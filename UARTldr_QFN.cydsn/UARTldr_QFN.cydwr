@@ -3420,17 +3420,17 @@
   <Group key="Pin2">
     <Group key="3a960253-138e-4757-af7c-c31e478282fd">
       <Group key="0">
-        <Data key="Port Format" value="3,2" />
+        <Data key="Port Format" value="3,4" />
       </Group>
     </Group>
     <Group key="a4c246a0-55f8-4012-a160-95210e380870">
       <Group key="0">
-        <Data key="Port Format" value="3,1" />
+        <Data key="Port Format" value="3,0" />
       </Group>
     </Group>
     <Group key="ed092b9b-d398-4703-be89-cebf998501f6">
       <Group key="0">
-        <Data key="Port Format" value="12,0" />
+        <Data key="Port Format" value="2,0" />
       </Group>
     </Group>
   </Group>

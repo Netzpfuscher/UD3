@@ -36,8 +36,10 @@
 #define FREQ 0
 #define CURR 1
 
-void run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint8_t channel, uint8_t delay, uint8_t port) {
 
+
+uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint8_t channel, uint8_t delay, uint8_t port) {
+    uint16 freq_response[128][2]; //[frequency value, amplitude]
 	CT_MUX_Select(channel);
 	//units for frequency are 0.1kHz (so 1000 = 100khz).  Pulsewidth in uS
 	uint8 f;
@@ -50,7 +52,7 @@ void run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint8_t 
 	braille_clear();
 
 	if (F_min > F_max) {
-		return;
+		return 0;
 	}
 	//store the original setting, restore it after the sweep
 	original_freq = configuration.start_freq;
@@ -118,7 +120,6 @@ void run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint8_t 
 	}
 
 	for (f = 1; f < 128; f++) {
-		//braille_setPixel(f,((PIX_HEIGHT-1)-((PIX_HEIGHT-1)*freq_response[f][CURR])/max_curr));
 		braille_line(f - 1, ((PIX_HEIGHT - 1) - ((PIX_HEIGHT - 1) * freq_response[f - 1][CURR]) / max_curr), f, ((PIX_HEIGHT - 1) - ((PIX_HEIGHT - 1) * freq_response[f][CURR]) / max_curr));
 	}
 	braille_draw(port);
@@ -133,6 +134,7 @@ void run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint8_t 
 	}
 	sprintf(buffer, "\r\nFound Peak at: %i00Hz\r\n", freq_response[max_curr_num][FREQ]);
 	send_string(buffer, port);
+    return freq_response[max_curr_num][FREQ];
 }
 
 /* [] END OF FILE */

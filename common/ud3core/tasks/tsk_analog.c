@@ -114,9 +114,9 @@ CY_ISR(ADC_data_ready_ISR) {
 
 CY_ISR(isr_primary) {
     telemetry.primary_i = CT1_Get_Current(CT_PRIMARY);
-    if(telemetry.primary_i > configuration.max_tr_current){
+    /*if(telemetry.primary_i > configuration.max_tr_current){
         ct1_dac_val[0]--;
-    }
+    }*/
 }
 
 uint32_t read_bus_mv(uint16_t raw_adc) {

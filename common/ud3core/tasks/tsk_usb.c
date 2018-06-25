@@ -26,7 +26,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /* ======================================================================== */
-#include <cylib.h>
+#include <CyLib.h>
 #include <cytypes.h>
 #include <stdio.h>
 

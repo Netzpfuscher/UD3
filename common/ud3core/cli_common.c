@@ -130,7 +130,7 @@ void init_config(){
     strcpy(configuration.ud_name,"UD3-Tesla");
     strcpy(configuration.ip_addr,"0.0.0.0");
     
-    param.pw = 50;
+    param.pw = 0;
     param.pwd = 50000;
     param.tune_start = 400;
     param.tune_end = 1000;
@@ -146,8 +146,8 @@ parameter_entry confparam[] = {
     //        Parameter Type,"Text   "         , Value ptr                     , Type          ,Min    ,Max    ,Callback Function           ,Help text
     ADD_PARAM(PARAM_DEFAULT ,"pw"              , param.pw                      , TYPE_UNSIGNED ,0      ,800    ,callback_TRFunction         ,"Pulsewidth")
     ADD_PARAM(PARAM_DEFAULT ,"pwd"             , param.pwd                     , TYPE_UNSIGNED ,0      ,60000  ,callback_TRFunction         ,"Pulsewidthdelay")
-    ADD_PARAM(PARAM_DEFAULT ,"tune_start"      , param.tune_start              , TYPE_UNSIGNED ,5      ,400    ,callback_TuneFunction       ,"Start frequency")
-    ADD_PARAM(PARAM_DEFAULT ,"tune_end"        , param.tune_end                , TYPE_UNSIGNED ,5      ,400    ,callback_TuneFunction       ,"End frequency")
+    ADD_PARAM(PARAM_DEFAULT ,"tune_start"      , param.tune_start              , TYPE_UNSIGNED ,5      ,1000   ,callback_TuneFunction       ,"Start frequency")
+    ADD_PARAM(PARAM_DEFAULT ,"tune_end"        , param.tune_end                , TYPE_UNSIGNED ,5      ,1000   ,callback_TuneFunction       ,"End frequency")
     ADD_PARAM(PARAM_DEFAULT ,"tune_pw"         , param.tune_pw                 , TYPE_UNSIGNED ,0      ,800    ,NULL                        ,"Tune pulsewidth")
     ADD_PARAM(PARAM_DEFAULT ,"tune_delay"      , param.tune_delay              , TYPE_UNSIGNED ,1      ,200    ,NULL                        ,"Tune delay")
     ADD_PARAM(PARAM_CONFIG  ,"offtime"         , param.offtime                 , TYPE_UNSIGNED ,2      ,250    ,callback_OfftimeFunction    ,"Offtime for MIDI")
@@ -389,7 +389,7 @@ uint8_t command_tterm(char *commandline, uint8_t port){
 		}
 	} 
     
-    
+    return 1;
 }
 
 
@@ -499,7 +499,7 @@ uint8_t command_qcw(char *commandline, uint8_t port) {
 }
 
 uint8_t command_udkill(char *commandline, uint8_t port) {
-	USBMIDI_1_callbackLocalMidiEvent(0, kill_msg);
+	USBMIDI_1_callbackLocalMidiEvent(0, (uint8_t*)kill_msg);
 	bus_command = BUS_COMMAND_OFF;
     
     if (xQCW_Timer != NULL) {
@@ -517,7 +517,17 @@ uint8_t command_udkill(char *commandline, uint8_t port) {
 }
 
 uint8_t command_tune_p(char *commandline, uint8_t port) {
-	run_adc_sweep(param.tune_start, param.tune_end, param.tune_pw, CT_PRIMARY, param.tune_delay, port);
+    uint16_t f_res;
+    int16_t f_fine_start;
+    int16_t f_fine_end;
+    
+	f_res = run_adc_sweep(param.tune_start, param.tune_end, param.tune_pw, CT_PRIMARY, param.tune_delay, port);
+    f_fine_start = f_res -60;
+    f_fine_end = f_res -60;
+    if(f_fine_start < param.tune_start) f_fine_start = param.tune_start;
+    if(f_fine_end > param.tune_end) f_fine_end = param.tune_end;
+    
+    f_res = run_adc_sweep(f_fine_start, f_fine_end, param.tune_pw, CT_PRIMARY, param.tune_delay, port);
 	return 0;
 }
 

@@ -109,29 +109,32 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 
 	//Draw Diagram
 
-	braille_line(0, 63, 127, 63);
-	braille_line(0, 0, 0, 63);
+    if(term_mode == TERM_MODE_VT100){
+	    braille_line(0, 63, 127, 63);
+	    braille_line(0, 0, 0, 63);
 
-	for (f = 0; f < PIX_HEIGHT; f += 4) {
-		braille_line(0, f, 2, f);
-	}
-	for (f = 0; f < PIX_WIDTH; f += 4) {
-		braille_line(f, PIX_HEIGHT - 1, f, PIX_HEIGHT - 3);
-	}
+    	for (f = 0; f < PIX_HEIGHT; f += 4) {
+    		braille_line(0, f, 2, f);
+    	}
+    	for (f = 0; f < PIX_WIDTH; f += 4) {
+    		braille_line(f, PIX_HEIGHT - 1, f, PIX_HEIGHT - 3);
+    	}
 
-	for (f = 1; f < 128; f++) {
-		braille_line(f - 1, ((PIX_HEIGHT - 1) - ((PIX_HEIGHT - 1) * freq_response[f - 1][CURR]) / max_curr), f, ((PIX_HEIGHT - 1) - ((PIX_HEIGHT - 1) * freq_response[f][CURR]) / max_curr));
-	}
-	braille_draw(port);
-	for (f = 0; f < PIX_WIDTH / 2; f += 4) {
-		if (!f) {
-			sprintf(buffer, "%i", freq_response[f * 2][FREQ]);
-			send_string(buffer, port);
-		} else {
-			sprintf(buffer, "%4i", freq_response[f * 2][FREQ]);
-			send_string(buffer, port);
-		}
-	}
+    	for (f = 1; f < 128; f++) {
+    		braille_line(f - 1, ((PIX_HEIGHT - 1) - ((PIX_HEIGHT - 1) * freq_response[f - 1][CURR]) / max_curr), f, ((PIX_HEIGHT - 1) - ((PIX_HEIGHT - 1) * freq_response[f][CURR]) / max_curr));
+    	}
+    	braille_draw(port);
+    	for (f = 0; f < PIX_WIDTH / 2; f += 4) {
+    		if (!f) {
+    			sprintf(buffer, "%i", freq_response[f * 2][FREQ]);
+    			send_string(buffer, port);
+    		} else {
+    			sprintf(buffer, "%4i", freq_response[f * 2][FREQ]);
+    			send_string(buffer, port);
+    		}
+    	}
+    }
+    
 	sprintf(buffer, "\r\nFound Peak at: %i00Hz\r\n", freq_response[max_curr_num][FREQ]);
 	send_string(buffer, port);
     return freq_response[max_curr_num][FREQ];

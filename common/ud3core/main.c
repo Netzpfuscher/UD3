@@ -82,10 +82,10 @@ int main() {
 	xSemaphoreGive(block_term[1]);
 
 	//Starting Tasks
-	tsk_uart_Start(); //Handles UART-Hardware and queues
-	tsk_usb_Start();  //Handles USB-Hardware and queues
-	tsk_midi_Start();
-	tsk_cli_Start();			//Commandline interface
+	tsk_uart_Start();       //Handles UART-Hardware and queues
+	tsk_usb_Start();        //Handles USB-Hardware and queues
+	tsk_midi_Start();       //MIDI synth
+	tsk_cli_Start();		//Commandline interface
 	tsk_analog_Start();		//Reads bus voltage and currents
 	tsk_thermistor_Start(); //Reads thermistors
 	tsk_fault_Start();		//Handles fault conditions

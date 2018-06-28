@@ -62,8 +62,6 @@ xSemaphoreHandle USB_Terminal_Mutex;
 	} while (0)
 void *extobjt = 0;
 
-static int serial_read(char *buf, int cnt, void *extobj);
-static int usb_read(char *buf, int cnt, void *extobj);
 static int serial_write(const char *buf, int cnt, void *extobj);
 static int usb_write(const char *buf, int cnt, void *extobj);
 void initialize_cli(ntshell_t *ptr, uint8_t port);
@@ -84,30 +82,18 @@ void initialize_cli(ntshell_t *ptr, uint8_t port) {
 	switch (port) {
 	case SERIAL:
 		UART_2_Start();
-		ntshell_init(ptr, serial_read, serial_write, serial_callback, extobjt);
+		ntshell_init(ptr, serial_write, serial_callback, extobjt);
         command_cls("", SERIAL);
 		break;
 	case USB:
 		USBMIDI_1_Start(0, USBMIDI_1_5V_OPERATION);
-		ntshell_init(ptr, usb_read, usb_write, usb_callback, extobjt);
+		ntshell_init(ptr, usb_write, usb_callback, extobjt);
 		break;
 	default:
 		break;
 	}
 	ntshell_set_prompt(ptr, ":>");
 	ntshell_show_promt(ptr);
-}
-
-static int serial_read(char *buf, int cnt, void *extobj) {
-	UNUSED_VARIABLE(extobj);
-
-	return cnt;
-}
-
-static int usb_read(char *buf, int cnt, void *extobj) {
-	UNUSED_VARIABLE(extobj);
-
-	return cnt;
 }
 
 static int serial_write(const char *buf, int cnt, void *extobj) {

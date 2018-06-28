@@ -339,23 +339,19 @@ uint8_t command_tterm(char *commandline, uint8_t port){
 	}
 
 	if (strcmp(commandline, "start") == 0) {
-        send_gauge_config(0,0,600,"Bus Voltage", port);
-        send_gauge_config(1,0,100,"Temperature", port);
-        send_gauge_config(2,0,10000,"Power", port);
-        send_gauge_config(3,0,50,"Current", port);
-        send_gauge_config(4,0,1000,"Primary Curr.", port);
-        send_gauge_config(5,0,4,"Voices", port);
-        send_gauge_config(6,0,255,"DAC Value", port);
+        send_gauge_config(0, GAUGE0_MIN, GAUGE0_MAX, GAUGE0_NAME, port);
+        send_gauge_config(1, GAUGE1_MIN, GAUGE1_MAX, GAUGE1_NAME, port);
+        send_gauge_config(2, GAUGE2_MIN, GAUGE2_MAX, GAUGE2_NAME, port);
+        send_gauge_config(3, GAUGE3_MIN, GAUGE3_MAX, GAUGE3_NAME, port);
+        send_gauge_config(4, GAUGE4_MIN, GAUGE4_MAX, GAUGE4_NAME, port);
+        send_gauge_config(5, GAUGE5_MIN, GAUGE5_MAX, GAUGE5_NAME, port);
+        send_gauge_config(6, GAUGE6_MIN, GAUGE6_MAX, GAUGE6_NAME, port);
         
-        send_chart_config(0,0,600,0,TT_UNIT_V,"Bus Voltage",port);
-        send_chart_config(1,0,100,0,TT_UNIT_C,"Temperature",port);
-        send_chart_config(2,0,1000,0,TT_UNIT_A,"Primary Curr.",port);
-        send_chart_config(3,0,10000,0,TT_UNIT_W,"Power",port);
+        send_chart_config(0, CHART0_MIN, CHART0_MAX, CHART0_OFFSET, CHART0_UNIT, CHART0_NAME, port);
+        send_chart_config(1, CHART1_MIN, CHART1_MAX, CHART1_OFFSET, CHART1_UNIT, CHART1_NAME, port);
+        send_chart_config(2, CHART2_MIN, CHART2_MAX, CHART2_OFFSET, CHART2_UNIT, CHART2_NAME, port);
+        send_chart_config(3, CHART3_MIN, CHART3_MAX, CHART3_OFFSET, CHART3_UNIT, CHART3_NAME, port);
         
-        send_chart(0, telemetry.bus_v, port);
-        send_chart(1, telemetry.temp1, port);
-        send_chart(2, telemetry.primary_i, port);
-        send_chart(3, telemetry.avg_power, port);
         switch (port) {
 		case SERIAL:
 			if (overlay_Serial_TaskHandle == NULL) {
@@ -523,7 +519,7 @@ uint8_t command_tune_p(char *commandline, uint8_t port) {
     
 	f_res = run_adc_sweep(param.tune_start, param.tune_end, param.tune_pw, CT_PRIMARY, param.tune_delay, port);
     f_fine_start = f_res -60;
-    f_fine_end = f_res -60;
+    f_fine_end = f_res +60;
     if(f_fine_start < param.tune_start) f_fine_start = param.tune_start;
     if(f_fine_end > param.tune_end) f_fine_end = param.tune_end;
     

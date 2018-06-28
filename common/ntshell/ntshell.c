@@ -576,7 +576,6 @@ void vtrecv_callback(vtrecv_t *vtrecv, vtrecv_action_t action, unsigned char ch)
  * @param extobj An external object for the callback function.
  */
 void ntshell_init(ntshell_t *p,
-    NTSHELL_SERIAL_READ func_read,
     NTSHELL_SERIAL_WRITE func_write,
     NTSHELL_USER_CALLBACK func_callback,
     void *extobj)
@@ -585,7 +584,6 @@ void ntshell_init(ntshell_t *p,
      * The vtrecv module provides a pointer interface to an external object.
      * NT-Shell uses the text editor, text history, read function, write function with the pointer interface.
      */
-    p->func_read = func_read;
     p->func_write = func_write;
     p->func_callback = func_callback;
     p->extobj = extobj;
@@ -608,31 +606,34 @@ void ntshell_init(ntshell_t *p,
     p->initcode = INITCODE;
 }
 
+
 /**
  * @brief Execute the NT-Shell.
  * @details Never return from this function.
  *
  * @param p A pointer to the handler of the NT-Shell.
  */
-void ntshell_execute(ntshell_t *p)
-{
+
+//void ntshell_execute(ntshell_t *p)
+//{
     /*
      * Check the initialization code.
      */
-    if (p->initcode != INITCODE) {
-      return;
-    }
+ //   if (p->initcode != INITCODE) {
+//      return;
+//    }
 
     /*
      * User input loop.
      */
-    PROMPT_WRITE(p);
-    while (1) {
-        unsigned char ch;
-        SERIAL_READ(p, (char *)&ch, sizeof(ch));
-        vtrecv_execute(&(p->vtrecv), &ch, sizeof(ch));
-    }
-}
+//    PROMPT_WRITE(p);
+//    while (1) {
+//        unsigned char ch;
+//        SERIAL_READ(p, (char *)&ch, sizeof(ch));
+//        vtrecv_execute(&(p->vtrecv), &ch, sizeof(ch));
+//    }
+//}
+
 
 void ntshell_show_promt(ntshell_t *p)
 {

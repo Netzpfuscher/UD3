@@ -35,7 +35,75 @@
 #define BUS_TEMP3_FAULT 5
 #define BUS_BATT_OV_FLT 6
 #define BUS_BATT_UV_FLT 7
+    
+ 
+/*
+*Teslaterm Configuration
+*/
+    
+#define GAUGE0_NAME "Bus Voltage"
+#define GAUGE0_MIN 0
+#define GAUGE0_MAX 600
+#define GAUGE0_VAR telemetry.bus_v
+        
+#define GAUGE1_NAME "Temperature"
+#define GAUGE1_MIN 0
+#define GAUGE1_MAX 100
+#define GAUGE1_VAR telemetry.temp1
 
+#define GAUGE2_NAME "Power"
+#define GAUGE2_MIN 0
+#define GAUGE2_MAX 10000
+#define GAUGE2_VAR telemetry.avg_power
+        
+#define GAUGE3_NAME "Current"
+#define GAUGE3_MIN 0
+#define GAUGE3_MAX 50
+#define GAUGE3_VAR telemetry.batt_i /10
+        
+#define GAUGE4_NAME "Primary Curr."
+#define GAUGE4_MIN 0
+#define GAUGE4_MAX 1000
+#define GAUGE4_VAR telemetry.primary_i
+        
+#define GAUGE5_NAME "Voices"
+#define GAUGE5_MIN 0
+#define GAUGE5_MAX 4        
+#define GAUGE5_VAR telemetry.midi_voices
+        
+#define GAUGE6_NAME "DAC Value"
+#define GAUGE6_MIN 0
+#define GAUGE6_MAX 255
+#define GAUGE6_VAR ct1_dac_val[0]
+        
+#define CHART0_NAME "Bus Voltage"
+#define CHART0_MIN 0
+#define CHART0_MAX 600
+#define CHART0_OFFSET 0
+#define CHART0_UNIT TT_UNIT_V
+#define CHART0_VAR telemetry.bus_v
+        
+#define CHART1_NAME "Temperature"
+#define CHART1_MIN 0
+#define CHART1_MAX 100
+#define CHART1_OFFSET 0
+#define CHART1_UNIT TT_UNIT_C
+#define CHART1_VAR telemetry.temp1
+        
+#define CHART2_NAME "Primary Curr."
+#define CHART2_MIN 0
+#define CHART2_MAX 1000
+#define CHART2_OFFSET 0
+#define CHART2_UNIT TT_UNIT_A
+#define CHART2_VAR telemetry.primary_i        
+        
+#define CHART3_NAME "Power"
+#define CHART3_MIN 0
+#define CHART3_MAX 10000
+#define CHART3_OFFSET 0
+#define CHART3_UNIT TT_UNIT_W
+#define CHART3_VAR telemetry.avg_power       
+        
 typedef struct
 {
 	uint16 bus_v;		//in volts

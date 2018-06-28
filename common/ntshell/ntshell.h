@@ -62,7 +62,6 @@ typedef struct {
     text_history_t history; /**< The handler of text_history. */
     int suggest_index;
     char suggest_source[TEXTEDITOR_MAXLEN];
-    NTSHELL_SERIAL_READ func_read;
     NTSHELL_SERIAL_WRITE func_write;
     NTSHELL_USER_CALLBACK func_callback;
     void *extobj;
@@ -74,7 +73,6 @@ extern "C" {
 #endif
 
 void ntshell_init(ntshell_t *p,
-    NTSHELL_SERIAL_READ func_read,
     NTSHELL_SERIAL_WRITE func_write,
     NTSHELL_USER_CALLBACK func_callback,
     void *extobj);

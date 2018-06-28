@@ -125,28 +125,20 @@ void show_overlay(uint8_t port) {
     
     }else{
         
-        send_gauge(0, telemetry.bus_v,port);
-        send_gauge(1, telemetry.temp1,port);
-        send_gauge(2, telemetry.avg_power,port);
-        send_gauge(3, telemetry.batt_i / 10,port);
-        send_gauge(4, telemetry.primary_i,port);
-        send_gauge(5, telemetry.midi_voices,port);
-        send_gauge(6, ct1_dac_val[0],port);
+        send_gauge(0, GAUGE0_VAR, port);
+        send_gauge(1, GAUGE1_VAR, port);
+        send_gauge(2, GAUGE2_VAR, port);
+        send_gauge(3, GAUGE3_VAR, port);
+        send_gauge(4, GAUGE4_VAR, port);
+        send_gauge(5, GAUGE5_VAR, port);
+        send_gauge(6, GAUGE6_VAR, port);
         
-        send_chart(0, telemetry.bus_v, port);
-        send_chart(1, telemetry.temp1, port);
-        send_chart(2, telemetry.primary_i, port);
-        send_chart(3, telemetry.avg_power, port);
+        send_chart(0, CHART0_VAR, port);
+        send_chart(1, CHART1_VAR, port);
+        send_chart(2, CHART2_VAR, port);
+        send_chart(3, CHART3_VAR, port);
+        
         send_chart_draw(port);
-        /*
-        send_gauge_config(0,0,600,"Bus Voltage", port);
-        send_gauge_config(1,0,100,"Temp", port);
-        send_gauge_config(2,0,20000,"Power", port);
-        send_gauge_config(3,0,50,"Current", port);
-        send_gauge_config(4,0,1000,"Primary", port);
-        send_gauge_config(5,0,4,"Voices", port);
-        send_gauge_config(6,0,255,"DAC Value", port);
-        */
         
     }
     

@@ -55,7 +55,6 @@ xSemaphoreHandle tsk_midi_Mutex;
 #define PITCHBEND_DIVIDER ((float)0x1fff)
 
 #define N_CHANNEL 4
-//#define N_SLOTS 8
 #define N_BUFFER 8
 #define N_DISPCHANNEL 4
 
@@ -154,16 +153,14 @@ fifo_t pulse_fifo;
 CY_ISR(isr_midi) {
 
 	uint8_t ch;
-	int flag[N_CHANNEL];
-	static int old_flag[N_CHANNEL];
+	uint8_t flag[N_CHANNEL];
+	static uint8_t old_flag[N_CHANNEL];
 	uint32 r = SG_Timer_ReadCounter();
 	for (ch = 0; ch < N_CHANNEL; ch++) {
 		flag[ch] = 0;
 		if (isr_port_ptr[ch].volume > 0) {
 			if ((r / isr_port_ptr[ch].halfcount) % 2 > 0) {
 				flag[ch] = 1;
-			} else {
-				flag[ch] = 0;
 			}
 		}
 		if (flag[ch] > old_flag[ch]) {
@@ -198,10 +195,9 @@ CY_ISR(isr_interrupter) {
 }
 
 void USBMIDI_1_callbackLocalMidiEvent(uint8 cable, uint8 *midiMsg) {
-	int skip_flag = 0; // Skipping system exclusive messages
+	static uint8_t skip_flag = 0; // Skipping system exclusive messages
 	NOTE note_struct;
 	uint8_t message_filter = midiMsg[0] & 0xf0;
-	//cable = 0;
 
 	if (skip_flag) {
 		if (midiMsg[0] == 0xf7 || midiMsg[1] == 0xf7 || midiMsg[2] == 0xf7) {
@@ -239,8 +235,7 @@ void USBMIDI_1_callbackLocalMidiEvent(uint8 cable, uint8 *midiMsg) {
 
 // Initialization of sound source channel
 void ChInit(CHANNEL channel[]) {
-	int ch;
-	for (ch = 0; ch < N_CHANNEL; ch++) {
+	for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
 		channel[ch].volume = 0;
 		channel[ch].updated = 0;
 		if (ch < N_DISPCHANNEL)
@@ -250,15 +245,13 @@ void ChInit(CHANNEL channel[]) {
 
 // All channels of the port volume off
 void PortVolumeAllOff(PORT port[]) {
-	int ch;
-	for (ch = 0; ch < N_CHANNEL; ch++) {
+	for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
 		port[ch].volume = 0;
 	}
 }
 
 void MidichInit(MIDICH ptr[]) {
-	int cnt;
-	for (cnt = 0; cnt < N_MIDICHANNEL; cnt++) {
+	for (uint8_t cnt = 0; cnt < N_MIDICHANNEL; cnt++) {
 		ptr[cnt].expression = 127; // Expression (0 - 127): Control change (Bxh) 0 BH xx
 
 		// Keep RPN in reset state: In order to avoid malfunctioning when data entry comes in suddenly
@@ -443,13 +436,9 @@ void tsk_midi_TaskProc(void *pvParameters) {
 		/* `#START TASK_LOOP_CODE` */
 
 		if (xQueueReceive(qMIDI_rx, &note_struct, portMAX_DELAY)) {
-			//sprintf(buffer,"C: %2x Ch: %2x \r\n", note_struct.command, note_struct.midich);
-			//send_string(buffer, SERIAL);
 			process(&note_struct, channel, midich);
 			while (xQueueReceive(qMIDI_rx, &note_struct, 0)) {
 				process(&note_struct, channel, midich);
-				//sprintf(buffer,"C: %2x Ch: %2x \r\n", note_struct.command, note_struct.midich);
-				//send_string(buffer, SERIAL);
 			}
 			reflect(port, channel, midich);
 		}

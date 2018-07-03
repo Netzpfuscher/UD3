@@ -109,6 +109,8 @@ struct parameter_struct{
     uint16_t offtime;
     uint8_t  qcw_ramp;
     uint16_t  qcw_repeat;
+    uint16_t  burst_on;
+    uint16_t  burst_off;
 };
 typedef struct parameter_struct cli_parameter;
 

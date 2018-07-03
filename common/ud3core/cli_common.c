@@ -94,7 +94,9 @@ const uint8_t kill_msg[3] = {0xb0, 0x77, 0x00};
 uint8_t term_mode = TERM_MODE_VT100;
 
 uint8_t tr_running = 0;
+uint8_t burst_state = 0;
 TimerHandle_t xQCW_Timer;
+TimerHandle_t xBurst_Timer;
 
 cli_config configuration;
 cli_parameter param;
@@ -132,6 +134,8 @@ void init_config(){
     
     param.pw = 0;
     param.pwd = 50000;
+    param.burst_on = 0;
+    param.burst_off = 500;
     param.tune_start = 400;
     param.tune_end = 1000;
     param.tune_pw = 50;
@@ -146,6 +150,8 @@ parameter_entry confparam[] = {
     //        Parameter Type,"Text   "         , Value ptr                     , Type          ,Min    ,Max    ,Callback Function           ,Help text
     ADD_PARAM(PARAM_DEFAULT ,"pw"              , param.pw                      , TYPE_UNSIGNED ,0      ,800    ,callback_TRFunction         ,"Pulsewidth")
     ADD_PARAM(PARAM_DEFAULT ,"pwd"             , param.pwd                     , TYPE_UNSIGNED ,0      ,60000  ,callback_TRFunction         ,"Pulsewidthdelay")
+    ADD_PARAM(PARAM_DEFAULT ,"bon"             , param.burst_on                , TYPE_UNSIGNED ,0      ,1000   ,callback_TRFunction         ,"Burst mode ontime [ms] 0=off")
+    ADD_PARAM(PARAM_DEFAULT ,"boff"            , param.burst_off               , TYPE_UNSIGNED ,0      ,1000   ,callback_TRFunction         ,"Burst mode offtime [ms]")
     ADD_PARAM(PARAM_DEFAULT ,"tune_start"      , param.tune_start              , TYPE_UNSIGNED ,5      ,1000   ,callback_TuneFunction       ,"Start frequency")
     ADD_PARAM(PARAM_DEFAULT ,"tune_end"        , param.tune_end                , TYPE_UNSIGNED ,5      ,1000   ,callback_TuneFunction       ,"End frequency")
     ADD_PARAM(PARAM_DEFAULT ,"tune_pw"         , param.tune_pw                 , TYPE_UNSIGNED ,0      ,800    ,NULL                        ,"Tune pulsewidth")
@@ -216,6 +222,8 @@ uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, uint8_t p
 	} else
 		return 1;
 }
+
+
 
 uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, uint8_t port) {
 	interrupter.pw = param.pw;
@@ -406,6 +414,20 @@ uint8_t command_bootloader(char *commandline, uint8_t port) {
 	return 1;
 }
 
+#define BURST_ON 0
+#define BURST_OFF 1
+
+void vBurst_Timer_Callback(TimerHandle_t xTimer){
+    if(burst_state == BURST_ON){
+        interrupter.pw = 0;
+        burst_state = BURST_OFF;
+        xTimerChangePeriod( xTimer, param.burst_off / portTICK_PERIOD_MS, 0 );                                                   
+    }else{
+        interrupter.pw = param.pw;
+        burst_state = BURST_ON;
+        xTimerChangePeriod( xTimer, param.burst_on / portTICK_PERIOD_MS, 0 );
+    }          
+}
 
 uint8_t command_tr(char *commandline, uint8_t port) {
 
@@ -422,16 +444,46 @@ uint8_t command_tr(char *commandline, uint8_t port) {
 	if (strcmp(commandline, "start") == 0) {
         interrupter.pw = param.pw;
 		interrupter.prd = param.pwd;
-		update_interrupter();
-		tr_running = 1;
-		send_string("Transient Enabled\r\n", port);
-		return 0;
+        update_interrupter();
+        burst_state = BURST_ON;
+        if(xBurst_Timer==NULL && param.burst_on > 0){
+                xBurst_Timer = xTimerCreate("Bust-Tmr", param.burst_on / portTICK_PERIOD_MS, pdFALSE,(void * ) 0, vBurst_Timer_Callback);
+                if(xBurst_Timer != NULL){
+                    xTimerStart(xBurst_Timer, 0);
+                    send_string("Burst Enabled\r\n", port);
+                    tr_running=1;
+                }else{
+                    interrupter.pw = 0;
+                    send_string("Cannot create burst Timer\r\n", port);
+                    tr_running=0;
+                }
+        }else{
+		    tr_running = 1;
+		    send_string("Transient Enabled\r\n", port);
+        }
+        return 0;
 	}
 	if (strcmp(commandline, "stop") == 0) {
+        interrupter.pw = 0;
+		update_interrupter();
+        if (xBurst_Timer != NULL) {
+				if(xTimerDelete(xBurst_Timer, 200 / portTICK_PERIOD_MS) != pdFALSE){
+				    xBurst_Timer = NULL;
+                    burst_state = BURST_ON;
+                    send_string("\r\nBurst Disabled\r\n", port);    
+                } else {
+                    send_string("Cannot delete burst Timer\r\n", port);
+                    burst_state = BURST_ON;
+                }
+		}else{
+            
+        send_string("\r\nTransient Disabled\r\n", port);    
+        }
+        
 		interrupter.pw = 0;
 		update_interrupter();
 		tr_running = 0;
-		send_string("\r\nTransient Disabled\r\n", port);
+		
 		return 0;
 	}
 	return 1;

@@ -26,6 +26,8 @@
 #define tsk_usb_BUFFER_LEN 64
 #include "ssd1306.h"
 #include <stdio.h>
+#include "min.h"
+#include "min_id.h"
 
 #define DISPLAY_ADDRESS 0x3C // 011110+SA0+RW - 0x3C or 0x3D
 
@@ -41,8 +43,13 @@ uint16_t byte_tx = 0;
 uint16_t byte_rx = 0;
 uint16_t byte_msg = 0;
 
+void USB_Send_Data(uint8_t* data, uint16_t len);
+
+struct min_context min_ctx;
+
+
 void USBMIDI_1_callbackLocalMidiEvent(uint8 cable, uint8 *midiMsg) {
-	UART_1_PutArray(midiMsg, 3);
+    min_queue_frame(&min_ctx, MIN_ID_TERM, midiMsg, 3);
 	byte_msg += 1;
 }
 
@@ -51,8 +58,6 @@ void USBMIDI_1_callbackLocalMidiEvent(uint8 cable, uint8 *midiMsg) {
 uint8 wd_reset[3] = {0xF0, 0x0F, 0x0F};
 
 void tick(void) {
-	static uint8_t cnt = 0;
-	static uint8_t dcnt = 0;
 
 	if (timeout > 0) {
 		timeout--;
@@ -63,6 +68,77 @@ void tick(void) {
 	if (timeout_wd > 0) {
 		timeout_wd--;
 	}
+}
+
+uint16_t min_tx_space(uint8_t port){
+  return UART_1_GetTxBufferSize();
+}
+
+void min_tx_byte(uint8_t port, uint8_t byte)
+{
+    UART_1_PutChar(byte);
+}
+
+uint32_t min_time_ms(void)
+{
+  uint32_t ticks = 65536 - Frame_Tmr_ReadCounter();
+  return ticks;
+}
+
+void min_tx_start(uint8_t port){
+}
+void min_tx_finished(uint8_t port){
+}
+
+void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_payload, uint8_t port)
+{
+    switch(min_id){
+        case MIN_ID_WD:
+
+        break;
+        case MIN_ID_MIDI:
+            USBMIDI_1_callbackLocalMidiEvent(0, min_payload);
+        break;
+        case MIN_ID_TERM:
+            USB_Send_Data(min_payload, len_payload);
+        break;
+
+    }
+}
+
+void USB_Send_Data(uint8_t* data, uint16_t len){
+
+    /* When component is ready to send more data to the PC */
+			if ((USBMIDI_1_CDCIsReady() != 0u) && (len > 0)) {
+	            
+                while(len > tsk_usb_BUFFER_LEN){
+                    while (USBMIDI_1_CDCIsReady() == 0u) {
+					}
+                    if(len>tsk_usb_BUFFER_LEN){
+                        USBMIDI_1_PutData(data, tsk_usb_BUFFER_LEN);
+                        data += tsk_usb_BUFFER_LEN;
+                        len -= tsk_usb_BUFFER_LEN;
+                    }
+                }
+                if(len){
+                    while (USBMIDI_1_CDCIsReady() == 0u) {
+                    } 
+                    USBMIDI_1_PutData(data, len);
+                }
+
+				/* If the last sent packet is exactly maximum packet size, 
+            	 *  it shall be followed by a zero-length packet to assure the
+             	 *  end of segment is properly identified by the terminal.
+             	 */
+				if (len == tsk_usb_BUFFER_LEN) {
+					/* Wait till component is ready to send more data to the PC */
+					while (USBMIDI_1_CDCIsReady() == 0u) {
+						//vTaskDelay( 10 / portTICK_RATE_MS );
+					}
+					USBMIDI_1_PutData(NULL, 0u); /* Send zero-length packet to PC */
+				}
+			}
+   
 }
 
 int main(void) {
@@ -87,6 +163,9 @@ int main(void) {
 	CyDelay(2000);
 	display_clear();
 	display_update();
+    
+    min_init_context(&min_ctx, 0);
+    
 	/* Place your initialization/startup code here (e.g. MyInst_Start()) */
 	UART_1_Start();
 	if (USBMIDI_1_initVar == 0) {
@@ -101,8 +180,8 @@ int main(void) {
 	uint16 count;
 	uint8 buffer[tsk_usb_BUFFER_LEN];
 
-	uint16 idx;
-
+    Frame_Tmr_Start();
+    
 	CySysTickStart();
 
 	CySysTickSetReload(SYSTICK_RELOAD);
@@ -172,18 +251,8 @@ int main(void) {
 		}
 		if (!timeout_wd && watchdog) {
 			timeout_wd = 1;
-			UART_1_PutArray(wd_reset, 3);
+			min_queue_frame(&min_ctx, MIN_ID_WD, &timeout_wd , 1);
 		}
-
-		//        if(!Status_Reg_1_Read()){
-		//            display_clear();
-		//            gfx_setTextSize(2);
-		//            gfx_setCursor(0,0);
-		//            gfx_println("Bootloader");
-		//            display_update();
-		//            CyDelay(2000);
-		//            Bootloadable_1_Load();
-		//        }
 
 		if (disp_ref && !timeout) {
 			display_clear();
@@ -233,49 +302,13 @@ int main(void) {
 				count = USBMIDI_1_GetAll(buffer);
 				if (count != 0u) {
 					/* insert data in to Receive FIFO */
-					UART_1_PutArray(buffer, count);
+                    min_queue_frame(&min_ctx, MIN_ID_TERM, buffer, count);
 					byte_tx += count;
-
-					//					for(idx=0;idx<count;++idx) {
-					//						xQueueSend( qUSB_rx, (void*)&buffer[idx],0);
-					//					}
 				}
 			}
-			/*
-    		 * Send a block of data ack through the USB port to the PC,
-    		 * by checkig to see if there is data to send, then sending
-    		 * up to the BUFFER_LEN of data (64 bytes)
-    		 */
-			count = UART_1_GetRxBufferSize();
-			count = (count > tsk_usb_BUFFER_LEN) ? tsk_usb_BUFFER_LEN : count;
 
-			/* When component is ready to send more data to the PC */
-			if ((USBMIDI_1_CDCIsReady() != 0u) && (count > 0)) {
-				/*
-    			 * Read the data from the transmit queue and buffer it
-    			 * locally so that the data can be utilized.
-    			 */
 
-				for (idx = 0; idx < count; ++idx) {
-					buffer[idx] = UART_1_GetChar();
-					byte_rx += 1;
-					//xQueueReceive( qUSB_tx,&buffer[idx],0);
-				}
-				/* Send data back to host */
-				USBMIDI_1_PutData(buffer, count);
-
-				/* If the last sent packet is exactly maximum packet size, 
-            	 *  it shall be followed by a zero-length packet to assure the
-             	 *  end of segment is properly identified by the terminal.
-             	 */
-				if (count == tsk_usb_BUFFER_LEN) {
-					/* Wait till component is ready to send more data to the PC */
-					while (USBMIDI_1_CDCIsReady() == 0u) {
-						//vTaskDelay( 10 / portTICK_RATE_MS );
-					}
-					USBMIDI_1_PutData(NULL, 0u); /* Send zero-length packet to PC */
-				}
-			}
+			
 		}
 
 		/* Place your application code here. */

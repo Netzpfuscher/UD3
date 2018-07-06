@@ -45,9 +45,16 @@ xSemaphoreHandle tx_Semaphore;
 #include "tsk_midi.h"
 #include "tsk_priority.h"
 #include <stdio.h>
+#include "min.h"
+#include "min_id.h"
 
-volatile uint8_t midi_count = 0;
-volatile uint8_t midiMsg[3];
+
+//volatile uint8_t midi_count = 0;
+//volatile uint8_t midiMsg[3];
+
+struct min_context min_ctx;
+
+
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */
@@ -58,45 +65,45 @@ volatile uint8_t midiMsg[3];
  */
 /* `#START USER_TASK_LOCAL_CODE` */
 
-CY_ISR(isr_uart_tx) {
-	if (tx_Semaphore != NULL) {
-		xSemaphoreGiveFromISR(tx_Semaphore, NULL);
-	}
+#define LOCAL_UART_BUFFER_SIZE 32
+
+uint16_t min_tx_space(uint8_t port){
+  // This is a lie but we will handle the consequences
+  return 512U;
 }
-CY_ISR(isr_uart_rx) {
-	char c;
-	while (UART_2_GetRxBufferSize()) {
-		c = UART_2_GetByte();
-		if (c & 0x80) {
-			midi_count = 1;
-			midiMsg[0] = c;
 
-			goto end;
-		} else if (!midi_count) {
-			xQueueSendFromISR(qUart_rx, &c, NULL);
-			goto end;
-		}
-		switch (midi_count) {
-		case 1:
-			midiMsg[1] = c;
-			midi_count = 2;
-			break;
-		case 2:
-			midiMsg[2] = c;
-			midi_count = 0;
-			if (midiMsg[0] == 0xF0) {
-				if (midiMsg[1] == 0x0F) {
-					watchdog_reset_Control = 1;
-					watchdog_reset_Control = 0;
-					goto end;
-				}
-			}
+void min_tx_byte(uint8_t port, uint8_t byte)
+{
+    UART_2_PutChar(byte);
+}
 
-			USBMIDI_1_callbackLocalMidiEvent(0, midiMsg);
-			break;
-		}
-	end:;
-	}
+uint32_t min_time_ms(void)
+{
+  uint32_t ticks = xTaskGetTickCount() * portTICK_RATE_MS;
+  return ticks;
+}
+
+void min_tx_start(uint8_t port){
+}
+void min_tx_finished(uint8_t port){
+}
+
+
+void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_payload, uint8_t port)
+{
+    switch(min_id){
+        case MIN_ID_WD:
+            watchdog_reset_Control = 1;
+			watchdog_reset_Control = 0;
+        break;
+        case MIN_ID_MIDI:
+            USBMIDI_1_callbackLocalMidiEvent(0, min_payload);
+        break;
+        case MIN_ID_TERM:
+            xStreamBufferSend( xUART_rx, min_payload, len_payload,0);
+        break;
+
+    }
 }
 
 /* `#END` */
@@ -120,30 +127,50 @@ void tsk_uart_TaskProc(void *pvParameters) {
 	 * in the task.
 	 */
 	/* `#START TASK_INIT_CODE` */
-	qUart_tx = xQueueCreate(3096, sizeof(char));
-	qUart_rx = xQueueCreate(64, sizeof(char));
+    
+    xUART_rx = xStreamBufferCreate(512,1);
+    xUART_tx = xStreamBufferCreate(512,1);
 
 	tx_Semaphore = xSemaphoreCreateBinary();
 
-	uart_rx_StartEx(isr_uart_rx);
-	uart_tx_StartEx(isr_uart_tx);
-
-	char c;
+    uint8_t buffer[LOCAL_UART_BUFFER_SIZE];
+    uint16_t rx_bytes=0;
+    uint8_t bytes_cnt=0;
+    
+    
+    //Init MIN Protocol
+    min_init_context(&min_ctx, 0);
 
 	/* `#END` */
-	//char buffer[30];
-	//uint16_t num;
-	//uint8_t cnt;
 
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
-
+/*
 		if (xQueueReceive(qUart_tx, &c, portMAX_DELAY)) {
 			UART_2_PutChar(c);
 			if (UART_2_GetTxBufferSize() == 4) {
 				xSemaphoreTake(tx_Semaphore, portMAX_DELAY);
 			}
 		}
+  */
+        rx_bytes = UART_2_GetRxBufferSize();
+        bytes_cnt = 0;
+        if(rx_bytes){
+            if (rx_bytes > LOCAL_UART_BUFFER_SIZE) rx_bytes = LOCAL_UART_BUFFER_SIZE;
+                while(bytes_cnt < rx_bytes){
+                    buffer[bytes_cnt] = UART_2_GetByte();
+                    bytes_cnt++;
+                }
+        }
+        min_poll(&min_ctx, (uint8_t *)buffer, (uint8_t)bytes_cnt);
+        
+        bytes_cnt = xStreamBufferReceive(xUART_tx, buffer, LOCAL_UART_BUFFER_SIZE, 10 / portTICK_RATE_MS);
+        if(bytes_cnt){
+            UART_2_PutArray(buffer,bytes_cnt);
+        }
+      
+        
+        
 
 		/* `#END` */
 	}

@@ -98,10 +98,8 @@ void initialize_cli(ntshell_t *ptr, uint8_t port) {
 
 static int serial_write(const char *buf, int cnt, void *extobj) {
 	UNUSED_VARIABLE(extobj);
-
-    for (int i = 0; i < cnt; i++) {
-		xQueueSend(qUart_tx, &buf[i], portMAX_DELAY);
-	}
+    
+    xStreamBufferSend(xUART_tx,buf, cnt,portMAX_DELAY);
 
 	return cnt;
 }
@@ -144,7 +142,7 @@ uint8_t handle_uart_terminal(ntshell_t *ptr) {
 	if (blink == 1)
 		rx_blink_Control = 1;
 
-	if (xQueueReceive(qUart_rx, &c, portMAX_DELAY)) {
+	if (xStreamBufferReceive(xUART_rx, &c,1, portMAX_DELAY)) {
 		if (xSemaphoreTake(block_term[SERIAL], portMAX_DELAY)) {
 			rx_blink_Control = 0;
 			blink = 240;

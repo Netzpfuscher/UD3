@@ -482,17 +482,15 @@ void Term_Restore_Cursor(uint8_t port) {
 * Sends char to transmit queue
 *********************************************/
 void send_char(uint8 c, uint8_t port) {
-	char buf[4];
+	//char buf[4];
 	switch (port) {
 	case USB:
 		if (qUSB_tx != NULL)
 			xQueueSend(qUSB_tx, &c, portMAX_DELAY);
 		break;
 	case SERIAL:
-		buf[0] = c;
-		buf[1] = '\0';
-		if (qUart_tx != NULL)
-			xQueueSend(qUart_tx, buf, portMAX_DELAY);
+		if (xUART_tx != NULL)
+            xStreamBufferSend(xUART_tx,&c, 1,portMAX_DELAY);
 		break;
 	}
 }
@@ -514,11 +512,8 @@ void send_string(char *data, uint8_t port) {
 
 		break;
 	case SERIAL:
-		if (qUart_tx != NULL) {
-			while ((*data) != '\0') {
-				if (xQueueSend(qUart_tx, data, portMAX_DELAY))
-					data++;
-			}
+		if (xUART_tx != NULL) {
+            xStreamBufferSend(xUART_tx,data, strlen(data),portMAX_DELAY);
 		}
 		break;
 	}
@@ -540,12 +535,8 @@ void send_buffer(uint8_t *data, uint16_t len, uint8_t port) {
 
 		break;
 	case SERIAL:
-		if (qUart_tx != NULL) {
-			while (len) {
-				if (xQueueSend(qUart_tx, data, portMAX_DELAY))
-					data++;
-				len--;
-			}
+		if (xUART_tx != NULL) {
+            xStreamBufferSend(xUART_tx,data, len,portMAX_DELAY);
 		}
 		break;
 	}

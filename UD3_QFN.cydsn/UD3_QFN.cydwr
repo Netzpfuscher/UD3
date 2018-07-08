@@ -31,9 +31,9 @@
         <Data key="check_tolerance" value="True" />
         <Data key="clock_version" value="v1" />
         <Data key="derive_type" value="NAMED_FREQ" />
-        <Data key="desired_freq" value="614.4" />
-        <Data key="desired_unit" value="3" />
-        <Data key="divider" value="104" />
+        <Data key="desired_freq" value="16" />
+        <Data key="desired_unit" value="6" />
+        <Data key="divider" value="4" />
         <Data key="domain" value="0" />
         <Data key="enabled" value="True" />
         <Data key="minus_accuracy" value="0.25" />
@@ -1414,7 +1414,7 @@
   </Group>
   <Group key="Component">
     <Group key="v1">
-      <Data key="cy_boot" value="cy_boot_v5_70" />
+      <Data key="cy_boot" value="cy_boot_v5_60" />
       <Data key="Em_EEPROM_Dynamic" value="Em_EEPROM_Dynamic_v2_0" />
       <Data key="LIN_Dynamic" value="LIN_Dynamic_v4_0" />
     </Group>

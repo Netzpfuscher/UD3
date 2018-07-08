@@ -29,6 +29,8 @@
 #include "min.h"
 #include "min_id.h"
 
+#define DISP 0
+
 #define DISPLAY_ADDRESS 0x3C // 011110+SA0+RW - 0x3C or 0x3D
 
 #define MNU_TIMEOUT 9
@@ -44,12 +46,12 @@ uint16_t byte_rx = 0;
 uint16_t byte_msg = 0;
 
 void USB_Send_Data(uint8_t* data, uint16_t len);
-
+void USB_send_string(char* str);
 struct min_context min_ctx;
 
 
 void USBMIDI_1_callbackLocalMidiEvent(uint8 cable, uint8 *midiMsg) {
-    min_queue_frame(&min_ctx, MIN_ID_TERM, midiMsg, 3);
+    min_send_frame(&min_ctx, MIN_ID_MIDI, midiMsg, 3);
 	byte_msg += 1;
 }
 
@@ -71,17 +73,24 @@ void tick(void) {
 }
 
 uint16_t min_tx_space(uint8_t port){
-  return UART_1_GetTxBufferSize();
+    return (4096-UART_1_GetTxBufferSize());
+  //return UART_1_GetTxBufferSize();
 }
 
 void min_tx_byte(uint8_t port, uint8_t byte)
 {
     UART_1_PutChar(byte);
 }
+/*
+void min_debug_print(const char *msg, ...){
 
+    USB_send_string(msg);
+
+}
+*/
 uint32_t min_time_ms(void)
 {
-  uint32_t ticks = 65536 - Frame_Tmr_ReadCounter();
+  uint32_t ticks = 4294967296 - Frame_Tmr_ReadCounter();
   return ticks;
 }
 
@@ -89,6 +98,7 @@ void min_tx_start(uint8_t port){
 }
 void min_tx_finished(uint8_t port){
 }
+uint32_t reset;
 
 void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_payload, uint8_t port)
 {
@@ -97,19 +107,34 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
 
         break;
         case MIN_ID_MIDI:
-            USBMIDI_1_callbackLocalMidiEvent(0, min_payload);
+            //USBMIDI_1_callbackLocalMidiEvent(0, min_payload);
         break;
         case MIN_ID_TERM:
             USB_Send_Data(min_payload, len_payload);
+        break;
+        case MIN_ID_RESET:
+            reset  = min_time_ms();  
         break;
 
     }
 }
 
+void USB_send_string(char* str){
+
+    USB_Send_Data((uint8_t*)str,strlen(str));
+}
+
 void USB_Send_Data(uint8_t* data, uint16_t len){
 
     /* When component is ready to send more data to the PC */
-			if ((USBMIDI_1_CDCIsReady() != 0u) && (len > 0)) {
+            uint8_t wait_cycles=100;
+            while (USBMIDI_1_CDCIsReady() == 0u){
+                CyDelayUs(10);
+                if (!wait_cycles) return;
+                wait_cycles--;
+            };
+            
+			if (len > 0) {
 	            
                 while(len > tsk_usb_BUFFER_LEN){
                     while (USBMIDI_1_CDCIsReady() == 0u) {
@@ -147,7 +172,9 @@ int main(void) {
 	PWM_2_Start();
 	CyGlobalIntEnable; /* Enable global interrupts. */
 
+    #if DISP
 	display_init(DISPLAY_ADDRESS);
+    
 
 	display_clear();
 	display_update();
@@ -163,8 +190,10 @@ int main(void) {
 	CyDelay(2000);
 	display_clear();
 	display_update();
+    #endif
     
     min_init_context(&min_ctx, 0);
+    
     
 	/* Place your initialization/startup code here (e.g. MyInst_Start()) */
 	UART_1_Start();
@@ -196,15 +225,21 @@ int main(void) {
 	uint16_t byte_s_tx = 0;
 	uint16_t byte_s_rx = 0;
 	uint16_t byte_s_msg = 0;
+    uint32_t last=0;
 
 	const char *mnu_str[3];
 	mnu_str[1] = "Kill";
 	mnu_str[2] = "Watchdog";
 	mnu_str[0] = "Bootloader";
-
+    
+    min_transport_reset(&min_ctx,1);
+    min_transport_reset(&min_ctx,1);
+    min_transport_reset(&min_ctx,1);
 	for (;;) {
 
 		btn = Status_Reg_1_Read();
+        
+        #if DISP
 		if (btn == 0 && old_btn) {
 			mnu += 1;
 			if (mnu > 2)
@@ -274,6 +309,7 @@ int main(void) {
 
 			display_update();
 		}
+        #endif
 
 		/* Handle enumeration of USB port */
 		if (USBMIDI_1_IsConfigurationChanged() != 0u) /* Host could send double SET_INTERFACE request */
@@ -302,15 +338,33 @@ int main(void) {
 				count = USBMIDI_1_GetAll(buffer);
 				if (count != 0u) {
 					/* insert data in to Receive FIFO */
-                    min_queue_frame(&min_ctx, MIN_ID_TERM, buffer, count);
+                    /*
+                    if(!min_queue_frame(&min_ctx, MIN_ID_TERM, buffer, count)){
+                        USB_send_string("Can't queue");
+                    }
+                    */
+                    min_send_frame(&min_ctx, MIN_ID_TERM, buffer, count);
 					byte_tx += count;
 				}
 			}
 
-
-			
 		}
-
+        if(UART_1_GetRxBufferSize()){
+            buffer[0] = UART_1_GetByte();
+            min_poll(&min_ctx,buffer,1);
+        }else{
+            min_poll(&min_ctx,buffer,0);
+        }
+        
+        if((min_time_ms()-reset)>150){
+            min_transport_reset(&min_ctx,true);
+        }
+        
+        if((min_time_ms()-last) > 50){
+            last = min_time_ms();
+            min_send_frame(&min_ctx,MIN_ID_RESET,buffer,1);
+        }
+      
 		/* Place your application code here. */
 	}
 }

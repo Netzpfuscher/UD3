@@ -66,10 +66,11 @@
 #ifdef ASSERTION_CHECKING
 #include <assert.h>
 #endif
-
+//#define MIN_DEBUG_PRINTING
 #ifndef NO_TRANSPORT_PROTOCOL
 #define TRANSPORT_PROTOCOL
 #endif
+//#define MIN_DEBUG_PRINTING
 
 #ifndef MAX_PAYLOAD
 #define MAX_PAYLOAD                                 (255U)
@@ -161,7 +162,7 @@ bool min_queue_frame(struct min_context *self, uint8_t min_id, uint8_t *payload,
 #endif
 
 // Send a non-transport frame MIN frame
-void min_send_frame(struct min_context *self, uint8_t min_id, uint8_t *payload, uint8_t payload_len);
+uint8_t min_send_frame(struct min_context *self, uint8_t min_id, uint8_t *payload, uint8_t payload_len);
 
 // Must be regularly called, with the received bytes since the last call.
 // NB: if the transport protocol is being used then even if there are no bytes

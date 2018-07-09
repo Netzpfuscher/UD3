@@ -119,6 +119,10 @@ typedef struct
 	uint8 uvlo_stat;	//uvlo status
 	uint16_t primary_i;
     uint8_t midi_voices;
+    uint32_t dropped_frames;                        // Diagnostic counters
+    uint32_t spurious_acks;
+    uint32_t sequence_mismatch_drop;
+    uint32_t resets_received;
 } telemetry_struct;
 telemetry_struct telemetry;
 

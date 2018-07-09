@@ -86,6 +86,7 @@ uint8_t command_bus(char *commandline, uint8_t port);
 uint8_t command_load_default(char *commandline, uint8_t port);
 uint8_t command_tterm(char *commandline, uint8_t port);
 uint8_t command_reset(char *commandline, uint8_t port);
+uint8_t command_minstat(char *commandline, uint8_t port);
 
 void nt_interpret(const char *text, uint8_t port);
 
@@ -207,6 +208,7 @@ command_entry commands[] = {
     ADD_COMMAND("tune_p"	    ,command_tune_p         ,"Autotune Primary")
     ADD_COMMAND("tune_s"	    ,command_tune_s         ,"Autotune Secondary")        
     ADD_COMMAND("tterm"	        ,command_tterm          ,"Changes terminal mode")
+    ADD_COMMAND("minstat"	    ,command_minstat        ,"Prints the min statistics")
 };
 // clang-format on
     
@@ -407,6 +409,19 @@ uint8_t command_cls(char *commandline, uint8_t port) {
     send_string(configuration.ud_name,port);
     send_string("\r\n\r\n",port);
 	return 1;
+}
+
+uint8_t command_minstat(char *commandline, uint8_t port){
+    char buffer[60];
+    sprintf(buffer,"Dropped frames: %d\r\n",telemetry.dropped_frames);
+    send_string(buffer,port);
+    sprintf(buffer,"Spurious acks: %d\r\n",telemetry.spurious_acks);
+    send_string(buffer,port);
+    sprintf(buffer,"Resets received: %d\r\n",telemetry.resets_received);
+    send_string(buffer,port);
+    sprintf(buffer,"Sequence mismatch drop: %d\r\n",telemetry.sequence_mismatch_drop);
+    send_string(buffer,port);
+    return 1; 
 }
 
 uint8_t command_bootloader(char *commandline, uint8_t port) {

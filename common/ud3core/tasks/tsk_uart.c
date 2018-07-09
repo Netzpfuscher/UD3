@@ -45,16 +45,13 @@ xSemaphoreHandle tx_Semaphore;
 #include "cli_common.h"
 #include "tsk_midi.h"
 #include "tsk_priority.h"
-#include <stdio.h>
+//#include <stdio.h>
 #include "min.h"
 #include "min_id.h"
+#include "telemetry.h"
 
-
-//volatile uint8_t midi_count = 0;
-//volatile uint8_t midiMsg[3];
 
 struct min_context min_ctx;
-
 
 
 /* `#END` */
@@ -66,21 +63,22 @@ struct min_context min_ctx;
  */
 /* `#START USER_TASK_LOCAL_CODE` */
 
-#define LOCAL_UART_BUFFER_SIZE 128
+#define LOCAL_UART_BUFFER_SIZE  128     //bytes
+#define CONNECTION_TIMEOUT      150     //ms
+#define CONNECTION_HEARTBEAT    50      //ms
+#define STREAMBUFFER_RX_SIZE    512     //bytes
+#define STREAMBUFFER_TX_SIZE    1024    //bytes
 
 uint16_t min_tx_space(uint8_t port){
-    return (1024 - UART_2_GetTxBufferSize());
+    return (UART_2_TX_BUFFER_SIZE - UART_2_GetTxBufferSize());
 }
 
-void min_tx_byte(uint8_t port, uint8_t byte)
-{
+void min_tx_byte(uint8_t port, uint8_t byte){
     UART_2_PutChar(byte);
 }
 
-uint32_t min_time_ms(void)
-{
-  uint32_t ticks = xTaskGetTickCount() * portTICK_RATE_MS;
-  return ticks;
+uint32_t min_time_ms(void){
+  return (xTaskGetTickCount() * portTICK_RATE_MS);
 }
 
 void min_tx_start(uint8_t port){
@@ -114,17 +112,18 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
 void min_reset_wd(void){
     static uint32_t last=0;
     
-    if((min_time_ms()-reset)>150){
+    if((min_time_ms()-reset)>CONNECTION_TIMEOUT){
             min_transport_reset(&min_ctx,true);
         }
         
-        if((min_time_ms()-last) > 50){
+        if((min_time_ms()-last) > CONNECTION_HEARTBEAT){
             last = min_time_ms();
             uint8_t byte=0;
             min_send_frame(&min_ctx,MIN_ID_RESET,&byte,1);   
         }
     
 }
+
 
 void poll_UART(uint8_t* ptr){
         
@@ -141,6 +140,14 @@ void poll_UART(uint8_t* ptr){
     
 }
 
+void write_telemetry(struct min_context* ptr){
+    telemetry.dropped_frames = ptr->transport_fifo.dropped_frames;
+    telemetry.spurious_acks = ptr->transport_fifo.spurious_acks;
+    telemetry.sequence_mismatch_drop = ptr->transport_fifo.sequence_mismatch_drop;
+    telemetry.resets_received = ptr->transport_fifo.resets_received;
+}
+
+
 /* `#END` */
 /* ------------------------------------------------------------------------ */
 /*
@@ -154,6 +161,11 @@ void tsk_uart_TaskProc(void *pvParameters) {
 	 * the the section below.
 	 */
 	/* `#START TASK_VARIABLES` */
+    
+    uint8_t buffer[LOCAL_UART_BUFFER_SIZE];
+    uint8_t buffer_u[LOCAL_UART_BUFFER_SIZE];
+
+    uint8_t bytes_cnt=0;
 
 	/* `#END` */
 
@@ -163,16 +175,11 @@ void tsk_uart_TaskProc(void *pvParameters) {
 	 */
 	/* `#START TASK_INIT_CODE` */
     
-    xUART_rx = xStreamBufferCreate(512,1);
-    xUART_tx = xStreamBufferCreate(1024,64);
+    xUART_rx = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
+    xUART_tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,LOCAL_UART_BUFFER_SIZE/2);
 
 	tx_Semaphore = xSemaphoreCreateBinary();
-
-    uint8_t buffer[LOCAL_UART_BUFFER_SIZE];
-    uint8_t buffer_u[LOCAL_UART_BUFFER_SIZE];
-
-    uint8_t bytes_cnt=0;
-    
+   
 
     //Init MIN Protocol
     min_init_context(&min_ctx, 0);
@@ -182,7 +189,7 @@ void tsk_uart_TaskProc(void *pvParameters) {
 
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
-
+        write_telemetry(&min_ctx);
         poll_UART(buffer_u);
         min_reset_wd();
   

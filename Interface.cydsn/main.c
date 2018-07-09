@@ -35,6 +35,9 @@
 
 #define MNU_TIMEOUT 9
 
+#define CONNECTION_TIMEOUT 150      //ms
+#define CONNECTION_HEARTBEAT 50     //ms
+
 volatile uint8_t disp_ref;
 volatile uint8_t timeout;
 volatile uint8_t timeout_byte;
@@ -73,8 +76,7 @@ void tick(void) {
 }
 
 uint16_t min_tx_space(uint8_t port){
-    return (4096-UART_1_GetTxBufferSize());
-  //return UART_1_GetTxBufferSize();
+    return (UART_1_TX_BUFFER_SIZE-UART_1_GetTxBufferSize());
 }
 
 void min_tx_byte(uint8_t port, uint8_t byte)
@@ -337,12 +339,6 @@ int main(void) {
 			if (USBMIDI_1_DataIsReady() != 0u) {
 				count = USBMIDI_1_GetAll(buffer);
 				if (count != 0u) {
-					/* insert data in to Receive FIFO */
-                    /*
-                    if(!min_queue_frame(&min_ctx, MIN_ID_TERM, buffer, count)){
-                        USB_send_string("Can't queue");
-                    }
-                    */
                     min_send_frame(&min_ctx, MIN_ID_TERM, buffer, count);
 					byte_tx += count;
 				}
@@ -356,11 +352,11 @@ int main(void) {
             min_poll(&min_ctx,buffer,0);
         }
         
-        if((min_time_ms()-reset)>150){
+        if((min_time_ms()-reset)>CONNECTION_TIMEOUT){
             min_transport_reset(&min_ctx,true);
         }
         
-        if((min_time_ms()-last) > 50){
+        if((min_time_ms()-last) > CONNECTION_HEARTBEAT){
             last = min_time_ms();
             min_send_frame(&min_ctx,MIN_ID_RESET,buffer,1);
         }

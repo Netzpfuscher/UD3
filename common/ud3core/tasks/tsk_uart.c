@@ -145,6 +145,7 @@ void write_telemetry(struct min_context* ptr){
     telemetry.spurious_acks = ptr->transport_fifo.spurious_acks;
     telemetry.sequence_mismatch_drop = ptr->transport_fifo.sequence_mismatch_drop;
     telemetry.resets_received = ptr->transport_fifo.resets_received;
+    telemetry.min_frames_max = ptr->transport_fifo.n_frames_max;
 }
 
 

@@ -69,5 +69,10 @@ void initialize_interrupter(void);
 void update_interrupter();
 void ramp_control(void);
 void interrupter_oneshot(uint16_t pw, uint8_t vol);
+uint8_t interrupter_get_kill(void);
+
+void interrupter_kill(void);
+
+void interrupter_unkill(void);
 
 #endif

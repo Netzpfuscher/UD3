@@ -123,6 +123,7 @@ typedef struct
     uint32_t spurious_acks;
     uint32_t sequence_mismatch_drop;
     uint32_t resets_received;
+    uint8_t min_frames_max;
 } telemetry_struct;
 telemetry_struct telemetry;
 

@@ -118,7 +118,10 @@ PORT *isr_port_ptr;
 NOTE *v_NOTE_NOTEONOFF(NOTE *v, uint8 midich, uint8 tone, uint8 vol) {
 	v->command = COMMAND_NOTEONOFF;
 	v->midich = midich;
-	v->data.noteonoff.tone = tone;
+    int16_t t_trans = tone + param.transpose;
+    if(t_trans<0) t_trans=0;
+    if(t_trans>127) t_trans=127;
+	v->data.noteonoff.tone = t_trans;
 	v->data.noteonoff.vol = vol;
 	return (v);
 }

@@ -29,7 +29,7 @@
 #include "min.h"
 #include "min_id.h"
 
-#define DISP 0
+#define DISP 1
 
 #define DISPLAY_ADDRESS 0x3C // 011110+SA0+RW - 0x3C or 0x3D
 
@@ -42,7 +42,7 @@ volatile uint8_t disp_ref;
 volatile uint8_t timeout;
 volatile uint8_t timeout_byte;
 volatile uint8_t timeout_wd;
-volatile uint8_t watchdog = 1;
+volatile uint8_t transparent = 0;
 char sbuf[128];
 uint16_t byte_tx = 0;
 uint16_t byte_rx = 0;
@@ -54,7 +54,7 @@ struct min_context min_ctx;
 
 
 void USBMIDI_1_callbackLocalMidiEvent(uint8 cable, uint8 *midiMsg) {
-    min_send_frame(&min_ctx, MIN_ID_MIDI, midiMsg, 3);
+    min_queue_frame(&min_ctx, MIN_ID_MIDI, midiMsg, 3);
 	byte_msg += 1;
 }
 
@@ -82,18 +82,12 @@ uint16_t min_tx_space(uint8_t port){
 void min_tx_byte(uint8_t port, uint8_t byte)
 {
     UART_1_PutChar(byte);
+    byte_tx++;
 }
-/*
-void min_debug_print(const char *msg, ...){
 
-    USB_send_string(msg);
-
-}
-*/
 uint32_t min_time_ms(void)
 {
-  uint32_t ticks = 4294967296 - Frame_Tmr_ReadCounter();
-  return ticks;
+  return (Frame_Tmr_ReadPeriod() - Frame_Tmr_ReadCounter());
 }
 
 void min_tx_start(uint8_t port){
@@ -189,7 +183,7 @@ int main(void) {
 	gfx_setTextSize(2);
 	gfx_println("Interface");
 	display_update();
-	CyDelay(2000);
+	CyDelay(1000);
 	display_clear();
 	display_update();
     #endif
@@ -231,8 +225,10 @@ int main(void) {
 
 	const char *mnu_str[3];
 	mnu_str[1] = "Kill";
-	mnu_str[2] = "Watchdog";
+	mnu_str[2] = "Transparent";
 	mnu_str[0] = "Bootloader";
+    
+    const char * str_kill = "/r/nkill/r/n";
     
     min_transport_reset(&min_ctx,1);
     min_transport_reset(&min_ctx,1);
@@ -261,13 +257,13 @@ int main(void) {
 
 			switch (mnu) {
 			case 1:
-				UART_1_PutString("\r\nkill\r\n");
+                min_queue_frame(&min_ctx, MIN_ID_TERM, str_kill ,strlen(str_kill));
 				break;
 			case 2:
-				if (watchdog == 0) {
-					watchdog = 1;
+				if (transparent == 0) {
+					transparent = 1;
 				} else {
-					watchdog = 0;
+					transparent = 0;
 				}
 				break;
 			case 0:
@@ -286,20 +282,16 @@ int main(void) {
 			timeout_byte = 9;
 			disp_ref = 1;
 		}
-		if (!timeout_wd && watchdog) {
-			timeout_wd = 1;
-			min_queue_frame(&min_ctx, MIN_ID_WD, &timeout_wd , 1);
-		}
 
 		if (disp_ref && !timeout) {
 			display_clear();
 			gfx_setTextSize(1);
 			disp_ref = 0;
 			gfx_setCursor(0, 0);
-			if (watchdog) {
-				gfx_println("Watchdog:         ON");
+			if (transparent) {
+				gfx_println("Transparent:      ON");
 			} else {
-				gfx_println("Watchdog:        OFF");
+				gfx_println("Transparent:     OFF");
 			}
 
 			sprintf(sbuf, "Bytes TX: %8i/s", byte_s_tx);
@@ -339,26 +331,68 @@ int main(void) {
 			if (USBMIDI_1_DataIsReady() != 0u) {
 				count = USBMIDI_1_GetAll(buffer);
 				if (count != 0u) {
-                    min_send_frame(&min_ctx, MIN_ID_TERM, buffer, count);
-					byte_tx += count;
+                    if(transparent){
+                        UART_1_PutArray(buffer,count);
+                        byte_tx += count;
+                    }else{
+                        min_send_frame(&min_ctx, MIN_ID_TERM, buffer, count);
+                    }
 				}
 			}
 
 		}
-        if(UART_1_GetRxBufferSize()){
-            buffer[0] = UART_1_GetByte();
-            min_poll(&min_ctx,buffer,1);
+        
+        if(transparent){
+            
+        	count = UART_1_GetRxBufferSize();
+			count = (count > tsk_usb_BUFFER_LEN) ? tsk_usb_BUFFER_LEN : count;
+
+			/* When component is ready to send more data to the PC */
+			if ((USBMIDI_1_CDCIsReady() != 0u) && (count > 0)) {
+				/*
+    			 * Read the data from the transmit queue and buffer it
+    			 * locally so that the data can be utilized.
+    			 */
+
+				for (uint8_t idx = 0; idx < count; ++idx) {
+					buffer[idx] = UART_1_GetChar();
+					
+					//xQueueReceive( qUSB_tx,&buffer[idx],0);
+				}
+                byte_rx += count;
+				/* Send data back to host */
+				USBMIDI_1_PutData(buffer, count);
+
+				/* If the last sent packet is exactly maximum packet size, 
+            	 *  it shall be followed by a zero-length packet to assure the
+             	 *  end of segment is properly identified by the terminal.
+             	 */
+				if (count == tsk_usb_BUFFER_LEN) {
+					/* Wait till component is ready to send more data to the PC */
+					while (USBMIDI_1_CDCIsReady() == 0u) {
+						//vTaskDelay( 10 / portTICK_RATE_MS );
+					}
+					USBMIDI_1_PutData(NULL, 0u); /* Send zero-length packet to PC */
+				}
+			}
+   
         }else{
-            min_poll(&min_ctx,buffer,0);
-        }
-        
-        if((min_time_ms()-reset)>CONNECTION_TIMEOUT){
-            min_transport_reset(&min_ctx,true);
-        }
-        
-        if((min_time_ms()-last) > CONNECTION_HEARTBEAT){
-            last = min_time_ms();
-            min_send_frame(&min_ctx,MIN_ID_RESET,buffer,1);
+            if(UART_1_GetRxBufferSize()){
+                uint8_t byte = UART_1_GetByte();
+                byte_rx += 1;
+                min_poll(&min_ctx,&byte,1);
+            }else{
+                min_poll(&min_ctx,buffer,0);
+            }
+            
+            if((min_time_ms()-reset)>CONNECTION_TIMEOUT){
+                min_transport_reset(&min_ctx,true);
+            }
+            
+            if((min_time_ms()-last) > CONNECTION_HEARTBEAT){
+                last = min_time_ms();
+                min_send_frame(&min_ctx,MIN_ID_RESET,buffer,1);
+            }
         }
       
 		/* Place your application code here. */

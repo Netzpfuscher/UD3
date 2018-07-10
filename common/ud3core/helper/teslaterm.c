@@ -39,8 +39,8 @@ void send_chart_config(uint8_t chart, int16_t min, int16_t max, int16_t offset,u
     buf[8] = offset;
     buf[9] = (offset>>8);
     buf[10] = unit;
-    send_buffer(buf,sizeof(buf),SERIAL);
-    send_string(text, SERIAL);
+    send_buffer(buf,sizeof(buf),port);
+    send_string(text, port);
 }
 
 void send_gauge_config(uint8_t gauge, int16_t min, int16_t max, char * text, uint8_t port){
@@ -54,8 +54,8 @@ void send_gauge_config(uint8_t gauge, int16_t min, int16_t max, char * text, uin
     buf[5] = (min>>8);
     buf[6] = max;
     buf[7] = (max>>8);
-    send_buffer(buf,8,SERIAL);
-    send_string(text, SERIAL);
+    send_buffer(buf,sizeof(buf),port);
+    send_string(text, port);
 }
 
 void send_chart_clear(uint8_t port){
@@ -76,7 +76,7 @@ void send_chart_line(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint8_t
     buf[9] = y2;
     buf[10] = (y2>>8);
     buf[11] = color;
-    send_buffer(buf,sizeof(buf),SERIAL); 
+    send_buffer(buf,sizeof(buf),port); 
 }
 
 void send_chart_text(int16_t x, int16_t y, uint8_t color, uint8_t size, char * text, uint8_t port){
@@ -91,6 +91,6 @@ void send_chart_text(int16_t x, int16_t y, uint8_t color, uint8_t size, char * t
     buf[6] = (y>>8);
     buf[7] = color;
     buf[8] = size;
-    send_buffer(buf,sizeof(buf),SERIAL);
-    send_string(text, SERIAL);
+    send_buffer(buf,sizeof(buf),port);
+    send_string(text, port);
 }

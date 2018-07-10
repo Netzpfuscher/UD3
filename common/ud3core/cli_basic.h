@@ -34,8 +34,8 @@ struct parameter_entry_struct {
 	void *value;
 	const uint8_t size;
 	const uint8_t type;
-	uint16_t min;
-	uint16_t max;
+	int32_t min;
+	int32_t max;
 	uint8_t (*callback_function)(parameter_entry * params, uint8_t index, uint8_t port);
 	const char *help;
 };

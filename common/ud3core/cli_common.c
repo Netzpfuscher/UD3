@@ -56,6 +56,16 @@
 #define EEPROM_READ_BYTE(x) EEPROM_1_ReadByte(x)
 #define EEPROM_WRITE_ROW(x,y) EEPROM_1_Write(y,x)
 
+#define SKIP_SPACE(ptr) 	if (*ptr == 0x20 && ptr != 0) ptr++ //skip space
+#define HELP_TEXT(text)        \
+	if (*commandline == 0 || commandline == 0) {    \
+		Term_Color_Red(port);       \
+		send_string(text, port);  \
+		Term_Color_White(port);     \
+		return 1;}                  \
+	
+
+
 
 typedef struct {
 	const char *text;
@@ -144,6 +154,7 @@ void init_config(){
     param.offtime = 2;
     param.qcw_ramp = 2;
     param.qcw_repeat = 500;
+    param.transpose = 0;
 }
 
 // clang-format off
@@ -160,6 +171,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,"offtime"         , param.offtime                 , TYPE_UNSIGNED ,2      ,250    ,callback_OfftimeFunction    ,"Offtime for MIDI")
     ADD_PARAM(PARAM_DEFAULT ,"qcw_ramp"        , param.qcw_ramp                , TYPE_UNSIGNED ,1      ,10     ,NULL                        ,"QCW Ramp Inc/93us")
     ADD_PARAM(PARAM_DEFAULT ,"qcw_repeat"      , param.qcw_repeat              , TYPE_UNSIGNED ,0      ,1000   ,NULL                        ,"QCW pulse repeat time [ms] <100=single shot")
+    ADD_PARAM(PARAM_DEFAULT ,"transpose"       , param.transpose               , TYPE_SIGNED   ,-48    ,48     ,NULL                        ,"Transpose MIDI")
     ADD_PARAM(PARAM_CONFIG  ,"watchdog"        , configuration.watchdog        , TYPE_UNSIGNED ,0      ,1      ,NULL                        ,"Watchdog Enable")
     ADD_PARAM(PARAM_CONFIG  ,"max_tr_pw"       , configuration.max_tr_pw       , TYPE_UNSIGNED ,0      ,3000   ,callback_ConfigFunction     ,"Maximum TR PW [uSec]")
     ADD_PARAM(PARAM_CONFIG  ,"max_tr_prf"      , configuration.max_tr_prf      , TYPE_UNSIGNED ,0      ,3000   ,callback_ConfigFunction     ,"Maximum TR frequency [Hz]")
@@ -253,15 +265,8 @@ uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, uint8_
 }
 
 uint8_t command_bus(char *commandline, uint8_t port) {
-	if (*commandline == 0x20 && commandline != 0)
-		commandline++;						   //Skip space
-	if (*commandline == 0 || commandline == 0) { //No param --> show help text
-	
-		Term_Color_Red(port);
-		send_string("Usage: bus [on|off]\r\n", port);
-		Term_Color_White(port);
-		return 1;
-	}
+    SKIP_SPACE(commandline);
+    HELP_TEXT("Usage: bus [on|off]\r\n");
 
 	if (strcmp(commandline, "on") == 0) {
 		bus_command = BUS_COMMAND_ON;
@@ -290,17 +295,9 @@ xTaskHandle overlay_Serial_TaskHandle;
 xTaskHandle overlay_USB_TaskHandle;
 
 uint8_t command_status(char *commandline, uint8_t port) {
-	
-	if (*commandline == 0x20 && commandline != 0)
-		commandline++; //skip space
+	SKIP_SPACE(commandline);
+	HELP_TEXT("Usage: status [start|stop]\r\n");
 
-	if (*commandline == 0 || commandline == 0) { //no param --> show help text
-	
-		Term_Color_Red(port);
-		send_string("Usage: status [start|stop]\r\n", port);
-		Term_Color_White(port);
-		return 1;
-	}
     
 	if (strcmp(commandline, "start") == 0) {
 		switch (port) {
@@ -337,16 +334,9 @@ uint8_t command_status(char *commandline, uint8_t port) {
 }
 
 uint8_t command_tterm(char *commandline, uint8_t port){
-    if (*commandline == 0x20 && commandline != 0)
-		commandline++; //skip space
+    SKIP_SPACE(commandline);
+    HELP_TEXT("Usage: status [start|stop]\r\n");
 
-	if (*commandline == 0 || commandline == 0) { //no param --> show help text
-
-		Term_Color_Red(port);
-		send_string("Usage: status [start|stop]\r\n", port);
-		Term_Color_White(port);
-		return 1;
-	}
 
 	if (strcmp(commandline, "start") == 0) {
         send_gauge_config(0, GAUGE0_MIN, GAUGE0_MAX, GAUGE0_NAME, port);
@@ -413,14 +403,16 @@ uint8_t command_cls(char *commandline, uint8_t port) {
 
 uint8_t command_minstat(char *commandline, uint8_t port){
     char buffer[60];
-    sprintf(buffer,"Dropped frames: %d\r\n",telemetry.dropped_frames);
+    sprintf(buffer,"Dropped frames        : %lu\r\n",telemetry.dropped_frames);
     send_string(buffer,port);
-    sprintf(buffer,"Spurious acks: %d\r\n",telemetry.spurious_acks);
+    sprintf(buffer,"Spurious acks         : %lu\r\n",telemetry.spurious_acks);
     send_string(buffer,port);
-    sprintf(buffer,"Resets received: %d\r\n",telemetry.resets_received);
+    sprintf(buffer,"Resets received       : %lu\r\n",telemetry.resets_received);
     send_string(buffer,port);
-    sprintf(buffer,"Sequence mismatch drop: %d\r\n",telemetry.sequence_mismatch_drop);
+    sprintf(buffer,"Sequence mismatch drop: %lu\r\n",telemetry.sequence_mismatch_drop);
     send_string(buffer,port);
+    sprintf(buffer,"Max frames in buffer  : %u\r\n",telemetry.min_frames_max);
+    send_string(buffer,port); 
     return 1; 
 }
 
@@ -445,16 +437,8 @@ void vBurst_Timer_Callback(TimerHandle_t xTimer){
 }
 
 uint8_t command_tr(char *commandline, uint8_t port) {
-
-	if (*commandline == 0x20 && commandline != 0)
-		commandline++; //skip space
-
-	if (*commandline == 0 || commandline == 0) { //no param --> show help text
-		Term_Color_Red(port);
-		send_string("Usage: tr [start|stop]\r\n", port);
-		Term_Color_White(port);
-		return 1;
-	}
+    SKIP_SPACE(commandline);
+    HELP_TEXT("Usage: tr [start|stop]\r\n");
 
 	if (strcmp(commandline, "start") == 0) {
         interrupter.pw = param.pw;
@@ -514,16 +498,8 @@ void vQCW_Timer_Callback(TimerHandle_t xTimer){
 }
 
 uint8_t command_qcw(char *commandline, uint8_t port) {
-
-	if (*commandline == 0x20 && commandline != 0)
-		commandline++; //skip space
-
-	if (*commandline == 0 || commandline == 0) { //no param --> show help text
-		Term_Color_Red(port);
-		send_string("Usage: qcw [start|stop]\r\n", port);
-		Term_Color_White(port);
-		return 1;
-	}
+    SKIP_SPACE(commandline);
+    HELP_TEXT("Usage: qcw [start|stop]\r\n");
     
 	if (strcmp(commandline, "start") == 0) {
         if(param.qcw_repeat>99){
@@ -562,22 +538,43 @@ uint8_t command_qcw(char *commandline, uint8_t port) {
 }
 
 uint8_t command_udkill(char *commandline, uint8_t port) {
-	USBMIDI_1_callbackLocalMidiEvent(0, (uint8_t*)kill_msg);
-	bus_command = BUS_COMMAND_OFF;
+    SKIP_SPACE(commandline);
+    HELP_TEXT("Usage: kill [set|reset|get]\r\n");
     
-    if (xQCW_Timer != NULL) {
-		if(xTimerDelete(xQCW_Timer, 200 / portTICK_PERIOD_MS) != pdFALSE){
-	        xQCW_Timer = NULL;
-        }
-	}
+    if (strcmp(commandline, "set") == 0) {
+        interrupter_kill();
+    	USBMIDI_1_callbackLocalMidiEvent(0, (uint8_t*)kill_msg);
+    	bus_command = BUS_COMMAND_OFF;
+        
+        if (xQCW_Timer != NULL) {
+    		if(xTimerDelete(xQCW_Timer, 200 / portTICK_PERIOD_MS) != pdFALSE){
+    	        xQCW_Timer = NULL;
+            }
+    	}
+        
+    	interrupter1_control_Control = 0;
+    	QCW_enable_Control = 0;
+    	Term_Color_Green(port);
+    	send_string("Killbit set\r\n", port);
+    	Term_Color_White(port);
+    }else if (strcmp(commandline, "reset") == 0) {
+        interrupter_unkill();
+        Term_Color_Green(port);
+    	send_string("Killbit reset\r\n", port);
+    	Term_Color_White(port);
+        return 1;
+    }else if (strcmp(commandline, "get") == 0) {
+        char buf[30];
+        Term_Color_Green(port);
+        sprintf(buf, "Killbit: %u",interrupter_get_kill());
+        send_string(buf,port);
+        Term_Color_White(port);
+    }
     
-	interrupter1_control_Control = 0;
-	QCW_enable_Control = 0;
-	Term_Color_Green(port);
-	send_string("Killed\r\n", port);
-	Term_Color_White(port);
+        
 	return 0;
 }
+
 
 uint8_t command_tune_p(char *commandline, uint8_t port) {
     uint16_t f_res;
@@ -629,11 +626,10 @@ uint8_t command_tasks(char *commandline, uint8_t port) {
 }
 
 uint8_t commandGet(char *commandline, uint8_t port) {
-	
+	SKIP_SPACE(commandline);
+    
 	uint8_t current_parameter;
 
-	if (*commandline == 0x20 && commandline != 0)
-		commandline++; //skip space
 
 	if (*commandline == 0 || commandline == 0) //no param --> show help text
 	{
@@ -733,16 +729,9 @@ void eeprom_load(){
 * Saves confparams to eeprom
 *********************************************/
 uint8_t command_eprom(char *commandline, uint8_t port) {
-	if (*commandline == 0x20 && commandline != 0)
-		commandline++; //skip space
-
-	if (*commandline == 0 || commandline == 0) //no param --> show help text
-	{
-		Term_Color_Red(port);
-		send_string("Usage: eprom [load|save]\r\n", port);
-		Term_Color_White(port);
-		return 1;
-	}
+	SKIP_SPACE(commandline);
+    HELP_TEXT("Usage: eprom [load|save]\r\n");
+    
 	uint8 sfflag = system_fault_Read();
 	system_fault_Control = 0; //halt tesla coil operation during updates!
 	if (strcmp(commandline, "save") == 0) {

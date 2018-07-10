@@ -100,17 +100,18 @@ struct config_struct{
 typedef struct config_struct cli_config;
 
 struct parameter_struct{
-    uint16_t pw;
-	uint16_t pwd;
-    uint16_t tune_start;
-    uint16_t tune_end;
-    uint16_t tune_pw;
-    uint16_t tune_delay;
-    uint16_t offtime;
-    uint8_t  qcw_ramp;
-    uint16_t  qcw_repeat;
-    uint16_t  burst_on;
-    uint16_t  burst_off;
+    uint16_t    pw;
+	uint16_t    pwd;
+    uint16_t    tune_start;
+    uint16_t    tune_end;
+    uint16_t    tune_pw;
+    uint16_t    tune_delay;
+    uint16_t    offtime;
+    uint8_t     qcw_ramp;
+    uint16_t    qcw_repeat;
+    uint16_t    burst_on;
+    uint16_t    burst_off;
+    int8_t      transpose;
 };
 typedef struct parameter_struct cli_parameter;
 

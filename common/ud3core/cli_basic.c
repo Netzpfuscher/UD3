@@ -15,7 +15,7 @@ uint8_t EEPROM_1_Write_Row(uint8_t row, uint8_t * buffer);
 
 uint8_t updateDefaultFunction(parameter_entry * params, char * newValue, uint8_t index, uint8_t port) {
     char buffer[60];
-    uint32_t value;
+    int32_t value;
     float fvalue;
     char* ptr;
     switch (params[index].type){

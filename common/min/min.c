@@ -35,10 +35,10 @@ enum {
 #ifdef TRANSPORT_PROTOCOL
 
 #ifndef TRANSPORT_ACK_RETRANSMIT_TIMEOUT_MS
-#define TRANSPORT_ACK_RETRANSMIT_TIMEOUT_MS         (50U) //25
+#define TRANSPORT_ACK_RETRANSMIT_TIMEOUT_MS         (25U) //25
 #endif
 #ifndef TRANSPORT_FRAME_RETRANSMIT_TIMEOUT_MS
-#define TRANSPORT_FRAME_RETRANSMIT_TIMEOUT_MS       (100U) // Should be long enough for a whole window to be transmitted plus an ACK / NACK to get back 50
+#define TRANSPORT_FRAME_RETRANSMIT_TIMEOUT_MS       (50U) // Should be long enough for a whole window to be transmitted plus an ACK / NACK to get back 50
 #endif
 #ifndef TRANSPORT_MAX_WINDOW_SIZE
 #define TRANSPORT_MAX_WINDOW_SIZE                   (16U)

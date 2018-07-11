@@ -240,9 +240,10 @@ uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, uint8_t p
 
 
 uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, uint8_t port) {
+    
 	interrupter.pw = param.pw;
 	interrupter.prd = param.pwd;
-	if (tr_running) {
+	if (tr_running==1) {
 		update_interrupter();
 	}
 	return 1;
@@ -427,10 +428,12 @@ uint8_t command_bootloader(char *commandline, uint8_t port) {
 void vBurst_Timer_Callback(TimerHandle_t xTimer){
     if(burst_state == BURST_ON){
         interrupter.pw = 0;
+        update_interrupter();
         burst_state = BURST_OFF;
         xTimerChangePeriod( xTimer, param.burst_off / portTICK_PERIOD_MS, 0 );                                                   
     }else{
         interrupter.pw = param.pw;
+        update_interrupter();
         burst_state = BURST_ON;
         xTimerChangePeriod( xTimer, param.burst_on / portTICK_PERIOD_MS, 0 );
     }          
@@ -450,7 +453,7 @@ uint8_t command_tr(char *commandline, uint8_t port) {
                 if(xBurst_Timer != NULL){
                     xTimerStart(xBurst_Timer, 0);
                     send_string("Burst Enabled\r\n", port);
-                    tr_running=1;
+                    tr_running=2;
                 }else{
                     interrupter.pw = 0;
                     send_string("Cannot create burst Timer\r\n", port);

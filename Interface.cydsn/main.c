@@ -29,7 +29,7 @@
 #include "min.h"
 #include "min_id.h"
 
-#define DISP 1
+#define DISP 0
 
 #define DISPLAY_ADDRESS 0x3C // 011110+SA0+RW - 0x3C or 0x3D
 
@@ -163,12 +163,14 @@ void USB_Send_Data(uint8_t* data, uint16_t len){
 }
 
 int main(void) {
-	I2COLED_Start();
+    
+	
 	PWM_1_Start();
 	PWM_2_Start();
 	CyGlobalIntEnable; /* Enable global interrupts. */
 
     #if DISP
+    I2COLED_Start();
 	display_init(DISPLAY_ADDRESS);
     
 
@@ -237,18 +239,20 @@ int main(void) {
 
 		btn = Status_Reg_1_Read();
         
-        #if DISP
+        
 		if (btn == 0 && old_btn) {
 			mnu += 1;
 			if (mnu > 2)
 				mnu = 0;
 			timeout = MNU_TIMEOUT;
 			execute_mnu = 1;
+            #if DISP
 			display_clear();
 			gfx_setTextSize(2);
 			gfx_setCursor(0, 20);
 			gfx_println(mnu_str[mnu]);
 			display_update();
+            #endif
 		}
 		old_btn = btn;
 
@@ -282,7 +286,8 @@ int main(void) {
 			timeout_byte = 9;
 			disp_ref = 1;
 		}
-
+        
+        #if DISP
 		if (disp_ref && !timeout) {
 			display_clear();
 			gfx_setTextSize(1);

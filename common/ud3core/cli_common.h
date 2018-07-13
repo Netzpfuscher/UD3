@@ -64,7 +64,7 @@ extern parameter_entry tparameters[];
 volatile uint8_t qcw_reg;
 extern parameter_entry confparam[];
 
-xSemaphoreHandle block_term[2];
+xSemaphoreHandle block_term[3];
 
 struct config_struct{
     uint8_t watchdog;

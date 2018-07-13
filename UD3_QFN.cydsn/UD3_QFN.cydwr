@@ -1521,7 +1521,7 @@
       <Data key="2c2044d6-1de3-4e07-95b6-62bd018a9263" value="TP5" />
       <Data key="4af5aad7-f42e-46eb-a353-83d53c26ab07" value="LED4" />
       <Data key="4c15b41e-e284-4978-99e7-5aaee19bd0ce" value="RX_422" />
-      <Data key="4de8b778-eb40-4f1c-bc3f-98f57730fff7" value="TX_UART" />
+      <Data key="4de8b778-eb40-4f1c-bc3f-98f57730fff7" value="TX_422_EN" />
       <Data key="4e0ba977-981e-4aa2-a3bc-c02da9d2f7c6" value="therm2" />
       <Data key="05a9c8de-3ba2-4909-8250-95fdc61c0bf4" value="ZCDA" />
       <Data key="5b10b89f-b451-4ef8-a137-cb307c33a33c" value="OCref" />
@@ -1533,12 +1533,14 @@
       <Data key="13d5721e-017e-4f36-866d-01a4b6a3504a" value="Ibus" />
       <Data key="52f31aa9-2f0a-497d-9a1f-1424095e13e6" value="LED1" />
       <Data key="64d2766f-7fd2-455b-88c8-2fabd65c34c4" value="GD1A" />
-      <Data key="83fc8610-854c-47f6-b3ec-8847b2c290d3" value="RX_UART" />
+      <Data key="83b2fde2-60ad-45b6-9e5c-cb3baa6e3f9a" value="SCLK" />
+      <Data key="83fc8610-854c-47f6-b3ec-8847b2c290d3" value="RX_422_EN" />
       <Data key="299df0a5-d2ed-4b72-b3d7-ae900bca29ed" value="CTout" />
       <Data key="958e9411-0a95-4df9-865e-f68273cf2d90" value="Vin" />
       <Data key="6400ba9d-054d-4648-a80b-c36ed9080f64" value="CT_SEC" />
       <Data key="6533b513-81b1-46af-8e19-d98fd9cc0e1c/16a808f6-2e13-45b9-bce0-b001c8655113" value="ADC_therm_Bypass" />
       <Data key="183169da-5db0-456e-85f3-54d1ef93695d" value="TP6" />
+      <Data key="1425177d-0d0e-4468-8bcc-e638e5509a9b" value="MISO" />
       <Data key="77715107-f8d5-47e5-a629-0fb83101ac6b" value="Track" />
       <Data key="a1af635c-2735-4a6b-8435-ff30029b58ef" value="Vbus" />
       <Data key="a33d362e-32d3-4bd2-a4e3-6ca8b8e69c1f" value="LED3" />
@@ -1549,8 +1551,8 @@
       <Data key="df864acb-3838-45e6-8b11-23d8f35057fe" value="Relay2" />
       <Data key="e4c8597c-026f-4cf9-a17f-7d69962e088d" value="LED2" />
       <Data key="e92e0d69-8885-4c0d-a0b4-208d2aa95cb7" value="therm1" />
-      <Data key="e851a3b9-efb8-48be-bbb8-b303b216c393" value="Pin_1" />
-      <Data key="ed092b9b-d398-4703-be89-cebf998501f6" value="TxF" />
+      <Data key="e851a3b9-efb8-48be-bbb8-b303b216c393" value="ETH_CSN" />
+      <Data key="ed092b9b-d398-4703-be89-cebf998501f6" value="MOSI" />
       <Data key="ef67386f-6004-4f68-bee5-5150f41b270c" value="GD2A" />
       <Data key="efe99b71-ea8e-4255-954e-cd80c2ccf46e" value="TP1" />
       <Data key="f644e7be-1bcc-46a4-ac2a-2b890997e7a9" value="RxF" />
@@ -4844,11 +4846,6 @@
         <Data key="Port Format" value="5,3" />
       </Group>
     </Group>
-    <Group key="ed092b9b-d398-4703-be89-cebf998501f6">
-      <Group key="0">
-        <Data key="Port Format" value="3,6" />
-      </Group>
-    </Group>
     <Group key="ef67386f-6004-4f68-bee5-5150f41b270c">
       <Group key="0">
         <Data key="Port Format" value="1,6" />
@@ -4869,7 +4866,11 @@
         <Data key="Port Format" value="12,3" />
       </Group>
     </Group>
-    <Group key="UnAssigned Pins" />
+    <Group key="UnAssigned Pins">
+      <Group key="ed092b9b-d398-4703-be89-cebf998501f6">
+        <Data key="0" value="131759365581641224" />
+      </Group>
+    </Group>
     <Group key="Unlocked Pins" />
   </Group>
   <Group key="PlaceDir">

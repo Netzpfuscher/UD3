@@ -141,7 +141,7 @@ void init_config(){
     configuration.ps_scheme = 2;
     configuration.autotune_s = 1;
     strcpy(configuration.ud_name,"UD3-Tesla");
-    strcpy(configuration.ip_addr,"0.0.0.0");
+    strcpy(configuration.ip_addr,"192.168.50.250");
     
     param.pw = 0;
     param.pwd = 50000;

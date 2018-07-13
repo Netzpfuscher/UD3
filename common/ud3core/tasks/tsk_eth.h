@@ -22,13 +22,38 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#define PRIO_TERMINAL 2
-#define PRIO_OVERLAY 1
-#define PRIO_ANALOG 1
-#define PRIO_THERMISTOR 1
-#define PRIO_UART 3
-#define PRIO_USB 3
-#define PRIO_ETH 3
-#define PRIO_FAULT 3
-#define PRIO_MIDI 2
-#define PRIO_QCW 3
+#if !defined(tsk_eth_TASK_H)
+#define tsk_eth_TASK_H
+
+/*
+ * Add user task definitions, types, includes and other things in the below
+ * merge region to customize the task.
+ */
+/* `#START USER_TYPES_AND_DEFINES` */
+#include <device.h>
+    
+/* RTOS includes. */
+#include "FreeRTOS.h"
+#include "task.h"
+#include "semphr.h"
+#include "stream_buffer.h"    
+
+/* `#END` */
+
+void tsk_eth_Start(void);
+
+StreamBufferHandle_t xETH_rx;
+StreamBufferHandle_t xETH_tx;
+
+
+/*
+ * Add user function prototypes in the below merge region to add user
+ * functionality to the task definition.
+ */
+/* `#START USER_TASK_PROTOS` */
+
+/* `#END` */
+
+/* ------------------------------------------------------------------------ */
+#endif
+/* [] END OF FILE */

@@ -4,6 +4,7 @@
 #include <device.h>
 #include "tasks/tsk_uart.h"
 #include "tasks/tsk_usb.h"
+#include "tasks/tsk_eth.h"
 
 uint8_t EEPROM_Read_Row(uint8_t row, uint8_t * buffer);
 uint8_t EEPROM_1_Write_Row(uint8_t row, uint8_t * buffer);
@@ -482,16 +483,22 @@ void Term_Restore_Cursor(uint8_t port) {
 * Sends char to transmit queue
 *********************************************/
 void send_char(uint8 c, uint8_t port) {
-	//char buf[4];
-	switch (port) {
-	case USB:
-		if (qUSB_tx != NULL)
-			xQueueSend(qUSB_tx, &c, portMAX_DELAY);
-		break;
-	case SERIAL:
-		if (xUART_tx != NULL)
-            xStreamBufferSend(xUART_tx,&c, 1,portMAX_DELAY);
-		break;
+
+    switch (port) {
+	    case USB:
+		    if (qUSB_tx != NULL)
+			    xQueueSend(qUSB_tx, &c, portMAX_DELAY);
+		    break;
+	    case SERIAL:
+		    if (xUART_tx != NULL)
+                xStreamBufferSend(xUART_tx,&c, 1,portMAX_DELAY);
+		    break;
+        case ETH:
+            if (xETH_tx != NULL) {
+                xStreamBufferSend(xETH_tx,&c, 1,portMAX_DELAY);
+		    }
+            break;
+                
 	}
 }
 
@@ -501,21 +508,26 @@ void send_char(uint8 c, uint8_t port) {
 void send_string(char *data, uint8_t port) {
 
 	switch (port) {
-	case USB:
-		if (qUSB_tx != NULL) {
+	    case USB:
+		    if (qUSB_tx != NULL) {
 
-			while ((*data) != '\0') {
-				if (xQueueSend(qUSB_tx, data, portMAX_DELAY))
-					data++;
-			}
-		}
-
-		break;
-	case SERIAL:
-		if (xUART_tx != NULL) {
-            xStreamBufferSend(xUART_tx,data, strlen(data),portMAX_DELAY);
-		}
-		break;
+			    while ((*data) != '\0') {
+				    if (xQueueSend(qUSB_tx, data, portMAX_DELAY))
+					    data++;
+			    }
+		    }
+		    break;
+	    case SERIAL:
+		    if (xUART_tx != NULL) {
+                xStreamBufferSend(xUART_tx,data, strlen(data),portMAX_DELAY);
+		    }
+            break;
+        case ETH:
+            if (xETH_tx != NULL) {
+                xStreamBufferSend(xETH_tx,data, strlen(data),portMAX_DELAY);
+		    }
+            break;
+        
 	}
 }
 /********************************************
@@ -524,21 +536,25 @@ void send_string(char *data, uint8_t port) {
 void send_buffer(uint8_t *data, uint16_t len, uint8_t port) {
 
 	switch (port) {
-	case USB:
-		if (qUSB_tx != NULL) {
-			while (len) {
-				if (xQueueSend(qUSB_tx, data, portMAX_DELAY))
-					data++;
-				len--;
-			}
-		}
-
-		break;
-	case SERIAL:
-		if (xUART_tx != NULL) {
-            xStreamBufferSend(xUART_tx,data, len,portMAX_DELAY);
-		}
-		break;
+	    case USB:
+		    if (qUSB_tx != NULL) {
+			    while (len) {
+				    if (xQueueSend(qUSB_tx, data, portMAX_DELAY))
+					    data++;
+				    len--;
+			    }
+		    }
+		    break;
+	    case SERIAL:
+		    if (xUART_tx != NULL) {
+                xStreamBufferSend(xUART_tx,data, len,portMAX_DELAY);
+		    }
+		    break;
+        case ETH:
+            if (xETH_tx != NULL) {
+                xStreamBufferSend(xETH_tx,data, len,portMAX_DELAY);
+		    }
+            break;
 	}
 }
 

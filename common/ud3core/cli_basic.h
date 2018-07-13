@@ -26,6 +26,7 @@
 
 #define SERIAL 0
 #define USB 1
+#define ETH 2
 
 typedef struct parameter_entry_struct parameter_entry;
 struct parameter_entry_struct {

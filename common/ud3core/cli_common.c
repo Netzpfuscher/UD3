@@ -199,7 +199,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,"ps_scheme"       , configuration.ps_scheme       , TYPE_UNSIGNED ,0      ,4      ,callback_ConfigFunction     ,"Power supply sheme")
     ADD_PARAM(PARAM_CONFIG  ,"autotune_s"      , configuration.autotune_s      , TYPE_UNSIGNED ,1      ,32     ,NULL                        ,"Number of samples for Autotune")
     ADD_PARAM(PARAM_CONFIG  ,"ud_name"         , configuration.ud_name         , TYPE_STRING   ,0      ,0      ,NULL                        ,"Name of the Coil [15 chars]")
-    ADD_PARAM(PARAM_DEFAULT ,"ip_addr"         , configuration.ip_addr         , TYPE_STRING   ,0      ,0      ,NULL                        ,"IP-Adress of the ESP8266")
+    ADD_PARAM(PARAM_CONFIG  ,"ip_addr"         , configuration.ip_addr         , TYPE_STRING   ,0      ,0      ,NULL                        ,"IP-Adress of the UD3")
 };
 
 command_entry commands[] = {
@@ -294,6 +294,7 @@ uint8_t command_reset(char *commandline, uint8_t port){
 
 xTaskHandle overlay_Serial_TaskHandle;
 xTaskHandle overlay_USB_TaskHandle;
+xTaskHandle overlay_ETH_TaskHandle;
 
 uint8_t command_status(char *commandline, uint8_t port) {
 	SKIP_SPACE(commandline);
@@ -312,6 +313,11 @@ uint8_t command_status(char *commandline, uint8_t port) {
 				xTaskCreate(tsk_overlay_TaskProc, "Overl_U", 256, (void *)USB, PRIO_OVERLAY, &overlay_USB_TaskHandle);
 			}
 			break;
+        case ETH:
+			if (overlay_USB_TaskHandle == NULL) {
+				xTaskCreate(tsk_overlay_TaskProc, "Overl_E", 256, (void *)ETH, PRIO_OVERLAY, &overlay_ETH_TaskHandle);
+			}
+			break;
 		}
 	}
 	if (strcmp(commandline, "stop") == 0) {
@@ -325,7 +331,13 @@ uint8_t command_status(char *commandline, uint8_t port) {
 		case USB:
 			if (overlay_USB_TaskHandle != NULL) {
 				vTaskDelete(overlay_USB_TaskHandle);
-				overlay_Serial_TaskHandle = NULL;
+				overlay_USB_TaskHandle = NULL;
+			}
+			break;
+        case ETH:
+			if (overlay_ETH_TaskHandle != NULL) {
+				vTaskDelete(overlay_ETH_TaskHandle);
+				overlay_ETH_TaskHandle = NULL;
 			}
 			break;
 		}

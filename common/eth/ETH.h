@@ -141,6 +141,7 @@
 #define ETH_SR_CLOSE_WAIT     ( 0x1C )
 #define ETH_SR_UDP            ( 0x22 )
 #define ETH_SR_MACRAW         ( 0x42 )
+#define ETH_SR_FRESH_CLOSED   ( 0x01 )
 
 /*
  * timeout used to prevent command acceptance deadlock
@@ -230,6 +231,8 @@ void ETH_TcpPrint(uint8 socket, const char *string );
 uint16 ETH_TcpReceive(uint8 socket, uint8* buffer, uint16 len, uint8 flags);
 char ETH_TcpGetChar( uint8 socket );
 int ETH_TcpGetLine( uint8 socket, char *buffer );
+cystatus ETH_TcpPollConnection( uint8* socket, uint8_t port );
+
 
 uint8 ETH_UdpOpen( uint16 port );
 uint16 ETH_UdpSend(uint8 socket, uint32 ip, uint16 port, uint8 *buffer, uint16 len, uint8 flags);

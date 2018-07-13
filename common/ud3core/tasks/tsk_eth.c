@@ -98,7 +98,11 @@ void tsk_eth_TaskProc(void *pvParameters) {
     xETH_tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,64);
     
  
-    uint8_t socket_23 = ETH_TcpOpenServer(PORT_TELNET);
+    //uint8_t socket_23 = ETH_TcpOpenServer(PORT_TELNET);
+    uint8_t socket_23;
+    volatile uint8_t ret;
+    
+    uint8_t state_socket_23;
     
 	   
 
@@ -106,21 +110,30 @@ void tsk_eth_TaskProc(void *pvParameters) {
 
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
- 
-        if(ETH_TcpConnected(socket_23) == ETH_SOCKET_OPEN){
+        ret = ETH_TcpPollConnection(&socket_23, PORT_TELNET);
+        
+        if(ret == ETH_SR_FRESH_CLOSED){
+            state_socket_23 = 0;
+        }
+        
+        if(ret == ETH_SR_ESTABLISHED){
             bytes_cnt = xStreamBufferReceive(xETH_tx, buffer, LOCAL_ETH_BUFFER_SIZE, 10 / portTICK_RATE_MS);
             if(bytes_cnt){
-                ETH_TcpSend(socket_23,buffer,bytes_cnt, ETH_TXRX_FLG_WAIT);
+                ETH_TcpSend(socket_23,buffer,bytes_cnt, 0);
             }
             bytes_cnt = ETH_TcpReceive(socket_23, buffer, LOCAL_ETH_BUFFER_SIZE, 0);
             if(bytes_cnt){
-                xStreamBufferSend(xETH_tx, buffer, bytes_cnt, portMAX_DELAY);
+                xStreamBufferSend(xETH_rx, buffer, bytes_cnt, portMAX_DELAY);
             }
             
+            
+            if (!state_socket_23){
+                command_cls("",ETH);
+                send_string(":>",ETH);
+            }
+            state_socket_23 = 1;
         }
-    
-        
-        
+
 
 		/* `#END` */
 	}
@@ -135,6 +148,7 @@ void tsk_eth_Start(void) {
 	/* `#START TASK_GLOBAL_INIT` */
     
     SPIM0_Start();
+    
     ETH_StartEx("0.0.0.0","255.255.255.0","00:DE:AD:BE:EF:00",configuration.ip_addr);
 
 	/* `#END` */

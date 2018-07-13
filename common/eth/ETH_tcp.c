@@ -213,6 +213,42 @@ cystatus ETH_TcpWaitForConnection( uint8 socket )
 		
 	return CYRET_SUCCESS;
 }
+
+cystatus ETH_TcpPollConnection( uint8* socket, uint8_t port )
+{
+	uint8 status;
+
+	/*
+	 * If the socket is invalid or not yet open, return a non-connect result
+	 * to prevent calling functions and waiting for the timeout for sockets
+	 * that are not yet open
+	 */
+	if (ETH_SOCKET_BAD(*socket)){
+        *socket = ETH_TcpOpenServer(port);
+        return CYRET_BAD_PARAM;
+    }
+	/*
+	 * Wait for the connectino to be established, or a timeout on the connection
+	 * delay to occur.
+	 */
+	
+	ETH_Send(ETH_SREG_SR,ETH_SOCKET_BASE(*socket),0,&status, 1);
+	switch (status){
+        case ETH_SR_CLOSED:
+            ETH_TcpOpenServer(port);
+            return 0;
+        break;
+        case ETH_SR_CLOSE_WAIT:
+            ETH_SocketDisconnect(*socket);
+            return 0;
+        break;
+        case ETH_SR_ESTABLISHED:
+            return ETH_SR_ESTABLISHED;
+        break;
+    }
+		
+	return 0xFF;
+}
 /* ------------------------------------------------------------------------ */
 /**
  * \brief Generic transmission of a data block using TCP

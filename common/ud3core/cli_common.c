@@ -376,6 +376,11 @@ uint8_t command_tterm(char *commandline, uint8_t port){
 				xTaskCreate(tsk_overlay_TaskProc, "Overl_U", 256, (void *)USB, PRIO_OVERLAY, &overlay_USB_TaskHandle);
 			}
 			break;
+        case ETH:
+			if (overlay_ETH_TaskHandle == NULL) {
+				xTaskCreate(tsk_overlay_TaskProc, "Overl_E", 256, (void *)ETH, PRIO_OVERLAY, &overlay_ETH_TaskHandle);
+			}
+			break;
 		}
 
         term_mode = port;
@@ -392,7 +397,13 @@ uint8_t command_tterm(char *commandline, uint8_t port){
 		case USB:
 			if (overlay_USB_TaskHandle != NULL) {
 				vTaskDelete(overlay_USB_TaskHandle);
-				overlay_Serial_TaskHandle = NULL;
+				overlay_USB_TaskHandle = NULL;
+			}
+			break;
+        case ETH:
+			if (overlay_ETH_TaskHandle != NULL) {
+				vTaskDelete(overlay_ETH_TaskHandle);
+				overlay_ETH_TaskHandle = NULL;
 			}
 			break;
 		}

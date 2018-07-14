@@ -132,6 +132,8 @@ void tsk_eth_TaskProc(void *pvParameters) {
                 send_string(":>",ETH);
             }
             state_socket_23 = 1;
+        }else{
+            vTaskDelay(50 / portTICK_RATE_MS);
         }
 
 

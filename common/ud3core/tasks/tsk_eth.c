@@ -67,6 +67,50 @@ xSemaphoreHandle tsk_eth_Mutex;
 
 
 #define PORT_TELNET     23
+#define PORT_MIDI       24
+
+
+
+void process_midi(uint8_t* ptr, uint16_t len) {
+	uint8_t c;
+    static uint8_t midi_count = 0;
+    static uint8_t midiMsg[3];
+    
+	while (len) {
+		c = *ptr;
+        len--;
+        ptr++;
+		if (c & 0x80) {
+			midi_count = 1;
+			midiMsg[0] = c;
+
+			goto end;
+		} else if (!midi_count) {
+            xStreamBufferSend(xETH_rx, &c, 1, 0);
+			goto end;
+		}
+		switch (midi_count) {
+		case 1:
+			midiMsg[1] = c;
+			midi_count = 2;
+			break;
+		case 2:
+			midiMsg[2] = c;
+			midi_count = 0;
+			if (midiMsg[0] == 0xF0) {
+				if (midiMsg[1] == 0x0F) {
+					watchdog_reset_Control = 1;
+					watchdog_reset_Control = 0;
+					goto end;
+				}
+			}
+
+			USBMIDI_1_callbackLocalMidiEvent(0, midiMsg);
+			break;
+		}
+	end:;
+	}
+}
 
 
 /* `#END` */
@@ -100,7 +144,10 @@ void tsk_eth_TaskProc(void *pvParameters) {
  
     //uint8_t socket_23 = ETH_TcpOpenServer(PORT_TELNET);
     uint8_t socket_23;
-    volatile uint8_t ret;
+    uint8_t socket_24;
+    uint8_t ret;
+    
+    uint8_t ret_24;
     
     uint8_t state_socket_23;
     
@@ -114,27 +161,37 @@ void tsk_eth_TaskProc(void *pvParameters) {
         
         if(ret == ETH_SR_FRESH_CLOSED){
             state_socket_23 = 0;
+            if (overlay_ETH_TaskHandle != NULL) {
+				vTaskDelete(overlay_ETH_TaskHandle);
+				overlay_ETH_TaskHandle = NULL;
+			}
         }
         
         if(ret == ETH_SR_ESTABLISHED){
-            bytes_cnt = xStreamBufferReceive(xETH_tx, buffer, LOCAL_ETH_BUFFER_SIZE, 10 / portTICK_RATE_MS);
+            bytes_cnt = xStreamBufferReceive(xETH_tx, buffer, LOCAL_ETH_BUFFER_SIZE, 5 / portTICK_RATE_MS);
             if(bytes_cnt){
                 ETH_TcpSend(socket_23,buffer,bytes_cnt, 0);
             }
             bytes_cnt = ETH_TcpReceive(socket_23, buffer, LOCAL_ETH_BUFFER_SIZE, 0);
             if(bytes_cnt){
-                xStreamBufferSend(xETH_rx, buffer, bytes_cnt, portMAX_DELAY);
+               process_midi(buffer,bytes_cnt);
             }
-            
-            
             if (!state_socket_23){
                 command_cls("",ETH);
                 send_string(":>",ETH);
             }
             state_socket_23 = 1;
-        }else{
+        }
+ 
+
+        if(ret != ETH_SR_ESTABLISHED){
             vTaskDelay(50 / portTICK_RATE_MS);
         }
+        
+        //else{
+      //      vTaskDelay(50 / portTICK_RATE_MS);
+     //   }
+        
 
 
 		/* `#END` */

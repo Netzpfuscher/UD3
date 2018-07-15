@@ -214,7 +214,7 @@ cystatus ETH_TcpWaitForConnection( uint8 socket )
 	return CYRET_SUCCESS;
 }
 
-cystatus ETH_TcpPollConnection( uint8* socket, uint8_t port )
+cystatus ETH_TcpPollConnection( uint8* socket, uint16_t port )
 {
 	uint8 status;
 
@@ -223,10 +223,12 @@ cystatus ETH_TcpPollConnection( uint8* socket, uint8_t port )
 	 * to prevent calling functions and waiting for the timeout for sockets
 	 * that are not yet open
 	 */
+    
 	if (ETH_SOCKET_BAD(*socket)){
         *socket = ETH_TcpOpenServer(port);
         return CYRET_BAD_PARAM;
     }
+    
 	/*
 	 * Wait for the connectino to be established, or a timeout on the connection
 	 * delay to occur.
@@ -235,12 +237,12 @@ cystatus ETH_TcpPollConnection( uint8* socket, uint8_t port )
 	ETH_Send(ETH_SREG_SR,ETH_SOCKET_BASE(*socket),0,&status, 1);
 	switch (status){
         case ETH_SR_CLOSED:
-            ETH_TcpOpenServer(port);
+            *socket = ETH_TcpOpenServer(port);
             return 0;
         break;
         case ETH_SR_CLOSE_WAIT:
             ETH_SocketDisconnect(*socket);
-            return 0;
+            return ETH_SR_FRESH_CLOSED;
         break;
         case ETH_SR_ESTABLISHED:
             return ETH_SR_ESTABLISHED;

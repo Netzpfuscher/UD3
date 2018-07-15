@@ -231,7 +231,7 @@ void ETH_TcpPrint(uint8 socket, const char *string );
 uint16 ETH_TcpReceive(uint8 socket, uint8* buffer, uint16 len, uint8 flags);
 char ETH_TcpGetChar( uint8 socket );
 int ETH_TcpGetLine( uint8 socket, char *buffer );
-cystatus ETH_TcpPollConnection( uint8* socket, uint8_t port );
+cystatus ETH_TcpPollConnection( uint8* socket, uint16_t port );
 
 
 uint8 ETH_UdpOpen( uint16 port );

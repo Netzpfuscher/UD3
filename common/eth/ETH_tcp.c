@@ -214,6 +214,28 @@ cystatus ETH_TcpWaitForConnection( uint8 socket )
 	return CYRET_SUCCESS;
 }
 
+cystatus ETH_TcpPollSocket( uint8 socket)
+{
+	uint8 status;
+
+	/*
+	 * If the socket is invalid or not yet open, return a non-connect result
+	 * to prevent calling functions and waiting for the timeout for sockets
+	 * that are not yet open
+	 */
+    
+	if (ETH_SOCKET_BAD(socket) ) return 0;
+    
+	/*
+	 * Wait for the connectino to be established, or a timeout on the connection
+	 * delay to occur.
+	 */
+	
+	ETH_Send(ETH_SREG_SR,ETH_SOCKET_BASE(socket),0,&status, 1);
+
+	return status;
+}
+
 cystatus ETH_TcpPollConnection( uint8* socket, uint16_t port )
 {
 	uint8 status;

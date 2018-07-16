@@ -232,7 +232,7 @@ uint16 ETH_TcpReceive(uint8 socket, uint8* buffer, uint16 len, uint8 flags);
 char ETH_TcpGetChar( uint8 socket );
 int ETH_TcpGetLine( uint8 socket, char *buffer );
 cystatus ETH_TcpPollConnection( uint8* socket, uint16_t port );
-
+cystatus ETH_TcpPollSocket( uint8 socket);
 
 uint8 ETH_UdpOpen( uint16 port );
 uint16 ETH_UdpSend(uint8 socket, uint32 ip, uint16 port, uint8 *buffer, uint16 len, uint8 flags);

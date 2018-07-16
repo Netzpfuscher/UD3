@@ -148,7 +148,7 @@ uint8 ETH_SocketOpen( uint16 port, uint8 flags)
 	 * as available, and return 0xFF error socket to safely exit the error
 	 * condition.
 	 */
-	if (ETH_ExecuteSocketCommand(ETH_CR_OPEN, socket) != 0) {
+	if (ETH_ExecuteSocketCommand(socket,ETH_CR_OPEN) != 0) {   //ERROR Socket and Command is changed
 		ETH_socketStatus[socket] = ETH_SOCKET_AVAILALE;
 		socket = 0xFF;
 	}

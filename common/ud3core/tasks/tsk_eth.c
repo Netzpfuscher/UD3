@@ -67,7 +67,7 @@ xSemaphoreHandle tsk_eth_Mutex;
 
 
 #define PORT_TELNET     23
-#define PORT_MIDI       24
+#define PORT_MIDI       123
 
 
 
@@ -86,8 +86,7 @@ void process_midi(uint8_t* ptr, uint16_t len) {
 
 			goto end;
 		} else if (!midi_count) {
-            xStreamBufferSend(xETH_rx, &c, 1, 0);
-			goto end;
+            goto end;
 		}
 		switch (midi_count) {
 		case 1:
@@ -104,7 +103,6 @@ void process_midi(uint8_t* ptr, uint16_t len) {
 					goto end;
 				}
 			}
-
 			USBMIDI_1_callbackLocalMidiEvent(0, midiMsg);
 			break;
 		}
@@ -144,19 +142,79 @@ void tsk_eth_TaskProc(void *pvParameters) {
  
     //uint8_t socket_23 = ETH_TcpOpenServer(PORT_TELNET);
     uint8_t socket_23;
-    uint8_t socket_24;
+
     uint8_t ret;
-    
-    uint8_t ret_24;
+  
+
     
     uint8_t state_socket_23;
+    
+    uint8_t cli_socket =0xFF;
+    uint8_t cli_socket_state;
+    
+    uint8_t midi_socket =0xFF;
+    uint8_t midi_socket_state;
+    
+    uint16_t len;
     
 	   
 
 	/* `#END` */
 
 	for (;;) {
+        
+        if (cli_socket != 0xFF) {
+			cli_socket_state = ETH_TcpPollSocket(cli_socket);
+			if (cli_socket_state == ETH_SR_ESTABLISHED) {
+				/*
+				 * Check for data received from the telnet port.
+				 */
+				len = ETH_TcpReceive(cli_socket,buffer,LOCAL_ETH_BUFFER_SIZE,0);
+				xStreamBufferSend(xETH_rx, buffer, len, 0);
+				/*
+				 * check for data waiting to be sent over the telnet port
+				 */
+				len = xStreamBufferReceive(xETH_tx, buffer, LOCAL_ETH_BUFFER_SIZE, 0);
+				ETH_TcpSend(cli_socket,buffer,len,0);
+			}
+			else if (cli_socket_state != ETH_SR_LISTEN) {
+				ETH_SocketClose(cli_socket,1);
+				cli_socket = 0xFF;
+			}
+		}
+		else {
+			cli_socket = ETH_TcpOpenServer(PORT_TELNET);
+		}			
+       
+        
+        if (midi_socket != 0xFF) {
+			midi_socket_state = ETH_TcpPollSocket(midi_socket);
+			if (midi_socket_state == ETH_SR_ESTABLISHED) {
+				/*
+				 * Check for data received from the telnet port.
+				 */
+				len = ETH_TcpReceive(midi_socket,buffer,LOCAL_ETH_BUFFER_SIZE,0);
+				if(len){
+                    process_midi(buffer,len);
+                }
+				/*
+				 * check for data waiting to be sent over the telnet port
+				 */
+				//len = xStreamBufferReceive(xETH_tx, buffer, LOCAL_ETH_BUFFER_SIZE, 0);
+				//ETH_TcpSend(midi_socket,buffer,len,0);
+			}
+			else if (midi_socket_state != ETH_SR_LISTEN) {
+				ETH_SocketClose(midi_socket,1);
+				midi_socket = 0xFF;
+			}
+		}
+		else {
+			midi_socket = ETH_TcpOpenServer(PORT_MIDI);
+		}			
+		vTaskDelay(5 /portTICK_RATE_MS);
+        
 		/* `#START TASK_LOOP_CODE` */
+        /*
         ret = ETH_TcpPollConnection(&socket_23, PORT_TELNET);
         
         if(ret == ETH_SR_FRESH_CLOSED){
@@ -191,6 +249,7 @@ void tsk_eth_TaskProc(void *pvParameters) {
         //else{
       //      vTaskDelay(50 / portTICK_RATE_MS);
      //   }
+        */
         
 
 

@@ -200,8 +200,8 @@ uint8_t handle_USB_terminal(ntshell_t *ptr) {
 
 uint8_t handle_ETH_terminal(ntshell_t *ptr) {
 	char c;
-	if (xStreamBufferReceive(xETH_rx, &c,1, portMAX_DELAY)) {
-		if (xSemaphoreTake(block_term[ETH], portMAX_DELAY)) {
+	if (xStreamBufferReceive(xETH_rx, &c,1, 20 /portTICK_RATE_MS)) {
+		if (xSemaphoreTake(block_term[ETH], 20 /portTICK_RATE_MS)) {
 			ntshell_execute_nb(ptr, c);
 			xSemaphoreGive(block_term[ETH]);
 		} 
@@ -254,6 +254,7 @@ void tsk_cli_TaskProc(void *pvParameters) {
 		default:
 			break;
 		}
+        
 
 		/* `#END` */
 

@@ -2,6 +2,10 @@
 #include "teslaterm.h"
 #include "cli_basic.h"
 #include <string.h>
+#include "FreeRTOS.h"
+#include "task.h"
+#include "queue.h"
+#include "semphr.h"
 
 uint8_t gaugebuf[] = {0xFF,0x04, TT_GAUGE,0x00,0x00,0x00};
 uint8_t chartbuf[] = {0xFF,0x04, TT_CHART,0x00,0x00,0x00};

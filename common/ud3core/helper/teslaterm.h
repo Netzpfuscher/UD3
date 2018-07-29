@@ -19,6 +19,11 @@
 #define TT_UNIT_Hz 4
 #define TT_UNIT_C 5
 
+#define TT_COLOR_WHITE 0
+#define TT_COLOR_RED 1
+#define TT_COLOR_BLUE 2
+#define TT_COLOR_GREEN 3
+
 
 
 void send_gauge(uint8_t gauge, int16_t val, uint8_t port);

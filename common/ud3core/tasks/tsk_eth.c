@@ -61,13 +61,14 @@ xSemaphoreHandle tsk_eth_Mutex;
 
 
 #define STREAMBUFFER_RX_SIZE    512     //bytes
-#define STREAMBUFFER_TX_SIZE    1024    //bytes
+#define STREAMBUFFER_TX_SIZE    4096    //bytes
 
 #define LOCAL_ETH_BUFFER_SIZE 128
 
 
 #define PORT_TELNET     23
 #define PORT_MIDI       123
+
 
 
 
@@ -125,7 +126,6 @@ void tsk_eth_TaskProc(void *pvParameters) {
 	 */
 	/* `#START TASK_VARIABLES` */
     
-    uint8_t bytes_cnt;
     uint8_t buffer[LOCAL_ETH_BUFFER_SIZE];
 
 	/* `#END` */
@@ -138,19 +138,11 @@ void tsk_eth_TaskProc(void *pvParameters) {
     
     xETH_rx = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
     xETH_tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,64);
-    
- 
-    //uint8_t socket_23 = ETH_TcpOpenServer(PORT_TELNET);
-    uint8_t socket_23;
 
-    uint8_t ret;
-  
-
-    
-    uint8_t state_socket_23;
-    
     uint8_t cli_socket =0xFF;
     uint8_t cli_socket_state;
+    uint8_t cli_socket_state_old;
+    
     
     uint8_t midi_socket =0xFF;
     uint8_t midi_socket_state;
@@ -160,12 +152,19 @@ void tsk_eth_TaskProc(void *pvParameters) {
 	   
 
 	/* `#END` */
+    
+    /* `#START TASK_LOOP_CODE` */
 
 	for (;;) {
         
         if (cli_socket != 0xFF) {
 			cli_socket_state = ETH_TcpPollSocket(cli_socket);
+
 			if (cli_socket_state == ETH_SR_ESTABLISHED) {
+                if(cli_socket_state != cli_socket_state_old){
+                    command_cls("",ETH);
+                    send_string(":>", ETH);
+                }
 				/*
 				 * Check for data received from the telnet port.
 				 */
@@ -175,12 +174,15 @@ void tsk_eth_TaskProc(void *pvParameters) {
 				 * check for data waiting to be sent over the telnet port
 				 */
 				len = xStreamBufferReceive(xETH_tx, buffer, LOCAL_ETH_BUFFER_SIZE, 0);
-				ETH_TcpSend(cli_socket,buffer,len,0);
+                if(len){
+				    ETH_TcpSend(cli_socket,buffer,len,0);
+                }
 			}
 			else if (cli_socket_state != ETH_SR_LISTEN) {
 				ETH_SocketClose(cli_socket,1);
 				cli_socket = 0xFF;
 			}
+            cli_socket_state_old = cli_socket_state;
 		}
 		else {
 			cli_socket = ETH_TcpOpenServer(PORT_TELNET);
@@ -197,11 +199,7 @@ void tsk_eth_TaskProc(void *pvParameters) {
 				if(len){
                     process_midi(buffer,len);
                 }
-				/*
-				 * check for data waiting to be sent over the telnet port
-				 */
-				//len = xStreamBufferReceive(xETH_tx, buffer, LOCAL_ETH_BUFFER_SIZE, 0);
-				//ETH_TcpSend(midi_socket,buffer,len,0);
+
 			}
 			else if (midi_socket_state != ETH_SR_LISTEN) {
 				ETH_SocketClose(midi_socket,1);
@@ -212,45 +210,6 @@ void tsk_eth_TaskProc(void *pvParameters) {
 			midi_socket = ETH_TcpOpenServer(PORT_MIDI);
 		}			
 		vTaskDelay(5 /portTICK_RATE_MS);
-        
-		/* `#START TASK_LOOP_CODE` */
-        /*
-        ret = ETH_TcpPollConnection(&socket_23, PORT_TELNET);
-        
-        if(ret == ETH_SR_FRESH_CLOSED){
-            state_socket_23 = 0;
-            if (overlay_ETH_TaskHandle != NULL) {
-				vTaskDelete(overlay_ETH_TaskHandle);
-				overlay_ETH_TaskHandle = NULL;
-			}
-        }
-        
-        if(ret == ETH_SR_ESTABLISHED){
-            bytes_cnt = xStreamBufferReceive(xETH_tx, buffer, LOCAL_ETH_BUFFER_SIZE, 5 / portTICK_RATE_MS);
-            if(bytes_cnt){
-                ETH_TcpSend(socket_23,buffer,bytes_cnt, 0);
-            }
-            bytes_cnt = ETH_TcpReceive(socket_23, buffer, LOCAL_ETH_BUFFER_SIZE, 0);
-            if(bytes_cnt){
-               process_midi(buffer,bytes_cnt);
-            }
-            if (!state_socket_23){
-                command_cls("",ETH);
-                send_string(":>",ETH);
-            }
-            state_socket_23 = 1;
-        }
- 
-
-        if(ret != ETH_SR_ESTABLISHED){
-            vTaskDelay(50 / portTICK_RATE_MS);
-        }
-        
-        //else{
-      //      vTaskDelay(50 / portTICK_RATE_MS);
-     //   }
-        */
-        
 
 
 		/* `#END` */
@@ -267,7 +226,9 @@ void tsk_eth_Start(void) {
     
     SPIM0_Start();
     
-    ETH_StartEx("0.0.0.0","255.255.255.0","00:DE:AD:BE:EF:00",configuration.ip_addr);
+    ETH_StartEx(configuration.ip_gw,configuration.ip_subnet,configuration.ip_mac,configuration.ip_addr);
+   
+    
 
 	/* `#END` */
 

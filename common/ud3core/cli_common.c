@@ -142,6 +142,10 @@ void init_config(){
     configuration.autotune_s = 1;
     strcpy(configuration.ud_name,"UD3-Tesla");
     strcpy(configuration.ip_addr,"192.168.50.250");
+    strcpy(configuration.ip_subnet,"255.255.255.0");
+    strcpy(configuration.ip_mac,"00:DE:AD:BE:EF:00");
+    strcpy(configuration.ip_gw,"192.168.50.1");
+    configuration.minprot = 0;
     
     param.pw = 0;
     param.pwd = 50000;
@@ -176,9 +180,9 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,"max_tr_pw"       , configuration.max_tr_pw       , TYPE_UNSIGNED ,0      ,3000   ,callback_ConfigFunction     ,"Maximum TR PW [uSec]")
     ADD_PARAM(PARAM_CONFIG  ,"max_tr_prf"      , configuration.max_tr_prf      , TYPE_UNSIGNED ,0      ,3000   ,callback_ConfigFunction     ,"Maximum TR frequency [Hz]")
     ADD_PARAM(PARAM_CONFIG  ,"max_qcw_pw"      , configuration.max_qcw_pw      , TYPE_UNSIGNED ,0      ,30000  ,callback_ConfigFunction     ,"Maximum QCW PW [uSec*10]")
-    ADD_PARAM(PARAM_CONFIG  ,"max_tr_current"  , configuration.max_tr_current  , TYPE_UNSIGNED ,0      ,1000   ,callback_ConfigFunction     ,"Maximum TR current [A]")
-    ADD_PARAM(PARAM_CONFIG  ,"min_tr_current"  , configuration.min_tr_current  , TYPE_UNSIGNED ,0      ,1000   ,callback_ConfigFunction     ,"Minimum TR current [A]")
-    ADD_PARAM(PARAM_CONFIG  ,"max_qcw_current" , configuration.max_qcw_current , TYPE_UNSIGNED ,0      ,1000   ,callback_ConfigFunction     ,"Maximum QCW current [A]")
+    ADD_PARAM(PARAM_CONFIG  ,"max_tr_current"  , configuration.max_tr_current  , TYPE_UNSIGNED ,0      ,2000   ,callback_ConfigFunction     ,"Maximum TR current [A]")
+    ADD_PARAM(PARAM_CONFIG  ,"min_tr_current"  , configuration.min_tr_current  , TYPE_UNSIGNED ,0      ,2000   ,callback_ConfigFunction     ,"Minimum TR current [A]")
+    ADD_PARAM(PARAM_CONFIG  ,"max_qcw_current" , configuration.max_qcw_current , TYPE_UNSIGNED ,0      ,2000   ,callback_ConfigFunction     ,"Maximum QCW current [A]")
     ADD_PARAM(PARAM_CONFIG  ,"temp1_max"       , configuration.temp1_max       , TYPE_UNSIGNED ,0      ,100    ,NULL                        ,"Max temperature 1 [*C]")
     ADD_PARAM(PARAM_CONFIG  ,"temp2_max"       , configuration.temp2_max       , TYPE_UNSIGNED ,0      ,100    ,NULL                        ,"Max temperature 2 [*C]")
     ADD_PARAM(PARAM_CONFIG  ,"ct1_ratio"       , configuration.ct1_ratio       , TYPE_UNSIGNED ,1      ,2000   ,callback_ConfigFunction     ,"CT1 [N Turns]")
@@ -200,6 +204,10 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,"autotune_s"      , configuration.autotune_s      , TYPE_UNSIGNED ,1      ,32     ,NULL                        ,"Number of samples for Autotune")
     ADD_PARAM(PARAM_CONFIG  ,"ud_name"         , configuration.ud_name         , TYPE_STRING   ,0      ,0      ,NULL                        ,"Name of the Coil [15 chars]")
     ADD_PARAM(PARAM_CONFIG  ,"ip_addr"         , configuration.ip_addr         , TYPE_STRING   ,0      ,0      ,NULL                        ,"IP-Adress of the UD3")
+    ADD_PARAM(PARAM_CONFIG  ,"ip_gateway"      , configuration.ip_gw           , TYPE_STRING   ,0      ,0      ,NULL                        ,"Gateway adress")
+    ADD_PARAM(PARAM_CONFIG  ,"ip_subnet"       , configuration.ip_subnet       , TYPE_STRING   ,0      ,0      ,NULL                        ,"Subnet")
+    ADD_PARAM(PARAM_CONFIG  ,"ip_mac"          , configuration.ip_mac          , TYPE_STRING   ,0      ,0      ,NULL                        ,"MAC adress")
+    ADD_PARAM(PARAM_CONFIG  ,"min_enable"      , configuration.minprot         , TYPE_UNSIGNED ,0      ,1      ,NULL                        ,"Use MIN-Protocol")
 };
 
 command_entry commands[] = {
@@ -414,6 +422,7 @@ uint8_t command_tterm(char *commandline, uint8_t port){
 
 
 uint8_t command_cls(char *commandline, uint8_t port) {
+    tsk_overlay_chart_start();
 	Term_Erase_Screen(port);
     send_string("  _   _   ___    ____    _____              _\r\n",port);
     send_string(" | | | | |   \\  |__ /   |_   _|  ___   ___ | |  __ _\r\n",port);
@@ -603,6 +612,12 @@ uint8_t command_udkill(char *commandline, uint8_t port) {
 
 
 uint8_t command_tune_p(char *commandline, uint8_t port) {
+    if(term_mode != TERM_MODE_VT100){
+        tsk_overlay_chart_stop();
+        send_chart_clear(port);
+        autotune_draw_d(port);
+    }
+    
     uint16_t f_res;
     int16_t f_fine_start;
     int16_t f_fine_end;
@@ -625,7 +640,8 @@ uint8_t command_tune_s(char *commandline, uint8_t port) {
 uint8_t command_tasks(char *commandline, uint8_t port) {
     #if configUSE_STATS_FORMATTING_FUNCTIONS && configUSE_TRACE_FACILITY && configGENERATE_RUN_TIME_STATS
         
-	    static char buff[600];
+	    //static char buff[600];
+        char buff[300];
 	    send_string("**********************************************\n\r", port);
 	    send_string("Task            State   Prio    Stack    Num\n\r", port);
 	    send_string("**********************************************\n\r", port);

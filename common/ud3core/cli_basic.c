@@ -9,6 +9,8 @@
 uint8_t EEPROM_Read_Row(uint8_t row, uint8_t * buffer);
 uint8_t EEPROM_1_Write_Row(uint8_t row, uint8_t * buffer);
 
+uint16_t byte_cnt;
+
 
 #define EEPROM_READ_BYTE(x) EEPROM_1_ReadByte(x)
 #define EEPROM_WRITE_ROW(x,y) EEPROM_1_Write(y,x)
@@ -247,6 +249,7 @@ uint8_t EEPROM_Read_Row(uint8_t row, uint8_t * buffer){
 }
 
 uint8_t EEPROM_buffer_write(uint8_t byte, uint16_t address, uint8_t flush){
+    byte_cnt++;
     static uint8_t eeprom_buffer[CY_EEPROM_SIZEOF_ROW];
     static uint16_t last_row = 0xFFFF;
     static uint8_t changed=0;
@@ -292,6 +295,7 @@ uint32_t djb_hash(const char* cp)
 }
 
 void EEPROM_write_conf(parameter_entry * params, uint8_t param_size, uint16_t eeprom_offset ,uint8_t port){
+    byte_cnt=0;
 	uint16_t count = eeprom_offset;
 	uint8_t change_flag = 0;
 	uint16_t change_count = 0;
@@ -341,7 +345,7 @@ void EEPROM_write_conf(parameter_entry * params, uint8_t param_size, uint16_t ee
 		EEPROM_buffer_write(0xEF, count,0);
         count++;
 		EEPROM_buffer_write(0x00, count,1);
-		sprintf(buffer, "%i / %i new config params written\r\n", change_count, param_count);
+		sprintf(buffer, "%i / %i new config params written. %i bytes from 2048 used.\r\n", change_count, param_count, byte_cnt);
         send_string(buffer, port);
 }
 
@@ -495,7 +499,7 @@ void send_char(uint8 c, uint8_t port) {
 		    break;
         case ETH:
             if (xETH_tx != NULL) {
-                xStreamBufferSend(xETH_tx,&c, 1,portMAX_DELAY);
+                xStreamBufferSend(xETH_tx,&c, 1,200 /portTICK_RATE_MS);
 		    }
             break;
                 
@@ -524,7 +528,7 @@ void send_string(char *data, uint8_t port) {
             break;
         case ETH:
             if (xETH_tx != NULL) {
-                xStreamBufferSend(xETH_tx,data, strlen(data),portMAX_DELAY);
+                xStreamBufferSend(xETH_tx,data, strlen(data),200 /portTICK_RATE_MS);
 		    }
             break;
         
@@ -552,7 +556,7 @@ void send_buffer(uint8_t *data, uint16_t len, uint8_t port) {
 		    break;
         case ETH:
             if (xETH_tx != NULL) {
-                xStreamBufferSend(xETH_tx,data, len,portMAX_DELAY);
+                xStreamBufferSend(xETH_tx,data, len,200 /portTICK_RATE_MS);
 		    }
             break;
 	}

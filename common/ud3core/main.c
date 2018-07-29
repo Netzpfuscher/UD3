@@ -47,6 +47,7 @@
 #include "tasks/tsk_uart.h"
 #include "tasks/tsk_usb.h"
 #include "tasks/tsk_eth.h"
+#include "tasks/tsk_min.h"
 
 void vMainTask(void *pvParameters);
 
@@ -83,7 +84,11 @@ int main() {
 	xSemaphoreGive(block_term[1]);
 
 	//Starting Tasks
-	tsk_uart_Start();       //Handles UART-Hardware and queues
+    if(configuration.minprot){
+        tsk_min_Start();        //Handles UART-Hardware and queues with MIN-Protocol
+    }else{
+	    tsk_uart_Start();       //Handles UART-Hardware and queues
+    }
 	tsk_usb_Start();        //Handles USB-Hardware and queues
     tsk_eth_Start();        //Handles Ethernet-Hardware and queues
 	tsk_midi_Start();       //MIDI synth

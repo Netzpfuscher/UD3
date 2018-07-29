@@ -24,12 +24,15 @@
 
 #include "cyapicallbacks.h"
 #include <cytypes.h>
-#include <stdarg.h>
 
 #include "tsk_uart.h"
 
 xTaskHandle tsk_uart_TaskHandle;
 uint8 tsk_uart_initVar = 0u;
+
+StreamBufferHandle_t xUART_rx;
+StreamBufferHandle_t xUART_tx;
+
 
 #if (1 == 1)
 xSemaphoreHandle tsk_uart_Mutex;
@@ -45,14 +48,14 @@ xSemaphoreHandle tx_Semaphore;
 #include "cli_common.h"
 #include "tsk_midi.h"
 #include "tsk_priority.h"
-//#include <stdio.h>
-#include "min.h"
-#include "min_id.h"
-#include "telemetry.h"
+#include <stdio.h>
+
+volatile uint8_t midi_count = 0;
+volatile uint8_t midiMsg[3];
 
 
-struct min_context min_ctx;
-
+#define STREAMBUFFER_RX_SIZE    512     //bytes
+#define STREAMBUFFER_TX_SIZE    1024    //bytes
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */
@@ -63,91 +66,46 @@ struct min_context min_ctx;
  */
 /* `#START USER_TASK_LOCAL_CODE` */
 
-#define LOCAL_UART_BUFFER_SIZE  128     //bytes
-#define CONNECTION_TIMEOUT      150     //ms
-#define CONNECTION_HEARTBEAT    50      //ms
-#define STREAMBUFFER_RX_SIZE    512     //bytes
-#define STREAMBUFFER_TX_SIZE    1024    //bytes
-
-uint16_t min_tx_space(uint8_t port){
-    return (UART_2_TX_BUFFER_SIZE - UART_2_GetTxBufferSize());
+CY_ISR(isr_uart_tx) {
+	if (tx_Semaphore != NULL) {
+		xSemaphoreGiveFromISR(tx_Semaphore, NULL);
+	}
 }
+CY_ISR(isr_uart_rx) {
+	char c;
+	while (UART_2_GetRxBufferSize()) {
+		c = UART_2_GetByte();
+		if (c & 0x80) {
+			midi_count = 1;
+			midiMsg[0] = c;
 
-void min_tx_byte(uint8_t port, uint8_t byte){
-    UART_2_PutChar(byte);
+			goto end;
+		} else if (!midi_count) {
+            xStreamBufferSendFromISR(xUART_rx, &c, 1, 0);
+			goto end;
+		}
+		switch (midi_count) {
+		case 1:
+			midiMsg[1] = c;
+			midi_count = 2;
+			break;
+		case 2:
+			midiMsg[2] = c;
+			midi_count = 0;
+			if (midiMsg[0] == 0xF0) {
+				if (midiMsg[1] == 0x0F) {
+					watchdog_reset_Control = 1;
+					watchdog_reset_Control = 0;
+					goto end;
+				}
+			}
+
+			USBMIDI_1_callbackLocalMidiEvent(0, midiMsg);
+			break;
+		}
+	end:;
+	}
 }
-
-uint32_t min_time_ms(void){
-  return (xTaskGetTickCount() * portTICK_RATE_MS);
-}
-
-void min_tx_start(uint8_t port){
-}
-void min_tx_finished(uint8_t port){
-}
-uint32_t reset;
-
-void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_payload, uint8_t port)
-{
-    switch(min_id){
-        case MIN_ID_WD:
-            watchdog_reset_Control = 1;
-			watchdog_reset_Control = 0;
-        break;
-        case MIN_ID_MIDI:
-            USBMIDI_1_callbackLocalMidiEvent(0, min_payload);
-        break;
-        case MIN_ID_TERM:
-            xStreamBufferSend( xUART_rx, min_payload, len_payload,0);
-        break;
-        case MIN_ID_RESET:
-            reset  = min_time_ms(); 
-            watchdog_reset_Control = 1;
-			watchdog_reset_Control = 0;
-        break;
-
-    }
-}
-
-void min_reset_wd(void){
-    static uint32_t last=0;
-    
-    if((min_time_ms()-reset)>CONNECTION_TIMEOUT){
-            min_transport_reset(&min_ctx,true);
-        }
-        
-        if((min_time_ms()-last) > CONNECTION_HEARTBEAT){
-            last = min_time_ms();
-            uint8_t byte=0;
-            min_send_frame(&min_ctx,MIN_ID_RESET,&byte,1);   
-        }
-    
-}
-
-
-void poll_UART(uint8_t* ptr){
-        
-    uint8_t bytes = UART_2_GetRxBufferSize();
-    uint8_t bytes_cnt=0;
-    if(bytes){
-        if (bytes > LOCAL_UART_BUFFER_SIZE) bytes = LOCAL_UART_BUFFER_SIZE;
-            while(bytes_cnt < bytes){
-                ptr[bytes_cnt] = UART_2_GetByte();
-                bytes_cnt++;
-            }
-    }
-    min_poll(&min_ctx, ptr, (uint8_t)bytes_cnt);
-    
-}
-
-void write_telemetry(struct min_context* ptr){
-    telemetry.dropped_frames = ptr->transport_fifo.dropped_frames;
-    telemetry.spurious_acks = ptr->transport_fifo.spurious_acks;
-    telemetry.sequence_mismatch_drop = ptr->transport_fifo.sequence_mismatch_drop;
-    telemetry.resets_received = ptr->transport_fifo.resets_received;
-    telemetry.min_frames_max = ptr->transport_fifo.n_frames_max;
-}
-
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */
@@ -162,11 +120,6 @@ void tsk_uart_TaskProc(void *pvParameters) {
 	 * the the section below.
 	 */
 	/* `#START TASK_VARIABLES` */
-    
-    uint8_t buffer[LOCAL_UART_BUFFER_SIZE];
-    uint8_t buffer_u[LOCAL_UART_BUFFER_SIZE];
-
-    uint8_t bytes_cnt=0;
 
 	/* `#END` */
 
@@ -175,47 +128,30 @@ void tsk_uart_TaskProc(void *pvParameters) {
 	 * in the task.
 	 */
 	/* `#START TASK_INIT_CODE` */
-    
     xUART_rx = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
-    xUART_tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,LOCAL_UART_BUFFER_SIZE/2);
+    xUART_tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,1);
 
 	tx_Semaphore = xSemaphoreCreateBinary();
-   
 
-    //Init MIN Protocol
-    min_init_context(&min_ctx, 0);
-    min_transport_reset(&min_ctx,1);
-        
+	uart_rx_StartEx(isr_uart_rx);
+	uart_tx_StartEx(isr_uart_tx);
+
+	char c;
+
 	/* `#END` */
+	//char buffer[30];
+	//uint16_t num;
+	//uint8_t cnt;
 
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
-        write_telemetry(&min_ctx);
-        poll_UART(buffer_u);
-        min_reset_wd();
-  
-        bytes_cnt = xStreamBufferReceive(xUART_tx, buffer, LOCAL_UART_BUFFER_SIZE, 10 / portTICK_RATE_MS);
-        if(bytes_cnt){
-            uint8_t res=0;
-           
-            res = min_queue_frame(&min_ctx,MIN_ID_TERM,buffer,bytes_cnt);
 
-            while(!res){
-                min_reset_wd();
-                
-                min_poll(&min_ctx, (uint8_t *)buffer_u, 0);
-                
-                vTaskDelay(5);
-                
-                poll_UART(buffer_u);
-                
-                vTaskDelay(5);
-                res = min_queue_frame(&min_ctx,MIN_ID_TERM,buffer,bytes_cnt);
-            }
-        }
-      
-        
-        
+		if (xStreamBufferReceive(xUART_tx, &c, 1, portMAX_DELAY)) {
+			UART_2_PutChar(c);
+			if (UART_2_GetTxBufferSize() == 4) {
+				xSemaphoreTake(tx_Semaphore, portMAX_DELAY);
+			}
+		}
 
 		/* `#END` */
 	}
@@ -240,7 +176,7 @@ void tsk_uart_Start(void) {
 	 	* Create the task and then leave. When FreeRTOS starts up the scheduler
 	 	* will call the task procedure and start execution of the task.
 	 	*/
-		xTaskCreate(tsk_uart_TaskProc, "UART-Svc", 256, NULL, PRIO_UART, &tsk_uart_TaskHandle);
+		xTaskCreate(tsk_uart_TaskProc, "UART-Svc", 128, NULL, PRIO_UART, &tsk_uart_TaskHandle);
 		tsk_uart_initVar = 1;
 	}
 }

@@ -35,6 +35,9 @@
 
 void tsk_overlay_TaskProc(void *pvParameters);
 
+void tsk_overlay_chart_stop();
+void tsk_overlay_chart_start();
+
 /*
  * Add user function prototypes in the below merge region to add user
  * functionality to the task definition.

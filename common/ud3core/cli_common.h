@@ -97,6 +97,10 @@ struct config_struct{
     uint8_t autotune_s;
     char ud_name[16];
     char ip_addr[16];
+    char ip_gw[16];
+    char ip_mac[18];
+    char ip_subnet[16];
+    uint8_t minprot;
 };
 typedef struct config_struct cli_config;
 

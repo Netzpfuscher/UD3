@@ -29,6 +29,7 @@
 #include "ZCDtoPWM.h"
 #include "autotune.h"
 #include "helper/brailledraw.h"
+#include "helper/teslaterm.h"
 #include "cli_common.h"
 #include "interrupter.h"
 #include "tasks/tsk_analog.h"
@@ -36,17 +37,37 @@
 #define FREQ 0
 #define CURR 1
 
+#define TTERM_HEIGHT 300L
+#define TTERM_WIDTH 400L
+
+#define OFFSET_X 50
+#define OFFSET_Y 50
+
+void autotune_draw_d(uint8_t port){
+    uint16_t f;
+    send_chart_line(OFFSET_X, TTERM_HEIGHT+OFFSET_Y, TTERM_WIDTH+OFFSET_X, TTERM_HEIGHT+OFFSET_Y, TT_COLOR_WHITE, port);
+    send_chart_line(OFFSET_X, OFFSET_Y, OFFSET_X, TTERM_HEIGHT+OFFSET_Y, TT_COLOR_WHITE, port);
+
+	for (f = 0; f <= TTERM_HEIGHT; f += 50) {
+		send_chart_line(OFFSET_X, f+OFFSET_Y, OFFSET_X-10, f+OFFSET_Y, TT_COLOR_WHITE, port);
+	}
+    
+	for (f = 0; f <= TTERM_WIDTH; f += 50) {
+		send_chart_line(OFFSET_X+f, TTERM_HEIGHT+OFFSET_Y, OFFSET_X+f, TTERM_HEIGHT +10+OFFSET_Y, TT_COLOR_WHITE, port);
+	}
+}
+
 
 
 uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint8_t channel, uint8_t delay, uint8_t port) {
     uint16 freq_response[128][2]; //[frequency value, amplitude]
 	CT_MUX_Select(channel);
 	//units for frequency are 0.1kHz (so 1000 = 100khz).  Pulsewidth in uS
-	uint8 f;
+	uint16 f;
 	uint8 n;
 	uint16 original_freq;
 	uint8 original_lock_cycles;
-	char buffer[60];
+	char buffer[100];
 	float current_buffer = 0;
 
 	braille_clear();
@@ -133,6 +154,29 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
     			send_string(buffer, port);
     		}
     	}
+    }else{
+       
+        float step_h = (float)TTERM_HEIGHT/128;
+        float step_w = (float)TTERM_WIDTH/128;
+        
+        float x_val_1;
+        float x_val_2;
+        
+        
+    	for (f = 0; f < 126; f++) {
+            x_val_1 = f*step_w;
+            x_val_2 = f+1*step_w;
+    		send_chart_line(x_val_1+OFFSET_X, ((TTERM_HEIGHT - 1) - ((TTERM_HEIGHT - 1) * freq_response[f][CURR]) / max_curr)+OFFSET_Y, x_val_2+OFFSET_X, ((TTERM_HEIGHT - 1) - ((TTERM_HEIGHT - 1) * freq_response[f+1][CURR]) / max_curr)+OFFSET_Y, TT_COLOR_GREEN, port);
+    	}
+        
+/*
+    	for (f = 0; f < 127; f++) {
+            x_val_1 = f*step_w;
+            sprintf(buffer, "%4i", freq_response[f][FREQ]);
+    		send_chart_text(x_val_1+OFFSET_X-30,OFFSET_Y,TT_COLOR_WHITE,8,buffer,port);
+    	}
+
+       */ 
     }
     
 	sprintf(buffer, "\r\nFound Peak at: %i00Hz\r\n", freq_response[max_curr_num][FREQ]);

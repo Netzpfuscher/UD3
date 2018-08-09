@@ -32,9 +32,6 @@
 xTaskHandle tsk_midi_TaskHandle;
 uint8 tsk_midi_initVar = 0u;
 
-#if (1 == 1)
-xSemaphoreHandle tsk_midi_Mutex;
-#endif
 
 /* ------------------------------------------------------------------------ */
 /*
@@ -461,15 +458,12 @@ void tsk_midi_Start(void) {
 	/* `#END` */
 
 	if (tsk_midi_initVar != 1) {
-#if (1 == 1)
-		tsk_midi_Mutex = xSemaphoreCreateMutex();
-#endif
 
-		/*
+        /*
 	 	* Create the task and then leave. When FreeRTOS starts up the scheduler
 	 	* will call the task procedure and start execution of the task.
 	 	*/
-		xTaskCreate(tsk_midi_TaskProc, "MIDI-Svc", 512, NULL, PRIO_MIDI, &tsk_midi_TaskHandle);
+		xTaskCreate(tsk_midi_TaskProc, "MIDI-Svc", 160, NULL, PRIO_MIDI, &tsk_midi_TaskHandle);
 		tsk_midi_initVar = 1;
 	}
 }

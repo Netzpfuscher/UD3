@@ -40,8 +40,8 @@
 #define TTERM_HEIGHT 300L
 #define TTERM_WIDTH 400L
 
-#define OFFSET_X 50
-#define OFFSET_Y 50
+#define OFFSET_X 20
+#define OFFSET_Y 20
 
 void autotune_draw_d(uint8_t port){
     uint16_t f;
@@ -51,10 +51,7 @@ void autotune_draw_d(uint8_t port){
 	for (f = 0; f <= TTERM_HEIGHT; f += 50) {
 		send_chart_line(OFFSET_X, f+OFFSET_Y, OFFSET_X-10, f+OFFSET_Y, TT_COLOR_WHITE, port);
 	}
-    
-	for (f = 0; f <= TTERM_WIDTH; f += 50) {
-		send_chart_line(OFFSET_X+f, TTERM_HEIGHT+OFFSET_Y, OFFSET_X+f, TTERM_HEIGHT +10+OFFSET_Y, TT_COLOR_WHITE, port);
-	}
+
 }
 
 
@@ -155,28 +152,34 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
     		}
     	}
     }else{
-       
-        float step_h = (float)TTERM_HEIGHT/128;
+
         float step_w = (float)TTERM_WIDTH/128;
         
         float x_val_1;
         float x_val_2;
         
         
-    	for (f = 0; f < 126; f++) {
+    	for (f = 0; f < 127; f++) {
             x_val_1 = f*step_w;
-            x_val_2 = f+1*step_w;
+            x_val_2 = (f+1)*step_w;
     		send_chart_line(x_val_1+OFFSET_X, ((TTERM_HEIGHT - 1) - ((TTERM_HEIGHT - 1) * freq_response[f][CURR]) / max_curr)+OFFSET_Y, x_val_2+OFFSET_X, ((TTERM_HEIGHT - 1) - ((TTERM_HEIGHT - 1) * freq_response[f+1][CURR]) / max_curr)+OFFSET_Y, TT_COLOR_GREEN, port);
     	}
         
-/*
-    	for (f = 0; f < 127; f++) {
-            x_val_1 = f*step_w;
-            sprintf(buffer, "%4i", freq_response[f][FREQ]);
-    		send_chart_text(x_val_1+OFFSET_X-30,OFFSET_Y,TT_COLOR_WHITE,8,buffer,port);
-    	}
 
-       */ 
+    	for (f = 0; f < 128; f+=8) {
+            x_val_1 = f*step_w;
+            sprintf(buffer, "%i,%i", freq_response[f][FREQ]/10,freq_response[f][FREQ]%10);
+    		send_chart_text(x_val_1+OFFSET_X,OFFSET_Y+TTERM_HEIGHT+50,TT_COLOR_WHITE,8,buffer,port);
+            send_chart_line(x_val_1+OFFSET_X, TTERM_HEIGHT+OFFSET_Y, x_val_1+OFFSET_X, TTERM_HEIGHT +10+OFFSET_Y, TT_COLOR_WHITE, port);
+    	}
+        f=127;
+        x_val_1 = f*step_w;
+        sprintf(buffer, "%i,%i kHz", freq_response[f][FREQ]/10,freq_response[f][FREQ]%10);
+    	send_chart_text(x_val_1+OFFSET_X,OFFSET_Y+TTERM_HEIGHT+50,TT_COLOR_WHITE,8,buffer,port);
+        send_chart_line(x_val_1+OFFSET_X, TTERM_HEIGHT+OFFSET_Y, x_val_1+OFFSET_X, TTERM_HEIGHT +10+OFFSET_Y, TT_COLOR_WHITE, port);
+        
+        autotune_draw_d(port);
+        
     }
     
 	sprintf(buffer, "\r\nFound Peak at: %i00Hz\r\n", freq_response[max_curr_num][FREQ]);

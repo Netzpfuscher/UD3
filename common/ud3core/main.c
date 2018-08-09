@@ -23,9 +23,6 @@
 */
 
 /* RTOS includes. */
-
-
-
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
@@ -78,10 +75,12 @@ int main() {
 	configure_ZCD_to_PWM();
 
 	rx_blink_Control = 1;
-	block_term[0] = xSemaphoreCreateBinary(); //Blocking semaphore for overlay Display
-	block_term[1] = xSemaphoreCreateBinary(); //Blocking semaphore for overlay Display
-	xSemaphoreGive(block_term[0]);
-	xSemaphoreGive(block_term[1]);
+	block_term[SERIAL] = xSemaphoreCreateBinary(); //Blocking semaphore for overlay Display
+	block_term[USB] = xSemaphoreCreateBinary();    //Blocking semaphore for overlay Display
+    block_term[ETH] = xSemaphoreCreateBinary();    //Blocking semaphore for overlay Display
+	xSemaphoreGive(block_term[SERIAL]);
+	xSemaphoreGive(block_term[USB]);
+    xSemaphoreGive(block_term[ETH]);
 
 	//Starting Tasks
     if(configuration.minprot){
@@ -89,8 +88,15 @@ int main() {
     }else{
 	    tsk_uart_Start();       //Handles UART-Hardware and queues
     }
+    
 	tsk_usb_Start();        //Handles USB-Hardware and queues
-    tsk_eth_Start();        //Handles Ethernet-Hardware and queues
+    
+
+    if(strcmp(configuration.ip_addr,"NULL")){
+        tsk_eth_Start();        //Handles Ethernet-Hardware and queues
+    }
+
+    
 	tsk_midi_Start();       //MIDI synth
 	tsk_cli_Start();		//Commandline interface
 	tsk_analog_Start();		//Reads bus voltage and currents

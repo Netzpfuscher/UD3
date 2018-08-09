@@ -31,9 +31,6 @@
 xTaskHandle tsk_eth_TaskHandle;
 uint8 tsk_eth_initVar = 0u;
 
-#if (1 == 1)
-xSemaphoreHandle tsk_eth_Mutex;
-#endif
 
 /* ------------------------------------------------------------------------ */
 /*
@@ -233,15 +230,12 @@ void tsk_eth_Start(void) {
 	/* `#END` */
 
 	if (tsk_eth_initVar != 1) {
-#if (1 == 1)
-		tsk_eth_Mutex = xSemaphoreCreateMutex();
-#endif
 
 		/*
 	 	* Create the task and then leave. When FreeRTOS starts up the scheduler
 	 	* will call the task procedure and start execution of the task.
 	 	*/
-		xTaskCreate(tsk_eth_TaskProc, "ETH-Svc", 256, NULL, PRIO_ETH, &tsk_eth_TaskHandle);
+		xTaskCreate(tsk_eth_TaskProc, "ETH-Svc", 128, NULL, PRIO_ETH, &tsk_eth_TaskHandle);
 		tsk_eth_initVar = 1;
 	}
 }

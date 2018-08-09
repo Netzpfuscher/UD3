@@ -40,7 +40,6 @@ void initialize_charging(void) {
 		SLRPWM_Start();
 		if (configuration.slr_fswitch == 0) {
 			configuration.slr_fswitch = 500; //just in case it wasnt ever programmed
-													 //store_setting(SET_SLR_FSWITCH, config.SLR_Fswitch);
 		}
 		uint16 x;
 		x = (320000 / (configuration.slr_fswitch));
@@ -53,7 +52,6 @@ void initialize_charging(void) {
 	final_vbus = 0;
 	charging_counter = 0;
 }
-char buf[100];
 
 void control_precharge(void) { //this gets called from analogs.c when the ADC data set is ready, 8khz rep rate
 	uint32 v_threshold;

@@ -22,6 +22,9 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#ifndef CLI_COMMON_H
+#define CLI_COMMON_H
+
 #include <device.h>
 #include "cli_basic.h"
 
@@ -39,13 +42,6 @@
 #define TERM_MODE_VT100 0xFF
 
 
-#define fan_controller 1  //enables fan controller
-#define auto_charge_bus 0 //enables auto charging of DC bus on start up (no wait for command)
-#define auto_charge_battery 0
-#define ext_trig_runs_CW 0 //special test mode where holding the trigger runs the coil in CW mode
-
-
-
 uint8_t input_handle();
 
 extern uint8_t term_mode;
@@ -57,7 +53,6 @@ void eeprom_load();
 void initialize_term(void);
 void task_terminal_overlay(void);
 uint8_t command_cls(char *commandline, uint8_t port);
-///Help
 void task_terminal();
 
 extern parameter_entry tparameters[];
@@ -123,3 +118,4 @@ typedef struct parameter_struct cli_parameter;
 extern cli_config configuration;
 extern cli_parameter param;
 
+#endif

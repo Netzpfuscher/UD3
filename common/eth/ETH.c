@@ -44,6 +44,9 @@
 
 #include <ETH_CSN.h>
 #include <SPIM0.h>
+#include "FreeRTOS.h"
+#include "task.h"
+
 
 #if defined (CY_SCB_SPIM0_H)
 	#include <SPIM0_SPI_UART.h>

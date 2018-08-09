@@ -39,8 +39,6 @@
 #include "cyapicallbacks.h"
 #include <cytypes.h>
 
-
-
 #include "tasks/tsk_analog.h"
 #include "tasks/tsk_overlay.h"
 #include "tasks/tsk_priority.h"
@@ -79,9 +77,9 @@ uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, uint8_t p
 uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, uint8_t port);
 uint8_t callback_OfftimeFunction(parameter_entry * params, uint8_t index, uint8_t port);
 
-uint8_t commandHelp(char *commandline, uint8_t port);
-uint8_t commandGet(char *commandline, uint8_t port);
-uint8_t commandSet(char *commandline, uint8_t port);
+uint8_t command_help(char *commandline, uint8_t port);
+uint8_t command_get(char *commandline, uint8_t port);
+uint8_t command_set(char *commandline, uint8_t port);
 uint8_t command_tr(char *commandline, uint8_t port);
 uint8_t command_udkill(char *commandline, uint8_t port);
 uint8_t command_eprom(char *commandline, uint8_t port);
@@ -106,12 +104,17 @@ uint8_t term_mode = TERM_MODE_VT100;
 
 uint8_t tr_running = 0;
 uint8_t burst_state = 0;
+
 TimerHandle_t xQCW_Timer;
 TimerHandle_t xBurst_Timer;
 
 cli_config configuration;
 cli_parameter param;
 
+
+/*****************************************************************************
+* Initializes parameters with default values
+******************************************************************************/
 void init_config(){
     configuration.watchdog = 1;
     configuration.max_tr_pw = 1000;
@@ -162,6 +165,10 @@ void init_config(){
 }
 
 // clang-format off
+
+/*****************************************************************************
+* Parameter struct
+******************************************************************************/
 parameter_entry confparam[] = {
     //        Parameter Type,"Text   "         , Value ptr                     , Type          ,Min    ,Max    ,Callback Function           ,Help text
     ADD_PARAM(PARAM_DEFAULT ,"pw"              , param.pw                      , TYPE_UNSIGNED ,0      ,800    ,callback_TRFunction         ,"Pulsewidth")
@@ -203,25 +210,28 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,"ps_scheme"       , configuration.ps_scheme       , TYPE_UNSIGNED ,0      ,4      ,callback_ConfigFunction     ,"Power supply sheme")
     ADD_PARAM(PARAM_CONFIG  ,"autotune_s"      , configuration.autotune_s      , TYPE_UNSIGNED ,1      ,32     ,NULL                        ,"Number of samples for Autotune")
     ADD_PARAM(PARAM_CONFIG  ,"ud_name"         , configuration.ud_name         , TYPE_STRING   ,0      ,0      ,NULL                        ,"Name of the Coil [15 chars]")
-    ADD_PARAM(PARAM_CONFIG  ,"ip_addr"         , configuration.ip_addr         , TYPE_STRING   ,0      ,0      ,NULL                        ,"IP-Adress of the UD3")
+    ADD_PARAM(PARAM_CONFIG  ,"ip_addr"         , configuration.ip_addr         , TYPE_STRING   ,0      ,0      ,NULL                        ,"IP-Adress of the UD3 (NULL for eth disable)")
     ADD_PARAM(PARAM_CONFIG  ,"ip_gateway"      , configuration.ip_gw           , TYPE_STRING   ,0      ,0      ,NULL                        ,"Gateway adress")
     ADD_PARAM(PARAM_CONFIG  ,"ip_subnet"       , configuration.ip_subnet       , TYPE_STRING   ,0      ,0      ,NULL                        ,"Subnet")
     ADD_PARAM(PARAM_CONFIG  ,"ip_mac"          , configuration.ip_mac          , TYPE_STRING   ,0      ,0      ,NULL                        ,"MAC adress")
     ADD_PARAM(PARAM_CONFIG  ,"min_enable"      , configuration.minprot         , TYPE_UNSIGNED ,0      ,1      ,NULL                        ,"Use MIN-Protocol")
 };
 
+/*****************************************************************************
+* Command struct
+******************************************************************************/
 command_entry commands[] = {
     ADD_COMMAND("bootloader"    ,command_bootloader     ,"Start bootloader")
     ADD_COMMAND("bus"           ,command_bus            ,"Bus [on/off]")
     ADD_COMMAND("cls"		    ,command_cls            ,"Clear screen")
     ADD_COMMAND("eeprom"	    ,command_eprom          ,"Save/Load config [load/save]")
-	ADD_COMMAND("get"		    ,commandGet             ,"Usage get [param]")
-    ADD_COMMAND("help"          ,commandHelp            ,"This text")
+	ADD_COMMAND("get"		    ,command_get             ,"Usage get [param]")
+    ADD_COMMAND("help"          ,command_help            ,"This text")
     ADD_COMMAND("kill"		    ,command_udkill         ,"Kills all UD Coils") 
     ADD_COMMAND("load_default"  ,command_load_default   ,"Loads the default parameters")
     ADD_COMMAND("qcw"           ,command_qcw            ,"QCW [start/stop]")
     ADD_COMMAND("reset"         ,command_reset          ,"Resets UD3")
-	ADD_COMMAND("set"		    ,commandSet             ,"Usage set [param] [value]")
+	ADD_COMMAND("set"		    ,command_set             ,"Usage set [param] [value]")
     ADD_COMMAND("status"	    ,command_status         ,"Displays coil status")
     ADD_COMMAND("tasks"	        ,command_tasks          ,"Show running Tasks")
     ADD_COMMAND("tr"		    ,command_tr             ,"Transient [start/stop]")
@@ -231,12 +241,18 @@ command_entry commands[] = {
     ADD_COMMAND("minstat"	    ,command_minstat        ,"Prints the min statistics")
 };
 // clang-format on
-    
+
+/*****************************************************************************
+* Callback if the offtime parameter is changed
+******************************************************************************/
 uint8_t callback_OfftimeFunction(parameter_entry * params, uint8_t index, uint8_t port){
     Offtime_WritePeriod(param.offtime);
     return 1;
 }
 
+/*****************************************************************************
+* Callback if a autotune parameter is changed
+******************************************************************************/
 uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, uint8_t port) {
     if(param.tune_start >= param.tune_end){
         send_string("ERROR: tune_start > tune_end", port);
@@ -246,7 +262,10 @@ uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, uint8_t p
 }
 
 
-
+/*****************************************************************************
+* Callback if a transient mode parameter is changed
+* Updates the interrupter hardware
+******************************************************************************/
 uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, uint8_t port) {
     
 	interrupter.pw = param.pw;
@@ -257,7 +276,9 @@ uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, uint8_t por
 	return 1;
 }
 
-
+/*****************************************************************************
+* Callback if a configuration relevant parameter is changed
+******************************************************************************/
 uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, uint8_t port){
     uint8 sfflag = system_fault_Read();
     system_fault_Control = 0; //halt tesla coil operation during updates!
@@ -268,11 +289,17 @@ uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, uint8_t
     return 1;
 }
 
+/*****************************************************************************
+* Default function if a parameter is changes (not used)
+******************************************************************************/
 uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, uint8_t port){
     
     return 1;
 }
 
+/*****************************************************************************
+* Switches the bus on/off
+******************************************************************************/
 uint8_t command_bus(char *commandline, uint8_t port) {
     SKIP_SPACE(commandline);
     HELP_TEXT("Usage: bus [on|off]\r\n");
@@ -289,28 +316,35 @@ uint8_t command_bus(char *commandline, uint8_t port) {
 	return 1;
 }
 
+/*****************************************************************************
+* Loads the default parametes out of flash
+******************************************************************************/
 uint8_t command_load_default(char *commandline, uint8_t port) {
     send_string("Default parameters loaded\r\n", port);
     init_config();
     return 1;
 }
 
+/*****************************************************************************
+* Reset of the controller
+******************************************************************************/
 uint8_t command_reset(char *commandline, uint8_t port){
     CySoftwareReset();
     return 1;
 }
 
+/*****************************************************************************
+* Task handles for the overlay tasks
+******************************************************************************/
 xTaskHandle overlay_Serial_TaskHandle;
 xTaskHandle overlay_USB_TaskHandle;
 xTaskHandle overlay_ETH_TaskHandle;
 
-uint8_t command_status(char *commandline, uint8_t port) {
-	SKIP_SPACE(commandline);
-	HELP_TEXT("Usage: status [start|stop]\r\n");
-
-    
-	if (strcmp(commandline, "start") == 0) {
-		switch (port) {
+/*****************************************************************************
+* Helper function for spawning the overlay task
+******************************************************************************/
+void start_overlay_task(uint8_t port){
+    switch (port) {
 		case SERIAL:
 			if (overlay_Serial_TaskHandle == NULL) {
 				xTaskCreate(tsk_overlay_TaskProc, "Overl_S", 256, (void *)SERIAL, PRIO_OVERLAY, &overlay_Serial_TaskHandle);
@@ -322,14 +356,19 @@ uint8_t command_status(char *commandline, uint8_t port) {
 			}
 			break;
         case ETH:
-			if (overlay_USB_TaskHandle == NULL) {
+			if (overlay_ETH_TaskHandle == NULL) {
 				xTaskCreate(tsk_overlay_TaskProc, "Overl_E", 256, (void *)ETH, PRIO_OVERLAY, &overlay_ETH_TaskHandle);
 			}
 			break;
 		}
-	}
-	if (strcmp(commandline, "stop") == 0) {
-		switch (port) {
+}
+
+
+/*****************************************************************************
+* Helper function for killing the overlay task
+******************************************************************************/
+void stop_overlay_task(uint8_t port){
+    switch (port) {
 		case SERIAL:
 			if (overlay_Serial_TaskHandle != NULL) {
 				vTaskDelete(overlay_Serial_TaskHandle);
@@ -349,11 +388,30 @@ uint8_t command_status(char *commandline, uint8_t port) {
 			}
 			break;
 		}
+}
+
+/*****************************************************************************
+* 
+******************************************************************************/
+uint8_t command_status(char *commandline, uint8_t port) {
+	SKIP_SPACE(commandline);
+	HELP_TEXT("Usage: status [start|stop]\r\n");
+
+    
+	if (strcmp(commandline, "start") == 0) {
+		start_overlay_task(port);
+	}
+	if (strcmp(commandline, "stop") == 0) {
+		stop_overlay_task(port);
 	}
 
 	return 1;
 }
 
+/*****************************************************************************
+* Initializes the teslaterm telemetry
+* Spawns the overlay task for telemetry stream generation
+******************************************************************************/
 uint8_t command_tterm(char *commandline, uint8_t port){
     SKIP_SPACE(commandline);
     HELP_TEXT("Usage: status [start|stop]\r\n");
@@ -373,54 +431,23 @@ uint8_t command_tterm(char *commandline, uint8_t port){
         send_chart_config(2, CHART2_MIN, CHART2_MAX, CHART2_OFFSET, CHART2_UNIT, CHART2_NAME, port);
         send_chart_config(3, CHART3_MIN, CHART3_MAX, CHART3_OFFSET, CHART3_UNIT, CHART3_NAME, port);
         
-        switch (port) {
-		case SERIAL:
-			if (overlay_Serial_TaskHandle == NULL) {
-				xTaskCreate(tsk_overlay_TaskProc, "Overl_S", 256, (void *)SERIAL, PRIO_OVERLAY, &overlay_Serial_TaskHandle);
-			}
-			break;
-		case USB:
-			if (overlay_USB_TaskHandle == NULL) {
-				xTaskCreate(tsk_overlay_TaskProc, "Overl_U", 256, (void *)USB, PRIO_OVERLAY, &overlay_USB_TaskHandle);
-			}
-			break;
-        case ETH:
-			if (overlay_ETH_TaskHandle == NULL) {
-				xTaskCreate(tsk_overlay_TaskProc, "Overl_E", 256, (void *)ETH, PRIO_OVERLAY, &overlay_ETH_TaskHandle);
-			}
-			break;
-		}
-
+        
+        start_overlay_task(port);
+   
         term_mode = port;
 	}
 	if (strcmp(commandline, "stop") == 0) {
         term_mode = TERM_MODE_VT100;
-        switch (port) {
-		case SERIAL:
-			if (overlay_Serial_TaskHandle != NULL) {
-				vTaskDelete(overlay_Serial_TaskHandle);
-				overlay_Serial_TaskHandle = NULL;
-			}
-			break;
-		case USB:
-			if (overlay_USB_TaskHandle != NULL) {
-				vTaskDelete(overlay_USB_TaskHandle);
-				overlay_USB_TaskHandle = NULL;
-			}
-			break;
-        case ETH:
-			if (overlay_ETH_TaskHandle != NULL) {
-				vTaskDelete(overlay_ETH_TaskHandle);
-				overlay_ETH_TaskHandle = NULL;
-			}
-			break;
-		}
+        stop_overlay_task(port);
+
 	} 
     
     return 1;
 }
 
-
+/*****************************************************************************
+* Clears the terminal screen and displays the logo
+******************************************************************************/
 uint8_t command_cls(char *commandline, uint8_t port) {
     tsk_overlay_chart_start();
 	Term_Erase_Screen(port);
@@ -434,6 +461,9 @@ uint8_t command_cls(char *commandline, uint8_t port) {
 	return 1;
 }
 
+/*****************************************************************************
+* Displays the statistics of the min protocol
+******************************************************************************/
 uint8_t command_minstat(char *commandline, uint8_t port){
     char buffer[60];
     sprintf(buffer,"Dropped frames        : %lu\r\n",telemetry.dropped_frames);
@@ -449,6 +479,9 @@ uint8_t command_minstat(char *commandline, uint8_t port){
     return 1; 
 }
 
+/*****************************************************************************
+* Kicks the controller into the bootloader
+******************************************************************************/
 uint8_t command_bootloader(char *commandline, uint8_t port) {
 	Bootloadable_Load();
 	return 1;
@@ -457,6 +490,9 @@ uint8_t command_bootloader(char *commandline, uint8_t port) {
 #define BURST_ON 0
 #define BURST_OFF 1
 
+/*****************************************************************************
+* Timer callback for burst mode
+******************************************************************************/
 void vBurst_Timer_Callback(TimerHandle_t xTimer){
     if(burst_state == BURST_ON){
         interrupter.pw = 0;
@@ -471,6 +507,10 @@ void vBurst_Timer_Callback(TimerHandle_t xTimer){
     }          
 }
 
+/*****************************************************************************
+* starts or stops the transient mode (classic mode)
+* also spawns a timer for the burst mode.
+******************************************************************************/
 uint8_t command_tr(char *commandline, uint8_t port) {
     SKIP_SPACE(commandline);
     HELP_TEXT("Usage: tr [start|stop]\r\n");
@@ -522,6 +562,10 @@ uint8_t command_tr(char *commandline, uint8_t port) {
 	}
 	return 1;
 }
+
+/*****************************************************************************
+* Timer callback for the QCW autofire
+******************************************************************************/
 void vQCW_Timer_Callback(TimerHandle_t xTimer){
     if(!qcw_reg){
          	ramp.modulation_value = 20;
@@ -532,6 +576,9 @@ void vQCW_Timer_Callback(TimerHandle_t xTimer){
     xTimerChangePeriod( xTimer, param.qcw_repeat / portTICK_PERIOD_MS, 0 );                                                   
 }
 
+/*****************************************************************************
+* starts the QCW mode. Spawns a timer for the automatic QCW pulses.
+******************************************************************************/
 uint8_t command_qcw(char *commandline, uint8_t port) {
     SKIP_SPACE(commandline);
     HELP_TEXT("Usage: qcw [start|stop]\r\n");
@@ -572,6 +619,9 @@ uint8_t command_qcw(char *commandline, uint8_t port) {
 	return 1;
 }
 
+/*****************************************************************************
+* sets the kill bit, stops the interrupter and switches the bus off
+******************************************************************************/
 uint8_t command_udkill(char *commandline, uint8_t port) {
     SKIP_SPACE(commandline);
     HELP_TEXT("Usage: kill [set|reset|get]\r\n");
@@ -610,33 +660,34 @@ uint8_t command_udkill(char *commandline, uint8_t port) {
 	return 0;
 }
 
-
+/*****************************************************************************
+* commands a frequency sweep for the primary coil. It searches for a peak
+* and makes a second run with +-6kHz around the peak
+******************************************************************************/
 uint8_t command_tune_p(char *commandline, uint8_t port) {
     if(term_mode != TERM_MODE_VT100){
         tsk_overlay_chart_stop();
         send_chart_clear(port);
-        autotune_draw_d(port);
+        
     }
-    
-    uint16_t f_res;
-    int16_t f_fine_start;
-    int16_t f_fine_end;
-    
-	f_res = run_adc_sweep(param.tune_start, param.tune_end, param.tune_pw, CT_PRIMARY, param.tune_delay, port);
-    f_fine_start = f_res -60;
-    f_fine_end = f_res +60;
-    if(f_fine_start < param.tune_start) f_fine_start = param.tune_start;
-    if(f_fine_end > param.tune_end) f_fine_end = param.tune_end;
-    
-    f_res = run_adc_sweep(f_fine_start, f_fine_end, param.tune_pw, CT_PRIMARY, param.tune_delay, port);
+
+	run_adc_sweep(param.tune_start, param.tune_end, param.tune_pw, CT_PRIMARY, param.tune_delay, port);
+
 	return 0;
 }
 
+/*****************************************************************************
+* commands a frequency sweep for the secondary coil
+******************************************************************************/
 uint8_t command_tune_s(char *commandline, uint8_t port) {
 	run_adc_sweep(param.tune_start, param.tune_end, param.tune_pw, CT_SECONDARY, param.tune_delay, port);
 	return 0;
 }
 
+/*****************************************************************************
+* Prints the task list needs to be enabled in FreeRTOSConfig.h
+* only use it for debugging reasons
+******************************************************************************/
 uint8_t command_tasks(char *commandline, uint8_t port) {
     #if configUSE_STATS_FORMATTING_FUNCTIONS && configUSE_TRACE_FACILITY && configGENERATE_RUN_TIME_STATS
         
@@ -667,7 +718,10 @@ uint8_t command_tasks(char *commandline, uint8_t port) {
 	
 }
 
-uint8_t commandGet(char *commandline, uint8_t port) {
+/*****************************************************************************
+* Get a value from a parameter or print all parameters
+******************************************************************************/
+uint8_t command_get(char *commandline, uint8_t port) {
 	SKIP_SPACE(commandline);
     
 	uint8_t current_parameter;
@@ -692,12 +746,12 @@ uint8_t commandGet(char *commandline, uint8_t port) {
 	return 0;
 }
 
-uint8_t commandSet(char *commandline, uint8_t port) {
-	
+/*****************************************************************************
+* Set a new value to a parameter
+******************************************************************************/
+uint8_t command_set(char *commandline, uint8_t port) {
+	SKIP_SPACE(commandline);
 	char *param_value;
-
-	if (*commandline == ' ')
-		commandline++;
 
 	if (commandline == NULL) {
 		if (!port)
@@ -767,9 +821,9 @@ void eeprom_load(){
    EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,SERIAL); 
 }
 
-/********************************************
+/*****************************************************************************
 * Saves confparams to eeprom
-*********************************************/
+******************************************************************************/
 uint8_t command_eprom(char *commandline, uint8_t port) {
 	SKIP_SPACE(commandline);
     HELP_TEXT("Usage: eprom [load|save]\r\n");
@@ -795,10 +849,10 @@ uint8_t command_eprom(char *commandline, uint8_t port) {
 	return 1;
 }
 
-/********************************************
+/*****************************************************************************
 * Prints the help text
-*********************************************/
-uint8_t commandHelp(char *commandline, uint8_t port) {
+******************************************************************************/
+uint8_t command_help(char *commandline, uint8_t port) {
 	UNUSED_VARIABLE(commandline);
 	uint8_t current_command;
 	send_string("\r\nCommands:\r\n", port);
@@ -856,9 +910,9 @@ uint8_t commandHelp(char *commandline, uint8_t port) {
 }
 
 
-/********************************************
+/*****************************************************************************
 * Interprets the Input String
-*********************************************/
+******************************************************************************/
 void nt_interpret(const char *text, uint8_t port) {
 	uint8_t current_command;
 	for (current_command = 0; current_command < (sizeof(commands) / sizeof(command_entry)); current_command++) {

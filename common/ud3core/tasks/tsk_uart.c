@@ -33,11 +33,8 @@ uint8 tsk_uart_initVar = 0u;
 StreamBufferHandle_t xUART_rx;
 StreamBufferHandle_t xUART_tx;
 
-
-#if (1 == 1)
-xSemaphoreHandle tsk_uart_Mutex;
 xSemaphoreHandle tx_Semaphore;
-#endif
+
 
 /* ------------------------------------------------------------------------ */
 /*
@@ -168,9 +165,6 @@ void tsk_uart_Start(void) {
 	/* `#END` */
 
 	if (tsk_uart_initVar != 1) {
-#if (1 == 1)
-		tsk_uart_Mutex = xSemaphoreCreateMutex();
-#endif
 
 		/*
 	 	* Create the task and then leave. When FreeRTOS starts up the scheduler

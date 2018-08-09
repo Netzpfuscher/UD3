@@ -40,9 +40,6 @@ SemaphoreHandle_t adc_ready_Semaphore;
 
 xQueueHandle adc_data;
 
-#if (1 == 1)
-xSemaphoreHandle tsk_analog_Mutex;
-#endif
 
 /* ------------------------------------------------------------------------ */
 /*
@@ -286,9 +283,6 @@ void tsk_analog_Start(void) {
 	/* `#END` */
 
 	if (tsk_analog_initVar != 1) {
-#if (1 == 1)
-		tsk_analog_Mutex = xSemaphoreCreateMutex();
-#endif
 
 		/*
 	 	* Create the task and then leave. When FreeRTOS starts up the scheduler

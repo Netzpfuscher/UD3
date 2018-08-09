@@ -1,3 +1,5 @@
+#ifndef CLI_BASIC_H
+#define CLI_BASIC_H
 
 #include <stdint.h>
 
@@ -64,3 +66,5 @@ void send_string(char *data, uint8_t port);
 void send_buffer(uint8_t *data, uint16_t len, uint8_t port);
 uint8_t term_config_changed(void);
 uint32_t djb_hash(const char* cp);
+
+#endif

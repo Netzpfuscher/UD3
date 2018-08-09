@@ -38,12 +38,6 @@ xTaskHandle USB_Terminal_TaskHandle;
 xTaskHandle ETH_Terminal_TaskHandle;
 uint8 tsk_cli_initVar = 0u;
 
-#if (1 == 1)
-xSemaphoreHandle UART_Terminal_Mutex;
-xSemaphoreHandle USB_Terminal_Mutex;
-xSemaphoreHandle ETH_Terminal_Mutex;
-#endif
-
 /* ------------------------------------------------------------------------ */
 /*
  * Place user included headers, defines and task global data in the
@@ -273,19 +267,14 @@ void tsk_cli_Start(void) {
 /* `#END` */
 
 	if (tsk_cli_initVar != 1) {
-#if (1 == 1)
-		UART_Terminal_Mutex = xSemaphoreCreateMutex();
-		USB_Terminal_Mutex = xSemaphoreCreateMutex();
-        ETH_Terminal_Mutex = xSemaphoreCreateMutex();
-#endif
 
 		/*
 	 	* Create the task and then leave. When FreeRTOS starts up the scheduler
 	 	* will call the task procedure and start execution of the task.
 	 	*/
-		xTaskCreate(tsk_cli_TaskProc, "UART-CLI", 512, (void *)SERIAL, PRIO_TERMINAL, &UART_Terminal_TaskHandle);
-		xTaskCreate(tsk_cli_TaskProc, "USB-CLI", 512, (void *)USB, PRIO_TERMINAL, &USB_Terminal_TaskHandle);
-        xTaskCreate(tsk_cli_TaskProc, "ETH-CLI", 512, (void *)ETH, PRIO_TERMINAL, &ETH_Terminal_TaskHandle);
+		xTaskCreate(tsk_cli_TaskProc, "UART-CLI", 576, (void *)SERIAL, PRIO_TERMINAL, &UART_Terminal_TaskHandle);
+		xTaskCreate(tsk_cli_TaskProc, "USB-CLI", 576, (void *)USB, PRIO_TERMINAL, &USB_Terminal_TaskHandle);
+        xTaskCreate(tsk_cli_TaskProc, "ETH-CLI", 576, (void *)ETH, PRIO_TERMINAL, &ETH_Terminal_TaskHandle);
 		tsk_cli_initVar = 1;
 	}
 }

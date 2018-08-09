@@ -124,6 +124,7 @@ typedef struct
     uint32_t sequence_mismatch_drop;
     uint32_t resets_received;
     uint8_t min_frames_max;
+    int16_t die_temp;
 } telemetry_struct;
 telemetry_struct telemetry;
 

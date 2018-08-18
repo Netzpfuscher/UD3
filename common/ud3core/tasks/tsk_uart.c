@@ -52,7 +52,7 @@ volatile uint8_t midiMsg[3];
 
 
 #define STREAMBUFFER_RX_SIZE    512     //bytes
-#define STREAMBUFFER_TX_SIZE    1024    //bytes
+#define STREAMBUFFER_TX_SIZE    512    //bytes
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */
@@ -170,7 +170,7 @@ void tsk_uart_Start(void) {
 	 	* Create the task and then leave. When FreeRTOS starts up the scheduler
 	 	* will call the task procedure and start execution of the task.
 	 	*/
-		xTaskCreate(tsk_uart_TaskProc, "UART-Svc", 128, NULL, PRIO_UART, &tsk_uart_TaskHandle);
+		xTaskCreate(tsk_uart_TaskProc, "UART-Svc", 256, NULL, PRIO_UART, &tsk_uart_TaskHandle);
 		tsk_uart_initVar = 1;
 	}
 }

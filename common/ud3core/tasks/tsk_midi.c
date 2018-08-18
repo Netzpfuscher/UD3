@@ -106,9 +106,12 @@ typedef struct __channel__ {
 typedef struct __port__ {
 	uint16 halfcount; // A count that determines the frequency of port (for 1/2 period)
 	uint8 volume;	 // Volume of port (0 - 127)
+    float freq;
 } PORT;
 
 PORT *isr_port_ptr;
+CHANNEL *channel_ptr;
+MIDICH *midich_ptr;
 
 // Note on & off
 
@@ -151,7 +154,6 @@ uint8_t pulse_buffer[N_BUFFER];
 fifo_t pulse_fifo;
 
 CY_ISR(isr_midi) {
-
 	uint8_t ch;
 	uint8_t flag[N_CHANNEL];
 	static uint8_t old_flag[N_CHANNEL];
@@ -167,12 +169,14 @@ CY_ISR(isr_midi) {
 			fifo_put(&pulse_fifo, isr_port_ptr[ch].volume);
 		}
 		old_flag[ch] = flag[ch];
+   
 	}
-
+   
+    
 	int16_t temp_pulse;
 	temp_pulse = fifo_get_nowait(&pulse_fifo);
 	if (temp_pulse != -1) {
-		interrupter_oneshot(param.pw, temp_pulse);
+		interrupter_oneshot(interrupter.pw, temp_pulse);
 	}
 
 	if (qcw_reg) {
@@ -189,7 +193,7 @@ CY_ISR(isr_interrupter) {
 	int16_t temp_pulse;
 	temp_pulse = fifo_get_nowait(&pulse_fifo);
 	if (temp_pulse != -1) {
-		interrupter_oneshot(param.pw, temp_pulse);
+		interrupter_oneshot(interrupter.pw, temp_pulse);
 	}
 	Offtime_ReadStatusRegister();
 }
@@ -356,27 +360,62 @@ void process(NOTE *v, CHANNEL channel[], MIDICH midich[]) {
 	}
 }
 
+void update_midi_duty(){
+    if(!telemetry.midi_voices) return;
+    uint32_t dutycycle=0;
+
+    for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {    
+        if (channel_ptr[ch].volume > 0){
+            dutycycle+= ((uint32)channel_ptr[ch].volume*(uint32)param.pw)/(127000ul/(uint32)isr_port_ptr[ch].freq);
+        }
+	}
+  
+    telemetry.duty = dutycycle;
+    if(dutycycle>configuration.max_tr_duty){
+        interrupter.pw = (param.pw * configuration.max_tr_duty) / dutycycle;
+    }else{
+        interrupter.pw = param.pw;
+    }
+}
+
 void reflect(PORT port[], CHANNEL channel[], MIDICH midich[]) {
 	uint8_t ch;
 	uint8_t mch;
+    uint32_t dutycycle=0;
     telemetry.midi_voices =0;
 	// Reflect the status of the updated tone generator channel & MIDI channel on the port
 	for (ch = 0; ch < N_CHANNEL; ch++) {
 		mch = channel[ch].midich;
-        if (channel[ch].volume > 0) telemetry.midi_voices++;
 		if (channel[ch].updated || midich[mch].updated) {
 			if (channel[ch].volume > 0) {
-				port[ch].halfcount = FREQ_HALFCOUNT(MIDITONENUM_FREQ(channel[ch].miditone + ((float)midich[mch].pitchbend * midich[mch].bendrange) / PITCHBEND_DIVIDER));
+                port[ch].freq=MIDITONENUM_FREQ(channel[ch].miditone + ((float)midich[mch].pitchbend * midich[mch].bendrange) / PITCHBEND_DIVIDER);
+                
+				port[ch].halfcount = FREQ_HALFCOUNT(port[ch].freq);
 				if (ch < N_DISPCHANNEL)
 					channel[ch].displayed = 1; // Re-display required
 			}
 			port[ch].volume = (int32)channel[ch].volume * midich[mch].expression / 127; // Reflect Expression here
 			channel[ch].updated = 0;													// Mission channel update work done
 		}
+        
+        if (channel[ch].volume > 0){
+            telemetry.midi_voices++;
+            dutycycle+= ((uint32)channel[ch].volume*(uint32)param.pw)/(127000ul/(uint32)port[ch].freq);
+        }
 	}
 	for (mch = 0; mch < N_MIDICHANNEL; mch++) {
 		midich[mch].updated = 0; // MIDI channel update work done
 	}
+    
+    
+    telemetry.duty = dutycycle;
+    if(dutycycle>configuration.max_tr_duty){
+        interrupter.pw = (param.pw * configuration.max_tr_duty) / dutycycle;
+    }else{
+        interrupter.pw = param.pw;
+    }
+    
+    
 }
 
 /* `#END` */
@@ -400,9 +439,11 @@ void tsk_midi_TaskProc(void *pvParameters) {
 
 	// Tone generator channel status (updated according to MIDI messages)
 	CHANNEL channel[N_CHANNEL];
+    channel_ptr=channel;
 
 	// MIDI channel status
 	MIDICH midich[N_MIDICHANNEL];
+    midich_ptr=midich_ptr;
 
 	// Port status (updated at regular time intervals according to the status of the sound source channel)
 	PORT port[N_CHANNEL];

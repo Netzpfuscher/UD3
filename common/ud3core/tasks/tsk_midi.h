@@ -45,6 +45,8 @@ xSemaphoreHandle new_midi_data;
 
 void tsk_midi_Start(void);
 
+void update_midi_duty();
+
 /*
  * Add user function prototypes in the below merge region to add user
  * functionality to the task definition.

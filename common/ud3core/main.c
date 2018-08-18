@@ -95,10 +95,10 @@ int main() {
     if(strcmp(configuration.ip_addr,"NULL")){
         tsk_eth_Start();        //Handles Ethernet-Hardware and queues
     }
-
+    tsk_cli_Start();		//Commandline interface
     
 	tsk_midi_Start();       //MIDI synth
-	tsk_cli_Start();		//Commandline interface
+	
 	tsk_analog_Start();		//Reads bus voltage and currents
 	tsk_thermistor_Start(); //Reads thermistors
 	tsk_fault_Start();		//Handles fault conditions
@@ -132,12 +132,14 @@ void vApplicationStackOverflowHook( TaskHandle_t pxTask, char *pcTaskName )
 {
 	/* The stack space has been execeeded for a task, considering allocating more. */
 	taskDISABLE_INTERRUPTS();
+    for(;;);
 }/*---------------------------------------------------------------------------*/
 
 void vApplicationMallocFailedHook( void )
 {
 	/* The heap space has been execeeded. */
 	taskDISABLE_INTERRUPTS();
+    for(;;);
 }
 /*---------------------------------------------------------------------------*/
 

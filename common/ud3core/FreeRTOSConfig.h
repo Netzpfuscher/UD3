@@ -89,7 +89,7 @@
 #define configCPU_CLOCK_HZ			( ( unsigned long ) BCLK__BUS_CLK__HZ )
 #define configTICK_RATE_HZ			( ( TickType_t ) 500 )
 #define configMINIMAL_STACK_SIZE	( ( unsigned short ) 100 )
-#define configTOTAL_HEAP_SIZE		( ( size_t ) ( 50 * 1024 ) ) //54k
+#define configTOTAL_HEAP_SIZE		( ( size_t ) ( 54 * 1024 ) ) //54k
 #define configMAX_TASK_NAME_LEN		( 12 )
 #define configUSE_16_BIT_TICKS		0
 #define configIDLE_SHOULD_YIELD		0
@@ -101,18 +101,23 @@
 #define configTIMER_TASK_PRIORITY 3
 #define configTIMER_QUEUE_LENGTH 16
 #define configTIMER_TASK_STACK_DEPTH 128
-
+#define configMESSAGE_BUFFER_LENGTH_TYPE size_t
     
 #define configMAX_CO_ROUTINE_PRIORITIES ( 2 )
 
 #define configUSE_COUNTING_SEMAPHORES 	1
 #define configUSE_ALTERNATIVE_API 		0
-#define configCHECK_FOR_STACK_OVERFLOW	2
+    
+    
+#define configCHECK_FOR_STACK_OVERFLOW	0
+
+//#define configASSERT( x ) if( ( x ) == 0 ) { taskDISABLE_INTERRUPTS();for(;;); }
+    
 #define configUSE_RECURSIVE_MUTEXES		1
 #define configQUEUE_REGISTRY_SIZE		10
 #define configUSE_MALLOC_FAILED_HOOK	1
     
-#define ACTIVATE_TASK_INFO 1  
+#define ACTIVATE_TASK_INFO 0  
    
 #if ACTIVATE_TASK_INFO   
     #define configGENERATE_RUN_TIME_STATS	1  

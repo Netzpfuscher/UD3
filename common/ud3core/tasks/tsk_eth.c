@@ -166,11 +166,13 @@ void tsk_eth_TaskProc(void *pvParameters) {
 				 * Check for data received from the telnet port.
 				 */
 				len = ETH_TcpReceive(cli_socket,buffer,LOCAL_ETH_BUFFER_SIZE,0);
-				xStreamBufferSend(xETH_rx, buffer, len, 0);
+                if(len){
+				    xStreamBufferSend(xETH_rx, buffer, len, 0);
+                }
 				/*
 				 * check for data waiting to be sent over the telnet port
 				 */
-				len = xStreamBufferReceive(xETH_tx, buffer, LOCAL_ETH_BUFFER_SIZE, 0);
+				len = xStreamBufferReceive(xETH_tx, buffer, LOCAL_ETH_BUFFER_SIZE, 1);
                 if(len){
 				    ETH_TcpSend(cli_socket,buffer,len,0);
                 }

@@ -96,6 +96,8 @@ struct config_struct{
     char ip_mac[18];
     char ip_subnet[16];
     uint8_t minprot;
+    uint16_t max_inst_i;
+    uint16_t max_therm_i;
 };
 typedef struct config_struct cli_config;
 

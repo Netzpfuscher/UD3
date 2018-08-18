@@ -26,6 +26,7 @@
 #define TELEMETRY_H
 
 #include <device.h>
+#include "interrupter.h"
     
 #define BUS_OFF 0
 #define BUS_CHARGING 1
@@ -65,16 +66,17 @@
 #define GAUGE4_MIN 0
 #define GAUGE4_MAX 1000
 #define GAUGE4_VAR telemetry.primary_i
-        
+
+    
 #define GAUGE5_NAME "Voices"
 #define GAUGE5_MIN 0
 #define GAUGE5_MAX 4        
 #define GAUGE5_VAR telemetry.midi_voices
         
-#define GAUGE6_NAME "DAC Value"
+#define GAUGE6_NAME "Duty"
 #define GAUGE6_MIN 0
-#define GAUGE6_MAX 255
-#define GAUGE6_VAR ct1_dac_val[0]
+#define GAUGE6_MAX 500
+#define GAUGE6_VAR interrupter.pw
         
 #define CHART0_NAME "Bus Voltage"
 #define CHART0_MIN 0
@@ -124,7 +126,7 @@ typedef struct
     uint32_t sequence_mismatch_drop;
     uint32_t resets_received;
     uint8_t min_frames_max;
-    int16_t die_temp;
+    uint16_t duty;
 } telemetry_struct;
 telemetry_struct telemetry;
 

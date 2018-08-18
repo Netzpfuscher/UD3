@@ -44,6 +44,7 @@
 #include "tasks/tsk_priority.h"
 #include "tasks/tsk_uart.h"
 #include "tasks/tsk_usb.h"
+#include "tasks/tsk_midi.h"
 #include "helper/teslaterm.h"
 
 #define UNUSED_VARIABLE(N) \
@@ -76,6 +77,7 @@ uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, uint8_
 uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, uint8_t port);
 uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, uint8_t port);
 uint8_t callback_OfftimeFunction(parameter_entry * params, uint8_t index, uint8_t port);
+uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, uint8_t port);
 
 uint8_t command_help(char *commandline, uint8_t port);
 uint8_t command_get(char *commandline, uint8_t port);
@@ -101,8 +103,6 @@ void nt_interpret(const char *text, uint8_t port);
 const uint8_t kill_msg[3] = {0xb0, 0x77, 0x00};
 
 uint8_t term_mode = TERM_MODE_VT100;
-
-uint8_t tr_running = 0;
 uint8_t burst_state = 0;
 
 TimerHandle_t xQCW_Timer;
@@ -149,6 +149,8 @@ void init_config(){
     strcpy(configuration.ip_mac,"00:DE:AD:BE:EF:00");
     strcpy(configuration.ip_gw,"192.168.50.1");
     configuration.minprot = 0;
+    configuration.max_inst_i = 80;
+    configuration.max_therm_i = 16;
     
     param.pw = 0;
     param.pwd = 50000;
@@ -173,8 +175,8 @@ parameter_entry confparam[] = {
     //        Parameter Type,"Text   "         , Value ptr                     , Type          ,Min    ,Max    ,Callback Function           ,Help text
     ADD_PARAM(PARAM_DEFAULT ,"pw"              , param.pw                      , TYPE_UNSIGNED ,0      ,800    ,callback_TRFunction         ,"Pulsewidth")
     ADD_PARAM(PARAM_DEFAULT ,"pwd"             , param.pwd                     , TYPE_UNSIGNED ,0      ,60000  ,callback_TRFunction         ,"Pulsewidthdelay")
-    ADD_PARAM(PARAM_DEFAULT ,"bon"             , param.burst_on                , TYPE_UNSIGNED ,0      ,1000   ,callback_TRFunction         ,"Burst mode ontime [ms] 0=off")
-    ADD_PARAM(PARAM_DEFAULT ,"boff"            , param.burst_off               , TYPE_UNSIGNED ,0      ,1000   ,callback_TRFunction         ,"Burst mode offtime [ms]")
+    ADD_PARAM(PARAM_DEFAULT ,"bon"             , param.burst_on                , TYPE_UNSIGNED ,0      ,1000   ,callback_BurstFunction      ,"Burst mode ontime [ms] 0=off")
+    ADD_PARAM(PARAM_DEFAULT ,"boff"            , param.burst_off               , TYPE_UNSIGNED ,0      ,1000   ,callback_BurstFunction      ,"Burst mode offtime [ms]")
     ADD_PARAM(PARAM_DEFAULT ,"tune_start"      , param.tune_start              , TYPE_UNSIGNED ,5      ,1000   ,callback_TuneFunction       ,"Start frequency")
     ADD_PARAM(PARAM_DEFAULT ,"tune_end"        , param.tune_end                , TYPE_UNSIGNED ,5      ,1000   ,callback_TuneFunction       ,"End frequency")
     ADD_PARAM(PARAM_DEFAULT ,"tune_pw"         , param.tune_pw                 , TYPE_UNSIGNED ,0      ,800    ,NULL                        ,"Tune pulsewidth")
@@ -201,7 +203,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,"lead_time"       , configuration.lead_time       , TYPE_UNSIGNED ,0      ,2000   ,callback_ConfigFunction     ,"Lead time [nSec]")
     ADD_PARAM(PARAM_CONFIG  ,"start_freq"      , configuration.start_freq      , TYPE_UNSIGNED ,0      ,5000   ,callback_ConfigFunction     ,"Resonant freq [Hz*100]")
     ADD_PARAM(PARAM_CONFIG  ,"start_cycles"    , configuration.start_cycles    , TYPE_UNSIGNED ,0      ,20     ,callback_ConfigFunction     ,"Start Cyles [N]")
-    ADD_PARAM(PARAM_CONFIG  ,"max_tr_duty"     , configuration.max_tr_duty     , TYPE_UNSIGNED ,1      ,500    ,callback_ConfigFunction     ,"Max TR duty cycle [0.1% incr]")
+    ADD_PARAM(PARAM_CONFIG  ,"max_tr_duty"     , configuration.max_tr_duty     , TYPE_UNSIGNED ,1      ,5000   ,callback_ConfigFunction     ,"Max TR duty cycle [0.01% incr]")
     ADD_PARAM(PARAM_CONFIG  ,"max_qcw_duty"    , configuration.max_qcw_duty    , TYPE_UNSIGNED ,1      ,500    ,callback_ConfigFunction     ,"Max QCW duty cycle [0.1% incr]")
     ADD_PARAM(PARAM_CONFIG  ,"temp1_setpoint"  , configuration.temp1_setpoint  , TYPE_UNSIGNED ,0      ,100    ,NULL                        ,"Setpoint for fan [*C]")
     ADD_PARAM(PARAM_CONFIG  ,"batt_lockout_v"  , configuration.batt_lockout_v  , TYPE_UNSIGNED ,0      ,500    ,NULL                        ,"Battery lockout voltage [V]")
@@ -215,6 +217,8 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,"ip_subnet"       , configuration.ip_subnet       , TYPE_STRING   ,0      ,0      ,NULL                        ,"Subnet")
     ADD_PARAM(PARAM_CONFIG  ,"ip_mac"          , configuration.ip_mac          , TYPE_STRING   ,0      ,0      ,NULL                        ,"MAC adress")
     ADD_PARAM(PARAM_CONFIG  ,"min_enable"      , configuration.minprot         , TYPE_UNSIGNED ,0      ,1      ,NULL                        ,"Use MIN-Protocol")
+    ADD_PARAM(PARAM_CONFIG  ,"max_inst_i"      , configuration.max_inst_i      , TYPE_UNSIGNED ,0      ,1000   ,NULL                        ,"Maximum instantaneous current [A]")
+    ADD_PARAM(PARAM_CONFIG  ,"max_therm_i"     , configuration.max_therm_i     , TYPE_UNSIGNED ,0      ,1000   ,NULL                        ,"Maximum thermal current [A]")
 };
 
 /*****************************************************************************
@@ -270,9 +274,69 @@ uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, uint8_t por
     
 	interrupter.pw = param.pw;
 	interrupter.prd = param.pwd;
+    
+    update_midi_duty();
+    
 	if (tr_running==1) {
 		update_interrupter();
 	}
+	return 1;
+}
+
+#define BURST_ON 0
+#define BURST_OFF 1
+
+/*****************************************************************************
+* Timer callback for burst mode
+******************************************************************************/
+void vBurst_Timer_Callback(TimerHandle_t xTimer){
+    if(burst_state == BURST_ON){
+        interrupter.pw = 0;
+        update_interrupter();
+        burst_state = BURST_OFF;
+        if(!param.burst_off) param.burst_off=1;
+        xTimerChangePeriod( xTimer, param.burst_off / portTICK_PERIOD_MS, 0 );                                                   
+    }else{
+        interrupter.pw = param.pw;
+        update_interrupter();
+        burst_state = BURST_ON;
+        if(!param.burst_on) param.burst_on=1;
+        xTimerChangePeriod( xTimer, param.burst_on / portTICK_PERIOD_MS, 0 );
+    }          
+}
+
+
+/*****************************************************************************
+* Callback if a burst mode parameter is changed
+******************************************************************************/
+uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, uint8_t port) {
+    if(tr_running){
+        if(xBurst_Timer==NULL && param.burst_on > 0){
+            burst_state = BURST_ON;
+            xBurst_Timer = xTimerCreate("Bust-Tmr", param.burst_on / portTICK_PERIOD_MS, pdFALSE,(void * ) 0, vBurst_Timer_Callback);
+            if(xBurst_Timer != NULL){
+                xTimerStart(xBurst_Timer, 0);
+                send_string("Burst Enabled\r\n", port);
+                tr_running=2;
+            }else{
+                interrupter.pw = 0;
+                send_string("Cannot create burst Timer\r\n", port);
+                tr_running=0;
+            }
+        }else if(xBurst_Timer!=NULL && !param.burst_on){
+            if (xBurst_Timer != NULL) {
+    			if(xTimerDelete(xBurst_Timer, 200 / portTICK_PERIOD_MS) != pdFALSE){
+    			    xBurst_Timer = NULL;
+                    burst_state = BURST_ON;
+                    send_string("\r\nBurst Disabled\r\n", port);    
+                }else{
+                    send_string("Cannot delete burst Timer\r\n", port);
+                    burst_state = BURST_ON;
+                }
+            }
+
+        } 
+    }
 	return 1;
 }
 
@@ -487,25 +551,9 @@ uint8_t command_bootloader(char *commandline, uint8_t port) {
 	return 1;
 }
 
-#define BURST_ON 0
-#define BURST_OFF 1
 
-/*****************************************************************************
-* Timer callback for burst mode
-******************************************************************************/
-void vBurst_Timer_Callback(TimerHandle_t xTimer){
-    if(burst_state == BURST_ON){
-        interrupter.pw = 0;
-        update_interrupter();
-        burst_state = BURST_OFF;
-        xTimerChangePeriod( xTimer, param.burst_off / portTICK_PERIOD_MS, 0 );                                                   
-    }else{
-        interrupter.pw = param.pw;
-        update_interrupter();
-        burst_state = BURST_ON;
-        xTimerChangePeriod( xTimer, param.burst_on / portTICK_PERIOD_MS, 0 );
-    }          
-}
+
+
 
 /*****************************************************************************
 * starts or stops the transient mode (classic mode)
@@ -519,41 +567,21 @@ uint8_t command_tr(char *commandline, uint8_t port) {
         interrupter.pw = param.pw;
 		interrupter.prd = param.pwd;
         update_interrupter();
-        burst_state = BURST_ON;
-        if(xBurst_Timer==NULL && param.burst_on > 0){
-                xBurst_Timer = xTimerCreate("Bust-Tmr", param.burst_on / portTICK_PERIOD_MS, pdFALSE,(void * ) 0, vBurst_Timer_Callback);
-                if(xBurst_Timer != NULL){
-                    xTimerStart(xBurst_Timer, 0);
-                    send_string("Burst Enabled\r\n", port);
-                    tr_running=2;
-                }else{
-                    interrupter.pw = 0;
-                    send_string("Cannot create burst Timer\r\n", port);
-                    tr_running=0;
-                }
-        }else{
-		    tr_running = 1;
-		    send_string("Transient Enabled\r\n", port);
-        }
+
+		tr_running = 1;
+        
+        callback_BurstFunction(NULL, 0, port);
+        
+		send_string("Transient Enabled\r\n", port);
+       
         return 0;
 	}
 	if (strcmp(commandline, "stop") == 0) {
         interrupter.pw = 0;
 		update_interrupter();
-        if (xBurst_Timer != NULL) {
-				if(xTimerDelete(xBurst_Timer, 200 / portTICK_PERIOD_MS) != pdFALSE){
-				    xBurst_Timer = NULL;
-                    burst_state = BURST_ON;
-                    send_string("\r\nBurst Disabled\r\n", port);    
-                } else {
-                    send_string("Cannot delete burst Timer\r\n", port);
-                    burst_state = BURST_ON;
-                }
-		}else{
-            
+     
         send_string("\r\nTransient Disabled\r\n", port);    
-        }
-        
+ 
 		interrupter.pw = 0;
 		update_interrupter();
 		tr_running = 0;
@@ -650,8 +678,8 @@ uint8_t command_udkill(char *commandline, uint8_t port) {
         return 1;
     }else if (strcmp(commandline, "get") == 0) {
         char buf[30];
-        Term_Color_Green(port);
-        sprintf(buf, "Killbit: %u",interrupter_get_kill());
+        Term_Color_Red(port);
+        sprintf(buf, "Killbit: %u\r\n",interrupter_get_kill());
         send_string(buf,port);
         Term_Color_White(port);
     }
@@ -817,6 +845,7 @@ uint8_t command_set(char *commandline, uint8_t port) {
 	return 0;
 }
 
+
 void eeprom_load(){
    EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,SERIAL); 
 }
@@ -827,11 +856,13 @@ void eeprom_load(){
 uint8_t command_eprom(char *commandline, uint8_t port) {
 	SKIP_SPACE(commandline);
     HELP_TEXT("Usage: eprom [load|save]\r\n");
-    
+    EEPROM_1_UpdateTemperature();
 	uint8 sfflag = system_fault_Read();
 	system_fault_Control = 0; //halt tesla coil operation during updates!
 	if (strcmp(commandline, "save") == 0) {
+
 	    EEPROM_write_conf(confparam, PARAM_SIZE(confparam),0, port);
+
 		system_fault_Control = sfflag;
 		return 0;
 	}

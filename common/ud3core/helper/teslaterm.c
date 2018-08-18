@@ -98,3 +98,19 @@ void send_chart_text(int16_t x, int16_t y, uint8_t color, uint8_t size, char * t
     send_buffer(buf,sizeof(buf),port);
     send_string(text, port);
 }
+
+void send_chart_text_center(int16_t x, int16_t y, uint8_t color, uint8_t size, char * text, uint8_t port){
+    uint8_t bytes = strlen(text);
+    uint8_t buf[9];
+    buf[0] = 0xFF;
+    buf[1] = bytes+sizeof(buf)-2;
+    buf[2] = TT_CHART_TEXT_CENTER;
+    buf[3] = x;
+    buf[4] = (x>>8);
+    buf[5] = y;
+    buf[6] = (y>>8);
+    buf[7] = color;
+    buf[8] = size;
+    send_buffer(buf,sizeof(buf),port);
+    send_string(text, port);
+}

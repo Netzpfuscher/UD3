@@ -48,8 +48,9 @@ void autotune_draw_d(uint8_t port){
     send_chart_line(OFFSET_X, TTERM_HEIGHT+OFFSET_Y, TTERM_WIDTH+OFFSET_X, TTERM_HEIGHT+OFFSET_Y, TT_COLOR_WHITE, port);
     send_chart_line(OFFSET_X, OFFSET_Y, OFFSET_X, TTERM_HEIGHT+OFFSET_Y, TT_COLOR_WHITE, port);
 
-	for (f = 0; f <= TTERM_HEIGHT; f += 50) {
+	for (f = 0; f <= TTERM_HEIGHT; f += 25) {
 		send_chart_line(OFFSET_X, f+OFFSET_Y, OFFSET_X-10, f+OFFSET_Y, TT_COLOR_WHITE, port);
+        send_chart_line(OFFSET_X, f+OFFSET_Y, TTERM_WIDTH+OFFSET_X, f+OFFSET_Y, TT_COLOR_GRAY, port);
 	}
 
 }
@@ -157,28 +158,40 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
         
         float x_val_1;
         float x_val_2;
+        autotune_draw_d(port);
         
+        //Draw x grid
+        for (f = 0; f < 128; f+=8) {
+            x_val_1 = f*step_w;
+            send_chart_line(x_val_1+OFFSET_X, OFFSET_Y, x_val_1+OFFSET_X, TTERM_HEIGHT+OFFSET_Y, TT_COLOR_GRAY, port);
+    	}
+        f=127;
+        x_val_1 = f*step_w;
+        send_chart_line(x_val_1+OFFSET_X, OFFSET_Y, x_val_1+OFFSET_X, TTERM_HEIGHT+OFFSET_Y, TT_COLOR_GRAY, port);
         
+        //Draw line
     	for (f = 0; f < 127; f++) {
             x_val_1 = f*step_w;
             x_val_2 = (f+1)*step_w;
     		send_chart_line(x_val_1+OFFSET_X, ((TTERM_HEIGHT - 1) - ((TTERM_HEIGHT - 1) * freq_response[f][CURR]) / max_curr)+OFFSET_Y, x_val_2+OFFSET_X, ((TTERM_HEIGHT - 1) - ((TTERM_HEIGHT - 1) * freq_response[f+1][CURR]) / max_curr)+OFFSET_Y, TT_COLOR_GREEN, port);
     	}
         
-
+        //Draw text
     	for (f = 0; f < 128; f+=8) {
             x_val_1 = f*step_w;
             sprintf(buffer, "%i,%i", freq_response[f][FREQ]/10,freq_response[f][FREQ]%10);
-    		send_chart_text(x_val_1+OFFSET_X,OFFSET_Y+TTERM_HEIGHT+50,TT_COLOR_WHITE,8,buffer,port);
+    		send_chart_text_center(x_val_1+OFFSET_X,OFFSET_Y+TTERM_HEIGHT+20,TT_COLOR_WHITE,8,buffer,port);
             send_chart_line(x_val_1+OFFSET_X, TTERM_HEIGHT+OFFSET_Y, x_val_1+OFFSET_X, TTERM_HEIGHT +10+OFFSET_Y, TT_COLOR_WHITE, port);
     	}
         f=127;
         x_val_1 = f*step_w;
-        sprintf(buffer, "%i,%i kHz", freq_response[f][FREQ]/10,freq_response[f][FREQ]%10);
-    	send_chart_text(x_val_1+OFFSET_X,OFFSET_Y+TTERM_HEIGHT+50,TT_COLOR_WHITE,8,buffer,port);
+        sprintf(buffer, "%i,%i", freq_response[f][FREQ]/10,freq_response[f][FREQ]%10);
+    	send_chart_text_center(x_val_1+OFFSET_X,OFFSET_Y+TTERM_HEIGHT+20,TT_COLOR_WHITE,8,buffer,port);
         send_chart_line(x_val_1+OFFSET_X, TTERM_HEIGHT+OFFSET_Y, x_val_1+OFFSET_X, TTERM_HEIGHT +10+OFFSET_Y, TT_COLOR_WHITE, port);
+        x_val_1+=15;
+        send_chart_text(x_val_1+OFFSET_X,OFFSET_Y+TTERM_HEIGHT+20,TT_COLOR_WHITE,8,"khz",port);
         
-        autotune_draw_d(port);
+        
         
     }
     

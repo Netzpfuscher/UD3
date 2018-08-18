@@ -1505,6 +1505,8 @@
       <Data key="9d178943-a2e6-45cb-a262-b16444a207ec" value="uart_rx" />
       <Data key="9da6251c-7193-4905-b500-c8ed56bec282" value="uart_tx" />
       <Data key="29aa49e1-b695-418d-b21c-cd85130a5a1c" value="qcw_end" />
+      <Data key="226a7587-c4e4-4cd3-bd95-0cc66f0cdfc3/10dce1ed-dd83-44c0-9cff-cc3ee25204cd" value="UART_2_RXInternalInterrupt" />
+      <Data key="226a7587-c4e4-4cd3-bd95-0cc66f0cdfc3/0758f7e0-b58c-4a6b-bb59-e7d003cac7de" value="UART_2_TXInternalInterrupt" />
       <Data key="6533b513-81b1-46af-8e19-d98fd9cc0e1c/b73dcd38-4bce-4cd7-acec-33f53e91ccd6" value="ADC_therm_IRQ" />
       <Data key="8759c8f7-2d39-40ac-839a-fcdda7f406e7" value="therm_sample" />
       <Data key="1190957d-2d75-429b-86e8-ff9a02fc3853" value="OCD" />
@@ -4646,21 +4648,21 @@
     <Group key="29aa49e1-b695-418d-b21c-cd85130a5a1c">
       <Group key="CortexM3">
         <Data key="Assigned" value="True" />
-        <Data key="Priority" value="4" />
+        <Data key="Priority" value="6" />
         <Data key="Vector" value="-1" />
       </Group>
     </Group>
     <Group key="8759c8f7-2d39-40ac-839a-fcdda7f406e7">
       <Group key="CortexM3">
         <Data key="Assigned" value="True" />
-        <Data key="Priority" value="5" />
+        <Data key="Priority" value="6" />
         <Data key="Vector" value="-1" />
       </Group>
     </Group>
     <Group key="dec47964-b682-4738-b517-03b0233c3cbf">
       <Group key="CortexM3">
         <Data key="Assigned" value="True" />
-        <Data key="Priority" value="3" />
+        <Data key="Priority" value="6" />
         <Data key="Vector" value="-1" />
       </Group>
     </Group>

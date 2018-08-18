@@ -165,7 +165,6 @@ void tsk_thermistor_TaskProc(void *pvParameters) {
 
 	initialize_thermistor();
     
-    DieTemp_Start();
     
 
 	/* `#END` */
@@ -184,7 +183,6 @@ void tsk_thermistor_TaskProc(void *pvParameters) {
 			temp_fault_counter = 0;
 		}
         
-        DieTemp_GetTemp(&telemetry.die_temp);
 
 		/* `#END` */
 

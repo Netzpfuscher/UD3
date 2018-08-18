@@ -32,15 +32,21 @@
 uint16 int1_prd, int1_cmp, int2_prd, int2_cmp, int3_prd, int3_cmp;
 
 uint16 min_tr_prd;
+uint8_t tr_running = 0;
+
 volatile uint8 qcw_dl_ovf_counter;
 
 uint8_t blocked=0; 
 
+extern const uint8_t kill_msg[3];
 
 CY_ISR(int_wd_ISR) {
 	interrupter1_control_Control = 0;
 	QCW_enable_Control = 0;
 	ramp.modulation_value = 0;
+    //interrupter_kill();
+    //USBMIDI_1_callbackLocalMidiEvent(0, (uint8_t*)kill_msg);
+    //send_string("WD\r\n",ETH);
 }
 
 CY_ISR(qcw_end_ISR) {
@@ -217,13 +223,9 @@ void update_interrupter() {
 	}
 
 	/* Compute the duty cycle and mod the PW if required */
-	uint16 total_duty;
-	uint16 new_duty;
-	interrupter.duty = (interrupter.pw * 1000) / interrupter.prd; //gives duty cycle as 0.1% increment
-	total_duty = interrupter.duty;
-	if (total_duty > configuration.max_tr_duty) {
-		new_duty = (configuration.max_tr_duty * interrupter.duty) / total_duty;
-		interrupter.duty_limited_pw = new_duty * interrupter.prd / 1000;
+	interrupter.duty = (uint32)((uint32)interrupter.pw * 10000ul) / interrupter.prd; //gives duty cycle as 0.1% increment
+	if (interrupter.duty > configuration.max_tr_duty) {
+		interrupter.duty_limited_pw = (uint32)configuration.max_tr_duty * (uint32)interrupter.prd / 10000ul;
 	} else {
 		interrupter.duty_limited_pw = interrupter.pw;
 	}

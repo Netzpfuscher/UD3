@@ -38,7 +38,7 @@
  * code for the WizNET iW5500 device.
  */
 /* ======================================================================== */
-#include <cylib.h>
+#include <CyLib.h>
 #include <cytypes.h>
 #include <string.h>
 
@@ -155,7 +155,7 @@ void ETH_Send(uint16 offset, uint8 block_select, uint8 write, uint8 *buffer, uin
 			SPIM0_ReadRxData();
 			count = (count==0)?0:count-1;
 		}
-		CyDelayUs(5);
+		//CyDelayUs(5);
 	}
 	/* 
 	 * Now that the Receive FIFO has been flushed, send data through
@@ -177,7 +177,7 @@ void ETH_Send(uint16 offset, uint8 block_select, uint8 write, uint8 *buffer, uin
 			}
 			++count;
 		}
-		CyDelayUs(5);
+		//CyDelayUs(5);
 	}
 	/* Turn off the chip select. */
 	do {
@@ -306,10 +306,10 @@ uint16 ETH_TxBufferFree( uint8 socket )
 	return CYSWAP_ENDIAN16(second);
 }
 /* ------------------------------------------------------------------------ */
-void ETH_Reset( void )
+cystatus ETH_Reset( void )
 {
 	uint8 status;
-	
+	uint8_t retry_cnt=0;
 	/*
 	 * issue a mode register reset to the W5500 in order to set default
 	 * register contents for the chip.
@@ -322,8 +322,15 @@ void ETH_Reset( void )
 	 */
 	do {
 		ETH_Send( ETH_REG_MODE, ETH_BLOCK_COMMON, 0, &status, 1);
+        retry_cnt++;
 	}
-	while ( (status & 0x80) != 0 );
+	while ( (status & 0x80) != 0 && retry_cnt<100);
+    if(retry_cnt<100){
+        return CYRET_SUCCESS;
+    }else{
+        return CYRET_TIMEOUT;
+    }
+    
 }
 /* ------------------------------------------------------------------------ */
 cystatus ETH_Init( uint8* gateway, uint8* subnet, uint8* mac, uint8 *ip )
@@ -374,21 +381,6 @@ cystatus ETH_Init( uint8* gateway, uint8* subnet, uint8* mac, uint8 *ip )
 }
 /* ------------------------------------------------------------------------ */
 /**
- * \brief Initialize the W5500 with the default settings configured in Creator
- * 
- * This function calls the StartEx function to configure the W550 device using
- * the default setting as setup by the user in the configuration dialog in the
- * Creator tools.
- */
-cystatus ETH_Start( void )
-{	
-	cystatus result;
-	
-	result = ETH_StartEx("0.0.0.0","255.255.255.0","00:DE:AD:BE:EF:00","192.168.1.101");
-	return result;	
-}
-/* ------------------------------------------------------------------------ */
-/**
  * \brief configure the W5500 with user settings
  * \param config the Configuration for the W5500 device
  * 
@@ -409,7 +401,7 @@ cystatus ETH_StartEx( const char *gateway, const char *subnet, const char *mac, 
 	 * Wait for initial power-on PLL Lock, and issue a device reset
 	 * to initialize the registers
 	 */
-	CyDelay(ETH_RESET_DELAY);
+    vTaskDelay(ETH_RESET_DELAY /portTICK_RATE_MS);
 	
 	/*
 	 * use IoT utlity functions to convert from ASCII data to binary data
@@ -454,15 +446,18 @@ cystatus ETH_StartEx( const char *gateway, const char *subnet, const char *mac, 
 	 */
 	timeout = 0;
 	do {	
-		ETH_Reset();
-		result = ETH_Init(g,s,m,i);
+		result = ETH_Reset();
+        if(result == CYRET_SUCCESS){
+		    result = ETH_Init(g,s,m,i);
+        }
 		if (result != CYRET_SUCCESS) {
-			CyDelay(1);
+			//CyDelay(1);
+            vTaskDelay(5 /portTICK_RATE_MS);
 			++timeout;
 			result = CYRET_TIMEOUT;
 		}
 	}
-	while ( (result != CYRET_SUCCESS) && (timeout < 1000) );
+	while ( (result != CYRET_SUCCESS) && (timeout < 200) );
 	
 	return result;
 }

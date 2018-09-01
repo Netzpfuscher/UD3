@@ -53,6 +53,7 @@ xQueueHandle adc_data;
 #include "cli_common.h"
 #include "telemetry.h"
 #include "tsk_priority.h"
+#include "tsk_midi.h"
 #include <device.h>
 #include <stdio.h>
 
@@ -170,26 +171,22 @@ uint16_t average_filter(uint32_t *ptr, uint16_t sample) {
 
 void regulate_current(){
     int16_t e = (telemetry.batt_i/10)-configuration.max_inst_i;
-    
-    if(e<1 && interrupter.pw!=param.pw){
-        interrupter.pw += 2;  
-        if(interrupter.pw > param.pw) interrupter.pw = param.pw;
+    if(e>0){
+        int16_t temp = (int16_t)configuration.max_tr_duty - 1;
+        if(temp>-1) configuration.max_tr_duty = temp;
         if(tr_running){
             update_interrupter();
         }
-        return;
+        if(telemetry.midi_voices){
+            update_midi_duty();
+        }
+   
     }
-    if(e>0){
-        
-        int16_t temp = (int16_t)interrupter.pw - 2;
-        if(temp>-1) interrupter.pw = temp;  
-    }
-    
-    
+   
 }
 
 void calculate_rms(void) {
-    static uint16_t count=0;
+    static uint8_t count=0;
 	while (uxQueueMessagesWaiting(adc_data)) {
 
 		xQueueReceive(adc_data, ADC_sample, portMAX_DELAY);
@@ -209,16 +206,16 @@ void calculate_rms(void) {
 	control_precharge();
     
     if(count>10){
-        count =0;
-        if(configuration.max_therm_i>0){
-            if(tr_running || telemetry.midi_voices){
-                regulate_current();
-            }
+        count=0;
+    if(configuration.max_inst_i>0){
+        if(tr_running || telemetry.midi_voices){
+            regulate_current();
         }
+    }
     }else{
         count++;
     }
-    
+   
 }
 
 

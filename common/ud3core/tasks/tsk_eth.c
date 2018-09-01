@@ -27,6 +27,7 @@
 #include <stdarg.h>
 
 #include "tsk_eth.h"
+#include "tsk_cli.h"
 
 xTaskHandle tsk_eth_TaskHandle;
 uint8 tsk_eth_initVar = 0u;
@@ -41,7 +42,7 @@ uint8 tsk_eth_initVar = 0u;
 #include "cli_common.h"
 #include "tsk_midi.h"
 #include "tsk_priority.h"
-//#include <stdio.h>
+#include <stdio.h>
 #include "telemetry.h"
 #include "ETH.h"
 
@@ -146,10 +147,23 @@ void tsk_eth_TaskProc(void *pvParameters) {
     
     uint16_t len;
     
-	   
+    SPIM0_Start();
+    uint8_t ret;
+    if(strcmp(configuration.ip_addr,"NULL")){
+        ret= ETH_StartEx(configuration.ip_gw,configuration.ip_subnet,configuration.ip_mac,configuration.ip_addr);
+        
+    }else{
+        ret=CYRET_TIMEOUT;
+    }
+	  
+    if(ret==CYRET_TIMEOUT){
+            if(ETH_Terminal_TaskHandle!=NULL){
+                vTaskDelete(ETH_Terminal_TaskHandle);
+                vTaskDelete(tsk_eth_TaskHandle);
+            }
+    }
 
 	/* `#END` */
-    
     /* `#START TASK_LOOP_CODE` */
 
 	for (;;) {
@@ -222,12 +236,6 @@ void tsk_eth_Start(void) {
 	 * sure that your task data is properly 
 	 */
 	/* `#START TASK_GLOBAL_INIT` */
-    
-    SPIM0_Start();
-    
-    ETH_StartEx(configuration.ip_gw,configuration.ip_subnet,configuration.ip_mac,configuration.ip_addr);
-   
-    
 
 	/* `#END` */
 

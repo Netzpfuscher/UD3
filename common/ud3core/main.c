@@ -90,11 +90,9 @@ int main() {
     }
     
 	tsk_usb_Start();        //Handles USB-Hardware and queues
+   
+    tsk_eth_Start();        //Handles Ethernet-Hardware and queues
     
-
-    if(strcmp(configuration.ip_addr,"NULL")){
-        tsk_eth_Start();        //Handles Ethernet-Hardware and queues
-    }
     tsk_cli_Start();		//Commandline interface
     
 	tsk_midi_Start();       //MIDI synth

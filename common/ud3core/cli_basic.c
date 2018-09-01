@@ -263,7 +263,7 @@ uint8_t EEPROM_buffer_write(uint8_t byte, uint16_t address, uint8_t flush){
         EEPROM_Read_Row(rowNumber,eeprom_buffer);
     }else if(last_row!=rowNumber){
         if(changed){
-            uint8_t ret = EEPROM_WRITE_ROW(last_row,eeprom_buffer);
+            EEPROM_WRITE_ROW(last_row,eeprom_buffer);
         }
         EEPROM_Read_Row(rowNumber,eeprom_buffer);
         changed=0;

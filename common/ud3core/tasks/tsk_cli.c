@@ -76,6 +76,8 @@ static int eth_callback(const char *text, void *extobj);
  */
 /* `#START USER_TASK_LOCAL_CODE` */
 
+
+
 void initialize_cli(ntshell_t *ptr, uint8_t port) {
 
 	switch (port) {

@@ -206,7 +206,6 @@
 /* ------------------------------------------------------------------------ */
 void ETH_Send(uint16 offset, uint8 block_select, uint8 write, uint8 *buffer, uint16 len);
 
-cystatus ETH_Start( void );
 cystatus ETH_StartEx( const char *gateway, const char *subnet, const char *mac, const char *ip );
 cystatus ETH_Init( uint8* gateway, uint8* subnet, uint8 *mac, uint8* ip );
 void ETH_GetMac(uint8* mac);

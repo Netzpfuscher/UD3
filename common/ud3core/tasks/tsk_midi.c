@@ -49,7 +49,7 @@ uint8 tsk_midi_initVar = 0u;
 #include <stdio.h>
 
 #define PITCHBEND_ZEROBIAS (0x2000)
-#define PITCHBEND_DIVIDER ((float)0x1fff)
+#define PITCHBEND_DIVIDER ((uint32_t)0x1fff)
 
 #define N_CHANNEL 4
 #define N_BUFFER 8
@@ -106,7 +106,7 @@ typedef struct __channel__ {
 typedef struct __port__ {
 	uint16 halfcount; // A count that determines the frequency of port (for 1/2 period)
 	uint8 volume;	 // Volume of port (0 - 127)
-    float freq;
+    uint32 freq;
 } PORT;
 
 PORT *isr_port_ptr;
@@ -140,6 +140,47 @@ NOTE *v_NOTE_PITCHBEND(NOTE *v, uint8 midich, uint8 lsb, uint8 msb) {
 	v->data.pitchbend.value = (((int16)msb & 0x7f) << 7) + (lsb & 0x7f) - PITCHBEND_ZEROBIAS;
 	return (v);
 }
+
+typedef uint32_t Q16n16;
+
+static const uint32_t midiToFreq[128] =
+    {
+     0, 567670, 601425, 637188, 675077, 715219, 757748, 802806, 850544, 901120,
+     954703, 1011473, 1071618, 1135340, 1202851, 1274376, 1350154, 1430438, 1515497,
+     1605613, 1701088, 1802240, 1909406, 2022946, 2143236, 2270680, 2405702, 2548752,
+     2700309, 2860877, 3030994, 3211226, 3402176, 3604479, 3818813, 4045892, 4286472,
+     4541359, 4811404, 5097504, 5400618, 5721756, 6061988, 6422452, 6804352, 7208959,
+     7637627, 8091785, 8572945, 9082719, 9622808, 10195009, 10801235, 11443507,
+     12123974, 12844905, 13608704, 14417917, 15275252, 16183563, 17145888, 18165438,
+     19245616, 20390018, 21602470, 22887014, 24247948, 25689810, 27217408, 28835834,
+     30550514, 32367136, 34291776, 36330876, 38491212, 40780036, 43204940, 45774028,
+     48495912, 51379620, 54434816, 57671668, 61101028, 64734272, 68583552, 72661752,
+     76982424, 81560072, 86409880, 91548056, 96991792, 102759240, 108869632,
+     115343336, 122202056, 129468544, 137167104, 145323504, 153964848, 163120144,
+     172819760, 183096224, 193983648, 205518336, 217739200, 230686576, 244403840,
+     258937008, 274334112, 290647008, 307929696, 326240288, 345639520, 366192448,
+     387967040, 411036672, 435478400, 461373152, 488807680, 517874016, 548668224,
+     581294016, 615859392, 652480576, 691279040, 732384896, 775934592, 822073344
+    };
+
+Q16n16  Q16n16_mtof(Q16n16 midival_fractional)
+ {
+     Q16n16 diff_fraction;
+     uint8_t index = midival_fractional >> 16;
+     uint16_t fraction = (uint16_t) midival_fractional; // keeps low word
+     Q16n16 freq1 = (Q16n16) midiToFreq[index];
+     Q16n16 freq2 = (Q16n16) midiToFreq[index+1];
+     Q16n16 difference = freq2 - freq1;
+     if (difference>=65536)
+     {
+         diff_fraction = ((difference>>8) * fraction) >> 8;
+     }
+     else
+     {
+         diff_fraction = (difference * fraction) >> 16;
+     }
+     return (Q16n16) (freq1+ diff_fraction);
+ }
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */
@@ -377,20 +418,31 @@ void update_midi_duty(){
         interrupter.pw = param.pw;
     }
 }
-
+char buf[30];
 void reflect(PORT port[], CHANNEL channel[], MIDICH midich[]) {
 	uint8_t ch;
 	uint8_t mch;
     uint32_t dutycycle=0;
+    uint32_t pb;
+    uint32_t count;
     telemetry.midi_voices =0;
 	// Reflect the status of the updated tone generator channel & MIDI channel on the port
 	for (ch = 0; ch < N_CHANNEL; ch++) {
 		mch = channel[ch].midich;
 		if (channel[ch].updated || midich[mch].updated) {
 			if (channel[ch].volume > 0) {
-                port[ch].freq=MIDITONENUM_FREQ(channel[ch].miditone + ((float)midich[mch].pitchbend * midich[mch].bendrange) / PITCHBEND_DIVIDER);
+                //port[ch].freq=MIDITONENUM_FREQ(channel[ch].miditone + ((float)midich[mch].pitchbend * midich[mch].bendrange) / PITCHBEND_DIVIDER);
+                count=CySysTickGetValue();
+                pb = ((((uint32_t)midich[mch].pitchbend*midich[mch].bendrange)<<10) / PITCHBEND_DIVIDER)<<6;
+                port[ch].freq=Q16n16_mtof((channel[ch].miditone<<16)+pb);
+                port[ch].halfcount= (150000<<14) / (port[ch].freq>>2);
+                port[ch].freq = port[ch].freq >>16;
+                count=count - CySysTickGetValue();
+                sprintf(buf, "Half: %u Ticks: %u\r\n",port[ch].halfcount,count);
+                send_string(buf, ETH);
                 
-				port[ch].halfcount = FREQ_HALFCOUNT(port[ch].freq);
+				//port[ch].halfcount = FREQ_HALFCOUNT(port[ch].freq);
+                
 				if (ch < N_DISPCHANNEL)
 					channel[ch].displayed = 1; // Re-display required
 			}

@@ -222,7 +222,7 @@ void tsk_eth_TaskProc(void *pvParameters) {
 		else {
 			midi_socket = ETH_TcpOpenServer(PORT_MIDI);
 		}			
-		vTaskDelay(5 /portTICK_RATE_MS);
+		vTaskDelay(2 /portTICK_RATE_MS);
 
 
 		/* `#END` */

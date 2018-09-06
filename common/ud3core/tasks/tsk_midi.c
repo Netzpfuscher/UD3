@@ -418,30 +418,22 @@ void update_midi_duty(){
         interrupter.pw = param.pw;
     }
 }
-char buf[30];
 void reflect(PORT port[], CHANNEL channel[], MIDICH midich[]) {
 	uint8_t ch;
 	uint8_t mch;
     uint32_t dutycycle=0;
     uint32_t pb;
-    uint32_t count;
     telemetry.midi_voices =0;
 	// Reflect the status of the updated tone generator channel & MIDI channel on the port
 	for (ch = 0; ch < N_CHANNEL; ch++) {
 		mch = channel[ch].midich;
 		if (channel[ch].updated || midich[mch].updated) {
 			if (channel[ch].volume > 0) {
-                //port[ch].freq=MIDITONENUM_FREQ(channel[ch].miditone + ((float)midich[mch].pitchbend * midich[mch].bendrange) / PITCHBEND_DIVIDER);
-                count=CySysTickGetValue();
                 pb = ((((uint32_t)midich[mch].pitchbend*midich[mch].bendrange)<<10) / PITCHBEND_DIVIDER)<<6;
                 port[ch].freq=Q16n16_mtof((channel[ch].miditone<<16)+pb);
                 port[ch].halfcount= (150000<<14) / (port[ch].freq>>2);
                 port[ch].freq = port[ch].freq >>16;
-                count=count - CySysTickGetValue();
-                sprintf(buf, "Half: %u Ticks: %u\r\n",port[ch].halfcount,count);
-                send_string(buf, ETH);
-                
-				//port[ch].halfcount = FREQ_HALFCOUNT(port[ch].freq);
+
                 
 				if (ch < N_DISPCHANNEL)
 					channel[ch].displayed = 1; // Re-display required

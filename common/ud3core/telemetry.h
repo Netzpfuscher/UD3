@@ -73,10 +73,10 @@
 #define GAUGE5_MAX 4        
 #define GAUGE5_VAR telemetry.midi_voices
         
-#define GAUGE6_NAME "Duty"
+#define GAUGE6_NAME "ETH_Buffer"
 #define GAUGE6_MIN 0
-#define GAUGE6_MAX 500
-#define GAUGE6_VAR interrupter.pw
+#define GAUGE6_MAX 4096
+#define GAUGE6_VAR telemetry.num_bytes
         
 #define CHART0_NAME "Bus Voltage"
 #define CHART0_MIN 0
@@ -127,6 +127,7 @@ typedef struct
     uint32_t resets_received;
     uint8_t min_frames_max;
     uint16_t duty;
+    uint16_t num_bytes;
 } telemetry_struct;
 telemetry_struct telemetry;
 

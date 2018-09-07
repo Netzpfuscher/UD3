@@ -47,6 +47,15 @@ void tsk_midi_Start(void);
 
 void update_midi_duty();
 
+extern xQueueHandle qSID;
+struct sid_f{
+    uint16_t freq[3];
+    uint16_t half[3];
+    uint16_t pw[3];
+    uint8_t gate[3];
+    uint8_t wave[3];
+};
+
 /*
  * Add user function prototypes in the below merge region to add user
  * functionality to the task definition.

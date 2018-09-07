@@ -61,7 +61,7 @@ uint8 tsk_eth_initVar = 0u;
 #define STREAMBUFFER_RX_SIZE    512     //bytes
 #define STREAMBUFFER_TX_SIZE    4096    //bytes
 
-#define LOCAL_ETH_BUFFER_SIZE 128
+#define LOCAL_ETH_BUFFER_SIZE 256
 
 
 #define PORT_TELNET     23
@@ -109,6 +109,106 @@ void process_midi(uint8_t* ptr, uint16_t len) {
 	}
 }
 
+char buf[30];
+void process_sid(uint8_t* ptr, uint16_t len) {
+    static uint8_t SID_frame_marker=0;
+    static uint8_t SID_register=0;
+    static struct sid_f SID_frame;
+    static uint8_t start_frame=0;
+    if(len){
+        uint8_t cnt=0;
+        uint32_t temp;
+	    while(len){
+            
+            if(start_frame){
+            switch(SID_register){
+                case 0:
+                    SID_frame.freq[0]=(SID_frame.freq[0] & 0xff00) + *ptr;
+                    break;
+                case 1:
+                    SID_frame.freq[0] = (SID_frame.freq[0] & 0xff) + ((uint16_t)*ptr << 8);
+                    temp = ((uint32_t)SID_frame.freq[0]<<7)/2179;
+                    //SID_frame.half[0]= (150000<<14) / ((uint32)SID_frame.freq[0]<<14);
+                    SID_frame.half[0]= (150000<<14) / (temp<<14);
+                    break;
+                case 2:
+		            SID_frame.pw[0] = (SID_frame.pw[0] & 0xff00) + *ptr;
+		            break;      
+                case 3:
+		            SID_frame.pw[0] = (SID_frame.pw[0] & 0xff) + ((uint16_t)*ptr << 8);
+		            break;
+        		case 4:
+                    SID_frame.gate[0] = *ptr & 0x01;
+                    SID_frame.wave[0] = *ptr & 0x80;
+        			break;
+                case 7:
+                    SID_frame.freq[1]=(SID_frame.freq[1] & 0xff00) + *ptr;
+                    break;
+                case 8:
+                    SID_frame.freq[1] = (SID_frame.freq[1] & 0xff) + ((uint16_t)*ptr << 8);
+                    temp = ((uint32_t)SID_frame.freq[1]<<7)/2179;
+                    temp/=2;
+                    //SID_frame.half[1]= (150000<<14) / ((uint32)SID_frame.freq[1]<<14);
+                    SID_frame.half[1]= (150000<<14) / (temp<<14);
+                    break;
+                case 9:
+		            SID_frame.pw[1] = (SID_frame.pw[1] & 0xff00) + *ptr;
+		            break;      
+                case 10:
+		            SID_frame.pw[1] = (SID_frame.pw[1] & 0xff) + ((uint16_t)*ptr << 8);
+		            break;
+        		case 11:
+                    SID_frame.gate[1] = *ptr & 0x01;
+                    SID_frame.wave[1] = *ptr & 0x80;
+        			break;
+                case 14:
+                    SID_frame.freq[2]=(SID_frame.freq[2] & 0xff00) + *ptr;
+                    break;
+                case 15:
+                    SID_frame.freq[2] = (SID_frame.freq[2] & 0xff) + ((uint16_t)*ptr << 8);
+                    temp = ((uint32_t)SID_frame.freq[2]<<7)/2179;
+                    SID_frame.half[2]= (150000<<14) / (temp<<14);
+                    //SID_frame.half[2]= (150000<<14) / ((uint32)SID_frame.freq[2]<<14);
+                    break;
+                case 16:
+		            SID_frame.pw[2] = (SID_frame.pw[2] & 0xff00) + *ptr;
+		            break;      
+                case 17:
+		            SID_frame.pw[2] = (SID_frame.pw[2] & 0xff) + ((uint16_t)*ptr << 8);
+		            break;
+        		case 18:
+                    SID_frame.gate[2] = *ptr & 0x01;
+                    SID_frame.wave[2] = *ptr & 0x80;
+        			break;
+            }
+            SID_register++;
+            if(SID_register==25){
+                xQueueSend(qSID,&SID_frame,0);
+                SID_register=0;
+                start_frame=0;
+            }
+            }
+            
+            if(*ptr==0xFF){
+                SID_frame_marker++;
+            }else{
+                SID_frame_marker=0;
+            }
+            if(SID_frame_marker==4){
+                SID_register=0;
+                start_frame=1;
+            }
+            
+            len--;
+            ptr++;
+            
+        }
+        
+    }
+}
+
+uint8_t stop[2] = {'x','x'};
+uint8_t start[2] = {'o','o'};
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */
@@ -165,7 +265,9 @@ void tsk_eth_TaskProc(void *pvParameters) {
 
 	/* `#END` */
     /* `#START TASK_LOOP_CODE` */
-
+    
+    uint8_t flow_ctl=1;
+    
 	for (;;) {
         
         if (cli_socket != 0xFF) {
@@ -205,14 +307,35 @@ void tsk_eth_TaskProc(void *pvParameters) {
         if (midi_socket != 0xFF) {
 			midi_socket_state = ETH_TcpPollSocket(midi_socket);
 			if (midi_socket_state == ETH_SR_ESTABLISHED) {
-				/*
-				 * Check for data received from the telnet port.
-				 */
-				len = ETH_TcpReceive(midi_socket,buffer,LOCAL_ETH_BUFFER_SIZE,0);
-				if(len){
-                    process_midi(buffer,len);
-                }
 
+                uint16_t bytes_waiting = ETH_RxDataReady(midi_socket);
+                
+                if(bytes_waiting>1800){
+                    if(flow_ctl){
+                        ETH_TcpSend(midi_socket,stop,1,0);
+                        flow_ctl=0;
+                    }
+                }else{
+                     if(!flow_ctl){
+                        flow_ctl=1;
+                        ETH_TcpSend(midi_socket,start,1,0);
+                    }
+                }
+                
+                telemetry.num_bytes = bytes_waiting;
+                
+                uint8_t qspace = uxQueueSpacesAvailable(qSID);
+                
+                if(qspace > 15){
+                   
+				    len = ETH_TcpReceive(midi_socket,buffer,LOCAL_ETH_BUFFER_SIZE,0);
+				    if(len){
+                    //process_midi(buffer,len);
+                    
+                    process_sid(buffer,len);
+                    }
+                }
+       
 			}
 			else if (midi_socket_state != ETH_SR_LISTEN) {
 				ETH_SocketClose(midi_socket,1);
@@ -245,7 +368,7 @@ void tsk_eth_Start(void) {
 	 	* Create the task and then leave. When FreeRTOS starts up the scheduler
 	 	* will call the task procedure and start execution of the task.
 	 	*/
-		xTaskCreate(tsk_eth_TaskProc, "ETH-Svc", 128, NULL, PRIO_ETH, &tsk_eth_TaskHandle);
+		xTaskCreate(tsk_eth_TaskProc, "ETH-Svc", 256, NULL, PRIO_ETH, &tsk_eth_TaskHandle);
 		tsk_eth_initVar = 1;
 	}
 }

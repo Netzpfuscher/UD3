@@ -68,15 +68,15 @@
 #define GAUGE4_VAR telemetry.primary_i
 
     
-#define GAUGE5_NAME "Voices"
+#define GAUGE5_NAME "Duty"
 #define GAUGE5_MIN 0
-#define GAUGE5_MAX 4        
-#define GAUGE5_VAR telemetry.midi_voices
+#define GAUGE5_MAX 4000        
+#define GAUGE5_VAR telemetry.duty
         
-#define GAUGE6_NAME "ETH_Buffer"
+#define GAUGE6_NAME "PW"
 #define GAUGE6_MIN 0
-#define GAUGE6_MAX 4096
-#define GAUGE6_VAR telemetry.num_bytes
+#define GAUGE6_MAX 500
+#define GAUGE6_VAR interrupter.pw
         
 #define CHART0_NAME "Bus Voltage"
 #define CHART0_MIN 0

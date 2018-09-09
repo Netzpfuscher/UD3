@@ -114,6 +114,7 @@ struct parameter_struct{
     uint16_t    burst_on;
     uint16_t    burst_off;
     int8_t      transpose;
+    uint8_t     synth;
 };
 typedef struct parameter_struct cli_parameter;
 

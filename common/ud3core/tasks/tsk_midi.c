@@ -87,6 +87,14 @@ typedef struct __note__ {
 	} data;
 } NOTE;
 
+struct pulse_str {
+	uint8_t  volume;
+	uint16_t pw;
+};
+
+struct pulse_str isr1_pulse;
+struct pulse_str isr2_pulse;
+
 typedef struct __midich__ {
 	uint8 expression; // Expression: Control change (Bxh) 0 bH
 	uint8 rpn_lsb;	// RPN (LSB): Control change (Bxh) 64 H
@@ -192,13 +200,48 @@ Q16n16  Q16n16_mtof(Q16n16 midival_fractional)
  */
 /* `#START USER_TASK_LOCAL_CODE` */
 
-uint8_t pulse_buffer[N_BUFFER];
-fifo_t pulse_fifo;
-
 xQueueHandle qSID;
+xQueueHandle qPulse;
 struct sid_f sid_frm;
 
 CY_ISR(isr_midi) {
+	uint8_t ch;
+	uint8_t flag[N_CHANNEL];
+	static uint8_t old_flag[N_CHANNEL];
+	uint32 r = SG_Timer_ReadCounter();
+	for (ch = 0; ch < N_CHANNEL; ch++) {
+		flag[ch] = 0;
+		if (isr_port_ptr[ch].volume > 0) {
+			if ((r / isr_port_ptr[ch].halfcount) % 2 > 0) {
+				flag[ch] = 1;
+			}
+		}
+		if (flag[ch] > old_flag[ch]) {
+            isr1_pulse.volume = isr_port_ptr[ch].volume;
+            isr1_pulse.pw = interrupter.pw;
+            xQueueSendFromISR(qPulse,&isr1_pulse,0);;
+		}
+		old_flag[ch] = flag[ch];
+   
+	}
+
+    if(xQueueReceiveFromISR(qPulse,&isr1_pulse,0)){
+        interrupter_oneshot(isr1_pulse.pw, isr1_pulse.volume);
+    }
+
+	if (qcw_reg) {
+		if ((ramp.modulation_value < 255) && (ramp.modulation_value > 0)) {
+			ramp.modulation_value += param.qcw_ramp;
+			if (ramp.modulation_value > 255)
+				ramp.modulation_value = 255;
+			ramp_control();
+		}
+	}
+}
+
+#define SID_CHANNELS 3
+
+CY_ISR(isr_sid) {
     
     static uint8_t cnt=0;
     if (cnt >212){
@@ -239,10 +282,10 @@ CY_ISR(isr_midi) {
     
     
 	uint8_t ch;
-	uint8_t flag[N_CHANNEL];
-	static uint8_t old_flag[N_CHANNEL];
+	uint8_t flag[SID_CHANNELS];
+	static uint8_t old_flag[SID_CHANNELS];
 	uint32 r = SG_Timer_ReadCounter();
-	for (ch = 0; ch < N_CHANNEL; ch++) {
+	for (ch = 0; ch < SID_CHANNELS; ch++) {
 		flag[ch] = 0;
 		if (isr_port_ptr[ch].volume > 0) {
 			if ((r / isr_port_ptr[ch].halfcount) % 2 > 0) {
@@ -250,19 +293,17 @@ CY_ISR(isr_midi) {
 			}
 		}
 		if (flag[ch] > old_flag[ch]) {
-			fifo_put(&pulse_fifo, isr_port_ptr[ch].volume);
+            isr1_pulse.volume = isr_port_ptr[ch].volume;
+            isr1_pulse.pw = sid_frm.master_pw;
+            xQueueSendFromISR(qPulse,&isr1_pulse,0);
 		}
 		old_flag[ch] = flag[ch];
    
 	}
-   
-    
-	int16_t temp_pulse;
-	temp_pulse = fifo_get_nowait(&pulse_fifo);
-	if (temp_pulse != -1) {
-        interrupter_oneshot(interrupter.pw, temp_pulse);
-		//interrupter_oneshot(temp_pulse, temp_pulse);
-	}
+
+    if(xQueueReceiveFromISR(qPulse,&isr1_pulse,0)){
+        interrupter_oneshot(isr1_pulse.pw, isr1_pulse.volume);
+    }
 
 	if (qcw_reg) {
 		if ((ramp.modulation_value < 255) && (ramp.modulation_value > 0)) {
@@ -275,12 +316,10 @@ CY_ISR(isr_midi) {
 }
 
 CY_ISR(isr_interrupter) {
-	int16_t temp_pulse;
-	temp_pulse = fifo_get_nowait(&pulse_fifo);
-	if (temp_pulse != -1) {
-        interrupter_oneshot(interrupter.pw, temp_pulse);
-		//interrupter_oneshot(temp_pulse, temp_pulse);
-	}
+
+    if(xQueueReceiveFromISR(qPulse,&isr2_pulse,0)){
+        interrupter_oneshot(isr2_pulse.pw, isr2_pulse.volume);
+    }
 	Offtime_ReadStatusRegister();
 }
 
@@ -503,7 +542,23 @@ void reflect(PORT port[], CHANNEL channel[], MIDICH midich[]) {
     }else{
         interrupter.pw = param.pw;
     }
-    
+     
+}
+
+void switch_synth(uint8_t synth){
+    switch(synth){
+        case SYNTH_OFF:
+            isr_midi_Stop();
+        break;
+        case SYNTH_MIDI:
+            isr_midi_Stop();
+            isr_midi_StartEx(isr_midi);
+        break;
+        case SYNTH_SID:
+            isr_midi_Stop();
+            isr_midi_StartEx(isr_sid);
+        break;
+    }
     
 }
 
@@ -521,10 +576,8 @@ void tsk_midi_TaskProc(void *pvParameters) {
 	 */
 	/* `#START TASK_VARIABLES` */
 	qMIDI_rx = xQueueCreate(256, sizeof(NOTE));
-    
-    qSID = xQueueCreate(128, sizeof(struct sid_f));
-
-	fifo_init(&pulse_fifo, pulse_buffer, N_BUFFER);
+    qSID = xQueueCreate(32, sizeof(struct sid_f));
+    qPulse = xQueueCreate(8, sizeof(struct pulse_str));
 
 	NOTE note_struct;
 
@@ -559,7 +612,9 @@ void tsk_midi_TaskProc(void *pvParameters) {
 	// Sound source relation module initialization
 	SG_Timer_Start();
 
-	isr_midi_StartEx(isr_midi);
+	//isr_midi_StartEx(isr_midi);
+    isr_midi_StartEx(isr_sid);
+    
 	isr_interrupter_StartEx(isr_interrupter);
 
 	/* `#END` */
@@ -567,13 +622,17 @@ void tsk_midi_TaskProc(void *pvParameters) {
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
 
-		if (xQueueReceive(qMIDI_rx, &note_struct, portMAX_DELAY)) {
-			process(&note_struct, channel, midich);
-			while (xQueueReceive(qMIDI_rx, &note_struct, 0)) {
-				process(&note_struct, channel, midich);
-			}
-			reflect(port, channel, midich);
-		}
+        if(param.synth==SYNTH_MIDI){
+    		if (xQueueReceive(qMIDI_rx, &note_struct, portMAX_DELAY)) {
+    			process(&note_struct, channel, midich);
+    			while (xQueueReceive(qMIDI_rx, &note_struct, 0)) {
+    				process(&note_struct, channel, midich);
+    			}
+    			reflect(port, channel, midich);
+    		}
+        }else{
+        vTaskDelay(200 /portTICK_RATE_MS);
+        }
 
 		/* `#END` */
 	}

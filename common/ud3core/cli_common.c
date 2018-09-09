@@ -78,6 +78,7 @@ uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, uint8_t p
 uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, uint8_t port);
 uint8_t callback_OfftimeFunction(parameter_entry * params, uint8_t index, uint8_t port);
 uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, uint8_t port);
+uint8_t callback_SynthFunction(parameter_entry * params, uint8_t index, uint8_t port);
 
 uint8_t command_help(char *commandline, uint8_t port);
 uint8_t command_get(char *commandline, uint8_t port);
@@ -164,6 +165,7 @@ void init_config(){
     param.qcw_ramp = 2;
     param.qcw_repeat = 500;
     param.transpose = 0;
+    param.synth = SYNTH_SID;
 }
 
 // clang-format off
@@ -185,6 +187,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_DEFAULT ,"qcw_ramp"        , param.qcw_ramp                , TYPE_UNSIGNED ,1      ,10     ,NULL                        ,"QCW Ramp Inc/93us")
     ADD_PARAM(PARAM_DEFAULT ,"qcw_repeat"      , param.qcw_repeat              , TYPE_UNSIGNED ,0      ,1000   ,NULL                        ,"QCW pulse repeat time [ms] <100=single shot")
     ADD_PARAM(PARAM_DEFAULT ,"transpose"       , param.transpose               , TYPE_SIGNED   ,-48    ,48     ,NULL                        ,"Transpose MIDI")
+    ADD_PARAM(PARAM_DEFAULT ,"synth"           , param.synth                   , TYPE_UNSIGNED ,0      ,2      ,callback_SynthFunction      ,"0=off 1=MIDI 2=SID")
     ADD_PARAM(PARAM_CONFIG  ,"watchdog"        , configuration.watchdog        , TYPE_UNSIGNED ,0      ,1      ,NULL                        ,"Watchdog Enable")
     ADD_PARAM(PARAM_CONFIG  ,"max_tr_pw"       , configuration.max_tr_pw       , TYPE_UNSIGNED ,0      ,3000   ,callback_ConfigFunction     ,"Maximum TR PW [uSec]")
     ADD_PARAM(PARAM_CONFIG  ,"max_tr_prf"      , configuration.max_tr_prf      , TYPE_UNSIGNED ,0      ,3000   ,callback_ConfigFunction     ,"Maximum TR frequency [Hz]")
@@ -265,6 +268,13 @@ uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, uint8_t p
 		return 1;
 }
 
+/*****************************************************************************
+* Switches the synthesizer
+******************************************************************************/
+uint8_t callback_SynthFunction(parameter_entry * params, uint8_t index, uint8_t port){
+    switch_synth(param.synth);
+    return 1;
+}
 
 /*****************************************************************************
 * Callback if a transient mode parameter is changed

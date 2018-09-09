@@ -47,6 +47,8 @@ void tsk_midi_Start(void);
 
 void update_midi_duty();
 
+void switch_synth(uint8_t synth);
+
 extern xQueueHandle qSID;
 struct sid_f{
     uint16_t freq[3];
@@ -54,7 +56,12 @@ struct sid_f{
     uint16_t pw[3];
     uint8_t gate[3];
     uint8_t wave[3];
+    uint16_t master_pw;
 };
+
+#define SYNTH_OFF  0
+#define SYNTH_MIDI 1
+#define SYNTH_SID  2
 
 /*
  * Add user function prototypes in the below merge region to add user

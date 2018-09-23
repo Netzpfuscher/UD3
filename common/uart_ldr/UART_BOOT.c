@@ -16,9 +16,17 @@
 *******************************************************************************/
 
 #include "UART.h"
+#include "ETH.h"
 
 #if defined(CYDEV_BOOTLOADER_IO_COMP) && (0u != ((CYDEV_BOOTLOADER_IO_COMP == CyBtldr_UART) || \
                                           (CYDEV_BOOTLOADER_IO_COMP == CyBtldr_Custom_Interface)))
+    
+#define PORT_BOOTLDR 666
+#define LOCAL_ETH_BUFFER_SIZE 512
+uint8_t socket_bootldr;
+uint8_t socket_bootldr_state;
+uint8_t buffer[LOCAL_ETH_BUFFER_SIZE];
+uint16_t len;
 
 
 /*******************************************************************************
@@ -45,7 +53,6 @@ void UART_CyBtldrCommStart(void) CYSMALL
     UART_ClearRxBuffer();
     UART_ClearTxBuffer();
 }
-
 
 /*******************************************************************************
 * Function Name: UART_CyBtldrCommStop
@@ -113,7 +120,8 @@ void UART_CyBtldrCommReset(void) CYSMALL
 *  This function should be called after command was received .
 *
 *******************************************************************************/
-cystatus UART_CyBtldrCommWrite(const uint8 pData[], uint16 size, uint16 * count, uint8 timeOut) CYSMALL
+
+cystatus NA_CyBtldrCommWrite(const uint8 pData[], uint16 size, uint16 * count, uint8 timeOut) CYSMALL
          
 {
     uint16 bufIndex = 0u;
@@ -131,6 +139,65 @@ cystatus UART_CyBtldrCommWrite(const uint8 pData[], uint16 size, uint16 * count,
     {
         UART_PutChar(pData[bufIndex]);
         bufIndex++;
+    }
+
+    /* Return success code */
+    *count = size;
+
+    return (CYRET_SUCCESS);
+}
+
+
+uint8_t ETH_receive_char(){
+    if (socket_bootldr != 0xFF) {
+        socket_bootldr_state = ETH_TcpPollSocket(socket_bootldr);
+
+        if (socket_bootldr_state == ETH_SR_ESTABLISHED) {
+            /*
+        	 * Check for data received from the telnet port.
+        	 */
+            return ETH_TcpGetChar(socket_bootldr);
+        	
+        }
+        else if (socket_bootldr_state != ETH_SR_LISTEN) {
+        	ETH_SocketClose(socket_bootldr,1);
+        	socket_bootldr = 0xFF;
+        }
+    }
+    else {
+    socket_bootldr = ETH_TcpOpenServer(PORT_BOOTLDR);
+    }
+    return 0;
+    
+}
+
+
+cystatus UART_CyBtldrCommWrite(const uint8 pData[], uint16 size, uint16 * count, uint8 timeOut) CYSMALL
+         
+{
+
+
+    if(0u != timeOut)
+    {
+        /* Suppress compiler warning */
+    }
+
+    /* Clear receive buffers */
+    if (socket_bootldr != 0xFF) {
+        socket_bootldr_state = ETH_TcpPollSocket(socket_bootldr);
+
+        if (socket_bootldr_state == ETH_SR_ESTABLISHED) {
+            if(size){
+        	    ETH_TcpSend(socket_bootldr,pData,size,ETH_TXRX_FLG_WAIT);
+            }
+        }
+        else if (socket_bootldr_state != ETH_SR_LISTEN) {
+        	ETH_SocketClose(socket_bootldr,1);
+        	socket_bootldr = 0xFF;
+        }
+    }
+    else {
+    socket_bootldr = ETH_TcpOpenServer(PORT_BOOTLDR);
     }
 
     /* Return success code */
@@ -167,7 +234,7 @@ cystatus UART_CyBtldrCommWrite(const uint8 pData[], uint16 size, uint16 * count,
 *  host. You have to account for the delay in hardware converters while
 *  calculating this value, if you are using any USB-UART bridges.
 *******************************************************************************/
-cystatus UART_CyBtldrCommRead(uint8 pData[], uint16 size, uint16 * count, uint8 timeOut) CYSMALL
+cystatus NA_CyBtldrCommRead(uint8 pData[], uint16 size, uint16 * count, uint8 timeOut) CYSMALL
          
 {
     uint16 iCntr;
@@ -248,6 +315,177 @@ cystatus UART_CyBtldrCommRead(uint8 pData[], uint16 size, uint16 * count, uint8 
         }
     }
 
+    return (status);
+}
+
+
+//cystatus UART_CyBtldrCommRead(uint8 pData[], uint16 size, uint16 * count, uint8 timeOut) CYSMALL
+//         
+//{
+//    uint16 iCntr;
+//    uint16 dataIndexCntr;
+//    uint16 tempCount;
+//    uint16 oldDataCount;
+//
+//    cystatus status = CYRET_EMPTY;
+//    
+//    if (socket_bootldr != 0xFF) {
+//    socket_bootldr_state = ETH_TcpPollSocket(socket_bootldr);
+//
+//    if (socket_bootldr_state == ETH_SR_ESTABLISHED) {
+//        /* Check whether data is received within the time out period.
+//        *  Time out period is in units of 10ms.
+//        *  If at least one byte is received within the time out interval, wait for more data */
+//            for (iCntr = 0u; iCntr < ((uint16)10u * timeOut); iCntr++)
+//            {
+//                /* If at least one byte is received within the timeout interval
+//                *  enter the next loop waiting for more data reception
+//                */
+//                if(0u != ETH_RxDataReady(socket_bootldr))
+//                {
+//                    /* Wait for more data until 25ms byte to byte time out interval.
+//                    * If no data is received during the last 25 ms(BYTE2BYTE_TIME_OUT)
+//                    * then it is considered as end of transmitted data block(packet)
+//                    * from the host and the program execution will break from the
+//                    * data awaiting loop with status=CYRET_SUCCESS
+//                    */
+//                    do
+//                    {
+//                        oldDataCount = ETH_RxDataReady(socket_bootldr);
+//                        CyDelayUs(UART_BYTE2BYTE_TIME_OUT);
+//                        //CyDelay(5);
+//                    }
+//                    while(ETH_RxDataReady(socket_bootldr) > oldDataCount);
+//
+//                    status = CYRET_SUCCESS;
+//                    break;
+//                }
+//                /* If the data is not received, give a delay of 
+//                *  UART_BL_CHK_DELAY_MS and check again until the timeOut specified.
+//                */
+//                else
+//                {
+//                    CyDelay(UART_BL_CHK_DELAY_MS);
+//                }
+//            }
+//
+//            /* Initialize the data read indexes and Count value */
+//            *count = 0u;
+//            dataIndexCntr = 0u;
+//
+//            /* If GetRxBufferSize()>0 , move the received data to the pData buffer */
+//            while(ETH_RxDataReady(socket_bootldr) > 0u)
+//            {
+//                tempCount = ETH_RxDataReady(socket_bootldr);
+//                *count  =(*count) + tempCount;
+//
+//                /* Check if buffer overflow will occur before moving the data */
+//                if(*count < size)
+//                {
+//                    for (iCntr = 0u; iCntr < tempCount; iCntr++)
+//                    {
+//                        /* Read the data and move it to the pData buffer */
+//                        pData[dataIndexCntr] = ETH_receive_char();
+//                        dataIndexCntr++;
+//                    }
+//
+//                    /* Check if the last received byte is end of packet defined by bootloader
+//                    *  If not wait for additional UART_WAIT_EOP_DELAY ms.
+//                    */
+//                    if(pData[dataIndexCntr - 1u] != UART_PACKET_EOP)
+//                    {
+//                        CyDelay(UART_WAIT_EOP_DELAY);
+//                    }
+//                }
+//                /* If there is no space to move data, break from the loop */
+//                else
+//                {
+//                    *count = (*count) - tempCount;
+//                    break;
+//                }
+//            }
+//        }
+//        else if (socket_bootldr_state != ETH_SR_LISTEN) {
+//        	ETH_SocketClose(socket_bootldr,1);
+//        	socket_bootldr = 0xFF;
+//        }
+//    }
+//    else {
+//    socket_bootldr = ETH_TcpOpenServer(PORT_BOOTLDR);
+//    }
+//    CyDelay(1);
+//    return (status);
+//}
+
+cystatus UART_CyBtldrCommRead(uint8 pData[], uint16 size, uint16 * count, uint8 timeOut) CYSMALL
+         
+{
+    uint16 iCntr;
+    uint16 dataIndexCntr;
+    uint16 tempCount;
+    uint16 oldDataCount;
+
+    cystatus status = CYRET_EMPTY;
+    
+    if (socket_bootldr != 0xFF) {
+    socket_bootldr_state = ETH_TcpPollSocket(socket_bootldr);
+
+    if (socket_bootldr_state == ETH_SR_ESTABLISHED) {
+        /* Check whether data is received within the time out period.
+        *  Time out period is in units of 10ms.
+        *  If at least one byte is received within the time out interval, wait for more data */
+            for (iCntr = 0u; iCntr < ((uint16)10u * timeOut); iCntr++)
+            {
+                /* If at least one byte is received within the timeout interval
+                *  enter the next loop waiting for more data reception
+                */
+                if(0u != ETH_RxDataReady(socket_bootldr))
+                {
+                    /* Wait for more data until 25ms byte to byte time out interval.
+                    * If no data is received during the last 25 ms(BYTE2BYTE_TIME_OUT)
+                    * then it is considered as end of transmitted data block(packet)
+                    * from the host and the program execution will break from the
+                    * data awaiting loop with status=CYRET_SUCCESS
+                    */
+                    do
+                    {
+                        oldDataCount = ETH_RxDataReady(socket_bootldr);
+                        CyDelayUs(UART_BYTE2BYTE_TIME_OUT);
+                        //CyDelay(5);
+                    }
+                    while(ETH_RxDataReady(socket_bootldr) > oldDataCount);
+
+                    status = CYRET_SUCCESS;
+                    break;
+                }
+                /* If the data is not received, give a delay of 
+                *  UART_BL_CHK_DELAY_MS and check again until the timeOut specified.
+                */
+                else
+                {
+                    CyDelay(UART_BL_CHK_DELAY_MS);
+                }
+            }
+
+            /* Initialize the data read indexes and Count value */
+            *count = 0u;
+            dataIndexCntr = 0u;
+            
+            *count=ETH_TcpReceive(socket_bootldr,pData,size,0);
+            //*count=size;
+            
+
+     
+        }
+        else if (socket_bootldr_state != ETH_SR_LISTEN) {
+        	ETH_SocketClose(socket_bootldr,1);
+        	socket_bootldr = 0xFF;
+        }
+    }
+    else {
+    socket_bootldr = ETH_TcpOpenServer(PORT_BOOTLDR);
+    }
+    CyDelay(1);
     return (status);
 }
 

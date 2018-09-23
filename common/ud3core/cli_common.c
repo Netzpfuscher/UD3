@@ -145,9 +145,9 @@ void init_config(){
     configuration.ps_scheme = 2;
     configuration.autotune_s = 1;
     strcpy(configuration.ud_name,"UD3-Tesla");
-    strcpy(configuration.ip_addr,"192.168.50.250");
+ //   strcpy(configuration.ip_addr,"192.168.50.250");
     strcpy(configuration.ip_subnet,"255.255.255.0");
-    strcpy(configuration.ip_mac,"00:DE:AD:BE:EF:00");
+    strcpy(configuration.ip_mac,"21:24:5D:AA:68:57");
     strcpy(configuration.ip_gw,"192.168.50.1");
     configuration.minprot = 0;
     configuration.max_inst_i = 80;
@@ -165,7 +165,7 @@ void init_config(){
     param.qcw_ramp = 2;
     param.qcw_repeat = 500;
     param.transpose = 0;
-    param.synth = SYNTH_SID;
+    param.synth = SYNTH_MIDI;
 }
 
 // clang-format off

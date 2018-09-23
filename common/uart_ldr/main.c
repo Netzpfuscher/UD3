@@ -81,16 +81,43 @@
 * On successful bootloading the message “Bootloaded - Bye” will be displayed on CY8CKIT – 050 LCD and the message “Bye” 
 * will be displayed on CY8CKIT – 030 LCD.
 ***************************************************************************** */
-
 #include <project.h>
 #include "Bootloader.h"
 #include "UART.h"
+#include "ETH.h"
+#include "cli_basic.h"
 
-void main()
+struct config_struct{
+    char ip_addr[16];
+    char ip_gw[16];
+    char ip_mac[18];
+    char ip_subnet[16];
+};
+typedef struct config_struct cli_config;
+cli_config configuration;
+
+/*****************************************************************************
+* Parameter struct
+******************************************************************************/
+parameter_entry confparam[] = {
+    ADD_PARAM(PARAM_CONFIG  ,"ip_addr"         , configuration.ip_addr         , TYPE_STRING   ,0      ,0      ,NULL                        ,"IP-Adress of the UD3 (NULL for eth disable)")
+    ADD_PARAM(PARAM_CONFIG  ,"ip_gateway"      , configuration.ip_gw           , TYPE_STRING   ,0      ,0      ,NULL                        ,"Gateway adress")
+    ADD_PARAM(PARAM_CONFIG  ,"ip_subnet"       , configuration.ip_subnet       , TYPE_STRING   ,0      ,0      ,NULL                        ,"Subnet")
+    ADD_PARAM(PARAM_CONFIG  ,"ip_mac"          , configuration.ip_mac          , TYPE_STRING   ,0      ,0      ,NULL                        ,"MAC adress")
+    ADD_PARAM(PARAM_CONFIG  ,"ip_trest"          , configuration.ip_mac          , TYPE_STRING   ,0      ,0      ,NULL                        ,"MAC adress")
+};
+
+int main()
 {
-
+    
 	/* Initialize PWM */
-    PWM_Start();   
+    PWM_Start();  
+    SPIM0_Start();
+    EEPROM_1_Start();
+    CyDelay(10);
+    EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,NONE); 
+    
+    ETH_StartEx( "192.168.50.1", "255.255.255.0", "58:E9:40:31:CB:9B", "192.168.50.249" );
 	
 	/* This API does the entire bootload operation. After a succesful bootload operation, this API transfers
 	   program control to the new application via a software reset */

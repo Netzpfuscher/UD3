@@ -200,7 +200,7 @@
 #define ETH_PROTO_MACRAW                       ( 0x04 )
 
 #define ETH_TXRX_FLG_WAIT                      ( 0x01 )
-
+    
 //#define ETH_IPADDRESS(x1,x2,x3,x4)   ( (uint32)(x1&0x000000FF) + (uint32)((x2<<8)&0x0000FF00) + (uint32)((x3<<16)&0x00FF0000) + ((uint32)(x4<<24)&0xFF000000 ))
 	
 /* ------------------------------------------------------------------------ */

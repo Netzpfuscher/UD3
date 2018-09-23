@@ -29,7 +29,8 @@
 #define SERIAL 0
 #define USB 1
 #define ETH 2
-
+#define NONE 3
+    
 typedef struct parameter_entry_struct parameter_entry;
 struct parameter_entry_struct {
     const uint8_t parameter_type;

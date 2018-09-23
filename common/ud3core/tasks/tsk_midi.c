@@ -612,8 +612,8 @@ void tsk_midi_TaskProc(void *pvParameters) {
 	// Sound source relation module initialization
 	SG_Timer_Start();
 
-	//isr_midi_StartEx(isr_midi);
-    isr_midi_StartEx(isr_sid);
+	isr_midi_StartEx(isr_midi);
+    //isr_midi_StartEx(isr_sid);
     
 	isr_interrupter_StartEx(isr_interrupter);
 

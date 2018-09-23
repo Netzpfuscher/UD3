@@ -44,8 +44,11 @@
 
 #include <ETH_CSN.h>
 #include <SPIM0.h>
+
+#ifndef BOOT
 #include "FreeRTOS.h"
 #include "task.h"
+#endif
 
 
 #if defined (CY_SCB_SPIM0_H)
@@ -155,7 +158,9 @@ void ETH_Send(uint16 offset, uint8 block_select, uint8 write, uint8 *buffer, uin
 			SPIM0_ReadRxData();
 			count = (count==0)?0:count-1;
 		}
-		//CyDelayUs(5);
+        #ifdef BOOT
+		    CyDelayUs(5);
+        #endif
 	}
 	/* 
 	 * Now that the Receive FIFO has been flushed, send data through
@@ -177,7 +182,9 @@ void ETH_Send(uint16 offset, uint8 block_select, uint8 write, uint8 *buffer, uin
 			}
 			++count;
 		}
-		//CyDelayUs(5);
+        #ifdef BOOT
+		    CyDelayUs(5);
+        #endif
 	}
 	/* Turn off the chip select. */
 	do {
@@ -401,8 +408,12 @@ cystatus ETH_StartEx( const char *gateway, const char *subnet, const char *mac, 
 	 * Wait for initial power-on PLL Lock, and issue a device reset
 	 * to initialize the registers
 	 */
+    #ifdef configTOTAL_HEAP_SIZE
     vTaskDelay(ETH_RESET_DELAY /portTICK_RATE_MS);
-	
+	#else
+        CyDelay(ETH_RESET_DELAY);
+    #endif
+        
 	/*
 	 * use IoT utlity functions to convert from ASCII data to binary data
 	 * used by the driver, and store it in the ChipInfo for later use.
@@ -451,8 +462,13 @@ cystatus ETH_StartEx( const char *gateway, const char *subnet, const char *mac, 
 		    result = ETH_Init(g,s,m,i);
         }
 		if (result != CYRET_SUCCESS) {
-			//CyDelay(1);
+            
+            #ifndef BOOT
             vTaskDelay(5 /portTICK_RATE_MS);
+            #else
+            CyDelay(1);    
+            #endif
+            
 			++timeout;
 			result = CYRET_TIMEOUT;
 		}

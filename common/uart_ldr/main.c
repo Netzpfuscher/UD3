@@ -100,11 +100,10 @@ cli_config configuration;
 * Parameter struct
 ******************************************************************************/
 parameter_entry confparam[] = {
-    ADD_PARAM(PARAM_CONFIG  ,"ip_addr"         , configuration.ip_addr         , TYPE_STRING   ,0      ,0      ,NULL                        ,"IP-Adress of the UD3 (NULL for eth disable)")
-    ADD_PARAM(PARAM_CONFIG  ,"ip_gateway"      , configuration.ip_gw           , TYPE_STRING   ,0      ,0      ,NULL                        ,"Gateway adress")
-    ADD_PARAM(PARAM_CONFIG  ,"ip_subnet"       , configuration.ip_subnet       , TYPE_STRING   ,0      ,0      ,NULL                        ,"Subnet")
-    ADD_PARAM(PARAM_CONFIG  ,"ip_mac"          , configuration.ip_mac          , TYPE_STRING   ,0      ,0      ,NULL                        ,"MAC adress")
-    ADD_PARAM(PARAM_CONFIG  ,"ip_trest"          , configuration.ip_mac          , TYPE_STRING   ,0      ,0      ,NULL                        ,"MAC adress")
+    ADD_PARAM(PARAM_CONFIG  ,"ip_addr"         , configuration.ip_addr         , TYPE_STRING   ,0      ,0      ,NULL                        ,"")
+    ADD_PARAM(PARAM_CONFIG  ,"ip_gateway"      , configuration.ip_gw           , TYPE_STRING   ,0      ,0      ,NULL                        ,"")
+    ADD_PARAM(PARAM_CONFIG  ,"ip_subnet"       , configuration.ip_subnet       , TYPE_STRING   ,0      ,0      ,NULL                        ,"")
+    ADD_PARAM(PARAM_CONFIG  ,"ip_mac"          , configuration.ip_mac          , TYPE_STRING   ,0      ,0      ,NULL                        ,"")
 };
 
 int main()
@@ -114,10 +113,13 @@ int main()
     PWM_Start();  
     SPIM0_Start();
     EEPROM_1_Start();
-    CyDelay(10);
     EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,NONE); 
     
-    ETH_StartEx( "192.168.50.1", "255.255.255.0", "58:E9:40:31:CB:9B", "192.168.50.249" );
+    if(ETH_StartEx(configuration.ip_gw, configuration.ip_subnet, configuration.ip_mac, configuration.ip_addr)==CYRET_SUCCESS){
+        com_type=ETH;   
+    }else{
+        com_type=SERIAL;
+    }
 	
 	/* This API does the entire bootload operation. After a succesful bootload operation, this API transfers
 	   program control to the new application via a software reset */

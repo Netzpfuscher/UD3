@@ -121,7 +121,7 @@ void UART_CyBtldrCommReset(void) CYSMALL
 *
 *******************************************************************************/
 
-cystatus NA_CyBtldrCommWrite(const uint8 pData[], uint16 size, uint16 * count, uint8 timeOut) CYSMALL
+cystatus UART_CyBtldrCommWrite(const uint8 pData[], uint16 size, uint16 * count, uint8 timeOut) CYSMALL
          
 {
     uint16 bufIndex = 0u;
@@ -148,31 +148,7 @@ cystatus NA_CyBtldrCommWrite(const uint8 pData[], uint16 size, uint16 * count, u
 }
 
 
-uint8_t ETH_receive_char(){
-    if (socket_bootldr != 0xFF) {
-        socket_bootldr_state = ETH_TcpPollSocket(socket_bootldr);
-
-        if (socket_bootldr_state == ETH_SR_ESTABLISHED) {
-            /*
-        	 * Check for data received from the telnet port.
-        	 */
-            return ETH_TcpGetChar(socket_bootldr);
-        	
-        }
-        else if (socket_bootldr_state != ETH_SR_LISTEN) {
-        	ETH_SocketClose(socket_bootldr,1);
-        	socket_bootldr = 0xFF;
-        }
-    }
-    else {
-    socket_bootldr = ETH_TcpOpenServer(PORT_BOOTLDR);
-    }
-    return 0;
-    
-}
-
-
-cystatus UART_CyBtldrCommWrite(const uint8 pData[], uint16 size, uint16 * count, uint8 timeOut) CYSMALL
+cystatus ETH_CyBtldrCommWrite(const uint8 pData[], uint16 size, uint16 * count, uint8 timeOut) CYSMALL
          
 {
 
@@ -234,7 +210,7 @@ cystatus UART_CyBtldrCommWrite(const uint8 pData[], uint16 size, uint16 * count,
 *  host. You have to account for the delay in hardware converters while
 *  calculating this value, if you are using any USB-UART bridges.
 *******************************************************************************/
-cystatus NA_CyBtldrCommRead(uint8 pData[], uint16 size, uint16 * count, uint8 timeOut) CYSMALL
+cystatus UART_CyBtldrCommRead(uint8 pData[], uint16 size, uint16 * count, uint8 timeOut) CYSMALL
          
 {
     uint16 iCntr;
@@ -417,7 +393,7 @@ cystatus NA_CyBtldrCommRead(uint8 pData[], uint16 size, uint16 * count, uint8 ti
 //    return (status);
 //}
 
-cystatus UART_CyBtldrCommRead(uint8 pData[], uint16 size, uint16 * count, uint8 timeOut) CYSMALL
+cystatus ETH_CyBtldrCommRead(uint8 pData[], uint16 size, uint16 * count, uint8 timeOut) CYSMALL
          
 {
     uint16 iCntr;

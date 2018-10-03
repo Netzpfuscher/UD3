@@ -223,9 +223,9 @@ void update_interrupter() {
 	}
 
 	/* Compute the duty cycle and mod the PW if required */
-	interrupter.duty = (uint32)((uint32)interrupter.pw * 10000ul) / interrupter.prd; //gives duty cycle as 0.1% increment
+	interrupter.duty = (uint32)((uint32)interrupter.pw * 1000ul) / interrupter.prd; //gives duty cycle as 0.1% increment
 	if (interrupter.duty > configuration.max_tr_duty) {
-		interrupter.duty_limited_pw = (uint32)configuration.max_tr_duty * (uint32)interrupter.prd / 10000ul;
+		interrupter.duty_limited_pw = (uint32)configuration.max_tr_duty * (uint32)interrupter.prd / 1000ul;
 	} else {
 		interrupter.duty_limited_pw = interrupter.pw;
 	}

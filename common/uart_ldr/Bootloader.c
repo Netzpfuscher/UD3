@@ -21,10 +21,16 @@
 #include "UART.h"
 #include "project.h"
 #include <string.h>
+#include "cli_basic.h"
+
+cystatus ETH_CyBtldrCommWrite(const uint8 pData[], uint16 size, uint16 * count, uint8 timeOut) CYSMALL;
+cystatus ETH_CyBtldrCommRead(uint8 pData[], uint16 size, uint16 * count, uint8 timeOut) CYSMALL;
 
 #if (CY_BOOT_VERSION < CY_BOOT_5_0)
 #error Component Bootloader_v1_60 requires cy_boot v5.00 or later
 #endif /* (CY_BOOT_VERSION >= CY_BOOT_5_0) */
+
+uint8_t com_type=ETH;
 
 /*******************************************************************************
 * The Checksum and SizeBytes are forcefully set in code. We then post process
@@ -1705,10 +1711,23 @@ void Bootloader_HostLink(uint8 timeOut) CYLARGE
 
         do
         {
-            readStat = CyBtldrCommRead(packetBuffer,
+            switch(com_type){
+            case SERIAL:
+                readStat = CyBtldrCommRead(packetBuffer,
                                         Bootloader_SIZEOF_COMMAND_BUFFER,
                                         &numberRead,
                                         (0u == timeOut) ? 0xFFu : timeOut);
+                break;
+            case ETH:
+                readStat = ETH_CyBtldrCommRead(packetBuffer,
+                                        Bootloader_SIZEOF_COMMAND_BUFFER,
+                                        &numberRead,
+                                        (0u == timeOut) ? 0xFFu : timeOut);
+                break;
+            }
+                
+                
+                
             if (0u != timeOut)
             {
                 timeOutCnt--;
@@ -2776,7 +2795,14 @@ static cystatus Bootloader_WritePacket(uint8 status, uint8 buffer[], uint16 size
     buffer[Bootloader_EOP_ADDR(size)]     = Bootloader_EOP;
 
     /* Start packet transmit. */
-    return(CyBtldrCommWrite(buffer, size + Bootloader_MIN_PKT_SIZE, &size, 150u));
+    switch(com_type){
+        case SERIAL:
+            return(CyBtldrCommWrite(buffer, size + Bootloader_MIN_PKT_SIZE, &size, 150u));
+            break;
+        case ETH:
+            return(ETH_CyBtldrCommWrite(buffer, size + Bootloader_MIN_PKT_SIZE, &size, 150u));
+            break;
+    }
 }
 #endif /*(CYDEV_PROJ_TYPE != CYDEV_PROJ_TYPE_LAUNCHER)*/
 

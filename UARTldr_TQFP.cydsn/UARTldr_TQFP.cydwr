@@ -327,10 +327,14 @@
       <Data key="daa0ea3f-1da6-4088-bc09-3cdcccd9ba3f/be0a0e37-ad17-42ca-b5a1-1a654d736358" value="UART_IntClock" />
     </Group>
     <Group key="Pin">
+      <Data key="2b4c905a-a323-4c6f-8ff4-f16791a8270d" value="MOSI" />
       <Data key="2b269b96-47a4-4e9a-937e-76d4080bb211/8b77a6c4-10a0-4390-971c-672353e2a49c" value="USBUART_Dm" />
       <Data key="2b269b96-47a4-4e9a-937e-76d4080bb211/618a72fc-5ddd-4df5-958f-a3d55102db42" value="USBUART_Dp" />
       <Data key="3a960253-138e-4757-af7c-c31e478282fd" value="Rx" />
+      <Data key="83b2fde2-60ad-45b6-9e5c-cb3baa6e3f9a" value="SCLK" />
+      <Data key="1425177d-0d0e-4468-8bcc-e638e5509a9b" value="MISO" />
       <Data key="a4c246a0-55f8-4012-a160-95210e380870" value="Tx" />
+      <Data key="e851a3b9-efb8-48be-bbb8-b303b216c393" value="ETH_CSN" />
       <Data key="ed092b9b-d398-4703-be89-cebf998501f6" value="Pin_LED" />
     </Group>
   </Group>
@@ -3418,14 +3422,34 @@
     </Group>
   </Group>
   <Group key="Pin2">
+    <Group key="2b4c905a-a323-4c6f-8ff4-f16791a8270d">
+      <Group key="0">
+        <Data key="Port Format" value="5,3" />
+      </Group>
+    </Group>
     <Group key="3a960253-138e-4757-af7c-c31e478282fd">
       <Group key="0">
         <Data key="Port Format" value="3,2" />
       </Group>
     </Group>
+    <Group key="83b2fde2-60ad-45b6-9e5c-cb3baa6e3f9a">
+      <Group key="0">
+        <Data key="Port Format" value="12,4" />
+      </Group>
+    </Group>
+    <Group key="1425177d-0d0e-4468-8bcc-e638e5509a9b">
+      <Group key="0">
+        <Data key="Port Format" value="5,2" />
+      </Group>
+    </Group>
     <Group key="a4c246a0-55f8-4012-a160-95210e380870">
       <Group key="0">
         <Data key="Port Format" value="3,1" />
+      </Group>
+    </Group>
+    <Group key="e851a3b9-efb8-48be-bbb8-b303b216c393">
+      <Group key="0">
+        <Data key="Port Format" value="5,1" />
       </Group>
     </Group>
     <Group key="ed092b9b-d398-4703-be89-cebf998501f6">

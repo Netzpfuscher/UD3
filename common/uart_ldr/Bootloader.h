@@ -40,6 +40,8 @@
 #define Bootloader_GOLDEN_IMAGE_AVAIL         (0u)
 #define Bootloader_SECURITY_KEY_AVAIL         (0u)
 #define Bootloader_AUTO_SWITCHING_AVAIL       (1u)
+    
+extern uint8_t com_type;
 
 #if ((0u != Bootloader_DUAL_APP_BOOTLOADER) || \
      (CYDEV_PROJ_TYPE == CYDEV_PROJ_TYPE_LOADABLEANDBOOTLOADER)) 

@@ -145,7 +145,7 @@ void init_config(){
     configuration.ps_scheme = 2;
     configuration.autotune_s = 1;
     strcpy(configuration.ud_name,"UD3-Tesla");
- //   strcpy(configuration.ip_addr,"192.168.50.250");
+    strcpy(configuration.ip_addr,"192.168.50.250");
     strcpy(configuration.ip_subnet,"255.255.255.0");
     strcpy(configuration.ip_mac,"21:24:5D:AA:68:57");
     strcpy(configuration.ip_gw,"192.168.50.1");
@@ -300,18 +300,28 @@ uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, uint8_t por
 * Timer callback for burst mode
 ******************************************************************************/
 void vBurst_Timer_Callback(TimerHandle_t xTimer){
+    uint16_t bon_lim;
+    uint16_t boff_lim;
     if(burst_state == BURST_ON){
         interrupter.pw = 0;
         update_interrupter();
         burst_state = BURST_OFF;
-        if(!param.burst_off) param.burst_off=1;
-        xTimerChangePeriod( xTimer, param.burst_off / portTICK_PERIOD_MS, 0 );                                                   
+        if(!param.burst_off){
+            boff_lim=2;
+        }else{
+            boff_lim=param.burst_off;
+        }
+        xTimerChangePeriod( xTimer, boff_lim / portTICK_PERIOD_MS, 0 );                                                   
     }else{
         interrupter.pw = param.pw;
         update_interrupter();
         burst_state = BURST_ON;
-        if(!param.burst_on) param.burst_on=1;
-        xTimerChangePeriod( xTimer, param.burst_on / portTICK_PERIOD_MS, 0 );
+        if(!param.burst_on){
+            bon_lim=2;
+        }else{
+            bon_lim=param.burst_on;
+        }
+        xTimerChangePeriod( xTimer, bon_lim / portTICK_PERIOD_MS, 0 );
     }          
 }
 
@@ -338,6 +348,23 @@ uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, uint8_t 
     			if(xTimerDelete(xBurst_Timer, 200 / portTICK_PERIOD_MS) != pdFALSE){
     			    xBurst_Timer = NULL;
                     burst_state = BURST_ON;
+                    interrupter.pw =0;
+                    update_interrupter();
+                    tr_running=1;
+                    send_string("\r\nBurst Disabled\r\n", port);    
+                }else{
+                    send_string("Cannot delete burst Timer\r\n", port);
+                    burst_state = BURST_ON;
+                }
+            }
+        }else if(xBurst_Timer!=NULL && !param.burst_off){
+            if (xBurst_Timer != NULL) {
+    			if(xTimerDelete(xBurst_Timer, 200 / portTICK_PERIOD_MS) != pdFALSE){
+    			    xBurst_Timer = NULL;
+                    burst_state = BURST_ON;
+                    interrupter.pw =param.pw;
+                    update_interrupter();
+                    tr_running=1;
                     send_string("\r\nBurst Disabled\r\n", port);    
                 }else{
                     send_string("Cannot delete burst Timer\r\n", port);
@@ -346,6 +373,7 @@ uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, uint8_t 
             }
 
         } 
+        
     }
 	return 1;
 }

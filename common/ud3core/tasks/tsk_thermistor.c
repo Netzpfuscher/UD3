@@ -36,10 +36,6 @@
 xTaskHandle tsk_thermistor_TaskHandle;
 uint8 tsk_thermistor_initVar = 0u;
 
-#if (1 == 1)
-xSemaphoreHandle tsk_thermistor_Mutex;
-#endif
-
 /* ------------------------------------------------------------------------ */
 /*
  * Place user included headers, defines and task global data in the
@@ -168,6 +164,8 @@ void tsk_thermistor_TaskProc(void *pvParameters) {
 	/* `#START TASK_INIT_CODE` */
 
 	initialize_thermistor();
+    
+    
 
 	/* `#END` */
 
@@ -184,6 +182,7 @@ void tsk_thermistor_TaskProc(void *pvParameters) {
 			//system_fault_Control = 1;
 			temp_fault_counter = 0;
 		}
+        
 
 		/* `#END` */
 
@@ -202,15 +201,12 @@ void tsk_thermistor_Start(void) {
 	/* `#END` */
 
 	if (tsk_thermistor_initVar != 1) {
-#if (1 == 1)
-		tsk_thermistor_Mutex = xSemaphoreCreateMutex();
-#endif
 
 		/*
 	 	* Create the task and then leave. When FreeRTOS starts up the scheduler
 	 	* will call the task procedure and start execution of the task.
 	 	*/
-		xTaskCreate(tsk_thermistor_TaskProc, "Therm", 128, NULL, PRIO_THERMISTOR, &tsk_thermistor_TaskHandle);
+		xTaskCreate(tsk_thermistor_TaskProc, "Therm", 100, NULL, PRIO_THERMISTOR, &tsk_thermistor_TaskHandle);
 		tsk_thermistor_initVar = 1;
 	}
 }

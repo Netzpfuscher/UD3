@@ -22,12 +22,18 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#define PRIO_TERMINAL 2
+#if !defined(PRIORITY_H)
+#define PRIORITY_H
+
+#define PRIO_TERMINAL 3
 #define PRIO_OVERLAY 1
 #define PRIO_ANALOG 1
 #define PRIO_THERMISTOR 1
 #define PRIO_UART 3
 #define PRIO_USB 3
+#define PRIO_ETH 3
 #define PRIO_FAULT 3
 #define PRIO_MIDI 2
 #define PRIO_QCW 3
+
+#endif

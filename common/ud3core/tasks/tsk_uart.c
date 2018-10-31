@@ -30,10 +30,11 @@
 xTaskHandle tsk_uart_TaskHandle;
 uint8 tsk_uart_initVar = 0u;
 
-#if (1 == 1)
-xSemaphoreHandle tsk_uart_Mutex;
+StreamBufferHandle_t xUART_rx;
+StreamBufferHandle_t xUART_tx;
+
 xSemaphoreHandle tx_Semaphore;
-#endif
+
 
 /* ------------------------------------------------------------------------ */
 /*
@@ -48,6 +49,10 @@ xSemaphoreHandle tx_Semaphore;
 
 volatile uint8_t midi_count = 0;
 volatile uint8_t midiMsg[3];
+
+
+#define STREAMBUFFER_RX_SIZE    512     //bytes
+#define STREAMBUFFER_TX_SIZE    512    //bytes
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */
@@ -73,7 +78,7 @@ CY_ISR(isr_uart_rx) {
 
 			goto end;
 		} else if (!midi_count) {
-			xQueueSendFromISR(qUart_rx, &c, NULL);
+            xStreamBufferSendFromISR(xUART_rx, &c, 1, 0);
 			goto end;
 		}
 		switch (midi_count) {
@@ -120,8 +125,8 @@ void tsk_uart_TaskProc(void *pvParameters) {
 	 * in the task.
 	 */
 	/* `#START TASK_INIT_CODE` */
-	qUart_tx = xQueueCreate(3096, sizeof(char));
-	qUart_rx = xQueueCreate(64, sizeof(char));
+    xUART_rx = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
+    xUART_tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,1);
 
 	tx_Semaphore = xSemaphoreCreateBinary();
 
@@ -138,7 +143,7 @@ void tsk_uart_TaskProc(void *pvParameters) {
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
 
-		if (xQueueReceive(qUart_tx, &c, portMAX_DELAY)) {
+		if (xStreamBufferReceive(xUART_tx, &c, 1, portMAX_DELAY)) {
 			UART_2_PutChar(c);
 			if (UART_2_GetTxBufferSize() == 4) {
 				xSemaphoreTake(tx_Semaphore, portMAX_DELAY);
@@ -160,15 +165,12 @@ void tsk_uart_Start(void) {
 	/* `#END` */
 
 	if (tsk_uart_initVar != 1) {
-#if (1 == 1)
-		tsk_uart_Mutex = xSemaphoreCreateMutex();
-#endif
 
 		/*
 	 	* Create the task and then leave. When FreeRTOS starts up the scheduler
 	 	* will call the task procedure and start execution of the task.
 	 	*/
-		xTaskCreate(tsk_uart_TaskProc, "UART-Svc", 128, NULL, PRIO_UART, &tsk_uart_TaskHandle);
+		xTaskCreate(tsk_uart_TaskProc, "UART-Svc", 256, NULL, PRIO_UART, &tsk_uart_TaskHandle);
 		tsk_uart_initVar = 1;
 	}
 }

@@ -22,23 +22,30 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "FreeRTOS.h"
-#include "task.h"
-
-#if !defined(cli_TASK_H)
-#define cli_TASK_H
-    
+#if !defined(tsk_eth_TASK_H)
+#define tsk_eth_TASK_H
 
 /*
  * Add user task definitions, types, includes and other things in the below
  * merge region to customize the task.
  */
 /* `#START USER_TYPES_AND_DEFINES` */
+#include <device.h>
+    
+/* RTOS includes. */
+#include "FreeRTOS.h"
+#include "task.h"
+#include "semphr.h"
+#include "stream_buffer.h"    
 
 /* `#END` */
 
-void tsk_cli_Start(void);
-extern xTaskHandle ETH_Terminal_TaskHandle;
+void tsk_eth_Start(void);
+
+
+StreamBufferHandle_t xETH_rx;
+StreamBufferHandle_t xETH_tx;
+
 
 /*
  * Add user function prototypes in the below merge region to add user

@@ -36,10 +36,6 @@
 xTaskHandle tsk_fault_TaskHandle;
 uint8 tsk_fault_initVar = 0u;
 
-#if (1 == 1)
-xSemaphoreHandle tsk_fault_Mutex;
-#endif
-
 /* ------------------------------------------------------------------------ */
 /*
  * Place user included headers, defines and task global data in the
@@ -124,15 +120,12 @@ void tsk_fault_Start(void) {
 	/* `#END` */
 
 	if (tsk_fault_initVar != 1) {
-#if (1 == 1)
-		tsk_fault_Mutex = xSemaphoreCreateMutex();
-#endif
 
 		/*
 	 	* Create the task and then leave. When FreeRTOS starts up the scheduler
 	 	* will call the task procedure and start execution of the task.
 	 	*/
-		xTaskCreate(tsk_fault_TaskProc, "Fault-Svc", 128, NULL, PRIO_FAULT, &tsk_fault_TaskHandle);
+		xTaskCreate(tsk_fault_TaskProc, "Fault-Svc", 100, NULL, PRIO_FAULT, &tsk_fault_TaskHandle);
 		tsk_fault_initVar = 1;
 	}
 }

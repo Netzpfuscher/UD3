@@ -1,10 +1,12 @@
+#ifndef CLI_BASIC_H
+#define CLI_BASIC_H
 
 #include <stdint.h>
 
 #define PARAM_SIZE(param) sizeof(param) / sizeof(parameter_entry)
 
 #define SIZEP(x) ((char*)(&(x) + 1) - (char*)&(x))
-#define ADD_PARAM(para_type,text, value_var, type, min, max, update_func, help_text) {para_type,text, &value_var, SIZEP(value_var), type, min, max, update_func, help_text},
+#define ADD_PARAM(para_type,text, value_var, type, min, max, div, update_func, help_text) {para_type,text, &value_var, SIZEP(value_var), type,min, max, div, update_func, help_text},
 #define ADD_COMMAND(command, command_func, help_text) {command, command_func, help_text},
 #define TYPE_UNSIGNED   0
 #define TYPE_SIGNED     1
@@ -26,7 +28,10 @@
 
 #define SERIAL 0
 #define USB 1
+#define ETH 2
+#define NONE 3
 
+   
 typedef struct parameter_entry_struct parameter_entry;
 struct parameter_entry_struct {
     const uint8_t parameter_type;
@@ -34,8 +39,9 @@ struct parameter_entry_struct {
 	void *value;
 	const uint8_t size;
 	const uint8_t type;
-	uint16_t min;
-	uint16_t max;
+	const int32_t min;
+	const int32_t max;
+    const uint16_t div;
 	uint8_t (*callback_function)(parameter_entry * params, uint8_t index, uint8_t port);
 	const char *help;
 };
@@ -62,3 +68,6 @@ void send_char(uint8_t c, uint8_t port);
 void send_string(char *data, uint8_t port);
 void send_buffer(uint8_t *data, uint16_t len, uint8_t port);
 uint8_t term_config_changed(void);
+uint32_t djb_hash(const char* cp);
+
+#endif

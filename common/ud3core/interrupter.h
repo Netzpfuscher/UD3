@@ -64,10 +64,16 @@ ramp_params volatile ramp; //added volatile
 
 extern volatile uint8 qcw_dl_ovf_counter;
 extern uint16 pw_override;
+extern uint8_t tr_running;
 
 void initialize_interrupter(void);
 void update_interrupter();
 void ramp_control(void);
 void interrupter_oneshot(uint16_t pw, uint8_t vol);
+uint8_t interrupter_get_kill(void);
+
+void interrupter_kill(void);
+
+void interrupter_unkill(void);
 
 #endif

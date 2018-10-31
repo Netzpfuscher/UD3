@@ -2,9 +2,14 @@
 #include "teslaterm.h"
 #include "cli_basic.h"
 #include <string.h>
+#include "FreeRTOS.h"
+#include "task.h"
+#include "queue.h"
+#include "semphr.h"
 
 uint8_t gaugebuf[] = {0xFF,0x04, TT_GAUGE,0x00,0x00,0x00};
 uint8_t chartbuf[] = {0xFF,0x04, TT_CHART,0x00,0x00,0x00};
+uint8_t statusbuf[] = {0xFF,0x02, TT_STATUS,0x00};
 const uint8_t chartdraw[] = {0xFF,0x02, TT_CHART_DRAW,0x00};
 const uint8_t chartclear[] = {0xFF,0x02, TT_CHART_CLEAR,0x00};
 
@@ -39,8 +44,8 @@ void send_chart_config(uint8_t chart, int16_t min, int16_t max, int16_t offset,u
     buf[8] = offset;
     buf[9] = (offset>>8);
     buf[10] = unit;
-    send_buffer(buf,sizeof(buf),SERIAL);
-    send_string(text, SERIAL);
+    send_buffer(buf,sizeof(buf),port);
+    send_string(text, port);
 }
 
 void send_gauge_config(uint8_t gauge, int16_t min, int16_t max, char * text, uint8_t port){
@@ -54,8 +59,8 @@ void send_gauge_config(uint8_t gauge, int16_t min, int16_t max, char * text, uin
     buf[5] = (min>>8);
     buf[6] = max;
     buf[7] = (max>>8);
-    send_buffer(buf,8,SERIAL);
-    send_string(text, SERIAL);
+    send_buffer(buf,sizeof(buf),port);
+    send_string(text, port);
 }
 
 void send_chart_clear(uint8_t port){
@@ -76,7 +81,7 @@ void send_chart_line(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint8_t
     buf[9] = y2;
     buf[10] = (y2>>8);
     buf[11] = color;
-    send_buffer(buf,sizeof(buf),SERIAL); 
+    send_buffer(buf,sizeof(buf),port); 
 }
 
 void send_chart_text(int16_t x, int16_t y, uint8_t color, uint8_t size, char * text, uint8_t port){
@@ -91,6 +96,27 @@ void send_chart_text(int16_t x, int16_t y, uint8_t color, uint8_t size, char * t
     buf[6] = (y>>8);
     buf[7] = color;
     buf[8] = size;
-    send_buffer(buf,sizeof(buf),SERIAL);
-    send_string(text, SERIAL);
+    send_buffer(buf,sizeof(buf),port);
+    send_string(text, port);
+}
+
+void send_chart_text_center(int16_t x, int16_t y, uint8_t color, uint8_t size, char * text, uint8_t port){
+    uint8_t bytes = strlen(text);
+    uint8_t buf[9];
+    buf[0] = 0xFF;
+    buf[1] = bytes+sizeof(buf)-2;
+    buf[2] = TT_CHART_TEXT_CENTER;
+    buf[3] = x;
+    buf[4] = (x>>8);
+    buf[5] = y;
+    buf[6] = (y>>8);
+    buf[7] = color;
+    buf[8] = size;
+    send_buffer(buf,sizeof(buf),port);
+    send_string(text, port);
+}
+
+void send_status(uint8_t bus_active, uint8_t transient_active, uint8_t bus_controlled, uint8_t port) {
+	statusbuf[3] = bus_active|(transient_active<<1)|(bus_controlled<<2);
+    send_buffer(statusbuf, sizeof(statusbuf), port);
 }

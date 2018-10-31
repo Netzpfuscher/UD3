@@ -23,9 +23,6 @@
 */
 
 /* RTOS includes. */
-
-
-
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
@@ -46,6 +43,8 @@
 #include "tasks/tsk_thermistor.h"
 #include "tasks/tsk_uart.h"
 #include "tasks/tsk_usb.h"
+#include "tasks/tsk_eth.h"
+#include "tasks/tsk_min.h"
 
 void vMainTask(void *pvParameters);
 
@@ -76,16 +75,28 @@ int main() {
 	configure_ZCD_to_PWM();
 
 	rx_blink_Control = 1;
-	block_term[0] = xSemaphoreCreateBinary(); //Blocking semaphore for overlay Display
-	block_term[1] = xSemaphoreCreateBinary(); //Blocking semaphore for overlay Display
-	xSemaphoreGive(block_term[0]);
-	xSemaphoreGive(block_term[1]);
+	block_term[SERIAL] = xSemaphoreCreateBinary(); //Blocking semaphore for overlay Display
+	block_term[USB] = xSemaphoreCreateBinary();    //Blocking semaphore for overlay Display
+    block_term[ETH] = xSemaphoreCreateBinary();    //Blocking semaphore for overlay Display
+	xSemaphoreGive(block_term[SERIAL]);
+	xSemaphoreGive(block_term[USB]);
+    xSemaphoreGive(block_term[ETH]);
 
 	//Starting Tasks
-	tsk_uart_Start();       //Handles UART-Hardware and queues
+    if(configuration.minprot){
+        tsk_min_Start();        //Handles UART-Hardware and queues with MIN-Protocol
+    }else{
+	    tsk_uart_Start();       //Handles UART-Hardware and queues
+    }
+    
 	tsk_usb_Start();        //Handles USB-Hardware and queues
+   
+    tsk_eth_Start();        //Handles Ethernet-Hardware and queues
+    
+    tsk_cli_Start();		//Commandline interface
+    
 	tsk_midi_Start();       //MIDI synth
-	tsk_cli_Start();		//Commandline interface
+	
 	tsk_analog_Start();		//Reads bus voltage and currents
 	tsk_thermistor_Start(); //Reads thermistors
 	tsk_fault_Start();		//Handles fault conditions
@@ -119,12 +130,14 @@ void vApplicationStackOverflowHook( TaskHandle_t pxTask, char *pcTaskName )
 {
 	/* The stack space has been execeeded for a task, considering allocating more. */
 	taskDISABLE_INTERRUPTS();
+    for(;;);
 }/*---------------------------------------------------------------------------*/
 
 void vApplicationMallocFailedHook( void )
 {
 	/* The heap space has been execeeded. */
 	taskDISABLE_INTERRUPTS();
+    for(;;);
 }
 /*---------------------------------------------------------------------------*/
 

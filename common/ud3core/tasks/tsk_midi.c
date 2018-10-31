@@ -32,9 +32,6 @@
 xTaskHandle tsk_midi_TaskHandle;
 uint8 tsk_midi_initVar = 0u;
 
-#if (1 == 1)
-xSemaphoreHandle tsk_midi_Mutex;
-#endif
 
 /* ------------------------------------------------------------------------ */
 /*
@@ -50,9 +47,10 @@ xSemaphoreHandle tsk_midi_Mutex;
 #include <device.h>
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #define PITCHBEND_ZEROBIAS (0x2000)
-#define PITCHBEND_DIVIDER ((float)0x1fff)
+#define PITCHBEND_DIVIDER ((uint32_t)0x1fff)
 
 #define N_CHANNEL 4
 #define N_BUFFER 8
@@ -89,6 +87,16 @@ typedef struct __note__ {
 	} data;
 } NOTE;
 
+struct pulse_str {
+	uint8_t  volume;
+	uint16_t pw;
+};
+
+struct pulse_str isr1_pulse;
+struct pulse_str isr2_pulse;
+
+uint8_t skip_flag = 0; // Skipping system exclusive messages
+
 typedef struct __midich__ {
 	uint8 expression; // Expression: Control change (Bxh) 0 bH
 	uint8 rpn_lsb;	// RPN (LSB): Control change (Bxh) 64 H
@@ -109,16 +117,22 @@ typedef struct __channel__ {
 typedef struct __port__ {
 	uint16 halfcount; // A count that determines the frequency of port (for 1/2 period)
 	uint8 volume;	 // Volume of port (0 - 127)
+    uint32 freq;
 } PORT;
 
 PORT *isr_port_ptr;
+CHANNEL *channel_ptr;
+MIDICH *midich_ptr;
 
 // Note on & off
 
 NOTE *v_NOTE_NOTEONOFF(NOTE *v, uint8 midich, uint8 tone, uint8 vol) {
 	v->command = COMMAND_NOTEONOFF;
 	v->midich = midich;
-	v->data.noteonoff.tone = tone;
+    int16_t t_trans = tone + param.transpose;
+    if(t_trans<0) t_trans=0;
+    if(t_trans>127) t_trans=127;
+	v->data.noteonoff.tone = t_trans;
 	v->data.noteonoff.vol = vol;
 	return (v);
 }
@@ -138,6 +152,47 @@ NOTE *v_NOTE_PITCHBEND(NOTE *v, uint8 midich, uint8 lsb, uint8 msb) {
 	return (v);
 }
 
+typedef uint32_t Q16n16;
+
+static const uint32_t midiToFreq[128] =
+    {
+     0, 567670, 601425, 637188, 675077, 715219, 757748, 802806, 850544, 901120,
+     954703, 1011473, 1071618, 1135340, 1202851, 1274376, 1350154, 1430438, 1515497,
+     1605613, 1701088, 1802240, 1909406, 2022946, 2143236, 2270680, 2405702, 2548752,
+     2700309, 2860877, 3030994, 3211226, 3402176, 3604479, 3818813, 4045892, 4286472,
+     4541359, 4811404, 5097504, 5400618, 5721756, 6061988, 6422452, 6804352, 7208959,
+     7637627, 8091785, 8572945, 9082719, 9622808, 10195009, 10801235, 11443507,
+     12123974, 12844905, 13608704, 14417917, 15275252, 16183563, 17145888, 18165438,
+     19245616, 20390018, 21602470, 22887014, 24247948, 25689810, 27217408, 28835834,
+     30550514, 32367136, 34291776, 36330876, 38491212, 40780036, 43204940, 45774028,
+     48495912, 51379620, 54434816, 57671668, 61101028, 64734272, 68583552, 72661752,
+     76982424, 81560072, 86409880, 91548056, 96991792, 102759240, 108869632,
+     115343336, 122202056, 129468544, 137167104, 145323504, 153964848, 163120144,
+     172819760, 183096224, 193983648, 205518336, 217739200, 230686576, 244403840,
+     258937008, 274334112, 290647008, 307929696, 326240288, 345639520, 366192448,
+     387967040, 411036672, 435478400, 461373152, 488807680, 517874016, 548668224,
+     581294016, 615859392, 652480576, 691279040, 732384896, 775934592, 822073344
+    };
+
+Q16n16  Q16n16_mtof(Q16n16 midival_fractional)
+ {
+     Q16n16 diff_fraction;
+     uint8_t index = midival_fractional >> 16;
+     uint16_t fraction = (uint16_t) midival_fractional; // keeps low word
+     Q16n16 freq1 = (Q16n16) midiToFreq[index];
+     Q16n16 freq2 = (Q16n16) midiToFreq[index+1];
+     Q16n16 difference = freq2 - freq1;
+     if (difference>=65536)
+     {
+         diff_fraction = ((difference>>8) * fraction) >> 8;
+     }
+     else
+     {
+         diff_fraction = (difference * fraction) >> 16;
+     }
+     return (Q16n16) (freq1+ diff_fraction);
+ }
+
 /* `#END` */
 /* ------------------------------------------------------------------------ */
 /*
@@ -147,11 +202,11 @@ NOTE *v_NOTE_PITCHBEND(NOTE *v, uint8 midich, uint8 lsb, uint8 msb) {
  */
 /* `#START USER_TASK_LOCAL_CODE` */
 
-uint8_t pulse_buffer[N_BUFFER];
-fifo_t pulse_fifo;
+xQueueHandle qSID;
+xQueueHandle qPulse;
+struct sid_f sid_frm;
 
 CY_ISR(isr_midi) {
-
 	uint8_t ch;
 	uint8_t flag[N_CHANNEL];
 	static uint8_t old_flag[N_CHANNEL];
@@ -164,16 +219,93 @@ CY_ISR(isr_midi) {
 			}
 		}
 		if (flag[ch] > old_flag[ch]) {
-			fifo_put(&pulse_fifo, isr_port_ptr[ch].volume);
+            isr1_pulse.volume = isr_port_ptr[ch].volume;
+            isr1_pulse.pw = interrupter.pw;
+            xQueueSendFromISR(qPulse,&isr1_pulse,0);;
 		}
 		old_flag[ch] = flag[ch];
+   
 	}
 
-	int16_t temp_pulse;
-	temp_pulse = fifo_get_nowait(&pulse_fifo);
-	if (temp_pulse != -1) {
-		interrupter_oneshot(param.pw, temp_pulse);
+    if(xQueueReceiveFromISR(qPulse,&isr1_pulse,0)){
+        interrupter_oneshot(isr1_pulse.pw, isr1_pulse.volume);
+    }
+
+	if (qcw_reg) {
+		if ((ramp.modulation_value < 255) && (ramp.modulation_value > 0)) {
+			ramp.modulation_value += param.qcw_ramp;
+			if (ramp.modulation_value > 255)
+				ramp.modulation_value = 255;
+			ramp_control();
+		}
 	}
+}
+
+#define SID_CHANNELS 3
+
+CY_ISR(isr_sid) {
+    
+    static uint8_t cnt=0;
+    if (cnt >212){
+        cnt=0;
+        if(xQueueReceiveFromISR(qSID,&sid_frm,0)){
+            isr_port_ptr[0].halfcount = sid_frm.half[0];
+            isr_port_ptr[1].halfcount = sid_frm.half[1];
+            isr_port_ptr[2].halfcount = sid_frm.half[2];
+            //isr_port_ptr[0].volume = sid_frm.gate[0]*127;
+            //isr_port_ptr[1].volume = sid_frm.gate[1]*127;
+            //isr_port_ptr[2].volume = sid_frm.gate[2]*127;
+            sid_frm.pw[0]=sid_frm.pw[0]>>4;
+            sid_frm.pw[1]=sid_frm.pw[1]>>4;
+            sid_frm.pw[2]=sid_frm.pw[2]>>4;
+            isr_port_ptr[0].volume = sid_frm.gate[0]* sid_frm.pw[0];
+            isr_port_ptr[1].volume = sid_frm.gate[1]* sid_frm.pw[1];
+            isr_port_ptr[2].volume = sid_frm.gate[2]* sid_frm.pw[2];
+        }else{
+            isr_port_ptr[0].volume = 0;
+            isr_port_ptr[1].volume = 0;
+            isr_port_ptr[2].volume = 0;
+        }
+    }else{
+        cnt++;
+    }
+    
+    uint16_t random = rand();
+    random = random >>8;
+    if(sid_frm.wave[0]){
+        isr_port_ptr[0].halfcount = random;
+    }
+    if(sid_frm.wave[1]){
+        isr_port_ptr[1].halfcount = random;
+    }
+    if(sid_frm.wave[2]){
+        isr_port_ptr[2].halfcount = random;
+    }
+    
+    
+	uint8_t ch;
+	uint8_t flag[SID_CHANNELS];
+	static uint8_t old_flag[SID_CHANNELS];
+	uint32 r = SG_Timer_ReadCounter();
+	for (ch = 0; ch < SID_CHANNELS; ch++) {
+		flag[ch] = 0;
+		if (isr_port_ptr[ch].volume > 0) {
+			if ((r / isr_port_ptr[ch].halfcount) % 2 > 0) {
+				flag[ch] = 1;
+			}
+		}
+		if (flag[ch] > old_flag[ch]) {
+            isr1_pulse.volume = isr_port_ptr[ch].volume;
+            isr1_pulse.pw = sid_frm.master_pw;
+            xQueueSendFromISR(qPulse,&isr1_pulse,0);
+		}
+		old_flag[ch] = flag[ch];
+   
+	}
+
+    if(xQueueReceiveFromISR(qPulse,&isr1_pulse,0)){
+        interrupter_oneshot(isr1_pulse.pw, isr1_pulse.volume);
+    }
 
 	if (qcw_reg) {
 		if ((ramp.modulation_value < 255) && (ramp.modulation_value > 0)) {
@@ -186,16 +318,15 @@ CY_ISR(isr_midi) {
 }
 
 CY_ISR(isr_interrupter) {
-	int16_t temp_pulse;
-	temp_pulse = fifo_get_nowait(&pulse_fifo);
-	if (temp_pulse != -1) {
-		interrupter_oneshot(param.pw, temp_pulse);
-	}
+
+    if(xQueueReceiveFromISR(qPulse,&isr2_pulse,0)){
+        interrupter_oneshot(isr2_pulse.pw, isr2_pulse.volume);
+    }
 	Offtime_ReadStatusRegister();
 }
 
 void USBMIDI_1_callbackLocalMidiEvent(uint8 cable, uint8 *midiMsg) {
-	static uint8_t skip_flag = 0; // Skipping system exclusive messages
+	
 	NOTE note_struct;
 	uint8_t message_filter = midiMsg[0] & 0xf0;
 
@@ -227,9 +358,9 @@ void USBMIDI_1_callbackLocalMidiEvent(uint8 cable, uint8 *midiMsg) {
 		default:
 			break;
 		}
-		if (skip_flag && (midiMsg[1] == 0xf7 || midiMsg[2] == 0xf7)) {
-			skip_flag = 0;
-		}
+    	if (skip_flag && (midiMsg[1] == 0xf7 || midiMsg[2] == 0xf7)) {
+    		skip_flag = 0;
+    	}
 	}
 }
 
@@ -356,27 +487,100 @@ void process(NOTE *v, CHANNEL channel[], MIDICH midich[]) {
 	}
 }
 
+void update_midi_duty(){
+    if(!telemetry.midi_voices) return;
+    uint32_t dutycycle=0;
+
+    for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {    
+        if (channel_ptr[ch].volume > 0){
+            dutycycle+= ((uint32)channel_ptr[ch].volume*(uint32)param.pw)/(127000ul/(uint32)isr_port_ptr[ch].freq);
+        }
+	}
+  
+    telemetry.duty = dutycycle;
+    if(dutycycle>configuration.max_tr_duty){
+        interrupter.pw = (param.pw * configuration.max_tr_duty) / dutycycle;
+    }else{
+        interrupter.pw = param.pw;
+    }
+}
 void reflect(PORT port[], CHANNEL channel[], MIDICH midich[]) {
 	uint8_t ch;
 	uint8_t mch;
+    uint32_t dutycycle=0;
+    uint32_t pb;
     telemetry.midi_voices =0;
 	// Reflect the status of the updated tone generator channel & MIDI channel on the port
 	for (ch = 0; ch < N_CHANNEL; ch++) {
 		mch = channel[ch].midich;
-        if (channel[ch].volume > 0) telemetry.midi_voices++;
 		if (channel[ch].updated || midich[mch].updated) {
 			if (channel[ch].volume > 0) {
-				port[ch].halfcount = FREQ_HALFCOUNT(MIDITONENUM_FREQ(channel[ch].miditone + ((float)midich[mch].pitchbend * midich[mch].bendrange) / PITCHBEND_DIVIDER));
+                pb = ((((uint32_t)midich[mch].pitchbend*midich[mch].bendrange)<<10) / PITCHBEND_DIVIDER)<<6;
+                port[ch].freq=Q16n16_mtof((channel[ch].miditone<<16)+pb);
+                port[ch].halfcount= (150000<<14) / (port[ch].freq>>2);
+                port[ch].freq = port[ch].freq >>16;
+
+                
 				if (ch < N_DISPCHANNEL)
 					channel[ch].displayed = 1; // Re-display required
 			}
 			port[ch].volume = (int32)channel[ch].volume * midich[mch].expression / 127; // Reflect Expression here
 			channel[ch].updated = 0;													// Mission channel update work done
 		}
+        
+        if (channel[ch].volume > 0){
+            telemetry.midi_voices++;
+            dutycycle+= ((uint32)channel[ch].volume*(uint32)param.pw)/(127000ul/(uint32)port[ch].freq);
+        }
 	}
 	for (mch = 0; mch < N_MIDICHANNEL; mch++) {
 		midich[mch].updated = 0; // MIDI channel update work done
 	}
+    
+    
+    telemetry.duty = dutycycle;
+    if(dutycycle>configuration.max_tr_duty){
+        interrupter.pw = (param.pw * configuration.max_tr_duty) / dutycycle;
+    }else{
+        interrupter.pw = param.pw;
+    }
+     
+}
+
+void kill_accu(){
+    for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
+                isr_port_ptr[ch].volume=0;
+                isr_port_ptr[ch].freq=0;
+                isr_port_ptr[ch].halfcount=0;
+
+	}
+}
+
+void switch_synth(uint8_t synth){
+    skip_flag=0;
+    switch(synth){
+        case SYNTH_OFF:
+            isr_midi_Stop();
+            xQueueReset(qMIDI_rx);
+            xQueueReset(qSID);
+            kill_accu();
+        break;
+        case SYNTH_MIDI:
+            isr_midi_Stop();
+            xQueueReset(qMIDI_rx);
+            xQueueReset(qSID);
+            kill_accu();
+            isr_midi_StartEx(isr_midi);
+        break;
+        case SYNTH_SID:
+            isr_midi_Stop();
+            xQueueReset(qMIDI_rx);
+            xQueueReset(qSID);
+            kill_accu();
+            isr_midi_StartEx(isr_sid);
+        break;
+    }
+    
 }
 
 /* `#END` */
@@ -393,16 +597,18 @@ void tsk_midi_TaskProc(void *pvParameters) {
 	 */
 	/* `#START TASK_VARIABLES` */
 	qMIDI_rx = xQueueCreate(256, sizeof(NOTE));
-
-	fifo_init(&pulse_fifo, pulse_buffer, N_BUFFER);
+    qSID = xQueueCreate(32, sizeof(struct sid_f));
+    qPulse = xQueueCreate(8, sizeof(struct pulse_str));
 
 	NOTE note_struct;
 
 	// Tone generator channel status (updated according to MIDI messages)
 	CHANNEL channel[N_CHANNEL];
+    channel_ptr=channel;
 
 	// MIDI channel status
 	MIDICH midich[N_MIDICHANNEL];
+    midich_ptr=midich_ptr;
 
 	// Port status (updated at regular time intervals according to the status of the sound source channel)
 	PORT port[N_CHANNEL];
@@ -428,6 +634,8 @@ void tsk_midi_TaskProc(void *pvParameters) {
 	SG_Timer_Start();
 
 	isr_midi_StartEx(isr_midi);
+    //isr_midi_StartEx(isr_sid);
+    
 	isr_interrupter_StartEx(isr_interrupter);
 
 	/* `#END` */
@@ -435,13 +643,17 @@ void tsk_midi_TaskProc(void *pvParameters) {
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
 
-		if (xQueueReceive(qMIDI_rx, &note_struct, portMAX_DELAY)) {
-			process(&note_struct, channel, midich);
-			while (xQueueReceive(qMIDI_rx, &note_struct, 0)) {
-				process(&note_struct, channel, midich);
-			}
-			reflect(port, channel, midich);
-		}
+        if(param.synth==SYNTH_MIDI){
+    		if (xQueueReceive(qMIDI_rx, &note_struct, portMAX_DELAY)) {
+    			process(&note_struct, channel, midich);
+    			while (xQueueReceive(qMIDI_rx, &note_struct, 0)) {
+    				process(&note_struct, channel, midich);
+    			}
+    			reflect(port, channel, midich);
+    		}
+        }else{
+        vTaskDelay(200 /portTICK_RATE_MS);
+        }
 
 		/* `#END` */
 	}
@@ -458,15 +670,12 @@ void tsk_midi_Start(void) {
 	/* `#END` */
 
 	if (tsk_midi_initVar != 1) {
-#if (1 == 1)
-		tsk_midi_Mutex = xSemaphoreCreateMutex();
-#endif
 
-		/*
+        /*
 	 	* Create the task and then leave. When FreeRTOS starts up the scheduler
 	 	* will call the task procedure and start execution of the task.
 	 	*/
-		xTaskCreate(tsk_midi_TaskProc, "MIDI-Svc", 512, NULL, PRIO_MIDI, &tsk_midi_TaskHandle);
+		xTaskCreate(tsk_midi_TaskProc, "MIDI-Svc", 160, NULL, PRIO_MIDI, &tsk_midi_TaskHandle);
 		tsk_midi_initVar = 1;
 	}
 }

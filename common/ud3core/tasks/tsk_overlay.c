@@ -42,6 +42,7 @@
 /* `#START USER_INCLUDE SECTION` */
 #include "cli_common.h"
 #include "telemetry.h"
+#include "charging.h"
 #include "tsk_analog.h"
 #include "tsk_uart.h"
 #include <project.h>
@@ -56,6 +57,14 @@
  * meaningful.
  */
 /* `#START USER_TASK_LOCAL_CODE` */
+uint8_t chart;
+
+void tsk_overlay_chart_stop(){
+    chart=0;
+}
+void tsk_overlay_chart_start(){
+    chart=1;
+}
 
 void show_overlay(uint8_t port) {
 	xSemaphoreTake(block_term[port], portMAX_DELAY);
@@ -133,12 +142,18 @@ void show_overlay(uint8_t port) {
         send_gauge(5, GAUGE5_VAR, port);
         send_gauge(6, GAUGE6_VAR, port);
         
-        send_chart(0, CHART0_VAR, port);
-        send_chart(1, CHART1_VAR, port);
-        send_chart(2, CHART2_VAR, port);
-        send_chart(3, CHART3_VAR, port);
+        send_status(telemetry.bus_status!=BUS_OFF,
+                    tr_running!=0,
+                    configuration.ps_scheme!=AC_NO_RELAY_BUS_SCHEME, port);
         
-        send_chart_draw(port);
+        if(chart){
+            send_chart(0, CHART0_VAR, port);
+            send_chart(1, CHART1_VAR, port);
+            send_chart(2, CHART2_VAR, port);
+            send_chart(3, CHART3_VAR, port);
+        
+            send_chart_draw(port);
+        }
         
     }
     

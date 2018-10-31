@@ -22,6 +22,9 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#ifndef CLI_COMMON_H
+#define CLI_COMMON_H
+
 #include <device.h>
 #include "cli_basic.h"
 
@@ -39,13 +42,6 @@
 #define TERM_MODE_VT100 0xFF
 
 
-#define fan_controller 1  //enables fan controller
-#define auto_charge_bus 0 //enables auto charging of DC bus on start up (no wait for command)
-#define auto_charge_battery 0
-#define ext_trig_runs_CW 0 //special test mode where holding the trigger runs the coil in CW mode
-
-
-
 uint8_t input_handle();
 
 extern uint8_t term_mode;
@@ -57,14 +53,14 @@ void eeprom_load();
 void initialize_term(void);
 void task_terminal_overlay(void);
 uint8_t command_cls(char *commandline, uint8_t port);
-///Help
 void task_terminal();
 
 extern parameter_entry tparameters[];
 volatile uint8_t qcw_reg;
 extern parameter_entry confparam[];
 
-xSemaphoreHandle block_term[2];
+xSemaphoreHandle block_term[3];
+extern xTaskHandle overlay_ETH_TaskHandle;
 
 struct config_struct{
     uint8_t watchdog;
@@ -96,22 +92,33 @@ struct config_struct{
     uint8_t autotune_s;
     char ud_name[16];
     char ip_addr[16];
+    char ip_gw[16];
+    char ip_mac[18];
+    char ip_subnet[16];
+    uint8_t minprot;
+    uint16_t max_inst_i;
+    uint16_t max_therm_i;
 };
 typedef struct config_struct cli_config;
 
 struct parameter_struct{
-    uint16_t pw;
-	uint16_t pwd;
-    uint16_t tune_start;
-    uint16_t tune_end;
-    uint16_t tune_pw;
-    uint16_t tune_delay;
-    uint16_t offtime;
-    uint8_t  qcw_ramp;
-    uint16_t  qcw_repeat;
+    uint16_t    pw;
+	uint16_t    pwd;
+    uint16_t    tune_start;
+    uint16_t    tune_end;
+    uint16_t    tune_pw;
+    uint16_t    tune_delay;
+    uint16_t    offtime;
+    uint8_t     qcw_ramp;
+    uint16_t    qcw_repeat;
+    uint16_t    burst_on;
+    uint16_t    burst_off;
+    int8_t      transpose;
+    uint8_t     synth;
 };
 typedef struct parameter_struct cli_parameter;
 
 extern cli_config configuration;
 extern cli_parameter param;
 
+#endif

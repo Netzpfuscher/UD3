@@ -37,14 +37,14 @@
 #include "task.h"
 #include "queue.h"
 #include "semphr.h"
-
+#include "stream_buffer.h" 
+    
 /* `#END` */
 
 void tsk_uart_Start(void);
 
-xQueueHandle qUart_tx;
-xQueueHandle qUart_rx;
-
+extern StreamBufferHandle_t xUART_rx;
+extern StreamBufferHandle_t xUART_tx;
 /*
  * Add user function prototypes in the below merge region to add user
  * functionality to the task definition.

@@ -2,25 +2,34 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <device.h>
+#ifndef BOOT
 #include "tasks/tsk_uart.h"
 #include "tasks/tsk_usb.h"
+#include "tasks/tsk_eth.h"
+#endif
 
 uint8_t EEPROM_Read_Row(uint8_t row, uint8_t * buffer);
 uint8_t EEPROM_1_Write_Row(uint8_t row, uint8_t * buffer);
+
+uint16_t byte_cnt;
 
 
 #define EEPROM_READ_BYTE(x) EEPROM_1_ReadByte(x)
 #define EEPROM_WRITE_ROW(x,y) EEPROM_1_Write(y,x)
 
-
 uint8_t updateDefaultFunction(parameter_entry * params, char * newValue, uint8_t index, uint8_t port) {
     char buffer[60];
-    uint32_t value;
+    int32_t value;
     float fvalue;
     char* ptr;
     switch (params[index].type){
     case TYPE_UNSIGNED:
-        value = strtoul(newValue,&ptr,10);
+        if(params[index].div){
+            fvalue=strtof(newValue,&ptr);
+            value = fvalue*params[index].div;
+        }else{
+            value = strtoul(newValue,&ptr,10);
+        }
         if (value >= params[index].min && value <= params[index].max){
             if(params[index].size==1){
                 *(uint8_t*)params[index].value = value;
@@ -39,7 +48,12 @@ uint8_t updateDefaultFunction(parameter_entry * params, char * newValue, uint8_t
         }
         break;
     case TYPE_SIGNED:
-        value = strtol(newValue,&ptr,10);
+        if(params[index].div){
+            fvalue=strtof(newValue,&ptr);
+            value = fvalue*params[index].div;
+        }else{
+            value = strtol(newValue,&ptr,10);
+        }
         if (value >= params[index].min && value <= params[index].max){
             if(params[index].size==1){
                 *(int8_t*)params[index].value = value;
@@ -92,7 +106,7 @@ void print_param_helperfunc(parameter_entry * params, uint8_t param_size, uint8_
     char buffer[100];
     #define COL_A 9
     #define COL_B 33
-    #define COL_C 49
+    #define COL_C 64
     uint8_t current_parameter;
     uint32_t u_temp_buffer=0;
     int32_t i_temp_buffer=0;
@@ -123,7 +137,11 @@ void print_param_helperfunc(parameter_entry * params, uint8_t param_size, uint8_
                 }
 
                 Term_Move_cursor_right(COL_B,port);
-                sprintf(buffer, "\033[37m| \033[32m%u", u_temp_buffer);
+                if(params[current_parameter].div){
+                    sprintf(buffer, "\033[37m| \033[32m%u.%u", (u_temp_buffer/params[current_parameter].div),(u_temp_buffer%params[current_parameter].div));
+                }else{
+                    sprintf(buffer, "\033[37m| \033[32m%u", u_temp_buffer);
+                }
                 send_string(buffer, port);
 
                 break;
@@ -141,7 +159,17 @@ void print_param_helperfunc(parameter_entry * params, uint8_t param_size, uint8_
                 }
 
                 Term_Move_cursor_right(COL_B,port);
-                sprintf(buffer, "\033[37m| \033[32m%i", i_temp_buffer);
+                if(params[current_parameter].div){
+                    uint32_t mod;
+                    if(i_temp_buffer<0){
+                        mod=(i_temp_buffer*-1)%params[current_parameter].div;
+                    }else{
+                        mod=i_temp_buffer%params[current_parameter].div;
+                    }
+                    sprintf(buffer, "\033[37m| \033[32m%i.%u", (i_temp_buffer/params[current_parameter].div),mod);
+                }else{
+                    sprintf(buffer, "\033[37m| \033[32m%i", i_temp_buffer);
+                }
                 send_string(buffer, port);
 
                 break;
@@ -200,7 +228,11 @@ void print_param(parameter_entry * params, uint8_t index, uint8_t port){
                     u_temp_buffer = *(uint32_t*)params[index].value;
                     break;
             }
-            sprintf(buffer, "\t%s=%u\r\n", params[index].name,u_temp_buffer);
+            if(params[index].div){
+                sprintf(buffer, "\t%s=%u.%u\r\n", params[index].name,(u_temp_buffer/params[index].div),(u_temp_buffer%params[index].div));
+            }else{
+                sprintf(buffer, "\t%s=%u\r\n", params[index].name,u_temp_buffer);
+            }
             send_string(buffer, port);
             break;
         case TYPE_SIGNED:
@@ -215,7 +247,17 @@ void print_param(parameter_entry * params, uint8_t index, uint8_t port){
                 i_temp_buffer = *(int32_t*)params[index].value;
                 break;
             }
-            sprintf(buffer, "\t%s=%i\r\n", params[index].name,i_temp_buffer);
+            if(params[index].div){
+                uint32_t mod;
+                if(i_temp_buffer<0){
+                    mod=(i_temp_buffer*-1)%params[index].div;
+                }else{
+                    mod=i_temp_buffer%params[index].div;
+                }
+                sprintf(buffer, "\t%s=%i.%u\r\n", params[index].name,(i_temp_buffer/params[index].div),mod);
+            }else{
+                sprintf(buffer, "\t%s=%i\r\n", params[index].name,i_temp_buffer);
+            }
 	        send_string(buffer, port);
             break;
         case TYPE_FLOAT:
@@ -246,6 +288,7 @@ uint8_t EEPROM_Read_Row(uint8_t row, uint8_t * buffer){
 }
 
 uint8_t EEPROM_buffer_write(uint8_t byte, uint16_t address, uint8_t flush){
+    byte_cnt++;
     static uint8_t eeprom_buffer[CY_EEPROM_SIZEOF_ROW];
     static uint16_t last_row = 0xFFFF;
     static uint8_t changed=0;
@@ -291,6 +334,7 @@ uint32_t djb_hash(const char* cp)
 }
 
 void EEPROM_write_conf(parameter_entry * params, uint8_t param_size, uint16_t eeprom_offset ,uint8_t port){
+    byte_cnt=0;
 	uint16_t count = eeprom_offset;
 	uint8_t change_flag = 0;
 	uint16_t change_count = 0;
@@ -340,7 +384,7 @@ void EEPROM_write_conf(parameter_entry * params, uint8_t param_size, uint16_t ee
 		EEPROM_buffer_write(0xEF, count,0);
         count++;
 		EEPROM_buffer_write(0x00, count,1);
-		sprintf(buffer, "%i / %i new config params written\r\n", change_count, param_count);
+		sprintf(buffer, "%i / %i new config params written. %i bytes from 2048 used.\r\n", change_count, param_count, byte_cnt);
         send_string(buffer, port);
 }
 
@@ -351,16 +395,20 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
     uint8_t data[DATASET_BYTES];
     uint16_t param_count=0;
     uint16_t change_count=0;
+    uint8_t change_flag=0;
         for(int i=0;i<DATASET_BYTES;i++){
             data[i] = EEPROM_READ_BYTE(addr);
             addr++;
         }
         if(!(data[0]== 0x00 && data[1] == 0xC0 && data[2] == 0xFF && data[3] == 0xEE)) {
+            #ifndef BOOT
             send_string("WARNING: No or old EEPROM dataset found\r\n",port);
+            #endif
             return;
         }
 
     while(addr<CY_EEPROM_SIZE){
+        change_flag=0;
         for(int i=0;i<DATASET_BYTES;i++){
             data[i] = EEPROM_READ_BYTE(addr);
             addr++;
@@ -376,13 +424,18 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
                         addr++;
                     }
                     change_count++;
+                    change_flag=1;
                     break;
                 }
             }
         }
+        if(!change_flag) addr+=data[4];
+        
         if(current_parameter == param_size){
+            #ifndef BOOT
             sprintf(buffer,"WARNING: Unknown param ID %i found in EEPROM\r\n", data[0]);
             send_string(buffer, port);
+            #endif
         }
     }
     uint8_t found_param=0;
@@ -391,6 +444,7 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
             param_count++;
             found_param=0;
             addr = DATASET_BYTES + eeprom_offset; //Skip header
+            temp_hash=djb_hash(params[current_parameter].name);
             while(addr<CY_EEPROM_SIZE){
                 for(int i=0;i<DATASET_BYTES;i++){
                     data[i] = EEPROM_READ_BYTE(addr);
@@ -398,21 +452,23 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
                 }
                     addr += data[4];
                 if(data[0] == 0xDE && data[1] == 0xAD && data[2] == 0xBE && data[3] == 0xEF) break;
-                temp_hash=djb_hash(params[current_parameter].name);
                 if((uint8_t)temp_hash == data[0] && (uint8_t)(temp_hash>>8) == data[1]&& (uint8_t)(temp_hash>>16) == data[2]&& (uint8_t)(temp_hash>>24) == data[3]){
                         found_param = 1;
                 }
             }
             if(!found_param){
+                //#ifndef BOOT
                 sprintf(buffer,"WARNING: Param [%s] not found in EEPROM\r\n",params[current_parameter].name);
                 send_string(buffer, port);
+                //#endif
             }
         }
     }
+    #ifndef BOOT
     sprintf(buffer, "%i / %i config params loaded\r\n", change_count, param_count);
     send_string(buffer, port);
+    #endif
 }
-
 
 void Term_Erase_Screen(uint8_t port) {
 	send_string("\033[2J\033[1;1H", port);
@@ -477,78 +533,85 @@ void Term_Restore_Cursor(uint8_t port) {
 	send_string("\033[u", port);
 }
 
-
 /********************************************
 * Sends char to transmit queue
 *********************************************/
 void send_char(uint8 c, uint8_t port) {
-	char buf[4];
-	switch (port) {
-	case USB:
-		if (qUSB_tx != NULL)
-			xQueueSend(qUSB_tx, &c, portMAX_DELAY);
-		break;
-	case SERIAL:
-		buf[0] = c;
-		buf[1] = '\0';
-		if (qUart_tx != NULL)
-			xQueueSend(qUart_tx, buf, portMAX_DELAY);
-		break;
+#ifndef BOOT
+    switch (port) {
+	    case USB:
+		    if (qUSB_tx != NULL)
+			    xQueueSend(qUSB_tx, &c, portMAX_DELAY);
+		    break;
+	    case SERIAL:
+		    if (xUART_tx != NULL)
+                xStreamBufferSend(xUART_tx,&c, 1,portMAX_DELAY);
+		    break;
+        case ETH:
+            if (xETH_tx != NULL) {
+                xStreamBufferSend(xETH_tx,&c, 1,200 /portTICK_RATE_MS);
+		    }
+            break;
+     
 	}
+#endif
 }
 
 /********************************************
 * Sends string to transmit queue
 *********************************************/
 void send_string(char *data, uint8_t port) {
-
+#ifndef BOOT
 	switch (port) {
-	case USB:
-		if (qUSB_tx != NULL) {
+	    case USB:
+		    if (qUSB_tx != NULL) {
 
-			while ((*data) != '\0') {
-				if (xQueueSend(qUSB_tx, data, portMAX_DELAY))
-					data++;
-			}
-		}
-
-		break;
-	case SERIAL:
-		if (qUart_tx != NULL) {
-			while ((*data) != '\0') {
-				if (xQueueSend(qUart_tx, data, portMAX_DELAY))
-					data++;
-			}
-		}
-		break;
+			    while ((*data) != '\0') {
+				    if (xQueueSend(qUSB_tx, data, portMAX_DELAY))
+					    data++;
+			    }
+		    }
+		    break;
+	    case SERIAL:
+		    if (xUART_tx != NULL) {
+                xStreamBufferSend(xUART_tx,data, strlen(data),portMAX_DELAY);
+		    }
+            break;
+        case ETH:
+            if (xETH_tx != NULL) {
+                xStreamBufferSend(xETH_tx,data, strlen(data),200 /portTICK_RATE_MS);
+		    }
+            break;
 	}
+#endif
 }
 /********************************************
 * Sends buffer to transmit queue
 *********************************************/
 void send_buffer(uint8_t *data, uint16_t len, uint8_t port) {
-
+#ifndef BOOT
 	switch (port) {
-	case USB:
-		if (qUSB_tx != NULL) {
-			while (len) {
-				if (xQueueSend(qUSB_tx, data, portMAX_DELAY))
-					data++;
-				len--;
-			}
-		}
-
-		break;
-	case SERIAL:
-		if (qUart_tx != NULL) {
-			while (len) {
-				if (xQueueSend(qUart_tx, data, portMAX_DELAY))
-					data++;
-				len--;
-			}
-		}
-		break;
+	    case USB:
+		    if (qUSB_tx != NULL) {
+			    while (len) {
+				    if (xQueueSend(qUSB_tx, data, portMAX_DELAY))
+					    data++;
+				    len--;
+			    }
+		    }
+		    break;
+	    case SERIAL:
+		    if (xUART_tx != NULL) {
+                xStreamBufferSend(xUART_tx,data, len,portMAX_DELAY);
+		    }
+		    break;
+        case ETH:
+            if (xETH_tx != NULL) {
+                xStreamBufferSend(xETH_tx,data, len,200 /portTICK_RATE_MS);
+		    }
+            break;
 	}
+#endif
 }
 
 

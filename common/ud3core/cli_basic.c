@@ -24,7 +24,12 @@ uint8_t updateDefaultFunction(parameter_entry * params, char * newValue, uint8_t
     char* ptr;
     switch (params[index].type){
     case TYPE_UNSIGNED:
-        value = strtoul(newValue,&ptr,10);
+        if(params[index].div){
+            fvalue=strtof(newValue,&ptr);
+            value = fvalue*params[index].div;
+        }else{
+            value = strtoul(newValue,&ptr,10);
+        }
         if (value >= params[index].min && value <= params[index].max){
             if(params[index].size==1){
                 *(uint8_t*)params[index].value = value;
@@ -43,7 +48,12 @@ uint8_t updateDefaultFunction(parameter_entry * params, char * newValue, uint8_t
         }
         break;
     case TYPE_SIGNED:
-        value = strtol(newValue,&ptr,10);
+        if(params[index].div){
+            fvalue=strtof(newValue,&ptr);
+            value = fvalue*params[index].div;
+        }else{
+            value = strtol(newValue,&ptr,10);
+        }
         if (value >= params[index].min && value <= params[index].max){
             if(params[index].size==1){
                 *(int8_t*)params[index].value = value;
@@ -127,7 +137,11 @@ void print_param_helperfunc(parameter_entry * params, uint8_t param_size, uint8_
                 }
 
                 Term_Move_cursor_right(COL_B,port);
-                sprintf(buffer, "\033[37m| \033[32m%u", u_temp_buffer);
+                if(params[current_parameter].div){
+                    sprintf(buffer, "\033[37m| \033[32m%u.%u", (u_temp_buffer/params[current_parameter].div),(u_temp_buffer%params[current_parameter].div));
+                }else{
+                    sprintf(buffer, "\033[37m| \033[32m%u", u_temp_buffer);
+                }
                 send_string(buffer, port);
 
                 break;
@@ -145,7 +159,17 @@ void print_param_helperfunc(parameter_entry * params, uint8_t param_size, uint8_
                 }
 
                 Term_Move_cursor_right(COL_B,port);
-                sprintf(buffer, "\033[37m| \033[32m%i", i_temp_buffer);
+                if(params[current_parameter].div){
+                    uint32_t mod;
+                    if(i_temp_buffer<0){
+                        mod=(i_temp_buffer*-1)%params[current_parameter].div;
+                    }else{
+                        mod=i_temp_buffer%params[current_parameter].div;
+                    }
+                    sprintf(buffer, "\033[37m| \033[32m%i.%u", (i_temp_buffer/params[current_parameter].div),mod);
+                }else{
+                    sprintf(buffer, "\033[37m| \033[32m%i", i_temp_buffer);
+                }
                 send_string(buffer, port);
 
                 break;
@@ -204,7 +228,11 @@ void print_param(parameter_entry * params, uint8_t index, uint8_t port){
                     u_temp_buffer = *(uint32_t*)params[index].value;
                     break;
             }
-            sprintf(buffer, "\t%s=%u\r\n", params[index].name,u_temp_buffer);
+            if(params[index].div){
+                sprintf(buffer, "\t%s=%u.%u\r\n", params[index].name,(u_temp_buffer/params[index].div),(u_temp_buffer%params[index].div));
+            }else{
+                sprintf(buffer, "\t%s=%u\r\n", params[index].name,u_temp_buffer);
+            }
             send_string(buffer, port);
             break;
         case TYPE_SIGNED:
@@ -219,7 +247,17 @@ void print_param(parameter_entry * params, uint8_t index, uint8_t port){
                 i_temp_buffer = *(int32_t*)params[index].value;
                 break;
             }
-            sprintf(buffer, "\t%s=%i\r\n", params[index].name,i_temp_buffer);
+            if(params[index].div){
+                uint32_t mod;
+                if(i_temp_buffer<0){
+                    mod=(i_temp_buffer*-1)%params[index].div;
+                }else{
+                    mod=i_temp_buffer%params[index].div;
+                }
+                sprintf(buffer, "\t%s=%i.%u\r\n", params[index].name,(i_temp_buffer/params[index].div),mod);
+            }else{
+                sprintf(buffer, "\t%s=%i\r\n", params[index].name,i_temp_buffer);
+            }
 	        send_string(buffer, port);
             break;
         case TYPE_FLOAT:

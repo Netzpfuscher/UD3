@@ -9,6 +9,7 @@
 
 uint8_t gaugebuf[] = {0xFF,0x04, TT_GAUGE,0x00,0x00,0x00};
 uint8_t chartbuf[] = {0xFF,0x04, TT_CHART,0x00,0x00,0x00};
+uint8_t statusbuf[] = {0xFF,0x02, TT_STATUS,0x00};
 const uint8_t chartdraw[] = {0xFF,0x02, TT_CHART_DRAW,0x00};
 const uint8_t chartclear[] = {0xFF,0x02, TT_CHART_CLEAR,0x00};
 
@@ -113,4 +114,9 @@ void send_chart_text_center(int16_t x, int16_t y, uint8_t color, uint8_t size, c
     buf[8] = size;
     send_buffer(buf,sizeof(buf),port);
     send_string(text, port);
+}
+
+void send_status(uint8_t bus_active, uint8_t transient_active, uint8_t bus_controlled, uint8_t port) {
+	statusbuf[3] = bus_active|(transient_active<<1)|(bus_controlled<<2);
+    send_buffer(statusbuf, sizeof(statusbuf), port);
 }

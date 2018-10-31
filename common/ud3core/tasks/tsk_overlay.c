@@ -42,6 +42,7 @@
 /* `#START USER_INCLUDE SECTION` */
 #include "cli_common.h"
 #include "telemetry.h"
+#include "charging.h"
 #include "tsk_analog.h"
 #include "tsk_uart.h"
 #include <project.h>
@@ -140,6 +141,10 @@ void show_overlay(uint8_t port) {
         send_gauge(4, GAUGE4_VAR, port);
         send_gauge(5, GAUGE5_VAR, port);
         send_gauge(6, GAUGE6_VAR, port);
+        
+        send_status(telemetry.bus_status!=BUS_OFF,
+                    tr_running!=0,
+                    configuration.ps_scheme!=AC_NO_RELAY_BUS_SCHEME, port);
         
         if(chart){
             send_chart(0, CHART0_VAR, port);

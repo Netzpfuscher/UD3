@@ -95,6 +95,8 @@ struct pulse_str {
 struct pulse_str isr1_pulse;
 struct pulse_str isr2_pulse;
 
+uint8_t skip_flag = 0; // Skipping system exclusive messages
+
 typedef struct __midich__ {
 	uint8 expression; // Expression: Control change (Bxh) 0 bH
 	uint8 rpn_lsb;	// RPN (LSB): Control change (Bxh) 64 H
@@ -324,7 +326,7 @@ CY_ISR(isr_interrupter) {
 }
 
 void USBMIDI_1_callbackLocalMidiEvent(uint8 cable, uint8 *midiMsg) {
-	static uint8_t skip_flag = 0; // Skipping system exclusive messages
+	
 	NOTE note_struct;
 	uint8_t message_filter = midiMsg[0] & 0xf0;
 
@@ -356,9 +358,9 @@ void USBMIDI_1_callbackLocalMidiEvent(uint8 cable, uint8 *midiMsg) {
 		default:
 			break;
 		}
-		if (skip_flag && (midiMsg[1] == 0xf7 || midiMsg[2] == 0xf7)) {
-			skip_flag = 0;
-		}
+    	if (skip_flag && (midiMsg[1] == 0xf7 || midiMsg[2] == 0xf7)) {
+    		skip_flag = 0;
+    	}
 	}
 }
 
@@ -545,17 +547,36 @@ void reflect(PORT port[], CHANNEL channel[], MIDICH midich[]) {
      
 }
 
+void kill_accu(){
+    for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
+                isr_port_ptr[ch].volume=0;
+                isr_port_ptr[ch].freq=0;
+                isr_port_ptr[ch].halfcount=0;
+
+	}
+}
+
 void switch_synth(uint8_t synth){
+    skip_flag=0;
     switch(synth){
         case SYNTH_OFF:
             isr_midi_Stop();
+            xQueueReset(qMIDI_rx);
+            xQueueReset(qSID);
+            kill_accu();
         break;
         case SYNTH_MIDI:
             isr_midi_Stop();
+            xQueueReset(qMIDI_rx);
+            xQueueReset(qSID);
+            kill_accu();
             isr_midi_StartEx(isr_midi);
         break;
         case SYNTH_SID:
             isr_midi_Stop();
+            xQueueReset(qMIDI_rx);
+            xQueueReset(qSID);
+            kill_accu();
             isr_midi_StartEx(isr_sid);
         break;
     }

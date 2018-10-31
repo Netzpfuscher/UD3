@@ -329,6 +329,10 @@ void tsk_eth_TaskProc(void *pvParameters) {
                 telemetry.num_bytes = bytes_waiting;
                 
                 switch(param.synth){
+                    case SYNTH_OFF:
+                        if(bytes_waiting>0){
+                            len = ETH_TcpReceive(midi_socket,buffer,LOCAL_ETH_BUFFER_SIZE,0);
+                        }
                     case SYNTH_MIDI:
                         len = ETH_TcpReceive(midi_socket,buffer,LOCAL_ETH_BUFFER_SIZE,0);
         				if(len){

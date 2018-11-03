@@ -244,7 +244,7 @@ CY_ISR(isr_midi) {
 #define SID_CHANNELS 3
 
 CY_ISR(isr_sid) {
-    
+    telemetry.midi_voices=0;
     static uint8_t cnt=0;
     if (cnt >212){
         cnt=0;
@@ -290,6 +290,7 @@ CY_ISR(isr_sid) {
 	for (ch = 0; ch < SID_CHANNELS; ch++) {
 		flag[ch] = 0;
 		if (isr_port_ptr[ch].volume > 0) {
+            telemetry.midi_voices++;
 			if ((r / isr_port_ptr[ch].halfcount) % 2 > 0) {
 				flag[ch] = 1;
 			}
@@ -558,6 +559,7 @@ void kill_accu(){
 
 void switch_synth(uint8_t synth){
     skip_flag=0;
+    telemetry.midi_voices=0;
     switch(synth){
         case SYNTH_OFF:
             isr_midi_Stop();

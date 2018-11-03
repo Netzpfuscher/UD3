@@ -100,6 +100,20 @@ void send_chart_text(int16_t x, int16_t y, uint8_t color, uint8_t size, char * t
     send_string(text, port);
 }
 
+void send_config(char* param,const char* help_text, uint8_t port){
+    uint8_t len = strlen(param);
+    len += strlen(help_text);
+    len++;
+    uint8_t buf[3];
+    buf[0] = 0xFF;
+    buf[1] = len+sizeof(buf)-2;
+    buf[2] = TT_CONFIG_GET;
+    send_buffer(buf,sizeof(buf),port);
+    send_string(param, port);
+    send_char(';', port);
+    send_string(help_text, port);
+}
+
 void send_chart_text_center(int16_t x, int16_t y, uint8_t color, uint8_t size, char * text, uint8_t port){
     uint8_t bytes = strlen(text);
     uint8_t buf[9];
@@ -117,6 +131,7 @@ void send_chart_text_center(int16_t x, int16_t y, uint8_t color, uint8_t size, c
 }
 
 void send_status(uint8_t bus_active, uint8_t transient_active, uint8_t bus_controlled, uint8_t port) {
+    statusbuf[2] = TT_STATUS;
 	statusbuf[3] = bus_active|(transient_active<<1)|(bus_controlled<<2);
     send_buffer(statusbuf, sizeof(statusbuf), port);
 }

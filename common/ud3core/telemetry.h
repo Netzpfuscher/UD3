@@ -46,38 +46,44 @@
 #define GAUGE0_MIN 0
 #define GAUGE0_MAX 600
 #define GAUGE0_VAR telemetry.bus_v
+#define GAUGE0_SLOW 0
         
 #define GAUGE1_NAME "Temperature"
 #define GAUGE1_MIN 0
 #define GAUGE1_MAX 100
 #define GAUGE1_VAR telemetry.temp1
+#define GAUGE1_SLOW 1
 
 #define GAUGE2_NAME "Power"
 #define GAUGE2_MIN 0
 #define GAUGE2_MAX 10000
 #define GAUGE2_VAR telemetry.avg_power
+#define GAUGE2_SLOW 0
         
 #define GAUGE3_NAME "Current"
 #define GAUGE3_MIN 0
 #define GAUGE3_MAX 50
 #define GAUGE3_VAR telemetry.batt_i /10
-        
+#define GAUGE3_SLOW 0
+    
 #define GAUGE4_NAME "Primary Curr."
 #define GAUGE4_MIN 0
 #define GAUGE4_MAX 1000
 #define GAUGE4_VAR telemetry.primary_i
-
+#define GAUGE4_SLOW 0
     
-#define GAUGE5_NAME "Duty"
+#define GAUGE5_NAME "Voices"
 #define GAUGE5_MIN 0
-#define GAUGE5_MAX 4000        
-#define GAUGE5_VAR telemetry.duty
-        
+#define GAUGE5_MAX 4        
+#define GAUGE5_VAR telemetry.midi_voices
+#define GAUGE5_SLOW 0
+    
 #define GAUGE6_NAME "PW"
 #define GAUGE6_MIN 0
 #define GAUGE6_MAX 500
 #define GAUGE6_VAR interrupter.pw
-        
+#define GAUGE6_SLOW 0
+    
 #define CHART0_NAME "Bus Voltage"
 #define CHART0_MIN 0
 #define CHART0_MAX 600
@@ -116,7 +122,6 @@ typedef struct
 	uint8 temp3;		//not used
 	uint8 bus_status;   //0 = charging, 1 = ready
 	uint16 avg_power;   //Average power in watts
-	uint16 bang_energy; //bang energy in joules
 	uint16 batt_i;		//battery current in centiamps
 	uint8 uvlo_stat;	//uvlo status
 	uint16_t primary_i;

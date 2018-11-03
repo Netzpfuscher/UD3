@@ -276,6 +276,66 @@ void print_param(parameter_entry * params, uint8_t index, uint8_t port){
         }
 }
 
+void print_param_buffer(char * buffer, parameter_entry * params, uint8_t index){
+    uint32_t u_temp_buffer=0;
+    int32_t i_temp_buffer=0;
+    float f_temp_buffer=0.0;
+    switch (params[index].type){
+        case TYPE_UNSIGNED:
+            switch (params[index].size){
+                case 1:
+                    u_temp_buffer = *(uint8_t*)params[index].value;
+                    break;
+                case 2:
+                    u_temp_buffer = *(uint16_t*)params[index].value;
+                    break;
+                case 4:
+                    u_temp_buffer = *(uint32_t*)params[index].value;
+                    break;
+            }
+            if(params[index].div){
+                sprintf(buffer, "%s;%u.%u", params[index].name,(u_temp_buffer/params[index].div),(u_temp_buffer%params[index].div));
+            }else{
+                sprintf(buffer, "%s;%u", params[index].name,u_temp_buffer);
+            }
+            break;
+        case TYPE_SIGNED:
+            switch (params[index].size){
+            case 1:
+                i_temp_buffer = *(int8_t*)params[index].value;
+                break;
+            case 2:
+                i_temp_buffer = *(int16_t*)params[index].value;
+                break;
+            case 4:
+                i_temp_buffer = *(int32_t*)params[index].value;
+                break;
+            }
+            if(params[index].div){
+                uint32_t mod;
+                if(i_temp_buffer<0){
+                    mod=(i_temp_buffer*-1)%params[index].div;
+                }else{
+                    mod=i_temp_buffer%params[index].div;
+                }
+                sprintf(buffer, "%s;%i.%u", params[index].name,(i_temp_buffer/params[index].div),mod);
+            }else{
+                sprintf(buffer, "%s;%i", params[index].name,i_temp_buffer);
+            }
+            break;
+        case TYPE_FLOAT:
+            f_temp_buffer = *(float*)params[index].value;
+            sprintf(buffer, "%s;%f", params[index].name,f_temp_buffer);
+            break;
+        case TYPE_CHAR:
+            sprintf(buffer, "%s;%c", params[index].name,*(char*)params[index].value);
+            break;
+        case TYPE_STRING:
+            sprintf(buffer, "%s;%s", params[index].name,(char*)params[index].value);
+            break;
+        }
+}
+
 
 uint8_t EEPROM_Read_Row(uint8_t row, uint8_t * buffer){
     uint16_t addr;

@@ -103,6 +103,7 @@ uint8_t command_load_default(char *commandline, uint8_t port);
 uint8_t command_tterm(char *commandline, uint8_t port);
 uint8_t command_reset(char *commandline, uint8_t port);
 uint8_t command_minstat(char *commandline, uint8_t port);
+uint8_t command_config_get(char *commandline, uint8_t port);
 
 void nt_interpret(const char *text, uint8_t port);
 
@@ -252,6 +253,7 @@ command_entry commands[] = {
     ADD_COMMAND("tune_s"	    ,command_tune_s         ,"Autotune Secondary")        
     ADD_COMMAND("tterm"	        ,command_tterm          ,"Changes terminal mode")
     ADD_COMMAND("minstat"	    ,command_minstat        ,"Prints the min statistics")
+    ADD_COMMAND("config_get"    ,command_config_get     ,"Internal use")
 };
 // clang-format on
 
@@ -584,6 +586,21 @@ uint8_t command_minstat(char *commandline, uint8_t port){
     send_string(buffer,port);
     sprintf(buffer,"Max frames in buffer  : %u\r\n",telemetry.min_frames_max);
     send_string(buffer,port); 
+    return 1; 
+}
+
+/*****************************************************************************
+* Sends the configuration
+******************************************************************************/
+uint8_t command_config_get(char *commandline, uint8_t port){
+    char buffer[50];
+	for (uint8_t current_parameter = 0; current_parameter < sizeof(confparam) / sizeof(parameter_entry); current_parameter++) {
+        if(confparam[current_parameter].parameter_type == PARAM_CONFIG){
+            print_param_buffer(buffer, confparam, current_parameter);
+            send_config(buffer,confparam[current_parameter].help, port);
+        }
+    }
+    send_config("NULL","NULL", port);
     return 1; 
 }
 

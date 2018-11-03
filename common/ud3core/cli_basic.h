@@ -50,6 +50,7 @@ void EEPROM_write_conf(parameter_entry * params, uint8_t param_size, uint16_t ee
 void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eeprom_offset ,uint8_t port);
 void print_param_help(parameter_entry * params, uint8_t param_size, uint8_t port);
 void print_param(parameter_entry * params, uint8_t index, uint8_t port);
+void print_param_buffer(char * buffer, parameter_entry * params, uint8_t index);
 
 void input_interpret(uint8_t port);
 void input_restart(void);

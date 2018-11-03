@@ -12,6 +12,7 @@
 #define TT_CHART_TEXT 8
 #define TT_CHART_TEXT_CENTER 9
 #define TT_STATUS 10
+#define TT_CONFIG_GET 11
 
 
 #define TT_UNIT_NONE 0
@@ -40,3 +41,4 @@ void send_chart_text_center(int16_t x, int16_t y, uint8_t color, uint8_t size, c
 void send_chart_line(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint8_t color, uint8_t port);
 void send_chart_clear(uint8_t port);
 void send_status(uint8_t bus_active, uint8_t transient_active, uint8_t bus_controlled, uint8_t port);
+void send_config(char* param, const char* help_text, uint8_t port);

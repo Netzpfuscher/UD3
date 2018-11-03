@@ -59,7 +59,7 @@ uint8 tsk_eth_initVar = 0u;
 
 
 #define STREAMBUFFER_RX_SIZE    512     //bytes
-#define STREAMBUFFER_TX_SIZE    4096    //bytes
+#define STREAMBUFFER_TX_SIZE    1024    //bytes
 
 #define LOCAL_ETH_BUFFER_SIZE 256
 
@@ -222,8 +222,9 @@ void process_sid(uint8_t* ptr, uint16_t len) {
     }
 }
 
-uint8_t stop[2] = {'x','x'};
-uint8_t start[2] = {'o','o'};
+uint8_t stop[1] = {'x'};
+uint8_t start[1] = {'o'};
+
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */
@@ -250,7 +251,7 @@ void tsk_eth_TaskProc(void *pvParameters) {
 	/* `#START TASK_INIT_CODE` */
     
     xETH_rx = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
-    xETH_tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,64);
+    xETH_tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,256);
 
     uint8_t cli_socket =0xFF;
     uint8_t cli_socket_state;

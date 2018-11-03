@@ -66,11 +66,10 @@ void tsk_overlay_chart_start(){
     chart=1;
 }
 
-void show_overlay(uint8_t port) {
-	xSemaphoreTake(block_term[port], portMAX_DELAY);
+void show_overlay_100ms(uint8_t port) {
 
-	char buffer[50];
     if(term_mode == TERM_MODE_VT100){
+        char buffer[50];
     	Term_Save_Cursor(port);
     	send_string("\033[?25l", port);
 
@@ -133,18 +132,27 @@ void show_overlay(uint8_t port) {
     	send_string("\033[?25h", port);
     
     }else{
-        
+        #if GAUGE0_SLOW==0
         send_gauge(0, GAUGE0_VAR, port);
+        #endif
+        #if GAUGE1_SLOW==0
         send_gauge(1, GAUGE1_VAR, port);
+        #endif
+        #if GAUGE2_SLOW==0
         send_gauge(2, GAUGE2_VAR, port);
+        #endif
+        #if GAUGE3_SLOW==0
         send_gauge(3, GAUGE3_VAR, port);
+        #endif
+        #if GAUGE4_SLOW==0
         send_gauge(4, GAUGE4_VAR, port);
+        #endif
+        #if GAUGE5_SLOW==0
         send_gauge(5, GAUGE5_VAR, port);
+        #endif
+        #if GAUGE6_SLOW==0
         send_gauge(6, GAUGE6_VAR, port);
-        
-        send_status(telemetry.bus_status!=BUS_OFF,
-                    tr_running!=0,
-                    configuration.ps_scheme!=AC_NO_RELAY_BUS_SCHEME, port);
+        #endif
         
         if(chart){
             send_chart(0, CHART0_VAR, port);
@@ -156,9 +164,38 @@ void show_overlay(uint8_t port) {
         }
         
     }
-    
-	xSemaphoreGive(block_term[port]);
+	
 }
+
+void show_overlay_400ms(uint8_t port) {
+    #if GAUGE0_SLOW==1
+    send_gauge(0, GAUGE0_VAR, port);
+    #endif
+    #if GAUGE1_SLOW==1
+    send_gauge(1, GAUGE1_VAR, port);
+    #endif
+    #if GAUGE2_SLOW==1
+    send_gauge(2, GAUGE2_VAR, port);
+    #endif
+    #if GAUGE3_SLOW==1
+    send_gauge(3, GAUGE3_VAR, port);
+    #endif
+    #if GAUGE4_SLOW==1
+    send_gauge(4, GAUGE4_VAR, port);
+    #endif
+    #if GAUGE5_SLOW==1
+    send_gauge(5, GAUGE5_VAR, port);
+    #endif
+    #if GAUGE6_SLOW==1
+    send_gauge(6, GAUGE6_VAR, port);
+    #endif
+
+    send_status(telemetry.bus_status!=BUS_OFF,
+                tr_running!=0,
+                configuration.ps_scheme!=AC_NO_RELAY_BUS_SCHEME, port);
+}
+
+
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */
@@ -173,6 +210,8 @@ void tsk_overlay_TaskProc(void *pvParameters) {
 	 * the the section below.
 	 */
 	/* `#START TASK_VARIABLES` */
+    
+    uint8_t cnt=0;
 
 	/* `#END` */
 
@@ -186,8 +225,16 @@ void tsk_overlay_TaskProc(void *pvParameters) {
 
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
-		show_overlay((uint32_t)pvParameters);
-
+        xSemaphoreTake(block_term[(uint32_t)pvParameters], portMAX_DELAY);
+        show_overlay_100ms((uint32_t)pvParameters);
+        if(cnt<3){
+            cnt++;
+        }else{
+            cnt=0;
+            show_overlay_400ms((uint32_t)pvParameters);
+        }
+        xSemaphoreGive(block_term[(uint32_t)pvParameters]);
+        
 		/* `#END` */
         if(term_mode==TERM_MODE_VT100){
 		    vTaskDelay(500 / portTICK_PERIOD_MS);

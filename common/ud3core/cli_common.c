@@ -593,7 +593,7 @@ uint8_t command_minstat(char *commandline, uint8_t port){
 * Sends the configuration
 ******************************************************************************/
 uint8_t command_config_get(char *commandline, uint8_t port){
-    char buffer[50];
+    char buffer[80];
 	for (uint8_t current_parameter = 0; current_parameter < sizeof(confparam) / sizeof(parameter_entry); current_parameter++) {
         if(confparam[current_parameter].parameter_type == PARAM_CONFIG){
             print_param_buffer(buffer, confparam, current_parameter);

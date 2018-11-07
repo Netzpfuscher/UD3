@@ -13,7 +13,6 @@ uint8_t EEPROM_1_Write_Row(uint8_t row, uint8_t * buffer);
 
 uint16_t byte_cnt;
 
-
 #define EEPROM_READ_BYTE(x) EEPROM_1_ReadByte(x)
 #define EEPROM_WRITE_ROW(x,y) EEPROM_1_Write(y,x)
 
@@ -294,9 +293,25 @@ void print_param_buffer(char * buffer, parameter_entry * params, uint8_t index){
                     break;
             }
             if(params[index].div){
-                sprintf(buffer, "%s;%u.%u", params[index].name,(u_temp_buffer/params[index].div),(u_temp_buffer%params[index].div));
+                sprintf(buffer, "%s;%u.%u;%u;%u;%i.%u;%i.%u",
+                    params[index].name,
+                    (u_temp_buffer/params[index].div),
+                    (u_temp_buffer%params[index].div),
+                    params[index].type,
+                    params[index].size,
+                    (params[index].min/params[index].div),
+                    (params[index].min%params[index].div),
+                    (params[index].max/params[index].div),
+                    (params[index].max%params[index].div));
             }else{
-                sprintf(buffer, "%s;%u", params[index].name,u_temp_buffer);
+                sprintf(buffer, "%s;%u;%u;%u;%u;%u",
+                    params[index].name,
+                    u_temp_buffer,
+                    params[index].type,
+                    params[index].size,
+                    params[index].min,
+                    params[index].max
+                );
             }
             break;
         case TYPE_SIGNED:
@@ -312,26 +327,53 @@ void print_param_buffer(char * buffer, parameter_entry * params, uint8_t index){
                 break;
             }
             if(params[index].div){
-                uint32_t mod;
-                if(i_temp_buffer<0){
-                    mod=(i_temp_buffer*-1)%params[index].div;
-                }else{
-                    mod=i_temp_buffer%params[index].div;
-                }
-                sprintf(buffer, "%s;%i.%u", params[index].name,(i_temp_buffer/params[index].div),mod);
+                sprintf(buffer, "%s;%i.%u;%u;%u;%i.%u;%i.%u",
+                    params[index].name,
+                    (i_temp_buffer/params[index].div),
+                    i_temp_buffer%params[index].div,
+                    params[index].type,
+                    params[index].size,
+                    (params[index].min/params[index].div),
+                    params[index].min%params[index].div,
+                    (params[index].max/params[index].div),
+                    params[index].max%params[index].div);
             }else{
-                sprintf(buffer, "%s;%i", params[index].name,i_temp_buffer);
+                sprintf(buffer, "%s;%i;%u;%u;%i;%i",
+                    params[index].name,
+                    i_temp_buffer,
+                    params[index].type,
+                    params[index].size,
+                    params[index].min,
+                    params[index].max);
             }
             break;
         case TYPE_FLOAT:
             f_temp_buffer = *(float*)params[index].value;
-            sprintf(buffer, "%s;%f", params[index].name,f_temp_buffer);
+            sprintf(buffer, "%s;%f;%u;%u;%i;%i",
+                params[index].name,
+                f_temp_buffer,
+                params[index].type,
+                params[index].size,
+                params[index].min,
+                params[index].max);
             break;
         case TYPE_CHAR:
-            sprintf(buffer, "%s;%c", params[index].name,*(char*)params[index].value);
+            sprintf(buffer, "%s;%c;%u;%u;%s;%s",
+                params[index].name,
+                *(char*)params[index].value,
+                params[index].type,
+                params[index].size,
+                "NULL",
+                "NULL");
             break;
         case TYPE_STRING:
-            sprintf(buffer, "%s;%s", params[index].name,(char*)params[index].value);
+            sprintf(buffer, "%s;%s;%u;%u;%s;%s",
+                params[index].name,
+                (char*)params[index].value,
+                params[index].type,
+                params[index].size,
+                "NULL",
+                "NULL");
             break;
         }
 }

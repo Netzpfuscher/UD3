@@ -54,6 +54,7 @@ void initialize_term(void);
 void task_terminal_overlay(void);
 uint8_t command_cls(char *commandline, uint8_t port);
 void task_terminal();
+void stop_overlay_task(uint8_t port);
 
 extern parameter_entry tparameters[];
 volatile uint8_t qcw_reg;

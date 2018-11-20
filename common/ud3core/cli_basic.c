@@ -95,7 +95,15 @@ uint8_t updateDefaultFunction(parameter_entry * params, char * newValue, uint8_t
     }
     return 0;
     error:
-        sprintf(buffer, "E:Range %i-%i\r\n", params[index].min, params[index].max);
+        if(params[index].div){
+            sprintf(buffer, "E:Range %i.%u-%i.%u\r\n",
+                params[index].min/params[index].div,
+                params[index].min%params[index].div,                
+                params[index].max/params[index].div,
+                params[index].max%params[index].div);
+        }else{
+            sprintf(buffer, "E:Range %i-%i\r\n", params[index].min, params[index].max);
+        }
         send_string(buffer,port);
 
     return 0;

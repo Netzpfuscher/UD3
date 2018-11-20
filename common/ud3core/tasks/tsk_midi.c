@@ -252,15 +252,15 @@ CY_ISR(isr_sid) {
             isr_port_ptr[0].halfcount = sid_frm.half[0];
             isr_port_ptr[1].halfcount = sid_frm.half[1];
             isr_port_ptr[2].halfcount = sid_frm.half[2];
-            //isr_port_ptr[0].volume = sid_frm.gate[0]*127;
-            //isr_port_ptr[1].volume = sid_frm.gate[1]*127;
-            //isr_port_ptr[2].volume = sid_frm.gate[2]*127;
+            isr_port_ptr[0].volume = sid_frm.gate[0]*127;
+            isr_port_ptr[1].volume = sid_frm.gate[1]*127;
+            isr_port_ptr[2].volume = sid_frm.gate[2]*127;
             sid_frm.pw[0]=sid_frm.pw[0]>>4;
             sid_frm.pw[1]=sid_frm.pw[1]>>4;
             sid_frm.pw[2]=sid_frm.pw[2]>>4;
-            isr_port_ptr[0].volume = sid_frm.gate[0]* sid_frm.pw[0];
-            isr_port_ptr[1].volume = sid_frm.gate[1]* sid_frm.pw[1];
-            isr_port_ptr[2].volume = sid_frm.gate[2]* sid_frm.pw[2];
+            //isr_port_ptr[0].volume = sid_frm.gate[0]* sid_frm.pw[0];
+            //isr_port_ptr[1].volume = sid_frm.gate[1]* sid_frm.pw[1];
+            //isr_port_ptr[2].volume = sid_frm.gate[2]* sid_frm.pw[2];
         }else{
             isr_port_ptr[0].volume = 0;
             isr_port_ptr[1].volume = 0;

@@ -196,7 +196,7 @@ void process_sid(uint8_t* ptr, uint16_t len) {
                     }else{
                         SID_frame.master_pw = param.pw;
                     }  
-                    
+                    interrupter.pw = SID_frame.master_pw;
                     xQueueSend(qSID,&SID_frame,0);
                     SID_register=0;
                     start_frame=0;
@@ -233,6 +233,8 @@ uint8_t start[1] = {'o'};
  * to preform the desired function within the merge regions of the task procedure
  * to add functionality to the task.
  */
+#define NUM_CON 2
+
 void tsk_eth_TaskProc(void *pvParameters) {
 	/*
 	 * Add and initialize local variables that are allocated on the Task stack
@@ -252,14 +254,25 @@ void tsk_eth_TaskProc(void *pvParameters) {
     
     xETH_rx = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
     xETH_tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,256);
+    
+    
 
-    uint8_t cli_socket =0xFF;
-    uint8_t cli_socket_state;
-    uint8_t cli_socket_state_old;
+    //uint8_t cli_socket =0xFF;
+    uint8_t cli_socket[NUM_CON];
+    uint8_t cli_socket_state[NUM_CON];
+    uint8_t cli_socket_state_old[NUM_CON];
     
+    uint8_t midi_socket[NUM_CON];
+    uint8_t midi_socket_state[NUM_CON];
     
-    uint8_t midi_socket =0xFF;
-    uint8_t midi_socket_state;
+    uint8_t flow_ctl[NUM_CON];
+    
+    for(int i =0;i<NUM_CON;i++){
+        midi_socket[i]=0xFF;
+        cli_socket[i]=0xFF;
+        flow_ctl[i]=1;
+    }
+    
     
     uint16_t len;
     
@@ -283,93 +296,98 @@ void tsk_eth_TaskProc(void *pvParameters) {
 	/* `#END` */
     /* `#START TASK_LOOP_CODE` */
     
-    uint8_t flow_ctl=1;
+    
     
 	for (;;) {
         
-        if (cli_socket != 0xFF) {
-			cli_socket_state = ETH_TcpPollSocket(cli_socket);
-
-			if (cli_socket_state == ETH_SR_ESTABLISHED) {
-                if(cli_socket_state != cli_socket_state_old){
-                    command_cls("",ETH);
-                    send_string(":>", ETH);
-                }
-				/*
-				 * Check for data received from the telnet port.
-				 */
-				len = ETH_TcpReceive(cli_socket,buffer,LOCAL_ETH_BUFFER_SIZE,0);
-                if(len){
-				    xStreamBufferSend(xETH_rx, buffer, len, 0);
-                }
-				/*
-				 * check for data waiting to be sent over the telnet port
-				 */
-				len = xStreamBufferReceive(xETH_tx, buffer, LOCAL_ETH_BUFFER_SIZE, 1);
-                if(len){
-				    ETH_TcpSend(cli_socket,buffer,len,0);
-                }
-			}
-			else if (cli_socket_state != ETH_SR_LISTEN) {
-				ETH_SocketClose(cli_socket,1);
-				cli_socket = 0xFF;
-			}
-            cli_socket_state_old = cli_socket_state;
-		}
-		else {
-			cli_socket = ETH_TcpOpenServer(PORT_TELNET);
-		}			
-       
         
-        if (midi_socket != 0xFF) {
-			midi_socket_state = ETH_TcpPollSocket(midi_socket);
-			if (midi_socket_state == ETH_SR_ESTABLISHED) {
+        for(uint8_t i=0;i<NUM_CON;i++){
+            if (cli_socket[i] != 0xFF) {
+    			cli_socket_state[i] = ETH_TcpPollSocket(cli_socket[i]);
 
-                uint16_t bytes_waiting = ETH_RxDataReady(midi_socket);
+    			if (cli_socket_state[i] == ETH_SR_ESTABLISHED) {
+                    if(cli_socket_state[i] != cli_socket_state_old[i]){
+                        command_cls("",ETH);
+                        send_string(":>", ETH);
+                    }
+    				/*
+    				 * Check for data received from the telnet port.
+    				 */
+    				len = ETH_TcpReceive(cli_socket[i],buffer,LOCAL_ETH_BUFFER_SIZE,0);
+                    if(len){
+    				    xStreamBufferSend(xETH_rx, buffer, len, 0);
+                    }
+    				/*
+    				 * check for data waiting to be sent over the telnet port
+    				 */
+    				len = xStreamBufferReceive(xETH_tx, buffer, LOCAL_ETH_BUFFER_SIZE, 1);
+                    if(len){
+    				    ETH_TcpSend(cli_socket[i],buffer,len,0);
+                    }
+    			}
+    			else if (cli_socket_state[i] != ETH_SR_LISTEN) {
+    				ETH_SocketClose(cli_socket[i],1);
+                    term_mode = TERM_MODE_VT100;
+                    stop_overlay_task(ETH);
+    				cli_socket[i] = 0xFF;
+    			}
+                cli_socket_state_old[i] = cli_socket_state[i];
+    		}
+    		else {
+    			cli_socket[i] = ETH_TcpOpenServer(PORT_TELNET);
+    		}			
+           
+            
+            if (midi_socket[i] != 0xFF) {
+    			midi_socket_state[i] = ETH_TcpPollSocket(midi_socket[i]);
+    			if (midi_socket_state[i] == ETH_SR_ESTABLISHED) {
 
-                telemetry.num_bytes = bytes_waiting;
-                
-                switch(param.synth){
-                    case SYNTH_OFF:
-                        if(bytes_waiting>0){
-                            len = ETH_TcpReceive(midi_socket,buffer,LOCAL_ETH_BUFFER_SIZE,0);
-                        }
-                    case SYNTH_MIDI:
-                        len = ETH_TcpReceive(midi_socket,buffer,LOCAL_ETH_BUFFER_SIZE,0);
-        				if(len){
-                            process_midi(buffer,len);
-                        }
-                    break;
-                    case SYNTH_SID:
-                        if(bytes_waiting>1800){
-                            if(flow_ctl){
-                                ETH_TcpSend(midi_socket,stop,1,0);
-                                flow_ctl=0;
+                    uint16_t bytes_waiting = ETH_RxDataReady(midi_socket[i]);
+
+                    telemetry.num_bytes = bytes_waiting;
+                    
+                    switch(param.synth){
+                        case SYNTH_OFF:
+                            if(bytes_waiting>0){
+                                len = ETH_TcpReceive(midi_socket[i],buffer,LOCAL_ETH_BUFFER_SIZE,0);
                             }
-                        }else{
-                             if(!flow_ctl){
-                                flow_ctl=1;
-                                ETH_TcpSend(midi_socket,start,1,0);
+                        case SYNTH_MIDI:
+                            len = ETH_TcpReceive(midi_socket[i],buffer,LOCAL_ETH_BUFFER_SIZE,0);
+            				if(len){
+                                process_midi(buffer,len);
                             }
-                        }
-                        if(uxQueueSpacesAvailable(qSID) > 15){
-        				    len = ETH_TcpReceive(midi_socket,buffer,LOCAL_ETH_BUFFER_SIZE,0);
-        				    if(len){
-                                process_sid(buffer,len);
+                        break;
+                        case SYNTH_SID:
+                            if(bytes_waiting>1800){
+                                if(flow_ctl[i]){
+                                    ETH_TcpSend(midi_socket[i],stop,1,0);
+                                    flow_ctl[i]=0;
+                                }
+                            }else{
+                                 if(!flow_ctl[i]){
+                                    flow_ctl[i]=1;
+                                    ETH_TcpSend(midi_socket[i],start,1,0);
+                                }
                             }
-                        }
-                    break;
-                }
-       
-			}
-			else if (midi_socket_state != ETH_SR_LISTEN) {
-				ETH_SocketClose(midi_socket,1);
-				midi_socket = 0xFF;
-			}
-		}
-		else {
-			midi_socket = ETH_TcpOpenServer(PORT_MIDI);
-		}			
+                            if(uxQueueSpacesAvailable(qSID) > 15){
+            				    len = ETH_TcpReceive(midi_socket[i],buffer,LOCAL_ETH_BUFFER_SIZE,0);
+            				    if(len){
+                                    process_sid(buffer,len);
+                                }
+                            }
+                        break;
+                    }
+           
+    			}
+    			else if (midi_socket_state[i] != ETH_SR_LISTEN) {
+    				ETH_SocketClose(midi_socket[i],1);
+    				midi_socket[i] = 0xFF;
+    			}
+    		}
+    		else {
+    			midi_socket[i] = ETH_TcpOpenServer(PORT_MIDI);
+    		}
+        }
 		vTaskDelay(2 /portTICK_RATE_MS);
 
 

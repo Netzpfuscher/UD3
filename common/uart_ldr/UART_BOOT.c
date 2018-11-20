@@ -25,6 +25,9 @@
 #define LOCAL_ETH_BUFFER_SIZE 512
 uint8_t socket_bootldr;
 uint8_t socket_bootldr_state;
+uint8_t socket_tel;
+uint8_t socket_tel_state;
+    
 uint8_t buffer[LOCAL_ETH_BUFFER_SIZE];
 uint16_t len;
 
@@ -460,6 +463,21 @@ cystatus ETH_CyBtldrCommRead(uint8 pData[], uint16 size, uint16 * count, uint8 t
     }
     else {
     socket_bootldr = ETH_TcpOpenServer(PORT_BOOTLDR);
+    }
+   
+    if (socket_tel != 0xFF) {
+        socket_tel_state = ETH_TcpPollSocket(socket_tel);
+
+        if (socket_tel_state == ETH_SR_ESTABLISHED) {
+               
+
+         
+        }else if (socket_tel_state != ETH_SR_LISTEN) {
+            ETH_SocketClose(socket_tel,1);
+            socket_tel = 0xFF;
+            }
+    }else {
+        socket_tel = ETH_TcpOpenServer(23);
     }
     CyDelay(1);
     return (status);

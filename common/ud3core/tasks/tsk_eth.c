@@ -58,7 +58,7 @@ uint8 tsk_eth_initVar = 0u;
 /* `#START USER_TASK_LOCAL_CODE` */
 
 
-#define STREAMBUFFER_RX_SIZE    512     //bytes
+#define STREAMBUFFER_RX_SIZE    256     //bytes
 #define STREAMBUFFER_TX_SIZE    1024    //bytes
 
 #define LOCAL_ETH_BUFFER_SIZE 256
@@ -252,8 +252,7 @@ void tsk_eth_TaskProc(void *pvParameters) {
 	 */
 	/* `#START TASK_INIT_CODE` */
     
-    xETH_rx = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
-    xETH_tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,256);
+
     
     
 
@@ -266,11 +265,14 @@ void tsk_eth_TaskProc(void *pvParameters) {
     uint8_t midi_socket_state[NUM_CON];
     
     uint8_t flow_ctl[NUM_CON];
+    uint16_t bytes_waiting[NUM_CON];
     
     for(int i =0;i<NUM_CON;i++){
         midi_socket[i]=0xFF;
         cli_socket[i]=0xFF;
         flow_ctl[i]=1;
+        xETH_rx[i] = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
+        xETH_tx[i] = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,256);
     }
     
     
@@ -287,15 +289,18 @@ void tsk_eth_TaskProc(void *pvParameters) {
     }
 	  
     if(ret==CYRET_TIMEOUT){
-            if(ETH_Terminal_TaskHandle!=NULL){
-                vTaskDelete(ETH_Terminal_TaskHandle);
+            if(ETH_Terminal_TaskHandle0!=NULL){
+                vTaskDelete(ETH_Terminal_TaskHandle0);
+            }
+            if(ETH_Terminal_TaskHandle1!=NULL){
+                vTaskDelete(ETH_Terminal_TaskHandle1);
                 vTaskDelete(tsk_eth_TaskHandle);
             }
     }
 
 	/* `#END` */
     /* `#START TASK_LOOP_CODE` */
-    
+   
     
     
 	for (;;) {
@@ -306,21 +311,22 @@ void tsk_eth_TaskProc(void *pvParameters) {
     			cli_socket_state[i] = ETH_TcpPollSocket(cli_socket[i]);
 
     			if (cli_socket_state[i] == ETH_SR_ESTABLISHED) {
+                    
                     if(cli_socket_state[i] != cli_socket_state_old[i]){
-                        command_cls("",ETH);
-                        send_string(":>", ETH);
+                        command_cls("",i);
+                        send_string(":>", i);
                     }
     				/*
     				 * Check for data received from the telnet port.
     				 */
     				len = ETH_TcpReceive(cli_socket[i],buffer,LOCAL_ETH_BUFFER_SIZE,0);
                     if(len){
-    				    xStreamBufferSend(xETH_rx, buffer, len, 0);
+    				    xStreamBufferSend(xETH_rx[i], buffer, len, 0);
                     }
     				/*
     				 * check for data waiting to be sent over the telnet port
     				 */
-    				len = xStreamBufferReceive(xETH_tx, buffer, LOCAL_ETH_BUFFER_SIZE, 1);
+    				len = xStreamBufferReceive(xETH_tx[i], buffer, LOCAL_ETH_BUFFER_SIZE, 1);
                     if(len){
     				    ETH_TcpSend(cli_socket[i],buffer,len,0);
                     }
@@ -328,7 +334,7 @@ void tsk_eth_TaskProc(void *pvParameters) {
     			else if (cli_socket_state[i] != ETH_SR_LISTEN) {
     				ETH_SocketClose(cli_socket[i],1);
                     term_mode = TERM_MODE_VT100;
-                    stop_overlay_task(ETH);
+                    stop_overlay_task(i);
     				cli_socket[i] = 0xFF;
     			}
                 cli_socket_state_old[i] = cli_socket_state[i];
@@ -342,9 +348,13 @@ void tsk_eth_TaskProc(void *pvParameters) {
     			midi_socket_state[i] = ETH_TcpPollSocket(midi_socket[i]);
     			if (midi_socket_state[i] == ETH_SR_ESTABLISHED) {
 
-                    uint16_t bytes_waiting = ETH_RxDataReady(midi_socket[i]);
-
-                    telemetry.num_bytes = bytes_waiting;
+                    bytes_waiting[i] = ETH_RxDataReady(midi_socket[i]);
+                    
+                    if(!i){
+                        telemetry.num_bytes = bytes_waiting[i];
+                    }else{
+                        telemetry.num_bytes += bytes_waiting[i];
+                    }
                     
                     switch(param.synth){
                         case SYNTH_OFF:
@@ -358,7 +368,7 @@ void tsk_eth_TaskProc(void *pvParameters) {
                             }
                         break;
                         case SYNTH_SID:
-                            if(bytes_waiting>1800){
+                            if(bytes_waiting[i]>1800){
                                 if(flow_ctl[i]){
                                     ETH_TcpSend(midi_socket[i],stop,1,0);
                                     flow_ctl[i]=0;

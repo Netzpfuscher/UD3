@@ -77,11 +77,13 @@ int main() {
 	rx_blink_Control = 1;
 	block_term[SERIAL] = xSemaphoreCreateBinary(); //Blocking semaphore for overlay Display
 	block_term[USB] = xSemaphoreCreateBinary();    //Blocking semaphore for overlay Display
-    block_term[ETH] = xSemaphoreCreateBinary();    //Blocking semaphore for overlay Display
+    block_term[ETH0] = xSemaphoreCreateBinary();    //Blocking semaphore for overlay Display
+    block_term[ETH1] = xSemaphoreCreateBinary();    //Blocking semaphore for overlay Display
 	xSemaphoreGive(block_term[SERIAL]);
 	xSemaphoreGive(block_term[USB]);
-    xSemaphoreGive(block_term[ETH]);
-
+    xSemaphoreGive(block_term[ETH0]);
+    xSemaphoreGive(block_term[ETH1]);
+    
 	//Starting Tasks
     if(configuration.minprot){
         tsk_min_Start();        //Handles UART-Hardware and queues with MIN-Protocol

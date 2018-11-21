@@ -657,9 +657,14 @@ void send_char(uint8 c, uint8_t port) {
 		    if (xUART_tx != NULL)
                 xStreamBufferSend(xUART_tx,&c, 1,portMAX_DELAY);
 		    break;
-        case ETH:
-            if (xETH_tx != NULL) {
-                xStreamBufferSend(xETH_tx,&c, 1,200 /portTICK_RATE_MS);
+        case ETH0:
+            if (xETH_tx[0] != NULL) {
+                xStreamBufferSend(xETH_tx[0],&c, 1,200 /portTICK_RATE_MS);
+		    }
+            break;
+        case ETH1:
+            if (xETH_tx[1] != NULL) {
+                xStreamBufferSend(xETH_tx[1],&c, 1,200 /portTICK_RATE_MS);
 		    }
             break;
      
@@ -687,9 +692,14 @@ void send_string(char *data, uint8_t port) {
                 xStreamBufferSend(xUART_tx,data, strlen(data),portMAX_DELAY);
 		    }
             break;
-        case ETH:
-            if (xETH_tx != NULL) {
-                xStreamBufferSend(xETH_tx,data, strlen(data),200 /portTICK_RATE_MS);
+        case ETH0:
+            if (xETH_tx[0] != NULL) {
+                xStreamBufferSend(xETH_tx[0],data, strlen(data),200 /portTICK_RATE_MS);
+		    }
+            break;
+        case ETH1:
+            if (xETH_tx[1] != NULL) {
+                xStreamBufferSend(xETH_tx[1],data, strlen(data),200 /portTICK_RATE_MS);
 		    }
             break;
 	}
@@ -715,9 +725,14 @@ void send_buffer(uint8_t *data, uint16_t len, uint8_t port) {
                 xStreamBufferSend(xUART_tx,data, len,portMAX_DELAY);
 		    }
 		    break;
-        case ETH:
-            if (xETH_tx != NULL) {
-                xStreamBufferSend(xETH_tx,data, len,200 /portTICK_RATE_MS);
+        case ETH0:
+            if (xETH_tx[0] != NULL) {
+                xStreamBufferSend(xETH_tx[0],data, len,200 /portTICK_RATE_MS);
+		    }
+            break;
+        case ETH1:
+            if (xETH_tx[1] != NULL) {
+                xStreamBufferSend(xETH_tx[1],data, len,200 /portTICK_RATE_MS);
 		    }
             break;
 	}

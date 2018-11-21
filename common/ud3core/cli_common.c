@@ -45,6 +45,7 @@
 #include "tasks/tsk_uart.h"
 #include "tasks/tsk_usb.h"
 #include "tasks/tsk_midi.h"
+#include "tasks/tsk_eth.h"
 #include "helper/teslaterm.h"
 
 #define UNUSED_VARIABLE(N) \
@@ -448,7 +449,8 @@ uint8_t command_reset(char *commandline, uint8_t port){
 ******************************************************************************/
 xTaskHandle overlay_Serial_TaskHandle;
 xTaskHandle overlay_USB_TaskHandle;
-xTaskHandle overlay_ETH_TaskHandle;
+xTaskHandle overlay_ETH_TaskHandle0;
+xTaskHandle overlay_ETH_TaskHandle1;
 
 /*****************************************************************************
 * Helper function for spawning the overlay task
@@ -465,9 +467,14 @@ void start_overlay_task(uint8_t port){
 				xTaskCreate(tsk_overlay_TaskProc, "Overl_U", 256, (void *)USB, PRIO_OVERLAY, &overlay_USB_TaskHandle);
 			}
 			break;
-        case ETH:
-			if (overlay_ETH_TaskHandle == NULL) {
-				xTaskCreate(tsk_overlay_TaskProc, "Overl_E", 256, (void *)ETH, PRIO_OVERLAY, &overlay_ETH_TaskHandle);
+        case ETH0:
+			if (overlay_ETH_TaskHandle0 == NULL) {
+				xTaskCreate(tsk_overlay_TaskProc, "Overl_E0", 256, (void *)ETH0, PRIO_OVERLAY, &overlay_ETH_TaskHandle0);
+			}
+			break;
+        case ETH1:
+			if (overlay_ETH_TaskHandle1 == NULL) {
+				xTaskCreate(tsk_overlay_TaskProc, "Overl_E1", 256, (void *)ETH1, PRIO_OVERLAY, &overlay_ETH_TaskHandle1);
 			}
 			break;
 		}
@@ -491,10 +498,16 @@ void stop_overlay_task(uint8_t port){
 				overlay_USB_TaskHandle = NULL;
 			}
 			break;
-        case ETH:
-			if (overlay_ETH_TaskHandle != NULL) {
-				vTaskDelete(overlay_ETH_TaskHandle);
-				overlay_ETH_TaskHandle = NULL;
+        case ETH0:
+			if (overlay_ETH_TaskHandle0 != NULL) {
+				vTaskDelete(overlay_ETH_TaskHandle0);
+				overlay_ETH_TaskHandle0 = NULL;
+			}
+			break;
+        case ETH1:
+			if (overlay_ETH_TaskHandle1 != NULL) {
+				vTaskDelete(overlay_ETH_TaskHandle1);
+				overlay_ETH_TaskHandle1 = NULL;
 			}
 			break;
 		}

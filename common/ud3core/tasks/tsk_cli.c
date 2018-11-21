@@ -27,6 +27,7 @@
 
 #include "tsk_cli.h"
 
+
 /* RTOS includes. */
 #include "FreeRTOS.h"
 #include "task.h"
@@ -35,7 +36,8 @@
 
 xTaskHandle UART_Terminal_TaskHandle;
 xTaskHandle USB_Terminal_TaskHandle;
-xTaskHandle ETH_Terminal_TaskHandle;
+xTaskHandle ETH_Terminal_TaskHandle0;
+xTaskHandle ETH_Terminal_TaskHandle1;
 uint8 tsk_cli_initVar = 0u;
 
 /* ------------------------------------------------------------------------ */
@@ -61,11 +63,13 @@ void *extobjt = 0;
 
 static int serial_write(const char *buf, int cnt, void *extobj);
 static int usb_write(const char *buf, int cnt, void *extobj);
-static int eth_write(const char *buf, int cnt, void *extobj);
+static int eth_write0(const char *buf, int cnt, void *extobj);
+static int eth_write1(const char *buf, int cnt, void *extobj);
 void initialize_cli(ntshell_t *ptr, uint8_t port);
 static int serial_callback(const char *text, void *extobj);
 static int usb_callback(const char *text, void *extobj);
-static int eth_callback(const char *text, void *extobj);
+static int eth_callback0(const char *text, void *extobj);
+static int eth_callback1(const char *text, void *extobj);
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */
@@ -90,8 +94,11 @@ void initialize_cli(ntshell_t *ptr, uint8_t port) {
 		USBMIDI_1_Start(0, USBMIDI_1_5V_OPERATION);
 		ntshell_init(ptr, usb_write, usb_callback, extobjt);
 		break;
-    case ETH:
-		ntshell_init(ptr, eth_write, eth_callback, extobjt);
+    case ETH0:
+		ntshell_init(ptr, eth_write0, eth_callback0, extobjt);
+		break;
+    case ETH1:
+		ntshell_init(ptr, eth_write1, eth_callback1, extobjt);
 		break;
         
 	default:
@@ -121,10 +128,18 @@ static int usb_write(const char *buf, int cnt, void *extobj) {
 	return cnt;
 }
 
-static int eth_write(const char *buf, int cnt, void *extobj) {
+static int eth_write0(const char *buf, int cnt, void *extobj) {
 	UNUSED_VARIABLE(extobj);
     
-    xStreamBufferSend(xETH_tx,buf, cnt,portMAX_DELAY);
+    xStreamBufferSend(xETH_tx[0],buf, cnt,portMAX_DELAY);
+
+	return cnt;
+}
+
+static int eth_write1(const char *buf, int cnt, void *extobj) {
+	UNUSED_VARIABLE(extobj);
+    
+    xStreamBufferSend(xETH_tx[1],buf, cnt,portMAX_DELAY);
 
 	return cnt;
 }
@@ -147,12 +162,21 @@ static int usb_callback(const char *text, void *extobj) {
 	return 0;
 }
 
-static int eth_callback(const char *text, void *extobj) {
+static int eth_callback0(const char *text, void *extobj) {
 	UNUSED_VARIABLE(extobj);
 	/*
      * This is a really simple example codes for the callback function.
      */
-	nt_interpret(text, ETH);
+	nt_interpret(text, ETH0);
+	return 0;
+}
+
+static int eth_callback1(const char *text, void *extobj) {
+	UNUSED_VARIABLE(extobj);
+	/*
+     * This is a really simple example codes for the callback function.
+     */
+	nt_interpret(text, ETH1);
 	return 0;
 }
 
@@ -194,12 +218,12 @@ uint8_t handle_USB_terminal(ntshell_t *ptr) {
 	return 0;
 }
 
-uint8_t handle_ETH_terminal(ntshell_t *ptr) {
+uint8_t handle_ETH_terminal(ntshell_t *ptr, uint32_t pvParameters) {
 	char c;
-	if (xStreamBufferReceive(xETH_rx, &c,1, 20 /portTICK_RATE_MS)) {
-		if (xSemaphoreTake(block_term[ETH], 20 /portTICK_RATE_MS)) {
+	if (xStreamBufferReceive(xETH_rx[pvParameters], &c,1, 20 /portTICK_RATE_MS)) {
+		if (xSemaphoreTake(block_term[pvParameters], 20 /portTICK_RATE_MS)) {
 			ntshell_execute_nb(ptr, c);
-			xSemaphoreGive(block_term[ETH]);
+			xSemaphoreGive(block_term[pvParameters]);
 		} 
 	}
 
@@ -220,7 +244,7 @@ void tsk_cli_TaskProc(void *pvParameters) {
 	 */
 	/* `#START TASK_VARIABLES` */
 
-	ntshell_t ntserial;
+	ntshell_t ntsh;
 
 	/* `#END` */
 
@@ -230,27 +254,29 @@ void tsk_cli_TaskProc(void *pvParameters) {
 	 */
 	/* `#START TASK_INIT_CODE` */
 
-	initialize_cli(&ntserial, (uint32_t)pvParameters);
+	initialize_cli(&ntsh, (uint32_t)pvParameters);
 
 	/* `#END` */
 
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
 
-		switch ((uint32_t)pvParameters) {
-		case SERIAL:
-			handle_uart_terminal(&ntserial);
-			break;
-		case USB:
-			handle_USB_terminal(&ntserial);
-			break;
-        case ETH:
-			handle_ETH_terminal(&ntserial);
-			break;
-		default:
-			break;
-		}
-        
+    		switch ((uint32_t)pvParameters) {
+    		case SERIAL:
+    			handle_uart_terminal(&ntsh);
+    			break;
+    		case USB:
+    			handle_USB_terminal(&ntsh);
+    			break;
+            case ETH0:
+    			handle_ETH_terminal(&ntsh, ETH0);
+    			break;
+            case ETH1:
+    			handle_ETH_terminal(&ntsh, ETH1);
+    			break;
+    		default:
+    			break;
+    		}
 
 		/* `#END` */
 
@@ -276,7 +302,8 @@ void tsk_cli_Start(void) {
 	 	*/
 		xTaskCreate(tsk_cli_TaskProc, "UART-CLI", 576, (void *)SERIAL, PRIO_TERMINAL, &UART_Terminal_TaskHandle);
 		xTaskCreate(tsk_cli_TaskProc, "USB-CLI", 576, (void *)USB, PRIO_TERMINAL, &USB_Terminal_TaskHandle);
-        xTaskCreate(tsk_cli_TaskProc, "ETH-CLI", 576, (void *)ETH, PRIO_TERMINAL, &ETH_Terminal_TaskHandle);
+        xTaskCreate(tsk_cli_TaskProc, "ETH-CLI0", 576, (void *)ETH0, PRIO_TERMINAL, &ETH_Terminal_TaskHandle0);
+        xTaskCreate(tsk_cli_TaskProc, "ETH-CLI1", 576, (void *)ETH1, PRIO_TERMINAL, &ETH_Terminal_TaskHandle1);
 		tsk_cli_initVar = 1;
 	}
 }

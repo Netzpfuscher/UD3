@@ -26,10 +26,12 @@
 #define CYDEV_EE_SIZE 0x00000800u
 #define CY_EEPROM_SIZE              (CYDEV_EE_SIZE)
 
-#define SERIAL 0
-#define USB 1
-#define ETH 2
-#define NONE 3
+#define NONE 2
+#define SERIAL 3
+#define USB 4
+#define ETH0 0
+#define ETH1 1
+
 
    
 typedef struct parameter_entry_struct parameter_entry;

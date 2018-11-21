@@ -60,8 +60,9 @@ extern parameter_entry tparameters[];
 volatile uint8_t qcw_reg;
 extern parameter_entry confparam[];
 
-xSemaphoreHandle block_term[3];
-extern xTaskHandle overlay_ETH_TaskHandle;
+xSemaphoreHandle block_term[5];
+extern xTaskHandle overlay_ETH_TaskHandle0;
+extern xTaskHandle overlay_ETH_TaskHandle1;
 
 struct config_struct{
     uint8_t watchdog;

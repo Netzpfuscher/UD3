@@ -110,7 +110,7 @@ void nt_interpret(const char *text, uint8_t port);
 
 const uint8_t kill_msg[3] = {0xb0, 0x77, 0x00};
 
-uint8_t term_mode = TERM_MODE_VT100;
+uint8_t term_mode[5] = {0xFF,0xFF,0xFF,0xFF,0xFF};
 uint8_t burst_state = 0;
 
 TimerHandle_t xQCW_Timer;
@@ -557,10 +557,10 @@ uint8_t command_tterm(char *commandline, uint8_t port){
         
         start_overlay_task(port);
    
-        term_mode = port;
+        term_mode[port] = port;
 	}
 	if (strcmp(commandline, "stop") == 0) {
-        term_mode = TERM_MODE_VT100;
+        term_mode[port] = TERM_MODE_VT100;
         stop_overlay_task(port);
 
 	} 
@@ -767,7 +767,7 @@ uint8_t command_udkill(char *commandline, uint8_t port) {
 * and makes a second run with +-6kHz around the peak
 ******************************************************************************/
 uint8_t command_tune_p(char *commandline, uint8_t port) {
-    if(term_mode != TERM_MODE_VT100){
+    if(term_mode[port] != TERM_MODE_VT100){
         tsk_overlay_chart_stop();
         send_chart_clear(port);
         

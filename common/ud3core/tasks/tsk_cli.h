@@ -40,8 +40,9 @@
 
 void tsk_cli_Start(void);
 void tsk_cli_TaskProc(void *pvParameters);
-extern xTaskHandle ETH_Terminal_TaskHandle0;
-extern xTaskHandle ETH_Terminal_TaskHandle1;
+//extern xTaskHandle ETH_Terminal_TaskHandle0;
+//extern xTaskHandle ETH_Terminal_TaskHandle1;
+extern xTaskHandle ETH_Terminal_TaskHandle[NUM_CON];
 
 /*
  * Add user function prototypes in the below merge region to add user

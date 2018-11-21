@@ -68,7 +68,7 @@ void tsk_overlay_chart_start(){
 
 void show_overlay_100ms(uint8_t port) {
 
-    if(term_mode == TERM_MODE_VT100){
+    if(term_mode[port] == TERM_MODE_VT100){
         char buffer[50];
     	Term_Save_Cursor(port);
     	send_string("\033[?25l", port);
@@ -236,7 +236,7 @@ void tsk_overlay_TaskProc(void *pvParameters) {
         xSemaphoreGive(block_term[(uint32_t)pvParameters]);
         
 		/* `#END` */
-        if(term_mode==TERM_MODE_VT100){
+        if(term_mode[(uint32_t)pvParameters]==TERM_MODE_VT100){
 		    vTaskDelay(500 / portTICK_PERIOD_MS);
         }else{
             vTaskDelay(100 / portTICK_PERIOD_MS);

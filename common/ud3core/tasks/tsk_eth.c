@@ -266,11 +266,13 @@ void tsk_eth_TaskProc(void *pvParameters) {
     
     uint8_t flow_ctl[NUM_CON];
     uint16_t bytes_waiting[NUM_CON];
+    uint32_t tsk_pvP[NUM_CON];
     
     for(int i =0;i<NUM_CON;i++){
         midi_socket[i]=0xFF;
         cli_socket[i]=0xFF;
         flow_ctl[i]=1;
+        tsk_pvP[i]=i;
         xETH_rx[i] = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
         xETH_tx[i] = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,256);
     }
@@ -289,13 +291,13 @@ void tsk_eth_TaskProc(void *pvParameters) {
     }
 	  
     if(ret==CYRET_TIMEOUT){
-            if(ETH_Terminal_TaskHandle0!=NULL){
-                vTaskDelete(ETH_Terminal_TaskHandle0);
-            }
-            if(ETH_Terminal_TaskHandle1!=NULL){
-                vTaskDelete(ETH_Terminal_TaskHandle1);
-                vTaskDelete(tsk_eth_TaskHandle);
-            }
+        for(uint8_t i=0;i<NUM_CON;i++){
+            if(ETH_Terminal_TaskHandle[i]!=NULL){
+                vTaskDelete(ETH_Terminal_TaskHandle[i]);
+                ETH_Terminal_TaskHandle[i]=NULL;
+            }  
+        }
+        vTaskDelete(tsk_eth_TaskHandle);    
     }
 
 	/* `#END` */
@@ -311,7 +313,9 @@ void tsk_eth_TaskProc(void *pvParameters) {
     			cli_socket_state[i] = ETH_TcpPollSocket(cli_socket[i]);
 
     			if (cli_socket_state[i] == ETH_SR_ESTABLISHED) {
-                    
+                    if(ETH_Terminal_TaskHandle[i]==NULL){
+                        xTaskCreate(tsk_cli_TaskProc, "ETH-CLI0", 576, (void *)tsk_pvP[i], PRIO_TERMINAL, &ETH_Terminal_TaskHandle[i]);
+                    }
                     if(cli_socket_state[i] != cli_socket_state_old[i]){
                         command_cls("",i);
                         send_string(":>", i);
@@ -333,9 +337,13 @@ void tsk_eth_TaskProc(void *pvParameters) {
     			}
     			else if (cli_socket_state[i] != ETH_SR_LISTEN) {
     				ETH_SocketClose(cli_socket[i],1);
-                    term_mode = TERM_MODE_VT100;
+                    term_mode[i] = TERM_MODE_VT100;
                     stop_overlay_task(i);
     				cli_socket[i] = 0xFF;
+                    if(ETH_Terminal_TaskHandle[i]!=NULL){
+                        vTaskDelete(ETH_Terminal_TaskHandle[i]);
+                        ETH_Terminal_TaskHandle[i]=NULL;
+                    }
     			}
                 cli_socket_state_old[i] = cli_socket_state[i];
     		}

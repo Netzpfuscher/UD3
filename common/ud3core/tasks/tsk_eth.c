@@ -28,6 +28,7 @@
 
 #include "tsk_eth.h"
 #include "tsk_cli.h"
+#include "tsk_overlay.h"
 
 xTaskHandle tsk_eth_TaskHandle;
 uint8 tsk_eth_initVar = 0u;
@@ -313,9 +314,6 @@ void tsk_eth_TaskProc(void *pvParameters) {
     			cli_socket_state[i] = ETH_TcpPollSocket(cli_socket[i]);
 
     			if (cli_socket_state[i] == ETH_SR_ESTABLISHED) {
-                    if(ETH_Terminal_TaskHandle[i]==NULL){
-                        xTaskCreate(tsk_cli_TaskProc, "ETH-CLI0", 576, (void *)tsk_pvP[i], PRIO_TERMINAL, &ETH_Terminal_TaskHandle[i]);
-                    }
                     if(cli_socket_state[i] != cli_socket_state_old[i]){
                         command_cls("",i);
                         send_string(":>", i);
@@ -337,13 +335,9 @@ void tsk_eth_TaskProc(void *pvParameters) {
     			}
     			else if (cli_socket_state[i] != ETH_SR_LISTEN) {
     				ETH_SocketClose(cli_socket[i],1);
-                    term_mode[i] = TERM_MODE_VT100;
                     stop_overlay_task(i);
+                    set_overlay_mode(TERM_MODE_VT100,i);
     				cli_socket[i] = 0xFF;
-                    if(ETH_Terminal_TaskHandle[i]!=NULL){
-                        vTaskDelete(ETH_Terminal_TaskHandle[i]);
-                        ETH_Terminal_TaskHandle[i]=NULL;
-                    }
     			}
                 cli_socket_state_old[i] = cli_socket_state[i];
     		}

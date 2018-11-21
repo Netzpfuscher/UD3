@@ -303,8 +303,8 @@ void tsk_cli_Start(void) {
 	 	*/
 		xTaskCreate(tsk_cli_TaskProc, "UART-CLI", 576, (void *)SERIAL, PRIO_TERMINAL, &UART_Terminal_TaskHandle);
 		xTaskCreate(tsk_cli_TaskProc, "USB-CLI", 576, (void *)USB, PRIO_TERMINAL, &USB_Terminal_TaskHandle);
-       // xTaskCreate(tsk_cli_TaskProc, "ETH-CLI0", 576, (void *)ETH0, PRIO_TERMINAL, &ETH_Terminal_TaskHandle[0]);
-       // xTaskCreate(tsk_cli_TaskProc, "ETH-CLI1", 576, (void *)ETH1, PRIO_TERMINAL, &ETH_Terminal_TaskHandle[1]);
+        xTaskCreate(tsk_cli_TaskProc, "ETH-CLI0", 576, (void *)ETH0, PRIO_TERMINAL, &ETH_Terminal_TaskHandle[0]);
+        xTaskCreate(tsk_cli_TaskProc, "ETH-CLI1", 576, (void *)ETH1, PRIO_TERMINAL, &ETH_Terminal_TaskHandle[1]);
 		tsk_cli_initVar = 1;
 	}
 }

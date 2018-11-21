@@ -58,12 +58,29 @@
  */
 /* `#START USER_TASK_LOCAL_CODE` */
 uint8_t chart;
+uint8_t term_mode[NUM_PORTS];
 
 void tsk_overlay_chart_stop(){
     chart=0;
 }
 void tsk_overlay_chart_start(){
     chart=1;
+}
+
+uint8_t set_overlay_mode(uint8_t mode, uint8_t port){
+    if(port < NUM_PORTS){
+        term_mode[port] = mode;  
+        return mode;
+    }else{
+        return -1;
+    }
+}
+
+uint8_t get_overlay_mode(uint8_t port){
+    if(port < NUM_PORTS){
+        return term_mode[port];   
+    }
+    return -1;
 }
 
 void show_overlay_100ms(uint8_t port) {
@@ -168,31 +185,33 @@ void show_overlay_100ms(uint8_t port) {
 }
 
 void show_overlay_400ms(uint8_t port) {
-    #if GAUGE0_SLOW==1
-    send_gauge(0, GAUGE0_VAR, port);
-    #endif
-    #if GAUGE1_SLOW==1
-    send_gauge(1, GAUGE1_VAR, port);
-    #endif
-    #if GAUGE2_SLOW==1
-    send_gauge(2, GAUGE2_VAR, port);
-    #endif
-    #if GAUGE3_SLOW==1
-    send_gauge(3, GAUGE3_VAR, port);
-    #endif
-    #if GAUGE4_SLOW==1
-    send_gauge(4, GAUGE4_VAR, port);
-    #endif
-    #if GAUGE5_SLOW==1
-    send_gauge(5, GAUGE5_VAR, port);
-    #endif
-    #if GAUGE6_SLOW==1
-    send_gauge(6, GAUGE6_VAR, port);
-    #endif
+    if(term_mode[port] != TERM_MODE_VT100){
+        #if GAUGE0_SLOW==1
+        send_gauge(0, GAUGE0_VAR, port);
+        #endif
+        #if GAUGE1_SLOW==1
+        send_gauge(1, GAUGE1_VAR, port);
+        #endif
+        #if GAUGE2_SLOW==1
+        send_gauge(2, GAUGE2_VAR, port);
+        #endif
+        #if GAUGE3_SLOW==1
+        send_gauge(3, GAUGE3_VAR, port);
+        #endif
+        #if GAUGE4_SLOW==1
+        send_gauge(4, GAUGE4_VAR, port);
+        #endif
+        #if GAUGE5_SLOW==1
+        send_gauge(5, GAUGE5_VAR, port);
+        #endif
+        #if GAUGE6_SLOW==1
+        send_gauge(6, GAUGE6_VAR, port);
+        #endif
 
-    send_status(telemetry.bus_status!=BUS_OFF,
-                tr_running!=0,
-                configuration.ps_scheme!=AC_NO_RELAY_BUS_SCHEME, port);
+        send_status(telemetry.bus_status!=BUS_OFF,
+                    tr_running!=0,
+                    configuration.ps_scheme!=AC_NO_RELAY_BUS_SCHEME, port);
+    }
 }
 
 
@@ -212,7 +231,7 @@ void tsk_overlay_TaskProc(void *pvParameters) {
 	/* `#START TASK_VARIABLES` */
     
     uint8_t cnt=0;
-
+    
 	/* `#END` */
 
 	/*

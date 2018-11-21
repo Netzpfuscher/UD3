@@ -26,6 +26,7 @@
 #define CYDEV_EE_SIZE 0x00000800u
 #define CY_EEPROM_SIZE              (CYDEV_EE_SIZE)
 
+#define NUM_PORTS 5
 #define NONE 2
 #define SERIAL 3
 #define USB 4

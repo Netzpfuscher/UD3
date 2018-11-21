@@ -39,12 +39,12 @@
 #define MODE_CLASSIC 1
 #define MODE_UDCLASSIC 2
 
-#define TERM_MODE_VT100 0xFF
+#define TERM_MODE_VT100 100
 
 
 uint8_t input_handle();
 
-extern uint8_t term_mode[5];
+
 
 void nt_interpret(const char *text, uint8_t port);
 void init_config();

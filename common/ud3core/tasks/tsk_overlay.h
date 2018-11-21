@@ -25,6 +25,9 @@
 #if !defined(overlay_TASK_H)
 #define overlay_TASK_H
 
+#include <device.h>
+#include "cli_basic.h"
+    
 /*
  * Add user task definitions, types, includes and other things in the below
  * merge region to customize the task.
@@ -37,6 +40,10 @@ void tsk_overlay_TaskProc(void *pvParameters);
 
 void tsk_overlay_chart_stop();
 void tsk_overlay_chart_start();
+uint8_t set_overlay_mode(uint8_t mode, uint8_t port);
+uint8_t get_overlay_mode(uint8_t port);
+
+extern uint8_t term_mode[NUM_PORTS];
 
 /*
  * Add user function prototypes in the below merge region to add user

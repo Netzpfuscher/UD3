@@ -33,6 +33,7 @@
 #include "cli_common.h"
 #include "interrupter.h"
 #include "tasks/tsk_analog.h"
+#include "tasks/tsk_overlay.h"
 
 #define FREQ 0
 #define CURR 1
@@ -128,7 +129,7 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 
 	//Draw Diagram
 
-    if(term_mode == TERM_MODE_VT100){
+    if(get_overlay_mode(port)== TERM_MODE_VT100){
 	    braille_line(0, 63, 127, 63);
 	    braille_line(0, 0, 0, 63);
 

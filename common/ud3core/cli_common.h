@@ -49,7 +49,7 @@ uint8_t input_handle();
 
 void nt_interpret(const char *text, port_str *ptr);
 void init_config();
-void eeprom_load();
+void eeprom_load(port_str *ptr);
 
 void initialize_term(void);
 void task_terminal_overlay(void);

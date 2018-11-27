@@ -42,7 +42,7 @@
 
 void tsk_eth_Start(void);
 
-#define NUM_ETH_CON 2
+#define NUM_ETH_CON 3
 
 StreamBufferHandle_t xETH_rx[NUM_ETH_CON];
 StreamBufferHandle_t xETH_tx[NUM_ETH_CON];

@@ -40,7 +40,7 @@ xTaskHandle USB_Terminal_TaskHandle;
 xTaskHandle ETH_Terminal_TaskHandle[NUM_ETH_CON];
 uint8 tsk_cli_initVar = 0u;
 
-
+port_str null_port;
 port_str serial_port;
 port_str usb_port;
 port_str eth_port[NUM_ETH_CON];
@@ -232,7 +232,7 @@ void tsk_cli_Start(void) {
 /* `#END` */
 
 	if (tsk_cli_initVar != 1) {
-        
+
         serial_port.type = PORT_TYPE_SERIAL;
         serial_port.term_mode = PORT_TERM_VT100;
         serial_port.term_block = xSemaphoreCreateBinary();
@@ -243,16 +243,14 @@ void tsk_cli_Start(void) {
         usb_port.term_block = xSemaphoreCreateBinary();
         xSemaphoreGive(usb_port.term_block);
         
-        eth_port[0].type = PORT_TYPE_ETH;
-        eth_port[0].num = 0;
-        eth_port[0].term_mode = PORT_TERM_VT100;
-        eth_port[0].term_block = xSemaphoreCreateBinary();
-        xSemaphoreGive(eth_port[0].term_block);
-        eth_port[1].type = PORT_TYPE_ETH;
-        eth_port[1].num = 1;
-        eth_port[1].term_mode = PORT_TERM_VT100;
-        eth_port[1].term_block = xSemaphoreCreateBinary();
-        xSemaphoreGive(eth_port[1].term_block);
+        for(uint8_t i=0;i<NUM_ETH_CON;i++){
+            eth_port[i].type = PORT_TYPE_ETH;
+            eth_port[i].num = i;
+            eth_port[i].term_mode = PORT_TERM_VT100;
+            eth_port[i].term_block = xSemaphoreCreateBinary();
+            xSemaphoreGive(eth_port[i].term_block);
+            xTaskCreate(tsk_cli_TaskProc, "ETH-CLI", 576, &eth_port[i], PRIO_TERMINAL, &ETH_Terminal_TaskHandle[i]);
+        }
 
 		/*
 	 	* Create the task and then leave. When FreeRTOS starts up the scheduler
@@ -260,8 +258,6 @@ void tsk_cli_Start(void) {
 	 	*/
 		xTaskCreate(tsk_cli_TaskProc, "UART-CLI", 576, &serial_port, PRIO_TERMINAL, &UART_Terminal_TaskHandle);
 		xTaskCreate(tsk_cli_TaskProc, "USB-CLI", 576,  &usb_port, PRIO_TERMINAL, &USB_Terminal_TaskHandle);
-        xTaskCreate(tsk_cli_TaskProc, "ETH-CLI0", 576, &eth_port[0], PRIO_TERMINAL, &ETH_Terminal_TaskHandle[0]);
-        xTaskCreate(tsk_cli_TaskProc, "ETH-CLI1", 576, &eth_port[1], PRIO_TERMINAL, &ETH_Terminal_TaskHandle[1]);
 		tsk_cli_initVar = 1;
 	}
 }

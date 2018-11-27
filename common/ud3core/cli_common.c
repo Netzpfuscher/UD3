@@ -908,8 +908,8 @@ uint8_t command_set(char *commandline, port_str *ptr) {
 }
 
 
-void eeprom_load(){
-   EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,&serial_port); 
+void eeprom_load(port_str *ptr){
+   EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,ptr); 
 }
 
 /*****************************************************************************

@@ -28,11 +28,10 @@
 #define CYDEV_EE_SIZE 0x00000800u
 #define CY_EEPROM_SIZE              (CYDEV_EE_SIZE)
 
-#define NONE (NUM_ETH_CON)
-#define SERIAL (NUM_ETH_CON+1)
-#define USB (NUM_ETH_CON+2)
+
 #define NUM_CON (NUM_ETH_CON+3)
-    
+
+#define PORT_TYPE_NULL      0    
 #define PORT_TYPE_SERIAL    1
 #define PORT_TYPE_USB       2
 #define PORT_TYPE_ETH       3

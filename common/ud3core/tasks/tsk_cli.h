@@ -47,6 +47,7 @@ extern xTaskHandle ETH_Terminal_TaskHandle[NUM_ETH_CON];
 
 extern port_str eth_port[NUM_ETH_CON];
 extern port_str serial_port;
+extern port_str null_port;
 
 /*
  * Add user function prototypes in the below merge region to add user

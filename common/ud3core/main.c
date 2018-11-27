@@ -61,7 +61,10 @@ int main() {
 	system_fault_Control = 0; //this should suppress any start-up sparking until the system is ready
 	init_config();
     EEPROM_1_Start();
-    eeprom_load();
+    
+    null_port.type = PORT_TYPE_NULL;
+    
+    eeprom_load(&null_port);
    
     
 	initialize_DMA();		  //sets up all DMA channels

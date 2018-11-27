@@ -649,6 +649,8 @@ void Term_Restore_Cursor(port_str *ptr) {
 void send_char(uint8 c, port_str *ptr) {
 #ifndef BOOT
     switch(ptr->type){
+        case PORT_TYPE_NULL:
+        break;
         case PORT_TYPE_SERIAL:
             if (xUART_tx != NULL)
                 xStreamBufferSend(xUART_tx,&c, 1,portMAX_DELAY);
@@ -672,6 +674,8 @@ void send_char(uint8 c, port_str *ptr) {
 void send_string(char *data, port_str *ptr) {
 #ifndef BOOT
     switch(ptr->type){
+        case PORT_TYPE_NULL:
+        break;
         case PORT_TYPE_SERIAL:
             if (xUART_tx != NULL) {
                     xStreamBufferSend(xUART_tx,data, strlen(data),portMAX_DELAY);
@@ -700,6 +704,8 @@ void send_string(char *data, port_str *ptr) {
 void send_buffer(uint8_t *data, uint16_t len, port_str *ptr) {
 #ifndef BOOT
     switch(ptr->type){
+        case PORT_TYPE_NULL:
+        break;
         case PORT_TYPE_SERIAL:
             if (xUART_tx != NULL) {
                 xStreamBufferSend(xUART_tx,data, len,portMAX_DELAY);

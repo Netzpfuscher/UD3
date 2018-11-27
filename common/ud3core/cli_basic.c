@@ -680,7 +680,6 @@ void send_string(char *data, uint8_t port) {
 	switch (port) {
 	    case USB:
 		    if (qUSB_tx != NULL) {
-
 			    while ((*data) != '\0') {
 				    if (xQueueSend(qUSB_tx, data, portMAX_DELAY))
 					    data++;

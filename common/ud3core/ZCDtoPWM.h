@@ -33,11 +33,11 @@
 
 typedef struct
 {
-	uint8 max_tr_cl_dac_val;
+	uint8  max_tr_cl_dac_val;
 	uint16 lead_time;
 	uint16 pwma_start_prd;
 	uint16 pwma_start_cmp;
-	uint16 pwma_run_prd;
+	//uint16 pwma_run_prd;
 	uint16 pwmb_start_prd;
 	uint16 pwmb_start_cmp;
 	uint16 pwm_top;
@@ -45,10 +45,10 @@ typedef struct
 	uint16 pwmb_psb_prd;
 	uint16 pwmb_psb_val;
 	uint16 pwmb_start_psb_val;
-	uint8 max_qcw_cl_dac_val;
+	uint8  max_qcw_cl_dac_val;
 	uint16 min_tr_prd;
-	uint8 min_tr_cl_dac_val;
-	uint8 diff_tr_cl_dac_val;
+	uint8  min_tr_cl_dac_val;
+	uint8  diff_tr_cl_dac_val;
 	uint16_t idc_ma_count;
 	float Idc_fs;
 } parameters;

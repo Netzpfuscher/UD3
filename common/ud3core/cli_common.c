@@ -74,10 +74,6 @@ typedef struct {
 } command_entry;
 
 
-
-
-
-
 uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, uint8_t port);
 uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, uint8_t port);
 uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, uint8_t port);

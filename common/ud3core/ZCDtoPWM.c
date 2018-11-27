@@ -121,7 +121,7 @@ void configure_ZCD_to_PWM(void) {
 	params.pwm_top = round(pwm_start_prd_temp * 2);								  //top value for FB capture and pwm generators to avoid ULF crap
 	params.pwma_start_prd = params.pwm_top - params.lead_time;
 	params.pwma_start_cmp = params.pwm_top - pwm_start_prd_temp + 4; //untested, was just 4;
-	params.pwma_run_prd = params.pwm_top - params.lead_time;
+	//params.pwma_run_prd = params.pwm_top - params.lead_time;
 	params.pwmb_start_prd = round(pwm_start_prd_temp); //experimental start up mode, 2 cycles of high frequency to start things up but stay ahead of the game.
 	params.pwmb_start_cmp = 4;
 	params.pwmb_start_psb_val = 15;				   //config.psb_start_val;// params.pwmb_start_prd>>3;

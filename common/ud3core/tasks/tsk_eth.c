@@ -69,8 +69,6 @@ uint8 tsk_eth_initVar = 0u;
 #define PORT_MIDI       123
 
 
-
-
 void process_midi(uint8_t* ptr, uint16_t len) {
 	uint8_t c;
     static uint8_t midi_count = 0;
@@ -254,10 +252,6 @@ void tsk_eth_TaskProc(void *pvParameters) {
 	/* `#START TASK_INIT_CODE` */
     
 
-    
-    
-
-    //uint8_t cli_socket =0xFF;
     uint8_t cli_socket[NUM_CON];
     uint8_t cli_socket_state[NUM_CON];
     uint8_t cli_socket_state_old[NUM_CON];
@@ -267,13 +261,11 @@ void tsk_eth_TaskProc(void *pvParameters) {
     
     uint8_t flow_ctl[NUM_CON];
     uint16_t bytes_waiting[NUM_CON];
-    uint32_t tsk_pvP[NUM_CON];
     
     for(int i =0;i<NUM_CON;i++){
         midi_socket[i]=0xFF;
         cli_socket[i]=0xFF;
         flow_ctl[i]=1;
-        tsk_pvP[i]=i;
         xETH_rx[i] = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
         xETH_tx[i] = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,256);
     }

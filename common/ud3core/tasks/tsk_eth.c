@@ -28,7 +28,6 @@
 
 #include "tsk_eth.h"
 #include "tsk_cli.h"
-#include "tsk_overlay.h"
 
 xTaskHandle tsk_eth_TaskHandle;
 uint8 tsk_eth_initVar = 0u;
@@ -42,6 +41,7 @@ uint8 tsk_eth_initVar = 0u;
 /* `#START USER_INCLUDE SECTION` */
 #include "cli_common.h"
 #include "tsk_midi.h"
+#include "tsk_cli.h"
 #include "tsk_priority.h"
 #include <stdio.h>
 #include "telemetry.h"
@@ -68,6 +68,8 @@ uint8 tsk_eth_initVar = 0u;
 #define PORT_TELNET     23
 #define PORT_MIDI       123
 
+
+const uint32_t port_const[8] = {0,1,2,3,4,5,6,7};
 
 void process_midi(uint8_t* ptr, uint16_t len) {
 	uint8_t c;
@@ -232,7 +234,7 @@ uint8_t start[1] = {'o'};
  * to preform the desired function within the merge regions of the task procedure
  * to add functionality to the task.
  */
-#define NUM_CON 2
+
 
 void tsk_eth_TaskProc(void *pvParameters) {
 	/*
@@ -252,17 +254,21 @@ void tsk_eth_TaskProc(void *pvParameters) {
 	/* `#START TASK_INIT_CODE` */
     
 
-    uint8_t cli_socket[NUM_CON];
-    uint8_t cli_socket_state[NUM_CON];
-    uint8_t cli_socket_state_old[NUM_CON];
     
-    uint8_t midi_socket[NUM_CON];
-    uint8_t midi_socket_state[NUM_CON];
     
-    uint8_t flow_ctl[NUM_CON];
-    uint16_t bytes_waiting[NUM_CON];
+
+    //uint8_t cli_socket =0xFF;
+    uint8_t cli_socket[NUM_ETH_CON];
+    uint8_t cli_socket_state[NUM_ETH_CON];
+    uint8_t cli_socket_state_old[NUM_ETH_CON];
     
-    for(int i =0;i<NUM_CON;i++){
+    uint8_t midi_socket[NUM_ETH_CON];
+    uint8_t midi_socket_state[NUM_ETH_CON];
+    
+    uint8_t flow_ctl[NUM_ETH_CON];
+    uint16_t bytes_waiting[NUM_ETH_CON];
+    
+    for(int i =0;i<NUM_ETH_CON;i++){
         midi_socket[i]=0xFF;
         cli_socket[i]=0xFF;
         flow_ctl[i]=1;
@@ -284,7 +290,7 @@ void tsk_eth_TaskProc(void *pvParameters) {
     }
 	  
     if(ret==CYRET_TIMEOUT){
-        for(uint8_t i=0;i<NUM_CON;i++){
+        for(uint8_t i=0;i<NUM_ETH_CON;i++){
             if(ETH_Terminal_TaskHandle[i]!=NULL){
                 vTaskDelete(ETH_Terminal_TaskHandle[i]);
                 ETH_Terminal_TaskHandle[i]=NULL;
@@ -301,14 +307,18 @@ void tsk_eth_TaskProc(void *pvParameters) {
 	for (;;) {
         
         
-        for(uint8_t i=0;i<NUM_CON;i++){
+        for(uint8_t i=0;i<NUM_ETH_CON;i++){
             if (cli_socket[i] != 0xFF) {
     			cli_socket_state[i] = ETH_TcpPollSocket(cli_socket[i]);
 
     			if (cli_socket_state[i] == ETH_SR_ESTABLISHED) {
+                    /*
+                    if(ETH_Terminal_TaskHandle[i]==NULL){
+                        xTaskCreate(tsk_cli_TaskProc, "ETH-CLI", 576, (void *)port_const[i], PRIO_TERMINAL, &ETH_Terminal_TaskHandle[i]);
+                    }*/
                     if(cli_socket_state[i] != cli_socket_state_old[i]){
-                        command_cls("",i);
-                        send_string(":>", i);
+                        command_cls("",&eth_port[i]);
+                        send_string(":>", &eth_port[i]);
                     }
     				/*
     				 * Check for data received from the telnet port.
@@ -327,9 +337,13 @@ void tsk_eth_TaskProc(void *pvParameters) {
     			}
     			else if (cli_socket_state[i] != ETH_SR_LISTEN) {
     				ETH_SocketClose(cli_socket[i],1);
-                    stop_overlay_task(i);
-                    set_overlay_mode(TERM_MODE_VT100,i);
-    				cli_socket[i] = 0xFF;
+                    eth_port[i].term_mode = PORT_TERM_VT100;    
+                    stop_overlay_task(&eth_port[i]);
+    				cli_socket[i] = 0xFF;/*
+                    if(ETH_Terminal_TaskHandle[i]!=NULL){
+                        vTaskDelete(ETH_Terminal_TaskHandle[i]);
+                        ETH_Terminal_TaskHandle[i]=NULL;
+                    }*/
     			}
                 cli_socket_state_old[i] = cli_socket_state[i];
     		}

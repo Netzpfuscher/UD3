@@ -75,14 +75,12 @@ int main() {
 	configure_ZCD_to_PWM();
 
 	rx_blink_Control = 1;
-	block_term[SERIAL] = xSemaphoreCreateBinary(); //Blocking semaphore for overlay Display
-	block_term[USB] = xSemaphoreCreateBinary();    //Blocking semaphore for overlay Display
-    block_term[ETH0] = xSemaphoreCreateBinary();    //Blocking semaphore for overlay Display
-    block_term[ETH1] = xSemaphoreCreateBinary();    //Blocking semaphore for overlay Display
-	xSemaphoreGive(block_term[SERIAL]);
-	xSemaphoreGive(block_term[USB]);
-    xSemaphoreGive(block_term[ETH0]);
-    xSemaphoreGive(block_term[ETH1]);
+    
+    /*
+    for(uint8_t i=0;i<NUM_CON;i++){
+        block_term[i] = xSemaphoreCreateBinary();
+        xSemaphoreGive(block_term[i]);
+    }*/
     
 	//Starting Tasks
     if(configuration.minprot){

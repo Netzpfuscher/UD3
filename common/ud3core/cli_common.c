@@ -45,7 +45,7 @@
 #include "tasks/tsk_uart.h"
 #include "tasks/tsk_usb.h"
 #include "tasks/tsk_midi.h"
-#include "tasks/tsk_eth.h"
+#include "tasks/tsk_cli.h"
 #include "helper/teslaterm.h"
 
 #define UNUSED_VARIABLE(N) \
@@ -59,9 +59,9 @@
 #define SKIP_SPACE(ptr) 	if (*ptr == 0x20 && ptr != 0) ptr++ //skip space
 #define HELP_TEXT(text)        \
 	if (*commandline == 0 || commandline == 0) {    \
-		Term_Color_Red(port);       \
-		send_string(text, port);  \
-		Term_Color_White(port);     \
+		Term_Color_Red(ptr);       \
+		send_string(text, ptr);  \
+		Term_Color_White(ptr);     \
 		return 1;}                  \
 	
 
@@ -69,40 +69,43 @@
 
 typedef struct {
 	const char *text;
-	uint8_t (*commandFunction)(char *commandline, uint8_t port);
+	uint8_t (*commandFunction)(char *commandline, port_str *ptr);
 	const char *help;
 } command_entry;
 
 
-uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, uint8_t port);
-uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, uint8_t port);
-uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, uint8_t port);
-uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, uint8_t port);
-uint8_t callback_OfftimeFunction(parameter_entry * params, uint8_t index, uint8_t port);
-uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, uint8_t port);
-uint8_t callback_SynthFunction(parameter_entry * params, uint8_t index, uint8_t port);
 
-uint8_t command_help(char *commandline, uint8_t port);
-uint8_t command_get(char *commandline, uint8_t port);
-uint8_t command_set(char *commandline, uint8_t port);
-uint8_t command_tr(char *commandline, uint8_t port);
-uint8_t command_udkill(char *commandline, uint8_t port);
-uint8_t command_eprom(char *commandline, uint8_t port);
-uint8_t command_status(char *commandline, uint8_t port);
-uint8_t command_cls(char *commandline, uint8_t port);
-uint8_t command_tune_p(char *commandline, uint8_t port);
-uint8_t command_tune_s(char *commandline, uint8_t port);
-uint8_t command_tasks(char *commandline, uint8_t port);
-uint8_t command_bootloader(char *commandline, uint8_t port);
-uint8_t command_qcw(char *commandline, uint8_t port);
-uint8_t command_bus(char *commandline, uint8_t port);
-uint8_t command_load_default(char *commandline, uint8_t port);
-uint8_t command_tterm(char *commandline, uint8_t port);
-uint8_t command_reset(char *commandline, uint8_t port);
-uint8_t command_minstat(char *commandline, uint8_t port);
-uint8_t command_config_get(char *commandline, uint8_t port);
 
-void nt_interpret(const char *text, uint8_t port);
+
+
+uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, port_str *ptr);
+uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, port_str *ptr);
+uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, port_str *ptr);
+uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, port_str *ptr);
+uint8_t callback_OfftimeFunction(parameter_entry * params, uint8_t index, port_str *ptr);
+uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, port_str *ptr);
+uint8_t callback_SynthFunction(parameter_entry * params, uint8_t index, port_str *ptr);
+
+uint8_t command_help(char *commandline, port_str *ptr);
+uint8_t command_get(char *commandline, port_str *ptr);
+uint8_t command_set(char *commandline, port_str *ptr);
+uint8_t command_tr(char *commandline, port_str *ptr);
+uint8_t command_udkill(char *commandline, port_str *ptr);
+uint8_t command_eprom(char *commandline, port_str *ptr);
+uint8_t command_status(char *commandline, port_str *ptr);
+uint8_t command_tune_p(char *commandline, port_str *ptr);
+uint8_t command_tune_s(char *commandline, port_str *ptr);
+uint8_t command_tasks(char *commandline, port_str *ptr);
+uint8_t command_bootloader(char *commandline, port_str *ptr);
+uint8_t command_qcw(char *commandline, port_str *ptr);
+uint8_t command_bus(char *commandline, port_str *ptr);
+uint8_t command_load_default(char *commandline, port_str *ptr);
+uint8_t command_tterm(char *commandline, port_str *ptr);
+uint8_t command_reset(char *commandline, port_str *ptr);
+uint8_t command_minstat(char *commandline, port_str *ptr);
+uint8_t command_config_get(char *commandline, port_str *ptr);
+
+//void nt_interpret(const char *text, uint8_t port);
 
 const uint8_t kill_msg[3] = {0xb0, 0x77, 0x00};
 
@@ -168,6 +171,7 @@ void init_config(){
     param.qcw_repeat = 500;
     param.transpose = 0;
     param.synth = SYNTH_MIDI;
+
 }
 
 // clang-format off
@@ -256,7 +260,7 @@ command_entry commands[] = {
 /*****************************************************************************
 * Callback if the offtime parameter is changed
 ******************************************************************************/
-uint8_t callback_OfftimeFunction(parameter_entry * params, uint8_t index, uint8_t port){
+uint8_t callback_OfftimeFunction(parameter_entry * params, uint8_t index, port_str *ptr){
     Offtime_WritePeriod(param.offtime);
     return 1;
 }
@@ -264,9 +268,9 @@ uint8_t callback_OfftimeFunction(parameter_entry * params, uint8_t index, uint8_
 /*****************************************************************************
 * Callback if a autotune parameter is changed
 ******************************************************************************/
-uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, uint8_t port) {
+uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, port_str *ptr) {
     if(param.tune_start >= param.tune_end){
-        send_string("ERROR: tune_start > tune_end", port);
+        send_string("ERROR: tune_start > tune_end", ptr);
 		return 0;
 	} else
 		return 1;
@@ -275,7 +279,7 @@ uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, uint8_t p
 /*****************************************************************************
 * Switches the synthesizer
 ******************************************************************************/
-uint8_t callback_SynthFunction(parameter_entry * params, uint8_t index, uint8_t port){
+uint8_t callback_SynthFunction(parameter_entry * params, uint8_t index, port_str *ptr){
     switch_synth(param.synth);
     return 1;
 }
@@ -284,7 +288,7 @@ uint8_t callback_SynthFunction(parameter_entry * params, uint8_t index, uint8_t 
 * Callback if a transient mode parameter is changed
 * Updates the interrupter hardware
 ******************************************************************************/
-uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, uint8_t port) {
+uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, port_str *ptr) {
     
 	interrupter.pw = param.pw;
 	interrupter.prd = param.pwd;
@@ -333,18 +337,18 @@ void vBurst_Timer_Callback(TimerHandle_t xTimer){
 /*****************************************************************************
 * Callback if a burst mode parameter is changed
 ******************************************************************************/
-uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, uint8_t port) {
+uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, port_str *ptr) {
     if(tr_running){
         if(xBurst_Timer==NULL && param.burst_on > 0){
             burst_state = BURST_ON;
             xBurst_Timer = xTimerCreate("Bust-Tmr", param.burst_on / portTICK_PERIOD_MS, pdFALSE,(void * ) 0, vBurst_Timer_Callback);
             if(xBurst_Timer != NULL){
                 xTimerStart(xBurst_Timer, 0);
-                send_string("Burst Enabled\r\n", port);
+                send_string("Burst Enabled\r\n", ptr);
                 tr_running=2;
             }else{
                 interrupter.pw = 0;
-                send_string("Cannot create burst Timer\r\n", port);
+                send_string("Cannot create burst Timer\r\n", ptr);
                 tr_running=0;
             }
         }else if(xBurst_Timer!=NULL && !param.burst_on){
@@ -355,9 +359,9 @@ uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, uint8_t 
                     interrupter.pw =0;
                     update_interrupter();
                     tr_running=1;
-                    send_string("\r\nBurst Disabled\r\n", port);    
+                    send_string("\r\nBurst Disabled\r\n", ptr);    
                 }else{
-                    send_string("Cannot delete burst Timer\r\n", port);
+                    send_string("Cannot delete burst Timer\r\n", ptr);
                     burst_state = BURST_ON;
                 }
             }
@@ -369,9 +373,9 @@ uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, uint8_t 
                     interrupter.pw =param.pw;
                     update_interrupter();
                     tr_running=1;
-                    send_string("\r\nBurst Disabled\r\n", port);    
+                    send_string("\r\nBurst Disabled\r\n", ptr);    
                 }else{
-                    send_string("Cannot delete burst Timer\r\n", port);
+                    send_string("Cannot delete burst Timer\r\n", ptr);
                     burst_state = BURST_ON;
                 }
             }
@@ -385,7 +389,7 @@ uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, uint8_t 
 /*****************************************************************************
 * Callback if a configuration relevant parameter is changed
 ******************************************************************************/
-uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, uint8_t port){
+uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, port_str *ptr){
     uint8 sfflag = system_fault_Read();
     system_fault_Control = 0; //halt tesla coil operation during updates!
     initialize_interrupter();
@@ -398,7 +402,7 @@ uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, uint8_t
 /*****************************************************************************
 * Default function if a parameter is changes (not used)
 ******************************************************************************/
-uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, uint8_t port){
+uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, port_str *ptr){
     
     return 1;
 }
@@ -406,17 +410,17 @@ uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, uint8_
 /*****************************************************************************
 * Switches the bus on/off
 ******************************************************************************/
-uint8_t command_bus(char *commandline, uint8_t port) {
+uint8_t command_bus(char *commandline, port_str *ptr) {
     SKIP_SPACE(commandline);
     HELP_TEXT("Usage: bus [on|off]\r\n");
 
 	if (strcmp(commandline, "on") == 0) {
 		bus_command = BUS_COMMAND_ON;
-		send_string("BUS ON\r\n", port);
+		send_string("BUS ON\r\n", ptr);
 	}
 	if (strcmp(commandline, "off") == 0) {
 		bus_command = BUS_COMMAND_OFF;
-		send_string("BUS OFF\r\n", port);
+		send_string("BUS OFF\r\n", ptr);
 	}
 
 	return 1;
@@ -425,8 +429,8 @@ uint8_t command_bus(char *commandline, uint8_t port) {
 /*****************************************************************************
 * Loads the default parametes out of flash
 ******************************************************************************/
-uint8_t command_load_default(char *commandline, uint8_t port) {
-    send_string("Default parameters loaded\r\n", port);
+uint8_t command_load_default(char *commandline, port_str *ptr) {
+    send_string("Default parameters loaded\r\n", ptr);
     init_config();
     return 1;
 }
@@ -434,7 +438,7 @@ uint8_t command_load_default(char *commandline, uint8_t port) {
 /*****************************************************************************
 * Reset of the controller
 ******************************************************************************/
-uint8_t command_reset(char *commandline, uint8_t port){
+uint8_t command_reset(char *commandline, port_str *ptr){
     CySoftwareReset();
     return 1;
 }
@@ -444,85 +448,72 @@ uint8_t command_reset(char *commandline, uint8_t port){
 ******************************************************************************/
 xTaskHandle overlay_Serial_TaskHandle;
 xTaskHandle overlay_USB_TaskHandle;
-xTaskHandle overlay_ETH_TaskHandle0;
-xTaskHandle overlay_ETH_TaskHandle1;
+xTaskHandle overlay_ETH_TaskHandle[NUM_ETH_CON];
 
 /*****************************************************************************
 * Helper function for spawning the overlay task
 ******************************************************************************/
-void start_overlay_task(uint8_t port){
-    switch (port) {
-		case SERIAL:
-			if (overlay_Serial_TaskHandle == NULL) {
-				xTaskCreate(tsk_overlay_TaskProc, "Overl_S", 256, (void *)SERIAL, PRIO_OVERLAY, &overlay_Serial_TaskHandle);
-			}
-			break;
-		case USB:
-			if (overlay_USB_TaskHandle == NULL) {
-				xTaskCreate(tsk_overlay_TaskProc, "Overl_U", 256, (void *)USB, PRIO_OVERLAY, &overlay_USB_TaskHandle);
-			}
-			break;
-        case ETH0:
-			if (overlay_ETH_TaskHandle0 == NULL) {
-				xTaskCreate(tsk_overlay_TaskProc, "Overl_E0", 256, (void *)ETH0, PRIO_OVERLAY, &overlay_ETH_TaskHandle0);
-			}
-			break;
-        case ETH1:
-			if (overlay_ETH_TaskHandle1 == NULL) {
-				xTaskCreate(tsk_overlay_TaskProc, "Overl_E1", 256, (void *)ETH1, PRIO_OVERLAY, &overlay_ETH_TaskHandle1);
-			}
-			break;
-		}
+void start_overlay_task(port_str *ptr){
+    switch(ptr->type){
+        case PORT_TYPE_SERIAL:
+            if (overlay_Serial_TaskHandle == NULL) {
+        				xTaskCreate(tsk_overlay_TaskProc, "Overl_S", 256, ptr, PRIO_OVERLAY, &overlay_Serial_TaskHandle);
+            }
+        break;
+        case PORT_TYPE_USB:
+            if (overlay_USB_TaskHandle == NULL) {
+    			xTaskCreate(tsk_overlay_TaskProc, "Overl_U", 256, ptr, PRIO_OVERLAY, &overlay_USB_TaskHandle);
+    		}
+        break;
+        case PORT_TYPE_ETH:
+            if (overlay_ETH_TaskHandle[ptr->num] == NULL) {
+        				xTaskCreate(tsk_overlay_TaskProc, "Overl_E", 256, ptr, PRIO_OVERLAY, &overlay_ETH_TaskHandle[ptr->num]);
+        	}
+        break;
+    }
 }
 
 
 /*****************************************************************************
 * Helper function for killing the overlay task
 ******************************************************************************/
-void stop_overlay_task(uint8_t port){
-    switch (port) {
-		case SERIAL:
-			if (overlay_Serial_TaskHandle != NULL) {
-				vTaskDelete(overlay_Serial_TaskHandle);
-				overlay_Serial_TaskHandle = NULL;
-			}
-			break;
-		case USB:
-			if (overlay_USB_TaskHandle != NULL) {
-				vTaskDelete(overlay_USB_TaskHandle);
-				overlay_USB_TaskHandle = NULL;
-			}
-			break;
-        case ETH0:
-			if (overlay_ETH_TaskHandle0 != NULL) {
-				vTaskDelete(overlay_ETH_TaskHandle0);
-				overlay_ETH_TaskHandle0 = NULL;
-			}
-			break;
-        case ETH1:
-			if (overlay_ETH_TaskHandle1 != NULL) {
-				vTaskDelete(overlay_ETH_TaskHandle1);
-				overlay_ETH_TaskHandle1 = NULL;
-			}
-			break;
-		}
+void stop_overlay_task(port_str *ptr){
+    
+    switch(ptr->type){
+        case PORT_TYPE_SERIAL:
+            if (overlay_Serial_TaskHandle != NULL) {
+    				vTaskDelete(overlay_Serial_TaskHandle);
+    				overlay_Serial_TaskHandle = NULL;
+    		}
+        break;
+        case PORT_TYPE_USB:
+            if (overlay_USB_TaskHandle != NULL) {
+    				vTaskDelete(overlay_USB_TaskHandle);
+    				overlay_USB_TaskHandle = NULL;
+    		}
+        break;
+        case PORT_TYPE_ETH:
+            if (overlay_ETH_TaskHandle[ptr->num] != NULL) {
+			    vTaskDelete(overlay_ETH_TaskHandle[ptr->num]);
+			    overlay_ETH_TaskHandle[ptr->num] = NULL;
+		    }
+        break;
+    }
 }
 
 /*****************************************************************************
 * 
 ******************************************************************************/
-uint8_t command_status(char *commandline, uint8_t port) {
+uint8_t command_status(char *commandline, port_str *ptr) {
 	SKIP_SPACE(commandline);
 	HELP_TEXT("Usage: status [start|stop]\r\n");
 
     
 	if (strcmp(commandline, "start") == 0) {
-		start_overlay_task(port);
-        set_overlay_mode(TERM_MODE_VT100,port);
+		start_overlay_task(ptr);
 	}
 	if (strcmp(commandline, "stop") == 0) {
-		stop_overlay_task(port);
-        set_overlay_mode(TERM_MODE_VT100,port);
+		stop_overlay_task(ptr);
 	}
 
 	return 1;
@@ -532,32 +523,32 @@ uint8_t command_status(char *commandline, uint8_t port) {
 * Initializes the teslaterm telemetry
 * Spawns the overlay task for telemetry stream generation
 ******************************************************************************/
-uint8_t command_tterm(char *commandline, uint8_t port){
+uint8_t command_tterm(char *commandline, port_str *ptr){
     SKIP_SPACE(commandline);
     HELP_TEXT("Usage: status [start|stop]\r\n");
 
 
 	if (strcmp(commandline, "start") == 0) {
-        send_gauge_config(0, GAUGE0_MIN, GAUGE0_MAX, GAUGE0_NAME, port);
-        send_gauge_config(1, GAUGE1_MIN, GAUGE1_MAX, GAUGE1_NAME, port);
-        send_gauge_config(2, GAUGE2_MIN, GAUGE2_MAX, GAUGE2_NAME, port);
-        send_gauge_config(3, GAUGE3_MIN, GAUGE3_MAX, GAUGE3_NAME, port);
-        send_gauge_config(4, GAUGE4_MIN, GAUGE4_MAX, GAUGE4_NAME, port);
-        send_gauge_config(5, GAUGE5_MIN, GAUGE5_MAX, GAUGE5_NAME, port);
-        send_gauge_config(6, GAUGE6_MIN, GAUGE6_MAX, GAUGE6_NAME, port);
+        ptr->term_mode = PORT_TERM_TT;
+        send_gauge_config(0, GAUGE0_MIN, GAUGE0_MAX, GAUGE0_NAME, ptr);
+        send_gauge_config(1, GAUGE1_MIN, GAUGE1_MAX, GAUGE1_NAME, ptr);
+        send_gauge_config(2, GAUGE2_MIN, GAUGE2_MAX, GAUGE2_NAME, ptr);
+        send_gauge_config(3, GAUGE3_MIN, GAUGE3_MAX, GAUGE3_NAME, ptr);
+        send_gauge_config(4, GAUGE4_MIN, GAUGE4_MAX, GAUGE4_NAME, ptr);
+        send_gauge_config(5, GAUGE5_MIN, GAUGE5_MAX, GAUGE5_NAME, ptr);
+        send_gauge_config(6, GAUGE6_MIN, GAUGE6_MAX, GAUGE6_NAME, ptr);
         
-        send_chart_config(0, CHART0_MIN, CHART0_MAX, CHART0_OFFSET, CHART0_UNIT, CHART0_NAME, port);
-        send_chart_config(1, CHART1_MIN, CHART1_MAX, CHART1_OFFSET, CHART1_UNIT, CHART1_NAME, port);
-        send_chart_config(2, CHART2_MIN, CHART2_MAX, CHART2_OFFSET, CHART2_UNIT, CHART2_NAME, port);
-        send_chart_config(3, CHART3_MIN, CHART3_MAX, CHART3_OFFSET, CHART3_UNIT, CHART3_NAME, port);
-        
-        
-        start_overlay_task(port);
-        set_overlay_mode(port,port);
-	}
+        send_chart_config(0, CHART0_MIN, CHART0_MAX, CHART0_OFFSET, CHART0_UNIT, CHART0_NAME, ptr);
+        send_chart_config(1, CHART1_MIN, CHART1_MAX, CHART1_OFFSET, CHART1_UNIT, CHART1_NAME, ptr);
+        send_chart_config(2, CHART2_MIN, CHART2_MAX, CHART2_OFFSET, CHART2_UNIT, CHART2_NAME, ptr);
+        send_chart_config(3, CHART3_MIN, CHART3_MAX, CHART3_OFFSET, CHART3_UNIT, CHART3_NAME, ptr);
+
+        start_overlay_task(ptr);
+
+    }
 	if (strcmp(commandline, "stop") == 0) {
-        set_overlay_mode(TERM_MODE_VT100,port);
-        stop_overlay_task(port);
+        ptr->term_mode = PORT_TERM_VT100;
+        stop_overlay_task(ptr);
 
 	} 
     
@@ -567,56 +558,56 @@ uint8_t command_tterm(char *commandline, uint8_t port){
 /*****************************************************************************
 * Clears the terminal screen and displays the logo
 ******************************************************************************/
-uint8_t command_cls(char *commandline, uint8_t port) {
+uint8_t command_cls(char *commandline, port_str *ptr) {
     tsk_overlay_chart_start();
-	Term_Erase_Screen(port);
-    send_string("  _   _   ___    ____    _____              _\r\n",port);
-    send_string(" | | | | |   \\  |__ /   |_   _|  ___   ___ | |  __ _\r\n",port);
-    send_string(" | |_| | | |) |  |_ \\     | |   / -_) (_-< | | / _` |\r\n",port);
-    send_string("  \\___/  |___/  |___/     |_|   \\___| /__/ |_| \\__,_|\r\n\r\n",port);
-    send_string("\tCoil: ",port);
-    send_string(configuration.ud_name,port);
-    send_string("\r\n\r\n",port);
+	Term_Erase_Screen(ptr);
+    send_string("  _   _   ___    ____    _____              _\r\n",ptr);
+    send_string(" | | | | |   \\  |__ /   |_   _|  ___   ___ | |  __ _\r\n",ptr);
+    send_string(" | |_| | | |) |  |_ \\     | |   / -_) (_-< | | / _` |\r\n",ptr);
+    send_string("  \\___/  |___/  |___/     |_|   \\___| /__/ |_| \\__,_|\r\n\r\n",ptr);
+    send_string("\tCoil: ",ptr);
+    send_string(configuration.ud_name,ptr);
+    send_string("\r\n\r\n",ptr);
 	return 1;
 }
 
 /*****************************************************************************
 * Displays the statistics of the min protocol
 ******************************************************************************/
-uint8_t command_minstat(char *commandline, uint8_t port){
+uint8_t command_minstat(char *commandline, port_str *ptr){
     char buffer[60];
     sprintf(buffer,"Dropped frames        : %lu\r\n",telemetry.dropped_frames);
-    send_string(buffer,port);
+    send_string(buffer,ptr);
     sprintf(buffer,"Spurious acks         : %lu\r\n",telemetry.spurious_acks);
-    send_string(buffer,port);
+    send_string(buffer,ptr);
     sprintf(buffer,"Resets received       : %lu\r\n",telemetry.resets_received);
-    send_string(buffer,port);
+    send_string(buffer,ptr);
     sprintf(buffer,"Sequence mismatch drop: %lu\r\n",telemetry.sequence_mismatch_drop);
-    send_string(buffer,port);
+    send_string(buffer,ptr);
     sprintf(buffer,"Max frames in buffer  : %u\r\n",telemetry.min_frames_max);
-    send_string(buffer,port); 
+    send_string(buffer,ptr); 
     return 1; 
 }
 
 /*****************************************************************************
 * Sends the configuration
 ******************************************************************************/
-uint8_t command_config_get(char *commandline, uint8_t port){
+uint8_t command_config_get(char *commandline, port_str *ptr){
     char buffer[80];
 	for (uint8_t current_parameter = 0; current_parameter < sizeof(confparam) / sizeof(parameter_entry); current_parameter++) {
         if(confparam[current_parameter].parameter_type == PARAM_CONFIG){
             print_param_buffer(buffer, confparam, current_parameter);
-            send_config(buffer,confparam[current_parameter].help, port);
+            send_config(buffer,confparam[current_parameter].help, ptr);
         }
     }
-    send_config("NULL","NULL", port);
+    send_config("NULL","NULL", ptr);
     return 1; 
 }
 
 /*****************************************************************************
 * Kicks the controller into the bootloader
 ******************************************************************************/
-uint8_t command_bootloader(char *commandline, uint8_t port) {
+uint8_t command_bootloader(char *commandline, port_str *ptr) {
 	Bootloadable_Load();
 	return 1;
 }
@@ -629,7 +620,7 @@ uint8_t command_bootloader(char *commandline, uint8_t port) {
 * starts or stops the transient mode (classic mode)
 * also spawns a timer for the burst mode.
 ******************************************************************************/
-uint8_t command_tr(char *commandline, uint8_t port) {
+uint8_t command_tr(char *commandline, port_str *ptr) {
     SKIP_SPACE(commandline);
     HELP_TEXT("Usage: tr [start|stop]\r\n");
 
@@ -640,9 +631,9 @@ uint8_t command_tr(char *commandline, uint8_t port) {
 
 		tr_running = 1;
         
-        callback_BurstFunction(NULL, 0, port);
+        callback_BurstFunction(NULL, 0, ptr);
         
-		send_string("Transient Enabled\r\n", port);
+		send_string("Transient Enabled\r\n", ptr);
        
         return 0;
 	}
@@ -650,7 +641,7 @@ uint8_t command_tr(char *commandline, uint8_t port) {
         interrupter.pw = 0;
 		update_interrupter();
      
-        send_string("\r\nTransient Disabled\r\n", port);    
+        send_string("\r\nTransient Disabled\r\n", ptr);    
  
 		interrupter.pw = 0;
 		update_interrupter();
@@ -677,7 +668,7 @@ void vQCW_Timer_Callback(TimerHandle_t xTimer){
 /*****************************************************************************
 * starts the QCW mode. Spawns a timer for the automatic QCW pulses.
 ******************************************************************************/
-uint8_t command_qcw(char *commandline, uint8_t port) {
+uint8_t command_qcw(char *commandline, port_str *ptr) {
     SKIP_SPACE(commandline);
     HELP_TEXT("Usage: qcw [start|stop]\r\n");
     
@@ -687,16 +678,16 @@ uint8_t command_qcw(char *commandline, uint8_t port) {
                 xQCW_Timer = xTimerCreate("QCW-Tmr", param.qcw_repeat / portTICK_PERIOD_MS, pdFALSE,(void * ) 0, vQCW_Timer_Callback);
                 if(xQCW_Timer != NULL){
                     xTimerStart(xQCW_Timer, 0);
-                    send_string("QCW Enabled\r\n", port);
+                    send_string("QCW Enabled\r\n", ptr);
                 }else{
-                    send_string("Cannot create QCW Timer\r\n", port);
+                    send_string("Cannot create QCW Timer\r\n", ptr);
                 }
             }
         }else{
 		    ramp.modulation_value = 20;
             qcw_reg = 1;
 		    ramp_control();
-            send_string("QCW single shot\r\n", port);
+            send_string("QCW single shot\r\n", ptr);
         }
 		
 		return 0;
@@ -706,12 +697,12 @@ uint8_t command_qcw(char *commandline, uint8_t port) {
 				if(xTimerDelete(xQCW_Timer, 200 / portTICK_PERIOD_MS) != pdFALSE){
 				    xQCW_Timer = NULL;
                 } else {
-                    send_string("Cannot delete QCW Timer\r\n", port);
+                    send_string("Cannot delete QCW Timer\r\n", ptr);
                 }
 		}
         QCW_enable_Control = 0;
         qcw_reg = 0;
-		send_string("QCW Disabled\r\n", port);
+		send_string("QCW Disabled\r\n", ptr);
 		return 0;
 	}
 	return 1;
@@ -720,7 +711,7 @@ uint8_t command_qcw(char *commandline, uint8_t port) {
 /*****************************************************************************
 * sets the kill bit, stops the interrupter and switches the bus off
 ******************************************************************************/
-uint8_t command_udkill(char *commandline, uint8_t port) {
+uint8_t command_udkill(char *commandline, port_str *ptr) {
     SKIP_SPACE(commandline);
     HELP_TEXT("Usage: kill [set|reset|get]\r\n");
     
@@ -737,21 +728,21 @@ uint8_t command_udkill(char *commandline, uint8_t port) {
         
     	interrupter1_control_Control = 0;
     	QCW_enable_Control = 0;
-    	Term_Color_Green(port);
-    	send_string("Killbit set\r\n", port);
-    	Term_Color_White(port);
+    	Term_Color_Green(ptr);
+    	send_string("Killbit set\r\n", ptr);
+    	Term_Color_White(ptr);
     }else if (strcmp(commandline, "reset") == 0) {
         interrupter_unkill();
-        Term_Color_Green(port);
-    	send_string("Killbit reset\r\n", port);
-    	Term_Color_White(port);
+        Term_Color_Green(ptr);
+    	send_string("Killbit reset\r\n", ptr);
+    	Term_Color_White(ptr);
         return 1;
     }else if (strcmp(commandline, "get") == 0) {
         char buf[30];
-        Term_Color_Red(port);
+        Term_Color_Red(ptr);
         sprintf(buf, "Killbit: %u\r\n",interrupter_get_kill());
-        send_string(buf,port);
-        Term_Color_White(port);
+        send_string(buf,ptr);
+        Term_Color_White(ptr);
     }
     
         
@@ -762,14 +753,15 @@ uint8_t command_udkill(char *commandline, uint8_t port) {
 * commands a frequency sweep for the primary coil. It searches for a peak
 * and makes a second run with +-6kHz around the peak
 ******************************************************************************/
-uint8_t command_tune_p(char *commandline, uint8_t port) {
-    if(get_overlay_mode(port) != TERM_MODE_VT100){
+uint8_t command_tune_p(char *commandline, port_str *ptr) {
+    
+    if(ptr->term_mode == PORT_TERM_TT){
         tsk_overlay_chart_stop();
-        send_chart_clear(port);
+        send_chart_clear(ptr);
         
     }
-
-	run_adc_sweep(param.tune_start, param.tune_end, param.tune_pw, CT_PRIMARY, param.tune_delay, port);
+    
+	run_adc_sweep(param.tune_start, param.tune_end, param.tune_pw, CT_PRIMARY, param.tune_delay, ptr);
 
 	return 0;
 }
@@ -777,8 +769,8 @@ uint8_t command_tune_p(char *commandline, uint8_t port) {
 /*****************************************************************************
 * commands a frequency sweep for the secondary coil
 ******************************************************************************/
-uint8_t command_tune_s(char *commandline, uint8_t port) {
-	run_adc_sweep(param.tune_start, param.tune_end, param.tune_pw, CT_SECONDARY, param.tune_delay, port);
+uint8_t command_tune_s(char *commandline, port_str *ptr) {
+	run_adc_sweep(param.tune_start, param.tune_end, param.tune_pw, CT_SECONDARY, param.tune_delay, ptr);
 	return 0;
 }
 
@@ -786,25 +778,25 @@ uint8_t command_tune_s(char *commandline, uint8_t port) {
 * Prints the task list needs to be enabled in FreeRTOSConfig.h
 * only use it for debugging reasons
 ******************************************************************************/
-uint8_t command_tasks(char *commandline, uint8_t port) {
+uint8_t command_tasks(char *commandline, port_str *ptr) {
     #if configUSE_STATS_FORMATTING_FUNCTIONS && configUSE_TRACE_FACILITY && configGENERATE_RUN_TIME_STATS
         
 	    //static char buff[600];
-        char buff[500];
-	    send_string("**********************************************\n\r", port);
-	    send_string("Task            State   Prio    Stack    Num\n\r", port);
-	    send_string("**********************************************\n\r", port);
+        char buff[600];
+	    send_string("**********************************************\n\r", ptr);
+	    send_string("Task            State   Prio    Stack    Num\n\r", ptr);
+	    send_string("**********************************************\n\r", ptr);
 	    vTaskList(buff);
-	    send_string(buff, port);
-	    send_string("**********************************************\n\r\n\r", port);
-        send_string("**********************************************\n\r", port);
-	    send_string("Task            Abs time        % time\n\r", port);
-	    send_string("**********************************************\n\r", port);
+	    send_string(buff, ptr);
+	    send_string("**********************************************\n\r\n\r", ptr);
+        send_string("**********************************************\n\r", ptr);
+	    send_string("Task            Abs time        % time\n\r", ptr);
+	    send_string("**********************************************\n\r", ptr);
         vTaskGetRunTimeStats( buff );
-        send_string(buff, port);
-        send_string("**********************************************\n\r\r\n", port);
+        send_string(buff, ptr);
+        send_string("**********************************************\n\r\r\n", ptr);
         sprintf(buff, "Free heap: %d\r\n",xPortGetFreeHeapSize());
-        send_string(buff,port);
+        send_string(buff,ptr);
         return 0;
     #endif
     
@@ -819,7 +811,7 @@ uint8_t command_tasks(char *commandline, uint8_t port) {
 /*****************************************************************************
 * Get a value from a parameter or print all parameters
 ******************************************************************************/
-uint8_t command_get(char *commandline, uint8_t port) {
+uint8_t command_get(char *commandline, port_str *ptr) {
 	SKIP_SPACE(commandline);
     
 	uint8_t current_parameter;
@@ -827,43 +819,43 @@ uint8_t command_get(char *commandline, uint8_t port) {
 
 	if (*commandline == 0 || commandline == 0) //no param --> show help text
 	{
-		print_param_help(confparam, PARAM_SIZE(confparam), port);
+		print_param_help(confparam, PARAM_SIZE(confparam), ptr);
 		return 1;
 	}
 
 	for (current_parameter = 0; current_parameter < sizeof(confparam) / sizeof(parameter_entry); current_parameter++) {
 		if (strcmp(commandline, confparam[current_parameter].name) == 0) {
 			//Parameter not found:
-			print_param(confparam,current_parameter,port);
+			print_param(confparam,current_parameter,ptr);
 			return 1;
 		}
 	}
-	Term_Color_Red(port);
-	send_string("E: unknown param\r\n", port);
-	Term_Color_White(port);
+	Term_Color_Red(ptr);
+	send_string("E: unknown param\r\n", ptr);
+	Term_Color_White(ptr);
 	return 0;
 }
 
 /*****************************************************************************
 * Set a new value to a parameter
 ******************************************************************************/
-uint8_t command_set(char *commandline, uint8_t port) {
+uint8_t command_set(char *commandline, port_str *ptr) {
 	SKIP_SPACE(commandline);
 	char *param_value;
 
 	if (commandline == NULL) {
-		if (!port)
-			Term_Color_Red(port);
-		send_string("E: no name\r\n", port);
-		Term_Color_White(port);
+		//if (!port)
+		Term_Color_Red(ptr);
+		send_string("E: no name\r\n", ptr);
+		Term_Color_White(ptr);
 		return 0;
 	}
 
 	param_value = strchr(commandline, ' ');
 	if (param_value == NULL) {
-		Term_Color_Red(port);
-		send_string("E: no value\r\n", port);
-		Term_Color_White(port);
+		Term_Color_Red(ptr);
+		send_string("E: no value\r\n", ptr);
+		Term_Color_White(ptr);
 		return 0;
 	}
 
@@ -871,9 +863,9 @@ uint8_t command_set(char *commandline, uint8_t port) {
 	param_value++;
 
 	if (*param_value == '\0') {
-		Term_Color_Red(port);
-		send_string("E: no val\r\n", port);
-		Term_Color_White(port);
+		Term_Color_Red(ptr);
+		send_string("E: no val\r\n", ptr);
+		Term_Color_White(ptr);
 		return 0;
 	}
 
@@ -882,48 +874,48 @@ uint8_t command_set(char *commandline, uint8_t port) {
 		if (strcmp(commandline, confparam[current_parameter].name) == 0) {
 			//parameter name found:
 
-			if (updateDefaultFunction(confparam, param_value,current_parameter, port)){
+			if (updateDefaultFunction(confparam, param_value,current_parameter, ptr)){
                 if(confparam[current_parameter].callback_function){
-                    if (confparam[current_parameter].callback_function(confparam, current_parameter, port)){
-                        Term_Color_Green(port);
-                        send_string("OK\r\n", port);
-                        Term_Color_White(port);
+                    if (confparam[current_parameter].callback_function(confparam, current_parameter, ptr)){
+                        Term_Color_Green(ptr);
+                        send_string("OK\r\n", ptr);
+                        Term_Color_White(ptr);
                         return 1;
                     }else{
-                        Term_Color_Red(port);
-                        send_string("ERROR: Callback\r\n", port);
-                        Term_Color_White(port);
+                        Term_Color_Red(ptr);
+                        send_string("ERROR: Callback\r\n", ptr);
+                        Term_Color_White(ptr);
                         return 1;
                     }
                 }else{
-                    Term_Color_Green(port);
-                    send_string("OK\r\n", port);
-                    Term_Color_White(port);
+                    Term_Color_Green(ptr);
+                    send_string("OK\r\n", ptr);
+                    Term_Color_White(ptr);
                     return 1;
                 }
 			} else {
-				Term_Color_Red(port);
-				send_string("NOK\r\n", port);
-				Term_Color_White(port);
+				Term_Color_Red(ptr);
+				send_string("NOK\r\n", ptr);
+				Term_Color_White(ptr);
 				return 1;
 			}
 		}
 	}
-	Term_Color_Red(port);
-	send_string("E: unknown param\r\n", port);
-	Term_Color_White(port);
+	Term_Color_Red(ptr);
+	send_string("E: unknown param\r\n", ptr);
+	Term_Color_White(ptr);
 	return 0;
 }
 
 
 void eeprom_load(){
-   EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,SERIAL); 
+   EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,&serial_port); 
 }
 
 /*****************************************************************************
 * Saves confparams to eeprom
 ******************************************************************************/
-uint8_t command_eprom(char *commandline, uint8_t port) {
+uint8_t command_eprom(char *commandline, port_str *ptr) {
 	SKIP_SPACE(commandline);
     HELP_TEXT("Usage: eprom [load|save]\r\n");
     EEPROM_1_UpdateTemperature();
@@ -931,7 +923,7 @@ uint8_t command_eprom(char *commandline, uint8_t port) {
 	system_fault_Control = 0; //halt tesla coil operation during updates!
 	if (strcmp(commandline, "save") == 0) {
 
-	    EEPROM_write_conf(confparam, PARAM_SIZE(confparam),0, port);
+	    EEPROM_write_conf(confparam, PARAM_SIZE(confparam),0, ptr);
 
 		system_fault_Control = sfflag;
 		return 0;
@@ -939,7 +931,7 @@ uint8_t command_eprom(char *commandline, uint8_t port) {
 	if (strcmp(commandline, "load") == 0) {
         uint8 sfflag = system_fault_Read();
         system_fault_Control = 0; //halt tesla coil operation during updates!
-		EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,port);
+		EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,ptr);
         
         initialize_interrupter();
 	    initialize_charging();
@@ -953,57 +945,57 @@ uint8_t command_eprom(char *commandline, uint8_t port) {
 /*****************************************************************************
 * Prints the help text
 ******************************************************************************/
-uint8_t command_help(char *commandline, uint8_t port) {
+uint8_t command_help(char *commandline, port_str *ptr) {
 	UNUSED_VARIABLE(commandline);
 	uint8_t current_command;
-	send_string("\r\nCommands:\r\n", port);
+	send_string("\r\nCommands:\r\n", ptr);
 	for (current_command = 0; current_command < (sizeof(commands) / sizeof(command_entry)); current_command++) {
-		send_string("\t", port);
-		Term_Color_Cyan(port);
-		send_string((char *)commands[current_command].text, port);
-		Term_Color_White(port);
+		send_string("\t", ptr);
+		Term_Color_Cyan(ptr);
+		send_string((char *)commands[current_command].text, ptr);
+		Term_Color_White(ptr);
 		if (strlen(commands[current_command].text) > 7) {
-			send_string("\t-> ", port);
+			send_string("\t-> ", ptr);
 		} else {
-			send_string("\t\t-> ", port);
+			send_string("\t\t-> ", ptr);
 		}
-		send_string((char *)commands[current_command].help, port);
-		send_string("\r\n", port);
+		send_string((char *)commands[current_command].help, ptr);
+		send_string("\r\n", ptr);
 	}
 
-	send_string("\r\nParameters:\r\n", port);
+	send_string("\r\nParameters:\r\n", ptr);
 	for (current_command = 0; current_command < sizeof(confparam) / sizeof(parameter_entry); current_command++) {
         if(confparam[current_command].parameter_type == PARAM_DEFAULT){
-            send_string("\t", port);
-            Term_Color_Cyan(port);
-            send_string((char *)confparam[current_command].name, port);
-            Term_Color_White(port);
+            send_string("\t", ptr);
+            Term_Color_Cyan(ptr);
+            send_string((char *)confparam[current_command].name, ptr);
+            Term_Color_White(ptr);
             if (strlen(confparam[current_command].name) > 7) {
-                send_string("\t-> ", port);
+                send_string("\t-> ", ptr);
             } else {
-                send_string("\t\t-> ", port);
+                send_string("\t\t-> ", ptr);
             }
 
-            send_string((char *)confparam[current_command].help, port);
-            send_string("\r\n", port);
+            send_string((char *)confparam[current_command].help, ptr);
+            send_string("\r\n", ptr);
         }
 	}
 
-	send_string("\r\nConfiguration:\r\n", port);
+	send_string("\r\nConfiguration:\r\n", ptr);
 	for (current_command = 0; current_command < sizeof(confparam) / sizeof(parameter_entry); current_command++) {
         if(confparam[current_command].parameter_type == PARAM_CONFIG){
-            send_string("\t", port);
-            Term_Color_Cyan(port);
-            send_string((char *)confparam[current_command].name, port);
-            Term_Color_White(port);
+            send_string("\t", ptr);
+            Term_Color_Cyan(ptr);
+            send_string((char *)confparam[current_command].name, ptr);
+            Term_Color_White(ptr);
             if (strlen(confparam[current_command].name) > 7) {
-                send_string("\t-> ", port);
+                send_string("\t-> ", ptr);
             } else {
-                send_string("\t\t-> ", port);
+                send_string("\t\t-> ", ptr);
             }
 
-            send_string((char *)confparam[current_command].help, port);
-            send_string("\r\n", port);
+            send_string((char *)confparam[current_command].help, ptr);
+            send_string("\r\n", ptr);
         }
 	}
 
@@ -1014,21 +1006,21 @@ uint8_t command_help(char *commandline, uint8_t port) {
 /*****************************************************************************
 * Interprets the Input String
 ******************************************************************************/
-void nt_interpret(const char *text, uint8_t port) {
+void nt_interpret(const char *text, port_str *ptr) {
 	uint8_t current_command;
 	for (current_command = 0; current_command < (sizeof(commands) / sizeof(command_entry)); current_command++) {
 		if (memcmp(text, commands[current_command].text, strlen(commands[current_command].text)) == 0) {
-			commands[current_command].commandFunction((char *)strchr(text, ' '), port);
+			commands[current_command].commandFunction((char *)strchr(text, ' '), ptr);
 
 			return;
 		}
 	}
 	if (text[0] != 0x00) {
-		Term_Color_Red(port);
-		send_string("Unknown Command: ", port);
-		send_string((char *)text, port);
-		send_string("\r\n", port);
-		Term_Color_White(port);
+		Term_Color_Red(ptr);
+		send_string("Unknown Command: ", ptr);
+		send_string((char *)text, ptr);
+		send_string("\r\n", ptr);
+		Term_Color_White(ptr);
 	}
 }
 

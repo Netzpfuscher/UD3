@@ -42,10 +42,12 @@
 
 void tsk_eth_Start(void);
 
-#define NUM_CON 2
+#define NUM_ETH_CON 2
 
-StreamBufferHandle_t xETH_rx[NUM_CON];
-StreamBufferHandle_t xETH_tx[NUM_CON];
+StreamBufferHandle_t xETH_rx[NUM_ETH_CON];
+StreamBufferHandle_t xETH_tx[NUM_ETH_CON];
+
+extern const uint32_t port_const[8];
 
 
 /*

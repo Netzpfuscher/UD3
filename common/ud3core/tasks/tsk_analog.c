@@ -180,7 +180,9 @@ void regulate_current(){
         if(telemetry.midi_voices){
             update_midi_duty();
         }
+   
     }
+   
 }
 
 void calculate_rms(void) {

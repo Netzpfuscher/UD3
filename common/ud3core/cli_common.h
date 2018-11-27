@@ -34,33 +34,34 @@
 #include "queue.h"
 #include "semphr.h"
 #include "timers.h"
+#include "tasks/tsk_eth.h"
 
 #define MODE_MIDI 0
 #define MODE_CLASSIC 1
 #define MODE_UDCLASSIC 2
 
-#define TERM_MODE_VT100 100
+#define TERM_MODE_VT100 0xFF
 
 
 uint8_t input_handle();
 
+//extern uint8_t term_mode[NUM_CON];
 
-
-void nt_interpret(const char *text, uint8_t port);
+void nt_interpret(const char *text, port_str *ptr);
 void init_config();
 void eeprom_load();
 
 void initialize_term(void);
 void task_terminal_overlay(void);
-uint8_t command_cls(char *commandline, uint8_t port);
+uint8_t command_cls(char *commandline, port_str *ptr);
 void task_terminal();
-void stop_overlay_task(uint8_t port);
+void stop_overlay_task(port_str *ptr);
 
 extern parameter_entry tparameters[];
 volatile uint8_t qcw_reg;
 extern parameter_entry confparam[];
 
-xSemaphoreHandle block_term[5];
+//xSemaphoreHandle block_term[NUM_CON];
 extern xTaskHandle overlay_ETH_TaskHandle0;
 extern xTaskHandle overlay_ETH_TaskHandle1;
 

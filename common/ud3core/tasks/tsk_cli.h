@@ -25,6 +25,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "tsk_eth.h"
+#include "cli_basic.h"
 
 #if !defined(cli_TASK_H)
 #define cli_TASK_H
@@ -42,7 +43,10 @@ void tsk_cli_Start(void);
 void tsk_cli_TaskProc(void *pvParameters);
 //extern xTaskHandle ETH_Terminal_TaskHandle0;
 //extern xTaskHandle ETH_Terminal_TaskHandle1;
-extern xTaskHandle ETH_Terminal_TaskHandle[NUM_CON];
+extern xTaskHandle ETH_Terminal_TaskHandle[NUM_ETH_CON];
+
+extern port_str eth_port[NUM_ETH_CON];
+extern port_str serial_port;
 
 /*
  * Add user function prototypes in the below merge region to add user

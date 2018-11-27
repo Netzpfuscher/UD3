@@ -91,7 +91,7 @@ void braille_clear(void) {
 	}
 }
 
-void braille_draw(uint8_t port) {
+void braille_draw(port_str *ptr) {
 	unsigned char byte;
 	for (uint16_t y = 0; y < PIX_HEIGHT; y += 4) {
 		for (uint16_t x = 0; x < PIX_WIDTH / 8; x++) {
@@ -118,9 +118,9 @@ void braille_draw(uint8_t port) {
 					byte |= 1 << 7;
 
 				set_bytes(out_buffer, byte);
-				send_string(out_buffer, port);
+				send_string(out_buffer, ptr);
 			}
 		}
-		send_string("\r\n", port);
+		send_string("\r\n", ptr);
 	}
 }

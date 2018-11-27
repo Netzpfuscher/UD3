@@ -2,6 +2,8 @@
 #define CLI_BASIC_H
 
 #include <stdint.h>
+#include "FreeRTOS.h"
+#include "semphr.h"
 
 #define PARAM_SIZE(param) sizeof(param) / sizeof(parameter_entry)
 
@@ -26,13 +28,26 @@
 #define CYDEV_EE_SIZE 0x00000800u
 #define CY_EEPROM_SIZE              (CYDEV_EE_SIZE)
 
-#define NUM_PORTS 5
-#define NONE 2
-#define SERIAL 3
-#define USB 4
-#define ETH0 0
-#define ETH1 1
-
+#define NONE (NUM_ETH_CON)
+#define SERIAL (NUM_ETH_CON+1)
+#define USB (NUM_ETH_CON+2)
+#define NUM_CON (NUM_ETH_CON+3)
+    
+#define PORT_TYPE_SERIAL    1
+#define PORT_TYPE_USB       2
+#define PORT_TYPE_ETH       3
+    
+#define PORT_TERM_VT100  0
+#define PORT_TERM_TT     1
+    
+    
+typedef struct port_struct port_str;
+struct port_struct {
+    uint8_t type;
+    uint8_t num;
+    uint8_t term_mode;
+    xSemaphoreHandle term_block;
+};
 
    
 typedef struct parameter_entry_struct parameter_entry;
@@ -45,32 +60,35 @@ struct parameter_entry_struct {
 	const int32_t min;
 	const int32_t max;
     const uint16_t div;
-	uint8_t (*callback_function)(parameter_entry * params, uint8_t index, uint8_t port);
+	uint8_t (*callback_function)(parameter_entry * params, uint8_t index, port_str *ptr);
 	const char *help;
 };
-uint8_t updateDefaultFunction(parameter_entry * params, char * newValue, uint8_t index, uint8_t port);
-void EEPROM_write_conf(parameter_entry * params, uint8_t param_size, uint16_t eeprom_offset ,uint8_t port);
-void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eeprom_offset ,uint8_t port);
-void print_param_help(parameter_entry * params, uint8_t param_size, uint8_t port);
-void print_param(parameter_entry * params, uint8_t index, uint8_t port);
+
+
+
+uint8_t updateDefaultFunction(parameter_entry * params, char * newValue, uint8_t index, port_str *ptr);
+void EEPROM_write_conf(parameter_entry * params, uint8_t param_size, uint16_t eeprom_offset ,port_str *ptr);
+void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eeprom_offset ,port_str *ptr);
+void print_param_help(parameter_entry * params, uint8_t param_size, port_str *ptr);
+void print_param(parameter_entry * params, uint8_t index, port_str *ptr);
 void print_param_buffer(char * buffer, parameter_entry * params, uint8_t index);
 
-void input_interpret(uint8_t port);
+void input_interpret(port_str *ptr);
 void input_restart(void);
-void Term_Move_cursor_right(uint8_t column, uint8_t port);
-void Term_Move_Cursor(uint8_t row, uint8_t column, uint8_t port);
-void Term_Erase_Screen(uint8_t port);
-void Term_Color_Green(uint8_t port);
-void Term_Color_Red(uint8_t port);
-void Term_Color_White(uint8_t port);
-void Term_Color_Cyan(uint8_t port);
-void Term_BGColor_Blue(uint8_t port);
-void Term_Save_Cursor(uint8_t port);
-void Term_Restore_Cursor(uint8_t port);
-void Term_Box(uint8_t row1, uint8_t col1, uint8_t row2, uint8_t col2, uint8_t port);
-void send_char(uint8_t c, uint8_t port);
-void send_string(char *data, uint8_t port);
-void send_buffer(uint8_t *data, uint16_t len, uint8_t port);
+void Term_Move_cursor_right(uint8_t column, port_str *ptr);
+void Term_Move_Cursor(uint8_t row, uint8_t column, port_str *ptr);
+void Term_Erase_Screen(port_str *ptr);
+void Term_Color_Green(port_str *ptr);
+void Term_Color_Red(port_str *ptr);
+void Term_Color_White(port_str *ptr);
+void Term_Color_Cyan(port_str *ptr);
+void Term_BGColor_Blue(port_str *ptr);
+void Term_Save_Cursor(port_str *ptr);
+void Term_Restore_Cursor(port_str *ptr);
+void Term_Box(uint8_t row1, uint8_t col1, uint8_t row2, uint8_t col2, port_str *ptr);
+void send_char(uint8_t c, port_str *ptr);
+void send_string(char *data, port_str *ptr);
+void send_buffer(uint8_t *data, uint16_t len, port_str *ptr);
 uint8_t term_config_changed(void);
 uint32_t djb_hash(const char* cp);
 

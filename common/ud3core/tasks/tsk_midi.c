@@ -677,7 +677,7 @@ void tsk_midi_Start(void) {
 	 	* Create the task and then leave. When FreeRTOS starts up the scheduler
 	 	* will call the task procedure and start execution of the task.
 	 	*/
-		xTaskCreate(tsk_midi_TaskProc, "MIDI-Svc", 160, NULL, PRIO_MIDI, &tsk_midi_TaskHandle);
+		xTaskCreate(tsk_midi_TaskProc, "MIDI-Svc", STACK_MIDI, NULL, PRIO_MIDI, &tsk_midi_TaskHandle);
 		tsk_midi_initVar = 1;
 	}
 }

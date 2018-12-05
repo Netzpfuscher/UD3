@@ -66,7 +66,7 @@ void tsk_usb_Init(void) {
 #endif
 	}
 
-	xTaskCreate(tsk_usb_Task, "USB-Svc", 400, NULL, PRIO_USB, &tsk_usb_TaskHandle);
+	xTaskCreate(tsk_usb_Task, "USB-Svc", STACK_USB, NULL, PRIO_USB, &tsk_usb_TaskHandle);
 
 	tsk_usb_initVar = 1;
 }

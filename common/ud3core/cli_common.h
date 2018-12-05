@@ -47,7 +47,7 @@ uint8_t input_handle();
 
 //extern uint8_t term_mode[NUM_CON];
 
-void nt_interpret(const char *text, port_str *ptr);
+void nt_interpret(char *text, port_str *ptr);
 void init_config();
 void eeprom_load(port_str *ptr);
 

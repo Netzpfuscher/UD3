@@ -28,6 +28,8 @@
 #define PIX_HEIGHT 64L
 #define PIX_WIDTH 128L
 
+void braille_malloc(port_str *ptr);
+void braille_free(port_str *ptr);
 void braille_draw(port_str *ptr);
 void braille_clear(void);
 void braille_line(int x0, int y0, int x1, int y1);

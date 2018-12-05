@@ -231,7 +231,7 @@ void tsk_min_Start(void) {
 	 	* Create the task and then leave. When FreeRTOS starts up the scheduler
 	 	* will call the task procedure and start execution of the task.
 	 	*/
-		xTaskCreate(tsk_min_TaskProc, "MIN-Svc", 256, NULL, PRIO_UART, &tsk_min_TaskHandle);
+		xTaskCreate(tsk_min_TaskProc, "MIN-Svc", STACK_MIN, NULL, PRIO_UART, &tsk_min_TaskHandle);
 		tsk_min_initVar = 1;
 	}
 }

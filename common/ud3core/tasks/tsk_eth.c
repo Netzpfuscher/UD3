@@ -429,7 +429,7 @@ void tsk_eth_Start(void) {
 	 	* Create the task and then leave. When FreeRTOS starts up the scheduler
 	 	* will call the task procedure and start execution of the task.
 	 	*/
-		xTaskCreate(tsk_eth_TaskProc, "ETH-Svc", 256, NULL, PRIO_ETH, &tsk_eth_TaskHandle);
+		xTaskCreate(tsk_eth_TaskProc, "ETH-Svc", STACK_ETH, NULL, PRIO_ETH, &tsk_eth_TaskHandle);
 		tsk_eth_initVar = 1;
 	}
 }

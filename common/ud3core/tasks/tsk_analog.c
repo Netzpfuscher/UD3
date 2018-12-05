@@ -322,7 +322,7 @@ void tsk_analog_Start(void) {
 	 	* Create the task and then leave. When FreeRTOS starts up the scheduler
 	 	* will call the task procedure and start execution of the task.
 	 	*/
-		xTaskCreate(tsk_analog_TaskProc, "Analog", 128, NULL, PRIO_ANALOG, &tsk_analog_TaskHandle);
+		xTaskCreate(tsk_analog_TaskProc, "Analog", STACK_ANALOG, NULL, PRIO_ANALOG, &tsk_analog_TaskHandle);
 		tsk_analog_initVar = 1;
 	}
 }

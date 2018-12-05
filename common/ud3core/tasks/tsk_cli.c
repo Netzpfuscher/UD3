@@ -249,15 +249,15 @@ void tsk_cli_Start(void) {
             eth_port[i].term_mode = PORT_TERM_VT100;
             eth_port[i].term_block = xSemaphoreCreateBinary();
             xSemaphoreGive(eth_port[i].term_block);
-            xTaskCreate(tsk_cli_TaskProc, "ETH-CLI", 576, &eth_port[i], PRIO_TERMINAL, &ETH_Terminal_TaskHandle[i]);
+            xTaskCreate(tsk_cli_TaskProc, "ETH-CLI", STACK_TERMINAL, &eth_port[i], PRIO_TERMINAL, &ETH_Terminal_TaskHandle[i]);
         }
 
 		/*
 	 	* Create the task and then leave. When FreeRTOS starts up the scheduler
 	 	* will call the task procedure and start execution of the task.
 	 	*/
-		xTaskCreate(tsk_cli_TaskProc, "UART-CLI", 576, &serial_port, PRIO_TERMINAL, &UART_Terminal_TaskHandle);
-		xTaskCreate(tsk_cli_TaskProc, "USB-CLI", 576,  &usb_port, PRIO_TERMINAL, &USB_Terminal_TaskHandle);
+		xTaskCreate(tsk_cli_TaskProc, "UART-CLI", STACK_TERMINAL, &serial_port, PRIO_TERMINAL, &UART_Terminal_TaskHandle);
+		xTaskCreate(tsk_cli_TaskProc, "USB-CLI", STACK_TERMINAL,  &usb_port, PRIO_TERMINAL, &USB_Terminal_TaskHandle);
 		tsk_cli_initVar = 1;
 	}
 }

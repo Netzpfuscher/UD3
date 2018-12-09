@@ -36,6 +36,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
+#include "cli_basic.h"
 #include "stream_buffer.h"    
 
 /* `#END` */

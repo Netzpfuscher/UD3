@@ -24,7 +24,7 @@
 
 #include <device.h>
 #include <math.h>
-#include <stdio.h>
+#include "helper/printf.h"
 
 #include "ZCDtoPWM.h"
 #include "autotune.h"
@@ -68,7 +68,7 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
     freq_str *freq_resp;
     freq_resp = pvPortMalloc(sizeof(freq_str));
     if(freq_resp==NULL){
-        send_string("Malloc failed\r\n", ptr);
+        SEND_CONST_STRING("Malloc failed\r\n", ptr);
         return 0;
     }
 
@@ -79,6 +79,7 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 	uint16 original_freq;
 	uint8 original_lock_cycles;
 	char buffer[100];
+    int ret=0;
 	float current_buffer = 0;
 
 	
@@ -117,10 +118,10 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 			current_buffer += CT1_Get_Current_f(channel);
 		}
 		freq_resp->curr[f] = round(current_buffer / (float)configuration.autotune_s * 10);
-		sprintf(buffer, "Frequency: %i00Hz Current: %4i,%iA     \r", freq_resp->freq[f], freq_resp->curr[f] / 10, freq_resp->curr[f] % 10);
-		send_string(buffer, ptr);
+		ret = snprintf(buffer, sizeof(buffer), "Frequency: %i00Hz Current: %4i,%iA     \r", freq_resp->freq[f], freq_resp->curr[f] / 10, freq_resp->curr[f] % 10);
+		send_buffer((uint8_t*)buffer, ret, ptr);
 	}
-	send_string("\r\n", ptr);
+	SEND_CONST_STRING("\r\n", ptr);
 
 	//restore original frequency
 	configuration.start_freq = original_freq;
@@ -160,11 +161,11 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
     	braille_draw(ptr);
     	for (f = 0; f < PIX_WIDTH / 2; f += 4) {
     		if (!f) {
-    			sprintf(buffer, "%i", freq_resp->freq[f*2]);
-    			send_string(buffer, ptr);
+    			ret = snprintf(buffer, sizeof(buffer), "%i", freq_resp->freq[f*2]);
+    			send_buffer((uint8_t*)buffer, ret, ptr);
     		} else {
-    			sprintf(buffer, "%4i", freq_resp->freq[f*2]);
-    			send_string(buffer, ptr);
+    			ret = snprintf(buffer, sizeof(buffer), "%4i", freq_resp->freq[f*2]);
+    			send_buffer((uint8_t*)buffer, ret, ptr);
     		}
     	}
         braille_free(ptr);
@@ -195,13 +196,13 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
         //Draw text
     	for (f = 0; f < ROWS; f+=8) {
             x_val_1 = f*step_w;
-            sprintf(buffer, "%i,%i", freq_resp->freq[f]/10,freq_resp->freq[f]%10);
+            snprintf(buffer, sizeof(buffer), "%i,%i", freq_resp->freq[f]/10,freq_resp->freq[f]%10);
     		send_chart_text_center(x_val_1+OFFSET_X,OFFSET_Y+TTERM_HEIGHT+20,TT_COLOR_WHITE,8,buffer,ptr);
             send_chart_line(x_val_1+OFFSET_X, TTERM_HEIGHT+OFFSET_Y, x_val_1+OFFSET_X, TTERM_HEIGHT +10+OFFSET_Y, TT_COLOR_WHITE, ptr);
     	}
         f=127;
         x_val_1 = f*step_w;
-        sprintf(buffer, "%i,%i", freq_resp->freq[f]/10,freq_resp->freq[f]%10);
+        snprintf(buffer, sizeof(buffer), "%i,%i", freq_resp->freq[f]/10,freq_resp->freq[f]%10);
     	send_chart_text_center(x_val_1+OFFSET_X,OFFSET_Y+TTERM_HEIGHT+20,TT_COLOR_WHITE,8,buffer,ptr);
         send_chart_line(x_val_1+OFFSET_X, TTERM_HEIGHT+OFFSET_Y, x_val_1+OFFSET_X, TTERM_HEIGHT +10+OFFSET_Y, TT_COLOR_WHITE, ptr);
         x_val_1+=15;
@@ -209,8 +210,8 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 
     }
     
-	sprintf(buffer, "\r\nFound Peak at: %i00Hz\r\n", freq_resp->freq[max_curr_num]);
-	send_string(buffer, ptr);
+	ret = snprintf(buffer, sizeof(buffer), "\r\nFound Peak at: %i00Hz\r\n", freq_resp->freq[max_curr_num]);
+	send_buffer((uint8_t*)buffer, ret, ptr);
     uint16_t temp = freq_resp->freq[max_curr_num];
     vPortFree(freq_resp);
     return temp;

@@ -46,9 +46,12 @@
 #include "tsk_analog.h"
 #include "tsk_uart.h"
 #include <project.h>
-#include <stdio.h>
+#include "helper/printf.h"
 #include "ZCDtoPWM.h"
 #include "cli_basic.h"
+
+
+
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */
@@ -71,66 +74,67 @@ void show_overlay_100ms(port_str *ptr) {
 
     if(ptr->term_mode == PORT_TERM_VT100){
         char buffer[50];
+        int ret=0;
     	Term_Save_Cursor(ptr);
-    	send_string("\033[?25l", ptr);
+    	SEND_CONST_STRING("\033[?25l", ptr);
 
     	uint8_t row_pos = 1;
     	uint8_t col_pos = 90;
     	//Term_Erase_Screen(ptr);
     	Term_Box(row_pos, col_pos, row_pos + 11, col_pos + 25, ptr);
     	Term_Move_Cursor(row_pos + 1, col_pos + 1, ptr);
-    	sprintf(buffer, "Bus Voltage:       %4iV", telemetry.bus_v);
-    	send_string(buffer, ptr);
+    	ret = snprintf(buffer, sizeof(buffer), "Bus Voltage:       %4iV", telemetry.bus_v);
+        send_buffer((uint8_t*)buffer,ret,ptr);
 
     	Term_Move_Cursor(row_pos + 2, col_pos + 1, ptr);
-    	sprintf(buffer, "Battery Voltage:   %4iV", telemetry.batt_v);
-    	send_string(buffer, ptr);
+    	ret = snprintf(buffer, sizeof(buffer), "Battery Voltage:   %4iV", telemetry.batt_v);
+        send_buffer((uint8_t*)buffer,ret,ptr);
 
     	Term_Move_Cursor(row_pos + 3, col_pos + 1, ptr);
-    	sprintf(buffer, "Temp 1:          %4i *C", telemetry.temp1);
-    	send_string(buffer, ptr);
+    	ret = snprintf(buffer, sizeof(buffer), "Temp 1:          %4i *C", telemetry.temp1);
+        send_buffer((uint8_t*)buffer,ret,ptr);
 
     	Term_Move_Cursor(row_pos + 4, col_pos + 1, ptr);
-    	sprintf(buffer, "Temp 2:          %4i *C", telemetry.temp2);
-    	send_string(buffer, ptr);
+    	ret = snprintf(buffer, sizeof(buffer), "Temp 2:          %4i *C", telemetry.temp2);
+        send_buffer((uint8_t*)buffer,ret,ptr);
 
     	Term_Move_Cursor(row_pos + 5, col_pos + 1, ptr);
-    	send_string("Bus status: ", ptr);
+        SEND_CONST_STRING("Bus status: ", ptr);
 
     	switch (telemetry.bus_status) {
     	case BUS_READY:
-    		send_string("       Ready", ptr);
+            SEND_CONST_STRING("       Ready", ptr);
     		break;
     	case BUS_CHARGING:
-    		send_string("    Charging", ptr);
+            SEND_CONST_STRING("    Charging", ptr);
     		break;
     	case BUS_OFF:
-    		send_string("         OFF", ptr);
+            SEND_CONST_STRING("         OFF", ptr);
     		break;
     	}
 
     	Term_Move_Cursor(row_pos + 6, col_pos + 1, ptr);
-    	sprintf(buffer, "Average power:     %4iW", telemetry.avg_power);
-    	send_string(buffer, ptr);
+    	ret = snprintf(buffer, sizeof(buffer), "Average power:     %4iW", telemetry.avg_power);
+        send_buffer((uint8_t*)buffer,ret,ptr);
 
     	Term_Move_Cursor(row_pos + 7, col_pos + 1, ptr);
-    	sprintf(buffer, "Average Current: %4i.%iA", telemetry.batt_i / 10, telemetry.batt_i % 10);
-    	send_string(buffer, ptr);
+    	ret = snprintf(buffer, sizeof(buffer), "Average Current: %4i.%iA", telemetry.batt_i / 10, telemetry.batt_i % 10);
+        send_buffer((uint8_t*)buffer,ret,ptr);
 
     	Term_Move_Cursor(row_pos + 8, col_pos + 1, ptr);
-    	sprintf(buffer, "Primary Current:   %4iA", telemetry.primary_i);
-    	send_string(buffer, ptr);
+    	ret = snprintf(buffer, sizeof(buffer), "Primary Current:   %4iA", telemetry.primary_i);
+        send_buffer((uint8_t*)buffer,ret,ptr);
         
         Term_Move_Cursor(row_pos + 9, col_pos + 1, ptr);
-    	sprintf(buffer, "MIDI voices:         %1i/4", telemetry.midi_voices);
-    	send_string(buffer, ptr);
+    	ret = snprintf(buffer, sizeof(buffer), "MIDI voices:         %1i/4", telemetry.midi_voices);
+        send_buffer((uint8_t*)buffer,ret,ptr);
         
         Term_Move_Cursor(row_pos + 10, col_pos + 1, ptr);
-    	sprintf(buffer, "DAC Value:           %3i", ct1_dac_val[0]);
-    	send_string(buffer, ptr);
+    	ret = snprintf(buffer, sizeof(buffer), "DAC Value:           %3i", ct1_dac_val[0]);
+        send_buffer((uint8_t*)buffer,ret,ptr);
 
     	Term_Restore_Cursor(ptr);
-    	send_string("\033[?25h", ptr);
+    	SEND_CONST_STRING("\033[?25h", ptr);
     
     }else{
         #if GAUGE0_SLOW==0

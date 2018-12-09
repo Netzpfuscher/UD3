@@ -43,7 +43,6 @@ uint8 tsk_eth_initVar = 0u;
 #include "tsk_midi.h"
 #include "tsk_cli.h"
 #include "tsk_priority.h"
-#include <stdio.h>
 #include "telemetry.h"
 #include "ETH.h"
 
@@ -223,6 +222,7 @@ void process_sid(uint8_t* ptr, uint16_t len) {
     }
 }
 
+
 uint8_t stop[1] = {'x'};
 uint8_t start[1] = {'o'};
 
@@ -282,8 +282,8 @@ void tsk_eth_TaskProc(void *pvParameters) {
     SPIM0_Start();
     uint8_t ret;
     if(strcmp(configuration.ip_addr,"NULL")){
-        ret= ETH_StartEx(configuration.ip_gw,configuration.ip_subnet,"58:E9:40:31:CB:9B",configuration.ip_addr);
-        //ret= ETH_StartEx(configuration.ip_gw,configuration.ip_subnet,configuration.ip_mac,configuration.ip_addr);
+        //ret= ETH_StartEx(configuration.ip_gw,configuration.ip_subnet,"58:E9:40:31:CB:9B",configuration.ip_addr);
+        ret= ETH_StartEx(configuration.ip_gw,configuration.ip_subnet,configuration.ip_mac,configuration.ip_addr);
         
     }else{
         ret=CYRET_TIMEOUT;
@@ -310,12 +310,8 @@ void tsk_eth_TaskProc(void *pvParameters) {
         for(uint8_t i=0;i<NUM_ETH_CON;i++){
             if (cli_socket[i] != 0xFF) {
     			cli_socket_state[i] = ETH_TcpPollSocket(cli_socket[i]);
-
+                
     			if (cli_socket_state[i] == ETH_SR_ESTABLISHED) {
-                    /*
-                    if(ETH_Terminal_TaskHandle[i]==NULL){
-                        xTaskCreate(tsk_cli_TaskProc, "ETH-CLI", 576, (void *)port_const[i], PRIO_TERMINAL, &ETH_Terminal_TaskHandle[i]);
-                    }*/
                     if(cli_socket_state[i] != cli_socket_state_old[i]){
                         command_cls("",&eth_port[i]);
                         send_string(":>", &eth_port[i]);
@@ -336,14 +332,10 @@ void tsk_eth_TaskProc(void *pvParameters) {
                     }
     			}
     			else if (cli_socket_state[i] != ETH_SR_LISTEN) {
-    				ETH_SocketClose(cli_socket[i],1);
+                    ETH_SocketClose(cli_socket[i],1);
                     eth_port[i].term_mode = PORT_TERM_VT100;    
                     stop_overlay_task(&eth_port[i]);
-    				cli_socket[i] = 0xFF;/*
-                    if(ETH_Terminal_TaskHandle[i]!=NULL){
-                        vTaskDelete(ETH_Terminal_TaskHandle[i]);
-                        ETH_Terminal_TaskHandle[i]=NULL;
-                    }*/
+    				cli_socket[i] = 0xFF;
     			}
                 cli_socket_state_old[i] = cli_socket_state[i];
     		}

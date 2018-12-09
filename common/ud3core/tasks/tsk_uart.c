@@ -45,7 +45,6 @@ xSemaphoreHandle tx_Semaphore;
 #include "cli_common.h"
 #include "tsk_midi.h"
 #include "tsk_priority.h"
-#include <stdio.h>
 
 volatile uint8_t midi_count = 0;
 volatile uint8_t midiMsg[3];
@@ -97,7 +96,7 @@ CY_ISR(isr_uart_rx) {
 				}
 			}
 
-			USBMIDI_1_callbackLocalMidiEvent(0, midiMsg);
+			USBMIDI_1_callbackLocalMidiEvent(0, (uint8_t*)midiMsg);
 			break;
 		}
 	end:;

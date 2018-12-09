@@ -71,6 +71,8 @@ uint8 tsk_midi_initVar = 0u;
 // n = 300000 / f, n / 2 = 150000 / f
 #define FREQ_HALFCOUNT(f) ((int16)floor(150000.0 / (f)))
 
+const uint8_t kill_msg[3] = {0xb0, 0x77, 0x00};
+
 typedef struct __note__ {
 	uint8 command;
 	uint8 midich;

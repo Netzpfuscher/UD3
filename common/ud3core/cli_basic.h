@@ -27,6 +27,8 @@
 
 #define CYDEV_EE_SIZE 0x00000800u
 #define CY_EEPROM_SIZE              (CYDEV_EE_SIZE)
+    
+#define SEND_CONST_STRING(string,port) send_buffer((uint8_t*)string,strlen(string),port);
 
 
 #define NUM_CON (NUM_ETH_CON+3)

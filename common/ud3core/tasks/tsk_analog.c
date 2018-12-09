@@ -55,7 +55,6 @@ xQueueHandle adc_data;
 #include "tsk_priority.h"
 #include "tsk_midi.h"
 #include <device.h>
-#include <stdio.h>
 
 /* Defines for MUX_DMA */
 #define MUX_DMA_BYTES_PER_BURST 1

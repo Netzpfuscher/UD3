@@ -50,6 +50,9 @@ void update_midi_duty();
 void switch_synth(uint8_t synth);
 
 extern xQueueHandle qSID;
+
+extern const uint8_t kill_msg[3];
+
 struct sid_f{
     uint16_t freq[3];
     uint16_t half[3];

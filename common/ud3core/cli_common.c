@@ -33,9 +33,7 @@
 #include <math.h>
 #include <project.h>
 #include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "helper/printf.h"
 
 #include "cyapicallbacks.h"
 #include <cytypes.h>
@@ -54,8 +52,6 @@
 		(void)(N);         \
 	} while (0)
         
-#define EEPROM_READ_BYTE(x) EEPROM_1_ReadByte(x)
-#define EEPROM_WRITE_ROW(x,y) EEPROM_1_Write(y,x)
 
 #define SKIP_SPACE(ptr) 	if (*ptr == 0x20 && ptr != 0) ptr++ //skip space
 #define HELP_TEXT(text)        \
@@ -65,19 +61,11 @@
 		Term_Color_White(ptr);     \
 		return 1;}                  \
 	
-
-
-
 typedef struct {
 	const char *text;
 	uint8_t (*commandFunction)(char *commandline, port_str *ptr);
 	const char *help;
 } command_entry;
-
-
-
-
-
 
 uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, port_str *ptr);
@@ -105,8 +93,9 @@ uint8_t command_tterm(char *commandline, port_str *ptr);
 uint8_t command_reset(char *commandline, port_str *ptr);
 uint8_t command_minstat(char *commandline, port_str *ptr);
 uint8_t command_config_get(char *commandline, port_str *ptr);
+uint8_t command_exit(char *commandline, port_str *ptr);
 
-const uint8_t kill_msg[3] = {0xb0, 0x77, 0x00};
+
 
 uint8_t burst_state = 0;
 
@@ -269,7 +258,7 @@ uint8_t callback_OfftimeFunction(parameter_entry * params, uint8_t index, port_s
 ******************************************************************************/
 uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, port_str *ptr) {
     if(param.tune_start >= param.tune_end){
-        send_string("ERROR: tune_start > tune_end", ptr);
+        SEND_CONST_STRING("ERROR: tune_start > tune_end", ptr);
 		return 0;
 	} else
 		return 1;
@@ -343,11 +332,11 @@ uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, port_str
             xBurst_Timer = xTimerCreate("Bust-Tmr", param.burst_on / portTICK_PERIOD_MS, pdFALSE,(void * ) 0, vBurst_Timer_Callback);
             if(xBurst_Timer != NULL){
                 xTimerStart(xBurst_Timer, 0);
-                send_string("Burst Enabled\r\n", ptr);
+                SEND_CONST_STRING("Burst Enabled\r\n", ptr);
                 tr_running=2;
             }else{
                 interrupter.pw = 0;
-                send_string("Cannot create burst Timer\r\n", ptr);
+                SEND_CONST_STRING("Cannot create burst Timer\r\n", ptr);
                 tr_running=0;
             }
         }else if(xBurst_Timer!=NULL && !param.burst_on){
@@ -358,9 +347,9 @@ uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, port_str
                     interrupter.pw =0;
                     update_interrupter();
                     tr_running=1;
-                    send_string("\r\nBurst Disabled\r\n", ptr);    
+                    SEND_CONST_STRING("\r\nBurst Disabled\r\n", ptr);    
                 }else{
-                    send_string("Cannot delete burst Timer\r\n", ptr);
+                    SEND_CONST_STRING("Cannot delete burst Timer\r\n", ptr);
                     burst_state = BURST_ON;
                 }
             }
@@ -372,9 +361,9 @@ uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, port_str
                     interrupter.pw =param.pw;
                     update_interrupter();
                     tr_running=1;
-                    send_string("\r\nBurst Disabled\r\n", ptr);    
+                    SEND_CONST_STRING("\r\nBurst Disabled\r\n", ptr);    
                 }else{
-                    send_string("Cannot delete burst Timer\r\n", ptr);
+                    SEND_CONST_STRING("Cannot delete burst Timer\r\n", ptr);
                     burst_state = BURST_ON;
                 }
             }
@@ -415,11 +404,11 @@ uint8_t command_bus(char *commandline, port_str *ptr) {
 
 	if (ntlibc_stricmp(commandline, "on") == 0) {
 		bus_command = BUS_COMMAND_ON;
-		send_string("BUS ON\r\n", ptr);
+		SEND_CONST_STRING("BUS ON\r\n", ptr);
 	}
 	if (ntlibc_stricmp(commandline, "off") == 0) {
 		bus_command = BUS_COMMAND_OFF;
-		send_string("BUS OFF\r\n", ptr);
+		SEND_CONST_STRING("BUS OFF\r\n", ptr);
 	}
 
 	return 1;
@@ -429,7 +418,7 @@ uint8_t command_bus(char *commandline, port_str *ptr) {
 * Loads the default parametes out of flash
 ******************************************************************************/
 uint8_t command_load_default(char *commandline, port_str *ptr) {
-    send_string("Default parameters loaded\r\n", ptr);
+    SEND_CONST_STRING("Default parameters loaded\r\n", ptr);
     init_config();
     return 1;
 }
@@ -560,13 +549,13 @@ uint8_t command_tterm(char *commandline, port_str *ptr){
 uint8_t command_cls(char *commandline, port_str *ptr) {
     tsk_overlay_chart_start();
 	Term_Erase_Screen(ptr);
-    send_string("  _   _   ___    ____    _____              _\r\n",ptr);
-    send_string(" | | | | |   \\  |__ /   |_   _|  ___   ___ | |  __ _\r\n",ptr);
-    send_string(" | |_| | | |) |  |_ \\     | |   / -_) (_-< | | / _` |\r\n",ptr);
-    send_string("  \\___/  |___/  |___/     |_|   \\___| /__/ |_| \\__,_|\r\n\r\n",ptr);
-    send_string("\tCoil: ",ptr);
+    SEND_CONST_STRING("  _   _   ___    ____    _____              _\r\n",ptr);
+    SEND_CONST_STRING(" | | | | |   \\  |__ /   |_   _|  ___   ___ | |  __ _\r\n",ptr);
+    SEND_CONST_STRING(" | |_| | | |) |  |_ \\     | |   / -_) (_-< | | / _` |\r\n",ptr);
+    SEND_CONST_STRING("  \\___/  |___/  |___/     |_|   \\___| /__/ |_| \\__,_|\r\n\r\n",ptr);
+    SEND_CONST_STRING("\tCoil: ",ptr);
     send_string(configuration.ud_name,ptr);
-    send_string("\r\n\r\n",ptr);
+    SEND_CONST_STRING("\r\n\r\n",ptr);
 	return 1;
 }
 
@@ -575,21 +564,22 @@ uint8_t command_cls(char *commandline, port_str *ptr) {
 ******************************************************************************/
 uint8_t command_minstat(char *commandline, port_str *ptr){
     char buffer[60];
-    sprintf(buffer,"Dropped frames        : %lu\r\n",telemetry.dropped_frames);
-    send_string(buffer,ptr);
-    sprintf(buffer,"Spurious acks         : %lu\r\n",telemetry.spurious_acks);
-    send_string(buffer,ptr);
-    sprintf(buffer,"Resets received       : %lu\r\n",telemetry.resets_received);
-    send_string(buffer,ptr);
-    sprintf(buffer,"Sequence mismatch drop: %lu\r\n",telemetry.sequence_mismatch_drop);
-    send_string(buffer,ptr);
-    sprintf(buffer,"Max frames in buffer  : %u\r\n",telemetry.min_frames_max);
-    send_string(buffer,ptr); 
+    int ret=0;
+    ret = snprintf(buffer, sizeof(buffer),"Dropped frames        : %lu\r\n",telemetry.dropped_frames);
+    send_buffer((uint8_t*)buffer,ret,ptr);
+    ret = snprintf(buffer, sizeof(buffer),"Spurious acks         : %lu\r\n",telemetry.spurious_acks);
+    send_buffer((uint8_t*)buffer,ret,ptr);
+    ret = snprintf(buffer, sizeof(buffer),"Resets received       : %lu\r\n",telemetry.resets_received);
+    send_buffer((uint8_t*)buffer,ret,ptr);
+    ret = snprintf(buffer, sizeof(buffer),"Sequence mismatch drop: %lu\r\n",telemetry.sequence_mismatch_drop);
+    send_buffer((uint8_t*)buffer,ret,ptr);
+    ret = snprintf(buffer, sizeof(buffer),"Max frames in buffer  : %u\r\n",telemetry.min_frames_max);
+    send_buffer((uint8_t*)buffer,ret,ptr);
     return 1; 
 }
 
 /*****************************************************************************
-* Sends the configuration
+* Sends the configuration to teslaterm
 ******************************************************************************/
 uint8_t command_config_get(char *commandline, port_str *ptr){
     char buffer[80];
@@ -628,7 +618,7 @@ uint8_t command_tr(char *commandline, port_str *ptr) {
         
         callback_BurstFunction(NULL, 0, ptr);
         
-		send_string("Transient Enabled\r\n", ptr);
+		SEND_CONST_STRING("Transient Enabled\r\n", ptr);
        
         return 0;
 	}
@@ -636,7 +626,7 @@ uint8_t command_tr(char *commandline, port_str *ptr) {
         interrupter.pw = 0;
 		update_interrupter();
      
-        send_string("\r\nTransient Disabled\r\n", ptr);    
+        SEND_CONST_STRING("\r\nTransient Disabled\r\n", ptr);    
  
 		interrupter.pw = 0;
 		update_interrupter();
@@ -673,16 +663,16 @@ uint8_t command_qcw(char *commandline, port_str *ptr) {
                 xQCW_Timer = xTimerCreate("QCW-Tmr", param.qcw_repeat / portTICK_PERIOD_MS, pdFALSE,(void * ) 0, vQCW_Timer_Callback);
                 if(xQCW_Timer != NULL){
                     xTimerStart(xQCW_Timer, 0);
-                    send_string("QCW Enabled\r\n", ptr);
+                    SEND_CONST_STRING("QCW Enabled\r\n", ptr);
                 }else{
-                    send_string("Cannot create QCW Timer\r\n", ptr);
+                    SEND_CONST_STRING("Cannot create QCW Timer\r\n", ptr);
                 }
             }
         }else{
 		    ramp.modulation_value = 20;
             qcw_reg = 1;
 		    ramp_control();
-            send_string("QCW single shot\r\n", ptr);
+            SEND_CONST_STRING("QCW single shot\r\n", ptr);
         }
 		
 		return 0;
@@ -692,12 +682,12 @@ uint8_t command_qcw(char *commandline, port_str *ptr) {
 				if(xTimerDelete(xQCW_Timer, 200 / portTICK_PERIOD_MS) != pdFALSE){
 				    xQCW_Timer = NULL;
                 } else {
-                    send_string("Cannot delete QCW Timer\r\n", ptr);
+                    SEND_CONST_STRING("Cannot delete QCW Timer\r\n", ptr);
                 }
 		}
         QCW_enable_Control = 0;
         qcw_reg = 0;
-		send_string("QCW Disabled\r\n", ptr);
+		SEND_CONST_STRING("QCW Disabled\r\n", ptr);
 		return 0;
 	}
 	return 1;
@@ -724,12 +714,12 @@ uint8_t command_udkill(char *commandline, port_str *ptr) {
     	interrupter1_control_Control = 0;
     	QCW_enable_Control = 0;
     	Term_Color_Green(ptr);
-    	send_string("Killbit set\r\n", ptr);
+    	SEND_CONST_STRING("Killbit set\r\n", ptr);
     	Term_Color_White(ptr);
     }else if (ntlibc_stricmp(commandline, "reset") == 0) {
         interrupter_unkill();
         Term_Color_Green(ptr);
-    	send_string("Killbit reset\r\n", ptr);
+    	SEND_CONST_STRING("Killbit reset\r\n", ptr);
     	Term_Color_White(ptr);
         return 1;
     }else if (ntlibc_stricmp(commandline, "get") == 0) {
@@ -777,22 +767,22 @@ uint8_t command_tasks(char *commandline, port_str *ptr) {
     #if configUSE_STATS_FORMATTING_FUNCTIONS && configUSE_TRACE_FACILITY && configGENERATE_RUN_TIME_STATS
         char * buff = pvPortMalloc(sizeof(char)* 40 * uxTaskGetNumberOfTasks());
         if(buff == NULL){
-            send_string("Malloc failed\r\n", ptr);
+            SEND_CONST_STRING("Malloc failed\r\n", ptr);
             return 0;
         }
         
-	    send_string("**********************************************\n\r", ptr);
-	    send_string("Task            State   Prio    Stack    Num\n\r", ptr);
-	    send_string("**********************************************\n\r", ptr);
+	    SEND_CONST_STRING("**********************************************\n\r", ptr);
+	    SEND_CONST_STRING("Task            State   Prio    Stack    Num\n\r", ptr);
+	    SEND_CONST_STRING("**********************************************\n\r", ptr);
 	    vTaskList(buff);
 	    send_string(buff, ptr);
-	    send_string("**********************************************\n\r\n\r", ptr);
-        send_string("**********************************************\n\r", ptr);
-	    send_string("Task            Abs time        % time\n\r", ptr);
-	    send_string("**********************************************\n\r", ptr);
+	    SEND_CONST_STRING("**********************************************\n\r\n\r", ptr);
+        SEND_CONST_STRING("**********************************************\n\r", ptr);
+	    SEND_CONST_STRING("Task            Abs time        % time\n\r", ptr);
+	    SEND_CONST_STRING("**********************************************\n\r", ptr);
         vTaskGetRunTimeStats( buff );
         send_string(buff, ptr);
-        send_string("**********************************************\n\r\r\n", ptr);
+        SEND_CONST_STRING("**********************************************\n\r\r\n", ptr);
         sprintf(buff, "Free heap: %d\r\n",xPortGetFreeHeapSize());
         send_string(buff,ptr);
         vPortFree(buff);
@@ -800,7 +790,7 @@ uint8_t command_tasks(char *commandline, port_str *ptr) {
     #endif
     
     #if !configUSE_STATS_FORMATTING_FUNCTIONS && !configUSE_TRACE_FACILITY
-	    send_string("Taskinfo not active, activate it in FreeRTOSConfig.h\n\r", port);
+	    SEND_CONST_STRING("Taskinfo not active, activate it in FreeRTOSConfig.h\n\r", port);
         return 0;
 	#endif
     
@@ -824,13 +814,13 @@ uint8_t command_get(char *commandline, port_str *ptr) {
 
 	for (current_parameter = 0; current_parameter < sizeof(confparam) / sizeof(parameter_entry); current_parameter++) {
 		if (ntlibc_stricmp(commandline, confparam[current_parameter].name) == 0) {
-			//Parameter not found:
+			//Parameter found:
 			print_param(confparam,current_parameter,ptr);
 			return 1;
 		}
 	}
 	Term_Color_Red(ptr);
-	send_string("E: unknown param\r\n", ptr);
+	SEND_CONST_STRING("E: unknown param\r\n", ptr);
 	Term_Color_White(ptr);
 	return 0;
 }
@@ -845,7 +835,7 @@ uint8_t command_set(char *commandline, port_str *ptr) {
 	if (commandline == NULL) {
 		//if (!port)
 		Term_Color_Red(ptr);
-		send_string("E: no name\r\n", ptr);
+		SEND_CONST_STRING("E: no name\r\n", ptr);
 		Term_Color_White(ptr);
 		return 0;
 	}
@@ -853,7 +843,7 @@ uint8_t command_set(char *commandline, port_str *ptr) {
 	param_value = strchr(commandline, ' ');
 	if (param_value == NULL) {
 		Term_Color_Red(ptr);
-		send_string("E: no value\r\n", ptr);
+		SEND_CONST_STRING("E: no value\r\n", ptr);
 		Term_Color_White(ptr);
 		return 0;
 	}
@@ -863,7 +853,7 @@ uint8_t command_set(char *commandline, port_str *ptr) {
 
 	if (*param_value == '\0') {
 		Term_Color_Red(ptr);
-		send_string("E: no val\r\n", ptr);
+		SEND_CONST_STRING("E: no val\r\n", ptr);
 		Term_Color_White(ptr);
 		return 0;
 	}
@@ -877,31 +867,31 @@ uint8_t command_set(char *commandline, port_str *ptr) {
                 if(confparam[current_parameter].callback_function){
                     if (confparam[current_parameter].callback_function(confparam, current_parameter, ptr)){
                         Term_Color_Green(ptr);
-                        send_string("OK\r\n", ptr);
+                        SEND_CONST_STRING("OK\r\n", ptr);
                         Term_Color_White(ptr);
                         return 1;
                     }else{
                         Term_Color_Red(ptr);
-                        send_string("ERROR: Callback\r\n", ptr);
+                        SEND_CONST_STRING("ERROR: Callback\r\n", ptr);
                         Term_Color_White(ptr);
                         return 1;
                     }
                 }else{
                     Term_Color_Green(ptr);
-                    send_string("OK\r\n", ptr);
+                    SEND_CONST_STRING("OK\r\n", ptr);
                     Term_Color_White(ptr);
                     return 1;
                 }
 			} else {
 				Term_Color_Red(ptr);
-				send_string("NOK\r\n", ptr);
+				SEND_CONST_STRING("NOK\r\n", ptr);
 				Term_Color_White(ptr);
 				return 1;
 			}
 		}
 	}
 	Term_Color_Red(ptr);
-	send_string("E: unknown param\r\n", ptr);
+	SEND_CONST_STRING("E: unknown param\r\n", ptr);
 	Term_Color_White(ptr);
 	return 0;
 }
@@ -947,54 +937,54 @@ uint8_t command_eprom(char *commandline, port_str *ptr) {
 uint8_t command_help(char *commandline, port_str *ptr) {
 	UNUSED_VARIABLE(commandline);
 	uint8_t current_command;
-	send_string("\r\nCommands:\r\n", ptr);
+	SEND_CONST_STRING("\r\nCommands:\r\n", ptr);
 	for (current_command = 0; current_command < (sizeof(commands) / sizeof(command_entry)); current_command++) {
-		send_string("\t", ptr);
+		SEND_CONST_STRING("\t", ptr);
 		Term_Color_Cyan(ptr);
 		send_string((char *)commands[current_command].text, ptr);
 		Term_Color_White(ptr);
 		if (strlen(commands[current_command].text) > 7) {
-			send_string("\t-> ", ptr);
+			SEND_CONST_STRING("\t-> ", ptr);
 		} else {
-			send_string("\t\t-> ", ptr);
+			SEND_CONST_STRING("\t\t-> ", ptr);
 		}
 		send_string((char *)commands[current_command].help, ptr);
-		send_string("\r\n", ptr);
+		SEND_CONST_STRING("\r\n", ptr);
 	}
 
-	send_string("\r\nParameters:\r\n", ptr);
+	SEND_CONST_STRING("\r\nParameters:\r\n", ptr);
 	for (current_command = 0; current_command < sizeof(confparam) / sizeof(parameter_entry); current_command++) {
         if(confparam[current_command].parameter_type == PARAM_DEFAULT){
-            send_string("\t", ptr);
+            SEND_CONST_STRING("\t", ptr);
             Term_Color_Cyan(ptr);
             send_string((char *)confparam[current_command].name, ptr);
             Term_Color_White(ptr);
             if (strlen(confparam[current_command].name) > 7) {
-                send_string("\t-> ", ptr);
+                SEND_CONST_STRING("\t-> ", ptr);
             } else {
-                send_string("\t\t-> ", ptr);
+                SEND_CONST_STRING("\t\t-> ", ptr);
             }
 
             send_string((char *)confparam[current_command].help, ptr);
-            send_string("\r\n", ptr);
+            SEND_CONST_STRING("\r\n", ptr);
         }
 	}
 
-	send_string("\r\nConfiguration:\r\n", ptr);
+	SEND_CONST_STRING("\r\nConfiguration:\r\n", ptr);
 	for (current_command = 0; current_command < sizeof(confparam) / sizeof(parameter_entry); current_command++) {
         if(confparam[current_command].parameter_type == PARAM_CONFIG){
-            send_string("\t", ptr);
+            SEND_CONST_STRING("\t", ptr);
             Term_Color_Cyan(ptr);
             send_string((char *)confparam[current_command].name, ptr);
             Term_Color_White(ptr);
             if (strlen(confparam[current_command].name) > 7) {
-                send_string("\t-> ", ptr);
+                SEND_CONST_STRING("\t-> ", ptr);
             } else {
-                send_string("\t\t-> ", ptr);
+                SEND_CONST_STRING("\t\t-> ", ptr);
             }
 
             send_string((char *)confparam[current_command].help, ptr);
-            send_string("\r\n", ptr);
+            SEND_CONST_STRING("\r\n", ptr);
         }
 	}
 
@@ -1034,9 +1024,9 @@ void nt_interpret(char *text, port_str *ptr) {
  
 	if (*text) {
 		Term_Color_Red(ptr);
-		send_string("Unknown Command: ", ptr);
+		SEND_CONST_STRING("Unknown Command: ", ptr);
 		send_string(text, ptr);
-		send_string("\r\n", ptr);
+		SEND_CONST_STRING("\r\n", ptr);
 		Term_Color_White(ptr);
 	}
 }

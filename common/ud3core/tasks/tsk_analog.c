@@ -88,7 +88,6 @@ typedef struct
 int16 ADC_sample[4];
 uint16 ADC_sample_buf[4];
 rms_t current_idc;
-uint32_t average_power;
 uint8_t ADC_mux_ctl[4] = {0x05, 0x02, 0x03, 0x00};
 
 /* `#END` */
@@ -101,11 +100,10 @@ uint8_t ADC_mux_ctl[4] = {0x05, 0x02, 0x03, 0x00};
 /* `#START USER_TASK_LOCAL_CODE` */
 
 CY_ISR(ADC_data_ready_ISR) {
-	if (adc_data != NULL) {
-		xQueueSendFromISR(adc_data, ADC_sample_buf, NULL);
-	}
+	
+    xQueueSendFromISR(adc_data, ADC_sample_buf, NULL);
 
-	if (uxQueueMessagesWaitingFromISR(adc_data) > 25) {
+    if (uxQueueMessagesWaitingFromISR(adc_data) > 25) {
 		xSemaphoreGiveFromISR(adc_ready_Semaphore, NULL);
 	}
 }
@@ -256,7 +254,6 @@ void initialize_analogs(void) {
 	CT_MUX_Select(CT_PRIMARY);
 
 	init_rms_filter(&current_idc, INITIAL);
-	init_average_filter(&average_power, INITIAL);
     
     ADC_Start();
 }
@@ -275,7 +272,7 @@ void tsk_analog_TaskProc(void *pvParameters) {
 	 */
 	/* `#START TASK_VARIABLES` */
 
-	adc_data = xQueueCreate(256, sizeof(ADC_sample));
+	adc_data = xQueueCreate(128, sizeof(ADC_sample));
 
 	/* `#END` */
 

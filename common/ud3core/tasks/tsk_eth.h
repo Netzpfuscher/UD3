@@ -48,8 +48,6 @@ void tsk_eth_Start(void);
 StreamBufferHandle_t xETH_rx[NUM_ETH_CON];
 StreamBufferHandle_t xETH_tx[NUM_ETH_CON];
 
-extern const uint32_t port_const[8];
-
 
 /*
  * Add user function prototypes in the below merge region to add user

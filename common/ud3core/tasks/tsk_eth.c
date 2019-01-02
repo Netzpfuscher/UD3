@@ -59,7 +59,7 @@ uint8 tsk_eth_initVar = 0u;
 
 
 #define STREAMBUFFER_RX_SIZE    256     //bytes
-#define STREAMBUFFER_TX_SIZE    1024    //bytes
+#define STREAMBUFFER_TX_SIZE    512    //bytes
 
 #define LOCAL_ETH_BUFFER_SIZE 256
 
@@ -67,8 +67,6 @@ uint8 tsk_eth_initVar = 0u;
 #define PORT_TELNET     23
 #define PORT_MIDI       123
 
-
-const uint32_t port_const[8] = {0,1,2,3,4,5,6,7};
 
 void process_midi(uint8_t* ptr, uint16_t len) {
 	uint8_t c;

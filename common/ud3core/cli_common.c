@@ -790,7 +790,7 @@ uint8_t command_tasks(char *commandline, port_str *ptr) {
     #endif
     
     #if !configUSE_STATS_FORMATTING_FUNCTIONS && !configUSE_TRACE_FACILITY
-	    SEND_CONST_STRING("Taskinfo not active, activate it in FreeRTOSConfig.h\n\r", port);
+	    SEND_CONST_STRING("Taskinfo not active, activate it in FreeRTOSConfig.h\n\r", ptr);
         return 0;
 	#endif
     

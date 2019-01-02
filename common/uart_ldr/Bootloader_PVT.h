@@ -29,8 +29,8 @@ typedef struct
 
 
 #define Bootloader_VERSION        {\
-                                            (uint8)60, \
-                                            (uint8)1, \
+                                            (uint8)0, \
+                                            (uint8)2, \
                                             (uint8)0x01u \
                                         }
 

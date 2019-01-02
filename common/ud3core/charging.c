@@ -78,7 +78,6 @@ void control_precharge(void) { //this gets called from analogs.c when the ADC da
 				}
 			}
 		}
-
 		else if (configuration.ps_scheme == BAT_BOOST_BUS_SCHEME) {
 			if (telemetry.bus_v < (configuration.slr_vbus - 15)) {
 				SLR_Control = 1;
@@ -99,7 +98,6 @@ void control_precharge(void) { //this gets called from analogs.c when the ADC da
 				}
 			}
 		}
-
 		else if (configuration.ps_scheme == AC_PRECHARGE_BUS_SCHEME) {
 			//we cant know the AC line voltage so we will watch the bus voltage climb and infer when its charged by it not increasing fast enough
 			//this logic is part of a charging counter
@@ -120,7 +118,6 @@ void control_precharge(void) { //this gets called from analogs.c when the ADC da
 				charging_counter = 0;
 			}
 		}
-
 		else if (configuration.ps_scheme == AC_OR_BATBOOST_SCHEME) {
 			//this routine determines if the battery or the AC line should be used
 			//first, assume there is mains voltage

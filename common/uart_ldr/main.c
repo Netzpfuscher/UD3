@@ -100,10 +100,10 @@ cli_config configuration;
 * Parameter struct
 ******************************************************************************/
 parameter_entry confparam[] = {
-    ADD_PARAM(PARAM_CONFIG  ,"ip_addr"         , configuration.ip_addr         , TYPE_STRING   ,0      ,0 ,0     ,NULL                        ,"")
-    ADD_PARAM(PARAM_CONFIG  ,"ip_gateway"      , configuration.ip_gw           , TYPE_STRING   ,0      ,0 ,0     ,NULL                        ,"")
-    ADD_PARAM(PARAM_CONFIG  ,"ip_subnet"       , configuration.ip_subnet       , TYPE_STRING   ,0      ,0 ,0     ,NULL                        ,"")
-    ADD_PARAM(PARAM_CONFIG  ,"ip_mac"          , configuration.ip_mac          , TYPE_STRING   ,0      ,0  ,0    ,NULL                        ,"")
+    ADD_PARAM(PARAM_CONFIG  ,"ip_addr"         , configuration.ip_addr         , TYPE_STRING)
+    ADD_PARAM(PARAM_CONFIG  ,"ip_gateway"      , configuration.ip_gw           , TYPE_STRING)
+    ADD_PARAM(PARAM_CONFIG  ,"ip_subnet"       , configuration.ip_subnet       , TYPE_STRING)
+    ADD_PARAM(PARAM_CONFIG  ,"ip_mac"          , configuration.ip_mac          , TYPE_STRING)
 };
 
 int main()
@@ -116,8 +116,6 @@ int main()
     EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,NONE); 
     if(ETH_StartEx(configuration.ip_gw, configuration.ip_subnet, configuration.ip_mac, configuration.ip_addr)==CYRET_SUCCESS){
         com_type=ETH;   
-        
-        
     }else{
         com_type=SERIAL;
     }

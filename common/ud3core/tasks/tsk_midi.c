@@ -27,8 +27,6 @@
 
 #include "tsk_midi.h"
 
-#include "helper/fifo.h"
-
 xTaskHandle tsk_midi_TaskHandle;
 uint8 tsk_midi_initVar = 0u;
 
@@ -46,7 +44,6 @@ uint8 tsk_midi_initVar = 0u;
 #include "telemetry.h"
 #include <device.h>
 #include <math.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 #define PITCHBEND_ZEROBIAS (0x2000)

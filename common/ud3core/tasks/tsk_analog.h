@@ -40,6 +40,7 @@
 void tsk_analog_Start(void);
 uint16_t CT1_Get_Current(uint8_t channel);
 float CT1_Get_Current_f(uint8_t channel);
+uint16_t get_max(void);
 
 /*
  * Add user function prototypes in the below merge region to add user

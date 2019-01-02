@@ -5,6 +5,7 @@
 #include "FreeRTOS.h"
 #include "semphr.h"
 
+
 #define PARAM_SIZE(param) sizeof(param) / sizeof(parameter_entry)
 
 #define SIZEP(x) ((char*)(&(x) + 1) - (char*)&(x))
@@ -40,7 +41,6 @@
     
 #define PORT_TERM_VT100  0
 #define PORT_TERM_TT     1
-    
     
 typedef struct port_struct port_str;
 struct port_struct {

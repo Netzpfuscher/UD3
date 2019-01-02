@@ -731,8 +731,8 @@ void send_buffer(uint8_t *data, uint16_t len, port_str *ptr) {
         break;
         case PORT_TYPE_ETH:
             if (xETH_tx[ptr->num] != NULL) {
-            xStreamBufferSend(xETH_tx[ptr->num],data, len,200 /portTICK_RATE_MS);
-		}
+                xStreamBufferSend(xETH_tx[ptr->num],data, len,200 /portTICK_RATE_MS);
+		    }
         break;
     }
 #endif

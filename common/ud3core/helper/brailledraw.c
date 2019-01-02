@@ -39,10 +39,10 @@ struct pix_struct {
 
 pix_str *pix_buffer[PIX_WIDTH / 8];
 
-char out_buffer[4] = {0x00, 0x00, 0x00, 0x00};
+char out_buffer[3] = {0x00, 0x00, 0x00};
 
 void raise_mermory_error(port_str *ptr){
-    send_string("WARNING: NULL pointer malloc failed\r\n", ptr);
+    SEND_CONST_STRING("WARNING: NULL pointer malloc failed\r\n", ptr);
 }
 
 static void set_bytes(char *pbuffer, const unsigned char c) {
@@ -111,10 +111,8 @@ void braille_line(int x0, int y0, int x1, int y1) {
 }
 
 void braille_clear(void) {
-    //if(pix_buffer==NULL) return;
 	for (uint8_t x = 0; x < PIX_WIDTH / 8; x++) {
 		for (uint8_t y = 0; y < PIX_HEIGHT; y++) {
-			//pix_buffer[x][y] = 0x00;
             if(pix_buffer[x]!=NULL)
                 pix_buffer[x]->data[y] = 0x00;
 		}
@@ -122,7 +120,6 @@ void braille_clear(void) {
 }
 
 void braille_draw(port_str *ptr) {
-    //if(pix_buffer==NULL) return;
 	unsigned char byte;
 	for (uint16_t y = 0; y < PIX_HEIGHT; y += 4) {
 		for (uint16_t x = 0; x < PIX_WIDTH / 8; x++) {
@@ -153,9 +150,9 @@ void braille_draw(port_str *ptr) {
 					byte |= 1 << 7;
 
 				set_bytes(out_buffer, byte);
-				send_string(out_buffer, ptr);
+				send_buffer((uint8_t*)out_buffer, sizeof(out_buffer),ptr);
 			}
 		}
-		send_string("\r\n", ptr);
+		SEND_CONST_STRING("\r\n", ptr);
 	}
 }

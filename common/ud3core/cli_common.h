@@ -101,6 +101,9 @@ struct config_struct{
     uint8_t minprot;
     uint16_t max_inst_i;
     uint16_t max_therm_i;
+    uint8_t eth_hw;
+    char ssid[16];
+    char passwd[20];
 };
 typedef struct config_struct cli_config;
 

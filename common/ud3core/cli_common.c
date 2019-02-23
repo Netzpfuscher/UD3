@@ -30,7 +30,6 @@
 #include "ntshell.h"
 #include "ntlibc.h"
 #include "telemetry.h"
-#include <math.h>
 #include <project.h>
 #include <stdint.h>
 #include "helper/printf.h"
@@ -45,6 +44,8 @@
 #include "tasks/tsk_usb.h"
 #include "tasks/tsk_midi.h"
 #include "tasks/tsk_cli.h"
+#include "tasks/tsk_min.h"
+#include "min_id.h"
 #include "helper/teslaterm.h"
 
 #define UNUSED_VARIABLE(N) \
@@ -94,7 +95,7 @@ uint8_t command_reset(char *commandline, port_str *ptr);
 uint8_t command_minstat(char *commandline, port_str *ptr);
 uint8_t command_config_get(char *commandline, port_str *ptr);
 uint8_t command_exit(char *commandline, port_str *ptr);
-
+uint8_t command_ethcon(char *commandline, port_str *ptr);
 
 
 uint8_t burst_state = 0;
@@ -137,14 +138,17 @@ void init_config(){
     configuration.slr_vbus = 200;
     configuration.ps_scheme = 2;
     configuration.autotune_s = 1;
-    strcpy(configuration.ud_name,"UD3-Tesla");
-    strcpy(configuration.ip_addr,"192.168.50.250");
-    strcpy(configuration.ip_subnet,"255.255.255.0");
-    strcpy(configuration.ip_mac,"21:24:5D:AA:68:57");
-    strcpy(configuration.ip_gw,"192.168.50.1");
+    ntlibc_strcpy(configuration.ud_name,"UD3-Tesla");
+    ntlibc_strcpy(configuration.ip_addr,"192.168.50.250");
+    ntlibc_strcpy(configuration.ip_subnet,"255.255.255.0");
+    ntlibc_strcpy(configuration.ip_mac,"21:24:5D:AA:68:57");
+    ntlibc_strcpy(configuration.ip_gw,"192.168.50.1");
+    ntlibc_strcpy(configuration.ssid,"NULL");
+    ntlibc_strcpy(configuration.passwd,"NULL");
     configuration.minprot = 0;
     configuration.max_inst_i = 80;
     configuration.max_therm_i = 16;
+    configuration.eth_hw = 2; //ESP32
     
     param.pw = 0;
     param.pwd = 50000;
@@ -217,6 +221,9 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,"min_enable"      , configuration.minprot         , TYPE_UNSIGNED ,0      ,1      ,0      ,NULL                        ,"Use MIN-Protocol")
     ADD_PARAM(PARAM_CONFIG  ,"max_inst_i"      , configuration.max_inst_i      , TYPE_UNSIGNED ,0      ,1000   ,0      ,NULL                        ,"Maximum instantaneous current [A]")
     ADD_PARAM(PARAM_CONFIG  ,"max_therm_i"     , configuration.max_therm_i     , TYPE_UNSIGNED ,0      ,1000   ,0      ,NULL                        ,"Maximum thermal current [A]")
+    ADD_PARAM(PARAM_CONFIG  ,"eth_hw"          , configuration.eth_hw          , TYPE_UNSIGNED ,0      ,2      ,0      ,NULL                        ,"0=Disabled 1=W5500 2=ESP32")
+    ADD_PARAM(PARAM_CONFIG  ,"ssid"            , configuration.ssid            , TYPE_STRING   ,0      ,0      ,0      ,NULL                        ,"WLAN SSID")
+    ADD_PARAM(PARAM_CONFIG  ,"passwd"          , configuration.passwd          , TYPE_STRING   ,0      ,0      ,0      ,NULL                        ,"WLAN password")
 };
 
 /*****************************************************************************
@@ -241,6 +248,7 @@ command_entry commands[] = {
     ADD_COMMAND("tune_s"	    ,command_tune_s         ,"Autotune Secondary")        
     ADD_COMMAND("tterm"	        ,command_tterm          ,"Changes terminal mode")
     ADD_COMMAND("minstat"	    ,command_minstat        ,"Prints the min statistics")
+    ADD_COMMAND("ethcon"	    ,command_ethcon         ,"Prints the eth connections")
     ADD_COMMAND("config_get"    ,command_config_get     ,"Internal use")
 };
 // clang-format on
@@ -393,6 +401,49 @@ uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, port_st
 uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, port_str *ptr){
     
     return 1;
+}
+
+/*****************************************************************************
+* Prints the ethernet connections
+******************************************************************************/
+uint8_t command_ethcon(char *commandline, port_str *ptr) {
+    SKIP_SPACE(commandline);
+    #define COL_A 9
+    #define COL_B 15
+    char buffer[40];
+    uint8_t ret;
+    SEND_CONST_STRING("Ethernet\r\nIP: ",ptr);
+    send_string(pEth_info[ETH_INFO_ETH]->ip,ptr);
+    SEND_CONST_STRING("\r\nGateway: ",ptr);
+    send_string(pEth_info[ETH_INFO_ETH]->gw,ptr);
+    SEND_CONST_STRING("\r\nDevice info: ",ptr);
+    send_string(pEth_info[ETH_INFO_ETH]->info,ptr);
+    SEND_CONST_STRING("\r\n\nWIFI\r\nIP: ",ptr);
+    send_string(pEth_info[ETH_INFO_WIFI]->ip,ptr);
+    SEND_CONST_STRING("\r\nGateway: ",ptr);
+    send_string(pEth_info[ETH_INFO_WIFI]->gw,ptr);
+    SEND_CONST_STRING("\r\nDevice info: ",ptr);
+    send_string(pEth_info[ETH_INFO_WIFI]->info,ptr);
+    
+    
+    SEND_CONST_STRING("\r\n\nConnected clients:\r\n",ptr);
+    Term_Move_cursor_right(COL_A,ptr);
+    SEND_CONST_STRING("Num", ptr);
+    Term_Move_cursor_right(COL_B,ptr);
+    SEND_CONST_STRING("| Remote IP\r\n", ptr);
+    
+    for(uint8_t i=0;i<NUM_ETH_CON;i++){
+        if(socket_info[i].socket==SOCKET_CONNECTED){
+            Term_Move_cursor_right(COL_A,ptr);
+            ret = snprintf(buffer,sizeof(buffer), "\033[36m%d", i);
+            send_buffer((uint8_t*)buffer,ret,ptr);
+            Term_Move_cursor_right(COL_B,ptr);
+            ret = snprintf(buffer,sizeof(buffer), "\033[32m%s\r\n", socket_info[i].info);
+            send_buffer((uint8_t*)buffer,ret,ptr);
+        }
+    }
+    Term_Color_White(ptr);
+	return 1;
 }
 
 /*****************************************************************************
@@ -803,16 +854,13 @@ uint8_t command_tasks(char *commandline, port_str *ptr) {
 uint8_t command_get(char *commandline, port_str *ptr) {
 	SKIP_SPACE(commandline);
     
-	uint8_t current_parameter;
-
-
 	if (*commandline == 0 || commandline == 0) //no param --> show help text
 	{
 		print_param_help(confparam, PARAM_SIZE(confparam), ptr);
 		return 1;
 	}
 
-	for (current_parameter = 0; current_parameter < sizeof(confparam) / sizeof(parameter_entry); current_parameter++) {
+	for (uint8_t current_parameter = 0; current_parameter < sizeof(confparam) / sizeof(parameter_entry); current_parameter++) {
 		if (ntlibc_stricmp(commandline, confparam[current_parameter].name) == 0) {
 			//Parameter found:
 			print_param(confparam,current_parameter,ptr);
@@ -858,8 +906,7 @@ uint8_t command_set(char *commandline, port_str *ptr) {
 		return 0;
 	}
 
-	uint8_t current_parameter;
-	for (current_parameter = 0; current_parameter < sizeof(confparam) / sizeof(parameter_entry); current_parameter++) {
+	for (uint8_t current_parameter = 0; current_parameter < sizeof(confparam) / sizeof(parameter_entry); current_parameter++) {
 		if (ntlibc_stricmp(commandline, confparam[current_parameter].name) == 0) {
 			//parameter name found:
 
@@ -936,9 +983,8 @@ uint8_t command_eprom(char *commandline, port_str *ptr) {
 ******************************************************************************/
 uint8_t command_help(char *commandline, port_str *ptr) {
 	UNUSED_VARIABLE(commandline);
-	uint8_t current_command;
 	SEND_CONST_STRING("\r\nCommands:\r\n", ptr);
-	for (current_command = 0; current_command < (sizeof(commands) / sizeof(command_entry)); current_command++) {
+	for (uint8_t current_command = 0; current_command < (sizeof(commands) / sizeof(command_entry)); current_command++) {
 		SEND_CONST_STRING("\t", ptr);
 		Term_Color_Cyan(ptr);
 		send_string((char *)commands[current_command].text, ptr);
@@ -953,7 +999,7 @@ uint8_t command_help(char *commandline, port_str *ptr) {
 	}
 
 	SEND_CONST_STRING("\r\nParameters:\r\n", ptr);
-	for (current_command = 0; current_command < sizeof(confparam) / sizeof(parameter_entry); current_command++) {
+	for (uint8_t current_command = 0; current_command < sizeof(confparam) / sizeof(parameter_entry); current_command++) {
         if(confparam[current_command].parameter_type == PARAM_DEFAULT){
             SEND_CONST_STRING("\t", ptr);
             Term_Color_Cyan(ptr);
@@ -971,7 +1017,7 @@ uint8_t command_help(char *commandline, port_str *ptr) {
 	}
 
 	SEND_CONST_STRING("\r\nConfiguration:\r\n", ptr);
-	for (current_command = 0; current_command < sizeof(confparam) / sizeof(parameter_entry); current_command++) {
+	for (uint8_t current_command = 0; current_command < sizeof(confparam) / sizeof(parameter_entry); current_command++) {
         if(confparam[current_command].parameter_type == PARAM_CONFIG){
             SEND_CONST_STRING("\t", ptr);
             Term_Color_Cyan(ptr);

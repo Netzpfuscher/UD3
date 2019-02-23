@@ -27,7 +27,11 @@
 #include <stdarg.h>
 
 #include "tsk_min.h"
+#include "tsk_midi.h"
 #include "tsk_uart.h"
+#include "tsk_cli.h"
+
+#include "helper/printf.h"
 
 xTaskHandle tsk_min_TaskHandle;
 uint8 tsk_min_initVar = 0u;
@@ -46,9 +50,12 @@ uint8 tsk_min_initVar = 0u;
 #include "min_id.h"
 #include "telemetry.h"
 #include "stream_buffer.h" 
+#include "ntlibc.h" 
 
 
 struct min_context min_ctx;
+
+eth_info *pEth_info[2];
 
 
 /* `#END` */
@@ -60,14 +67,16 @@ struct min_context min_ctx;
  */
 /* `#START USER_TASK_LOCAL_CODE` */
 
-#define LOCAL_UART_BUFFER_SIZE  128     //bytes
-#define CONNECTION_TIMEOUT      150     //ms
-#define CONNECTION_HEARTBEAT    50      //ms
+#define LOCAL_UART_BUFFER_SIZE  240     //bytes
 #define STREAMBUFFER_RX_SIZE    512     //bytes
 #define STREAMBUFFER_TX_SIZE    1024    //bytes
 
 uint16_t min_tx_space(uint8_t port){
     return (UART_2_TX_BUFFER_SIZE - UART_2_GetTxBufferSize());
+}
+
+uint32_t min_rx_space(uint8_t port){
+    return (UART_2_RX_BUFFER_SIZE - UART_2_GetRxBufferSize());
 }
 
 void min_tx_byte(uint8_t port, uint8_t byte){
@@ -76,6 +85,7 @@ void min_tx_byte(uint8_t port, uint8_t byte){
 
 uint32_t min_time_ms(void){
   return (xTaskGetTickCount() * portTICK_RATE_MS);
+    //return 4294967296ul-SG_Timer_ReadCounter(); //3,3us
 }
 
 void min_tx_start(uint8_t port){
@@ -83,49 +93,114 @@ void min_tx_start(uint8_t port){
 void min_tx_finished(uint8_t port){
 }
 uint32_t reset;
+uint8_t flow_ctl=1;
+uint8_t min_stop = 'x';
+uint8_t min_start = 'o';
+
+
+
+struct _socket_info socket_info[NUM_ETH_CON];
+
+void process_command(uint8_t *min_payload, uint8_t len_payload){
+    len_payload--;
+    uint8_t interface=0;
+    switch(*min_payload++){
+        case COMMAND_IP:
+            interface=*min_payload;
+            if(interface>ETH_INFO_WIFI) break;
+            min_payload++;
+            len_payload--;
+            if(len_payload>=sizeof(pEth_info[interface]->ip)-1 || pEth_info[interface]==NULL){
+                ntlibc_strcpy(pEth_info[interface]->ip,"overflow");
+                break;
+            }
+            memcpy(pEth_info[interface]->ip,min_payload,len_payload);
+            min_payload[len_payload]='\0';
+            break;
+        case COMMAND_GW:
+            interface=*min_payload;
+            if(interface>ETH_INFO_WIFI) break;
+            min_payload++;
+            len_payload--;
+            if(len_payload>=sizeof(pEth_info[interface]->gw)-1|| pEth_info[interface]==NULL){
+                ntlibc_strcpy(pEth_info[interface]->gw,"overflow");
+                break;
+            }
+            memcpy(pEth_info[interface]->gw,min_payload,len_payload);
+            min_payload[len_payload]='\0';
+            break;
+        case COMMAND_INFO:
+            interface=*min_payload;
+            if(interface>ETH_INFO_WIFI) break;
+            min_payload++;
+            len_payload--;
+            if(len_payload>=sizeof(pEth_info[interface]->info)-1|| pEth_info[interface]==NULL){
+                ntlibc_strcpy(pEth_info[interface]->info,"overflow");
+                break;
+            }
+            memcpy(pEth_info[interface]->info,min_payload,len_payload);
+            min_payload[len_payload]='\0';
+            break;
+        case COMMAND_ETH_STATE:
+            interface=*min_payload;
+            if(interface>ETH_INFO_WIFI) break;
+            min_payload++;
+            len_payload--;
+            pEth_info[interface]->eth_state = *min_payload;
+            break;
+  }
+}
 
 void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_payload, uint8_t port)
 {
+    if(min_id<10){
+        if(min_id>NUM_ETH_CON) return;
+        xStreamBufferSend(xETH_rx[min_id],min_payload, len_payload,1);
+        return;
+    }else if(min_id>=20 && min_id <30){
+        switch(param.synth){
+            case SYNTH_OFF:
+       
+                break;
+            case SYNTH_MIDI:
+                process_midi(min_payload,len_payload);     
+                break;
+            case SYNTH_SID:
+                process_sid(min_payload, len_payload);
+                break;
+        }
+        return;
+    }
     switch(min_id){
         case MIN_ID_WD:
             watchdog_reset_Control = 1;
 			watchdog_reset_Control = 0;
-        break;
-        case MIN_ID_MIDI:
-            USBMIDI_1_callbackLocalMidiEvent(0, min_payload);
-        break;
-        case MIN_ID_TERM:
-            xStreamBufferSend( xUART_rx, min_payload, len_payload,0);
-        break;
-        case MIN_ID_RESET:
-            reset  = min_time_ms(); 
-            watchdog_reset_Control = 1;
-			watchdog_reset_Control = 0;
-        break;
+            break;
+        case MIN_ID_SOCKET:
+            if(*min_payload>NUM_ETH_CON) return;
+            socket_info[*min_payload].socket = *(min_payload+1);
+            strcpy(socket_info[*min_payload].info,(char*)min_payload+2);
+            if(socket_info[*min_payload].socket==SOCKET_CONNECTED){
+                command_cls("",&eth_port[*min_payload]);
+                send_string(":>", &eth_port[*min_payload]);
+            }else{
+                eth_port[*min_payload].term_mode = PORT_TERM_VT100;    
+                stop_overlay_task(&eth_port[*min_payload]);   
+            }
+            break;
+        case MIN_ID_COMMAND:
+            process_command(min_payload,len_payload);
+            break;
+            
 
     }
-}
-
-void min_reset_wd(void){
-    static uint32_t last=0;
-    
-    if((min_time_ms()-reset)>CONNECTION_TIMEOUT){
-            min_transport_reset(&min_ctx,true);
-        }
-        
-        if((min_time_ms()-last) > CONNECTION_HEARTBEAT){
-            last = min_time_ms();
-            uint8_t byte=0;
-            min_send_frame(&min_ctx,MIN_ID_RESET,&byte,1);   
-        }
-    
 }
 
 
 void poll_UART(uint8_t* ptr){
         
-    uint8_t bytes = UART_2_GetRxBufferSize();
-    uint8_t bytes_cnt=0;
+    uint16_t bytes = UART_2_GetRxBufferSize();
+    uint16_t bytes_cnt=0;
     if(bytes){
         if (bytes > LOCAL_UART_BUFFER_SIZE) bytes = LOCAL_UART_BUFFER_SIZE;
             while(bytes_cnt < bytes){
@@ -133,7 +208,7 @@ void poll_UART(uint8_t* ptr){
                 bytes_cnt++;
             }
     }
-    min_poll(&min_ctx, ptr, (uint8_t)bytes_cnt);
+    min_poll(&min_ctx, ptr, bytes_cnt);
     
 }
 
@@ -143,6 +218,20 @@ void write_telemetry(struct min_context* ptr){
     telemetry.sequence_mismatch_drop = ptr->transport_fifo.sequence_mismatch_drop;
     telemetry.resets_received = ptr->transport_fifo.resets_received;
     telemetry.min_frames_max = ptr->transport_fifo.n_frames_max;
+    telemetry.remote_rx_buffer = ptr->remote_rx_space;
+}
+
+uint8_t assemble_command(uint8_t cmd, char *str, uint8_t *buf){
+    uint8_t len=0;
+    *buf = cmd;
+    buf++;
+    len=strlen(str);
+    memcpy(buf,str,len);
+    return len+1;
+}
+
+void min_reset_flow(void){
+    flow_ctl=0;
 }
 
 
@@ -164,6 +253,10 @@ void tsk_min_TaskProc(void *pvParameters) {
     uint8_t buffer_u[LOCAL_UART_BUFFER_SIZE];
 
     uint8_t bytes_cnt=0;
+    
+    
+    pEth_info[ETH_INFO_ETH] = pvPortMalloc(sizeof(eth_info));
+    pEth_info[ETH_INFO_WIFI] = pvPortMalloc(sizeof(eth_info));
 
 	/* `#END` */
 
@@ -179,38 +272,76 @@ void tsk_min_TaskProc(void *pvParameters) {
     //Init MIN Protocol
     min_init_context(&min_ctx, 0);
     min_transport_reset(&min_ctx,1);
+    
+    for(uint8_t i=0;i<NUM_ETH_CON;i++){
+        socket_info[i].socket=SOCKET_DISCONNECTED;   
+        socket_info[i].old_state=SOCKET_DISCONNECTED;
+        socket_info[i].info[0] = '\0';
+        
+    }
+    
+    if(configuration.eth_hw==ETH_HW_ESP32){
+        uint8_t len;
+        len = assemble_command(COMMAND_IP,configuration.ip_addr,buffer);
+        min_send_frame(&min_ctx,MIN_ID_COMMAND,buffer,len);
+        len = assemble_command(COMMAND_GW,configuration.ip_gw,buffer);
+        min_send_frame(&min_ctx,MIN_ID_COMMAND,buffer,len);
+        len = assemble_command(COMMAND_MAC,configuration.ip_mac,buffer);
+        min_send_frame(&min_ctx,MIN_ID_COMMAND,buffer,len);
+        len = assemble_command(COMMAND_SSID,configuration.ssid,buffer);
+        min_send_frame(&min_ctx,MIN_ID_COMMAND,buffer,len);
+        len = assemble_command(COMMAND_PASSWD,configuration.passwd,buffer);
+        min_send_frame(&min_ctx,MIN_ID_COMMAND,buffer,len);
+    }
         
 	/* `#END` */
-
+    uint8_t i=0;
+    uint16_t bytes_waiting=0;
+    
 	for (;;) {
-		/* `#START TASK_LOOP_CODE` */
         write_telemetry(&min_ctx);
-        poll_UART(buffer_u);
-        min_reset_wd();
-  
-        bytes_cnt = xStreamBufferReceive(xUART_tx, buffer, LOCAL_UART_BUFFER_SIZE, 10 / portTICK_RATE_MS);
-        if(bytes_cnt){
-            uint8_t res=0;
-           
-            res = min_queue_frame(&min_ctx,MIN_ID_TERM,buffer,bytes_cnt);
-
-            while(!res){
-                min_reset_wd();
+        bytes_waiting=UART_2_GetRxBufferSize();
+        
+        for(i=0;i<NUM_ETH_CON;i++){
+        
+    		/* `#START TASK_LOOP_CODE` */
                 
-                min_poll(&min_ctx, (uint8_t *)buffer_u, 0);
-                
-                vTaskDelay(5);
-                
-                poll_UART(buffer_u);
-                
-                vTaskDelay(5);
-                res = min_queue_frame(&min_ctx,MIN_ID_TERM,buffer,bytes_cnt);
+            poll_UART(buffer_u);
+            
+            //min_reset_wd();
+            
+            if(param.synth==SYNTH_SID){
+                if(uxQueueSpacesAvailable(qSID) < 30 && flow_ctl){
+                    min_queue_frame(&min_ctx, MIN_ID_MIDI, &min_stop,1);
+                    flow_ctl=0;
+                }else if(uxQueueSpacesAvailable(qSID) > 45 && !flow_ctl){ //
+                    min_queue_frame(&min_ctx, MIN_ID_MIDI, &min_start,1);
+                    flow_ctl=1;
+                }else if(uxQueueSpacesAvailable(qSID) > 59){
+                    min_send_frame(&min_ctx, MIN_ID_MIDI, &min_start,1);
+                }
+            }
+            uint16_t eth_bytes=xStreamBufferBytesAvailable(xETH_tx[i]);
+            if(eth_bytes){
+                bytes_waiting+=eth_bytes;
+                bytes_cnt = xStreamBufferReceive(xETH_tx[i], buffer, LOCAL_UART_BUFFER_SIZE, 0);
+                if(bytes_cnt){
+                    uint8_t res=0;
+                   
+                    res = min_queue_frame(&min_ctx,i,buffer,bytes_cnt);
+                    //min_send_frame(&min_ctx,i,buffer,bytes_cnt);
+                    while(!res){
+                        poll_UART(buffer_u);
+                        vTaskDelay(1);   
+                        res = min_queue_frame(&min_ctx,i,buffer,bytes_cnt);
+                    }
+                }
             }
         }
-      
-        
-        
-
+        if(bytes_waiting==0){
+            vTaskDelay(1);
+        }
+        //vTaskDelay(1);
 		/* `#END` */
 	}
 }
@@ -224,6 +355,7 @@ void tsk_min_Start(void) {
 	/* `#START TASK_GLOBAL_INIT` */
 
 	/* `#END` */
+    UART_2_Start();
 
 	if (tsk_min_initVar != 1) {
 

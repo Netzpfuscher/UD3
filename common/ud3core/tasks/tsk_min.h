@@ -37,12 +37,31 @@
 #include "task.h"
 #include "queue.h"
 #include "semphr.h"
+#include "tsk_eth.h"
   
 
 /* `#END` */
+struct _socket_info{
+    uint8_t socket;
+    uint8_t old_state;
+    char info[16];
+};
+#define ETH_INFO_ETH  0
+#define ETH_INFO_WIFI 1
 
+typedef struct {
+    char info[16];
+    char ip[16];
+    char gw[16];
+    uint8_t eth_state;
+}eth_info;
+
+extern eth_info *pEth_info[2];
+    
+    
 void tsk_min_Start(void);
-
+void min_reset_flow(void);
+extern struct _socket_info socket_info[NUM_ETH_CON];
 
 /*
  * Add user function prototypes in the below merge region to add user

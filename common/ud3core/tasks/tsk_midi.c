@@ -598,7 +598,7 @@ void tsk_midi_TaskProc(void *pvParameters) {
 	 */
 	/* `#START TASK_VARIABLES` */
 	qMIDI_rx = xQueueCreate(256, sizeof(NOTE));
-    qSID = xQueueCreate(32, sizeof(struct sid_f));
+    qSID = xQueueCreate(64, sizeof(struct sid_f));
     qPulse = xQueueCreate(8, sizeof(struct pulse_str));
 
 	NOTE note_struct;

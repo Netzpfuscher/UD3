@@ -66,11 +66,10 @@
 #ifdef ASSERTION_CHECKING
 #include <assert.h>
 #endif
-//#define MIN_DEBUG_PRINTING
+
 #ifndef NO_TRANSPORT_PROTOCOL
 #define TRANSPORT_PROTOCOL
 #endif
-//#define MIN_DEBUG_PRINTING
 
 #ifndef MAX_PAYLOAD
 #define MAX_PAYLOAD                                 (255U)
@@ -112,7 +111,7 @@ struct transport_frame {
     uint16_t payload_offset;                        // Where in the ring buffer the payload is
     uint8_t payload_len;                            // How big the payload is
     uint8_t min_id;                                 // ID of frame
-    uint8_t seq;                                    // Sequence number of frame
+    uint32_t seq;                                    // Sequence number of frame
 };
 
 struct transport_fifo {
@@ -131,9 +130,9 @@ struct transport_fifo {
     uint8_t n_frames_max;                           // Larger number of frames in the FIFO
     uint8_t head_idx;                               // Where frames are taken from in the FIFO
     uint8_t tail_idx;                               // Where new frames are added
-    uint8_t sn_min;                                 // Sequence numbers for transport protocol
-    uint8_t sn_max;
-    uint8_t rn;
+    uint32_t sn_min;                                 // Sequence numbers for transport protocol
+    uint32_t sn_max;
+    uint32_t rn;
 };
 #endif
 
@@ -149,11 +148,13 @@ struct min_context {
     uint8_t rx_frame_state;                         // State of receiver
     uint8_t rx_frame_payload_bytes;                 // Length of payload received so far
     uint8_t rx_frame_id_control;                    // ID and control bit of frame being received
-    uint8_t rx_frame_seq;                           // Sequence number of frame being received
+    uint32_t rx_frame_seq;                           // Sequence number of frame being received
     uint8_t rx_frame_length;                        // Length of frame
     uint8_t rx_control;                             // Control byte
     uint8_t tx_header_byte_countdown;               // Count out the header bytes
     uint8_t port;                                   // Number of the port associated with the context
+	uint32_t rx_space;
+	uint32_t remote_rx_space;
 };
 
 #ifdef TRANSPORT_PROTOCOL
@@ -162,7 +163,7 @@ bool min_queue_frame(struct min_context *self, uint8_t min_id, uint8_t *payload,
 #endif
 
 // Send a non-transport frame MIN frame
-uint8_t min_send_frame(struct min_context *self, uint8_t min_id, uint8_t *payload, uint8_t payload_len);
+void min_send_frame(struct min_context *self, uint8_t min_id, uint8_t *payload, uint8_t payload_len);
 
 // Must be regularly called, with the received bytes since the last call.
 // NB: if the transport protocol is being used then even if there are no bytes
@@ -185,6 +186,9 @@ uint32_t min_time_ms(void);
 // queued.
 uint16_t min_tx_space(uint8_t port);
 
+// CALLBACK. Must return current buffer space in the given port for flow control
+uint32_t min_rx_space(uint8_t port);
+
 // CALLBACK. Send a byte on the given line.
 void min_tx_byte(uint8_t port, uint8_t byte);
 
@@ -195,7 +199,7 @@ void min_tx_finished(uint8_t port);
 // Initialize a MIN context ready for receiving bytes from a serial link
 // (Can have multiple MIN contexts)
 void min_init_context(struct min_context *self, uint8_t port);
-
+//#define MIN_DEBUG_PRINTING
 #ifdef MIN_DEBUG_PRINTING
 // Debug print
 void min_debug_print(const char *msg, ...);

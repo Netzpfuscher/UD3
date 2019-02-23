@@ -78,10 +78,10 @@
 #define GAUGE5_VAR telemetry.midi_voices
 #define GAUGE5_SLOW 0
     
-#define GAUGE6_NAME "PW"
+#define GAUGE6_NAME "Remote Buff"
 #define GAUGE6_MIN 0
-#define GAUGE6_MAX 500
-#define GAUGE6_VAR interrupter.pw
+#define GAUGE6_MAX 2048
+#define GAUGE6_VAR telemetry.remote_rx_buffer
 #define GAUGE6_SLOW 0
     
 #define CHART0_NAME "Bus Voltage"
@@ -130,6 +130,7 @@ typedef struct
     uint32_t spurious_acks;
     uint32_t sequence_mismatch_drop;
     uint32_t resets_received;
+    uint32_t remote_rx_buffer;
     uint8_t min_frames_max;
     uint16_t duty;
     uint16_t num_bytes;

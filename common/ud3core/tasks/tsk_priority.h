@@ -42,7 +42,7 @@
 #define STACK_ANALOG 128
 #define STACK_THERMISTOR 100
 #define STACK_UART 256
-#define STACK_MIN 256
+#define STACK_MIN 512
 #define STACK_USB 400
 #define STACK_ETH 256
 #define STACK_FAULT 100

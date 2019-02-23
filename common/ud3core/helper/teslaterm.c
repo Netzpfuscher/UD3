@@ -111,7 +111,7 @@ void send_config(char* param,const char* help_text, port_str *ptr){
     send_buffer(buf,sizeof(buf),ptr);
     send_string(param, ptr);
     send_char(';', ptr);
-    send_string(help_text, ptr);
+    send_string((char*)help_text, ptr);
 }
 
 void send_chart_text_center(int16_t x, int16_t y, uint8_t color, uint8_t size, char * text, port_str *ptr){

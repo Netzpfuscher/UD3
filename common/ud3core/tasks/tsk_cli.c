@@ -82,7 +82,7 @@ static int nt_callback(const char *text, void *extobj);
 void initialize_cli(ntshell_t *ptr, port_str *port) {
     switch(port->type){
         case PORT_TYPE_SERIAL:
-            UART_2_Start();
+            //UART_2_Start();
         break;
         case PORT_TYPE_USB:
             USBMIDI_1_Start(0, USBMIDI_1_5V_OPERATION);
@@ -116,7 +116,7 @@ static int write(const char *buf, int cnt, void *extobj) {
 
 static int nt_callback(const char *text, void *extobj) {
 	port_str *port = extobj;
-	nt_interpret(text, port);
+	nt_interpret((char*)text, port);
 	return 0;
 }
 

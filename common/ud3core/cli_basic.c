@@ -454,7 +454,7 @@ void EEPROM_write_conf(parameter_entry * params, uint8_t param_size, uint16_t ee
 	uint16_t change_count = 0;
 	uint32_t temp_hash=0;
 	uint16_t param_count=0;
-	char buffer[44];
+	char buffer[70];
     int ret=0;
         EEPROM_buffer_write(0x00, count,0);
 		count++;
@@ -504,7 +504,7 @@ void EEPROM_write_conf(parameter_entry * params, uint8_t param_size, uint16_t ee
 }
 
 void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eeprom_offset ,port_str *ptr){
-    char buffer[50];
+    char buffer[60];
     int ret=0;
     uint16_t addr=eeprom_offset;
     uint32_t temp_hash=0;
@@ -669,7 +669,8 @@ void send_char(uint8 c, port_str *ptr) {
         break;
         case PORT_TYPE_ETH:
             if (xETH_tx[ptr->num] != NULL) {
-                xStreamBufferSend(xETH_tx[ptr->num],&c, 1,200 /portTICK_RATE_MS);
+                //xStreamBufferSend(xETH_tx[ptr->num],&c, 1,200 /portTICK_RATE_MS);
+                xStreamBufferSend(xETH_tx[ptr->num],&c, 1,portMAX_DELAY);
 		    }
         break;
     }
@@ -700,7 +701,8 @@ void send_string(char *data, port_str *ptr) {
         break;
         case PORT_TYPE_ETH:
             if (xETH_tx[ptr->num] != NULL) {
-                xStreamBufferSend(xETH_tx[ptr->num],data, len, 200 /portTICK_RATE_MS);
+                //xStreamBufferSend(xETH_tx[ptr->num],data, len, 200 /portTICK_RATE_MS);
+                xStreamBufferSend(xETH_tx[ptr->num],data, len, portMAX_DELAY);
     		}
         break;
     }
@@ -731,7 +733,8 @@ void send_buffer(uint8_t *data, uint16_t len, port_str *ptr) {
         break;
         case PORT_TYPE_ETH:
             if (xETH_tx[ptr->num] != NULL) {
-                xStreamBufferSend(xETH_tx[ptr->num],data, len,200 /portTICK_RATE_MS);
+                //xStreamBufferSend(xETH_tx[ptr->num],data, len,200 /portTICK_RATE_MS);
+                xStreamBufferSend(xETH_tx[ptr->num],data, len,portMAX_DELAY);
 		    }
         break;
     }

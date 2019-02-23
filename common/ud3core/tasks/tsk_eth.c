@@ -59,7 +59,7 @@ uint8 tsk_eth_initVar = 0u;
 
 
 #define STREAMBUFFER_RX_SIZE    256     //bytes
-#define STREAMBUFFER_TX_SIZE    512    //bytes
+#define STREAMBUFFER_TX_SIZE    1024    //bytes
 
 #define LOCAL_ETH_BUFFER_SIZE 256
 
@@ -220,10 +220,8 @@ void process_sid(uint8_t* ptr, uint16_t len) {
     }
 }
 
-
-uint8_t stop[1] = {'x'};
-uint8_t start[1] = {'o'};
-
+uint8_t stop = 'x';
+uint8_t start = 'o';
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */
@@ -260,14 +258,14 @@ void tsk_eth_TaskProc(void *pvParameters) {
     uint8_t cli_socket_state[NUM_ETH_CON];
     uint8_t cli_socket_state_old[NUM_ETH_CON];
     
-    uint8_t midi_socket[NUM_ETH_CON];
-    uint8_t midi_socket_state[NUM_ETH_CON];
+    uint8_t synth_socket[NUM_ETH_CON];
+    uint8_t synth_socket_state[NUM_ETH_CON];
     
     uint8_t flow_ctl[NUM_ETH_CON];
     uint16_t bytes_waiting[NUM_ETH_CON];
     
     for(int i =0;i<NUM_ETH_CON;i++){
-        midi_socket[i]=0xFF;
+        synth_socket[i]=0xFF;
         cli_socket[i]=0xFF;
         flow_ctl[i]=1;
         xETH_rx[i] = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
@@ -342,11 +340,11 @@ void tsk_eth_TaskProc(void *pvParameters) {
     		}			
            
             
-            if (midi_socket[i] != 0xFF) {
-    			midi_socket_state[i] = ETH_TcpPollSocket(midi_socket[i]);
-    			if (midi_socket_state[i] == ETH_SR_ESTABLISHED) {
+            if (synth_socket[i] != 0xFF) {
+    			synth_socket_state[i] = ETH_TcpPollSocket(synth_socket[i]);
+    			if (synth_socket_state[i] == ETH_SR_ESTABLISHED) {
 
-                    bytes_waiting[i] = ETH_RxDataReady(midi_socket[i]);
+                    bytes_waiting[i] = ETH_RxDataReady(synth_socket[i]);
                     
                     if(!i){
                         telemetry.num_bytes = bytes_waiting[i];
@@ -357,43 +355,44 @@ void tsk_eth_TaskProc(void *pvParameters) {
                     switch(param.synth){
                         case SYNTH_OFF:
                             if(bytes_waiting>0){
-                                len = ETH_TcpReceive(midi_socket[i],buffer,LOCAL_ETH_BUFFER_SIZE,0);
+                                len = ETH_TcpReceive(synth_socket[i],buffer,LOCAL_ETH_BUFFER_SIZE,0);
                             }
+                            break;
                         case SYNTH_MIDI:
-                            len = ETH_TcpReceive(midi_socket[i],buffer,LOCAL_ETH_BUFFER_SIZE,0);
+                            len = ETH_TcpReceive(synth_socket[i],buffer,LOCAL_ETH_BUFFER_SIZE,0);
             				if(len){
                                 process_midi(buffer,len);
                             }
-                        break;
+                            break;
                         case SYNTH_SID:
                             if(bytes_waiting[i]>1800){
                                 if(flow_ctl[i]){
-                                    ETH_TcpSend(midi_socket[i],stop,1,0);
+                                    ETH_TcpSend(synth_socket[i],&stop,1,0);
                                     flow_ctl[i]=0;
                                 }
                             }else{
                                  if(!flow_ctl[i]){
                                     flow_ctl[i]=1;
-                                    ETH_TcpSend(midi_socket[i],start,1,0);
+                                    ETH_TcpSend(synth_socket[i],&start,1,0);
                                 }
                             }
                             if(uxQueueSpacesAvailable(qSID) > 15){
-            				    len = ETH_TcpReceive(midi_socket[i],buffer,LOCAL_ETH_BUFFER_SIZE,0);
+            				    len = ETH_TcpReceive(synth_socket[i],buffer,LOCAL_ETH_BUFFER_SIZE,0);
             				    if(len){
                                     process_sid(buffer,len);
                                 }
                             }
-                        break;
+                            break;
                     }
            
     			}
-    			else if (midi_socket_state[i] != ETH_SR_LISTEN) {
-    				ETH_SocketClose(midi_socket[i],1);
-    				midi_socket[i] = 0xFF;
+    			else if (synth_socket_state[i] != ETH_SR_LISTEN) {
+    				ETH_SocketClose(synth_socket[i],1);
+    				synth_socket[i] = 0xFF;
     			}
     		}
     		else {
-    			midi_socket[i] = ETH_TcpOpenServer(PORT_MIDI);
+    			synth_socket[i] = ETH_TcpOpenServer(PORT_MIDI);
     		}
         }
 		vTaskDelay(2 /portTICK_RATE_MS);

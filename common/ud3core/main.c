@@ -46,8 +46,6 @@
 #include "tasks/tsk_eth.h"
 #include "tasks/tsk_min.h"
 
-void vMainTask(void *pvParameters);
-
 /*
  * Installs the RTOS interrupt handlers and starts the peripherals.
  */
@@ -78,23 +76,18 @@ int main() {
 	configure_ZCD_to_PWM();
 
 	rx_blink_Control = 1;
-    
-    /*
-    for(uint8_t i=0;i<NUM_CON;i++){
-        block_term[i] = xSemaphoreCreateBinary();
-        xSemaphoreGive(block_term[i]);
-    }*/
-    
+
 	//Starting Tasks
-    if(configuration.minprot){
+    if(configuration.minprot || configuration.eth_hw==ETH_HW_ESP32){
         tsk_min_Start();        //Handles UART-Hardware and queues with MIN-Protocol
     }else{
 	    tsk_uart_Start();       //Handles UART-Hardware and queues
     }
     
 	tsk_usb_Start();        //Handles USB-Hardware and queues
-   
-    tsk_eth_Start();        //Handles Ethernet-Hardware and queues
+    if(configuration.eth_hw==ETH_HW_W5500){
+        tsk_eth_Start();        //Handles Ethernet-Hardware and queues
+    }
     
     tsk_cli_Start();		//Commandline interface
     

@@ -30,6 +30,7 @@
 #include "tsk_midi.h"
 #include "tsk_uart.h"
 #include "tsk_cli.h"
+#include "tsk_eth_common.h"
 
 #include "helper/printf.h"
 
@@ -67,7 +68,7 @@ eth_info *pEth_info[2];
  */
 /* `#START USER_TASK_LOCAL_CODE` */
 
-#define LOCAL_UART_BUFFER_SIZE  240     //bytes
+#define LOCAL_UART_BUFFER_SIZE  127     //bytes
 #define STREAMBUFFER_RX_SIZE    512     //bytes
 #define STREAMBUFFER_TX_SIZE    1024    //bytes
 
@@ -96,7 +97,6 @@ uint32_t reset;
 uint8_t flow_ctl=1;
 uint8_t min_stop = 'x';
 uint8_t min_start = 'o';
-
 
 
 struct _socket_info socket_info[NUM_ETH_CON];
@@ -155,6 +155,7 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
 {
     if(min_id<10){
         if(min_id>NUM_ETH_CON) return;
+        if(socket_info[min_id].socket==SOCKET_DISCONNECTED) return;
         xStreamBufferSend(xETH_rx[min_id],min_payload, len_payload,1);
         return;
     }else if(min_id>=20 && min_id <30){
@@ -266,8 +267,6 @@ void tsk_min_TaskProc(void *pvParameters) {
 	 */
 	/* `#START TASK_INIT_CODE` */
     
-    xUART_rx = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
-    xUART_tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,LOCAL_UART_BUFFER_SIZE/2);
 
     //Init MIN Protocol
     min_init_context(&min_ctx, 0);
@@ -277,7 +276,8 @@ void tsk_min_TaskProc(void *pvParameters) {
         socket_info[i].socket=SOCKET_DISCONNECTED;   
         socket_info[i].old_state=SOCKET_DISCONNECTED;
         socket_info[i].info[0] = '\0';
-        
+        xETH_rx[i] = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
+        xETH_tx[i] = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,256);
     }
     
     if(configuration.eth_hw==ETH_HW_ESP32){
@@ -305,9 +305,9 @@ void tsk_min_TaskProc(void *pvParameters) {
         for(i=0;i<NUM_ETH_CON;i++){
         
     		/* `#START TASK_LOOP_CODE` */
-                
+             
             poll_UART(buffer_u);
-            
+            if(socket_info[i].socket==SOCKET_DISCONNECTED) goto end;   
             //min_reset_wd();
             
             if(param.synth==SYNTH_SID){
@@ -319,6 +319,7 @@ void tsk_min_TaskProc(void *pvParameters) {
                     flow_ctl=1;
                 }else if(uxQueueSpacesAvailable(qSID) > 59){
                     min_send_frame(&min_ctx, MIN_ID_MIDI, &min_start,1);
+                    flow_ctl=1;
                 }
             }
             uint16_t eth_bytes=xStreamBufferBytesAvailable(xETH_tx[i]);
@@ -337,11 +338,12 @@ void tsk_min_TaskProc(void *pvParameters) {
                     }
                 }
             }
+            
+            end:;
         }
         if(bytes_waiting==0){
             vTaskDelay(1);
         }
-        //vTaskDelay(1);
 		/* `#END` */
 	}
 }
@@ -358,7 +360,6 @@ void tsk_min_Start(void) {
     UART_2_Start();
 
 	if (tsk_min_initVar != 1) {
-
 		/*
 	 	* Create the task and then leave. When FreeRTOS starts up the scheduler
 	 	* will call the task procedure and start execution of the task.

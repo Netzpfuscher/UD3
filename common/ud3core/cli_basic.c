@@ -6,6 +6,7 @@
 #include "tasks/tsk_uart.h"
 #include "tasks/tsk_usb.h"
 #include "tasks/tsk_eth.h"
+#include "tasks/tsk_eth_common.h"
 #endif
 
 uint8_t EEPROM_Read_Row(uint8_t row, uint8_t * buffer);

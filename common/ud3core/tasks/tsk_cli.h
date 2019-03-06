@@ -26,6 +26,7 @@
 #include "task.h"
 #include "tsk_eth.h"
 #include "cli_basic.h"
+#include "tsk_eth_common.h"
 
 #if !defined(cli_TASK_H)
 #define cli_TASK_H

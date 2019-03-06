@@ -42,17 +42,10 @@
 /* `#END` */
 
 void tsk_eth_Start(void);
-void process_sid(uint8_t* ptr, uint16_t len);
-void process_midi(uint8_t* ptr, uint16_t len);
+//void process_sid(uint8_t* ptr, uint16_t len);
+//void process_midi(uint8_t* ptr, uint16_t len);
 
-#define NUM_ETH_CON 3
 
-StreamBufferHandle_t xETH_rx[NUM_ETH_CON];
-StreamBufferHandle_t xETH_tx[NUM_ETH_CON];
-
-#define ETH_HW_DISABLED 0
-#define ETH_HW_W5500    1
-#define ETH_HW_ESP32    2
 
 
 /*

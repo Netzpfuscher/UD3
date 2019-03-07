@@ -30,9 +30,6 @@
 xTaskHandle tsk_uart_TaskHandle;
 uint8 tsk_uart_initVar = 0u;
 
-StreamBufferHandle_t xUART_rx;
-StreamBufferHandle_t xUART_tx;
-
 xSemaphoreHandle tx_Semaphore;
 
 
@@ -44,14 +41,12 @@ xSemaphoreHandle tx_Semaphore;
 /* `#START USER_INCLUDE SECTION` */
 #include "cli_common.h"
 #include "tsk_midi.h"
+#include "tsk_cli.h"
 #include "tsk_priority.h"
 
 volatile uint8_t midi_count = 0;
 volatile uint8_t midiMsg[3];
 
-
-#define STREAMBUFFER_RX_SIZE    512     //bytes
-#define STREAMBUFFER_TX_SIZE    512    //bytes
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */
@@ -77,7 +72,7 @@ CY_ISR(isr_uart_rx) {
 
 			goto end;
 		} else if (!midi_count) {
-            xStreamBufferSendFromISR(xUART_rx, &c, 1, 0);
+            xStreamBufferSendFromISR(serial_port.rx, &c, 1, 0);
 			goto end;
 		}
 		switch (midi_count) {
@@ -124,8 +119,6 @@ void tsk_uart_TaskProc(void *pvParameters) {
 	 * in the task.
 	 */
 	/* `#START TASK_INIT_CODE` */
-    xUART_rx = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
-    xUART_tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,1);
 
 	tx_Semaphore = xSemaphoreCreateBinary();
 
@@ -142,7 +135,7 @@ void tsk_uart_TaskProc(void *pvParameters) {
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
 
-		if (xStreamBufferReceive(xUART_tx, &c, 1, portMAX_DELAY)) {
+		if (xStreamBufferReceive(serial_port.tx, &c, 1, portMAX_DELAY)) {
 			UART_2_PutChar(c);
 			if (UART_2_GetTxBufferSize() == 4) {
 				xSemaphoreTake(tx_Semaphore, portMAX_DELAY);

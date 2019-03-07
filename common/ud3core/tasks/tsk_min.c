@@ -69,8 +69,7 @@ eth_info *pEth_info[2];
 /* `#START USER_TASK_LOCAL_CODE` */
 
 #define LOCAL_UART_BUFFER_SIZE  127     //bytes
-#define STREAMBUFFER_RX_SIZE    512     //bytes
-#define STREAMBUFFER_TX_SIZE    1024    //bytes
+
 
 uint16_t min_tx_space(uint8_t port){
     return (UART_2_TX_BUFFER_SIZE - UART_2_GetTxBufferSize());
@@ -156,7 +155,7 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
     if(min_id<10){
         if(min_id>NUM_ETH_CON) return;
         if(socket_info[min_id].socket==SOCKET_DISCONNECTED) return;
-        xStreamBufferSend(xETH_rx[min_id],min_payload, len_payload,1);
+        xStreamBufferSend(eth_port[min_id].rx,min_payload, len_payload,1);
         return;
     }else if(min_id>=20 && min_id <30){
         switch(param.synth){
@@ -276,8 +275,6 @@ void tsk_min_TaskProc(void *pvParameters) {
         socket_info[i].socket=SOCKET_DISCONNECTED;   
         socket_info[i].old_state=SOCKET_DISCONNECTED;
         socket_info[i].info[0] = '\0';
-        xETH_rx[i] = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
-        xETH_tx[i] = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,256);
     }
     
     if(configuration.eth_hw==ETH_HW_ESP32){
@@ -322,10 +319,10 @@ void tsk_min_TaskProc(void *pvParameters) {
                     flow_ctl=1;
                 }
             }
-            uint16_t eth_bytes=xStreamBufferBytesAvailable(xETH_tx[i]);
+            uint16_t eth_bytes=xStreamBufferBytesAvailable(eth_port[i].tx);
             if(eth_bytes){
                 bytes_waiting+=eth_bytes;
-                bytes_cnt = xStreamBufferReceive(xETH_tx[i], buffer, LOCAL_UART_BUFFER_SIZE, 0);
+                bytes_cnt = xStreamBufferReceive(eth_port[i].tx, buffer, LOCAL_UART_BUFFER_SIZE, 0);
                 if(bytes_cnt){
                     uint8_t res=0;
                    

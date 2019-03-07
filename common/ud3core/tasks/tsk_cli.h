@@ -42,12 +42,11 @@
 
 void tsk_cli_Start(void);
 void tsk_cli_TaskProc(void *pvParameters);
-//extern xTaskHandle ETH_Terminal_TaskHandle0;
-//extern xTaskHandle ETH_Terminal_TaskHandle1;
 extern xTaskHandle ETH_Terminal_TaskHandle[NUM_ETH_CON];
 
 extern port_str eth_port[NUM_ETH_CON];
 extern port_str serial_port;
+extern port_str usb_port;
 extern port_str null_port;
 
 /*

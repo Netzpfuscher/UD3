@@ -49,8 +49,6 @@ void tsk_usb_Enable(void);
 
 void tsk_usb_Task(void *pvParameters);
 
-xQueueHandle qUSB_tx;
-xQueueHandle qUSB_rx;
 
 /*
  * Driver API interfaces.

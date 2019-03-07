@@ -43,8 +43,6 @@
 
 void tsk_uart_Start(void);
 
-extern StreamBufferHandle_t xUART_rx;
-extern StreamBufferHandle_t xUART_tx;
 /*
  * Add user function prototypes in the below merge region to add user
  * functionality to the task definition.

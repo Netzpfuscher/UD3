@@ -657,24 +657,8 @@ void Term_Restore_Cursor(port_str *ptr) {
 *********************************************/
 void send_char(uint8 c, port_str *ptr) {
 #ifndef BOOT
-    switch(ptr->type){
-        case PORT_TYPE_NULL:
-        break;
-        case PORT_TYPE_SERIAL:
-            if (xUART_tx != NULL)
-                xStreamBufferSend(xUART_tx,&c, 1,portMAX_DELAY);
-        break;
-        case PORT_TYPE_USB:
-            if (qUSB_tx != NULL)
-			    xQueueSend(qUSB_tx, &c, portMAX_DELAY);
-        break;
-        case PORT_TYPE_ETH:
-            if (xETH_tx[ptr->num] != NULL) {
-                //xStreamBufferSend(xETH_tx[ptr->num],&c, 1,200 /portTICK_RATE_MS);
-                xStreamBufferSend(xETH_tx[ptr->num],&c, 1,portMAX_DELAY);
-		    }
-        break;
-    }
+    if (ptr->tx != NULL)
+        xStreamBufferSend(ptr->tx,&c, 1,portMAX_DELAY);
 #endif
 }
 
@@ -684,28 +668,8 @@ void send_char(uint8 c, port_str *ptr) {
 void send_string(char *data, port_str *ptr) {
 #ifndef BOOT
     uint16_t len = strlen(data);
-    switch(ptr->type){
-        case PORT_TYPE_NULL:
-        break;
-        case PORT_TYPE_SERIAL:
-            if (xUART_tx != NULL) {
-                    xStreamBufferSend(xUART_tx,data, len, portMAX_DELAY);
-		    }
-        break;
-        case PORT_TYPE_USB:
-            if (qUSB_tx != NULL) {
-			    while ((*data) != '\0') {
-				    if (xQueueSend(qUSB_tx, data, portMAX_DELAY))
-					    data++;
-			    }
-		    }
-        break;
-        case PORT_TYPE_ETH:
-            if (xETH_tx[ptr->num] != NULL) {
-                //xStreamBufferSend(xETH_tx[ptr->num],data, len, 200 /portTICK_RATE_MS);
-                xStreamBufferSend(xETH_tx[ptr->num],data, len, portMAX_DELAY);
-    		}
-        break;
+    if (ptr->tx != NULL) {
+        xStreamBufferSend(ptr->tx,data, len, portMAX_DELAY);
     }
 
 #endif
@@ -715,29 +679,8 @@ void send_string(char *data, port_str *ptr) {
 *********************************************/
 void send_buffer(uint8_t *data, uint16_t len, port_str *ptr) {
 #ifndef BOOT
-    switch(ptr->type){
-        case PORT_TYPE_NULL:
-        break;
-        case PORT_TYPE_SERIAL:
-            if (xUART_tx != NULL) {
-                xStreamBufferSend(xUART_tx,data, len,portMAX_DELAY);
-		    }
-        break;
-        case PORT_TYPE_USB:
-            if (qUSB_tx != NULL) {
-			    while (len) {
-				    if (xQueueSend(qUSB_tx, data, portMAX_DELAY))
-					    data++;
-				    len--;
-			    }
-		    }
-        break;
-        case PORT_TYPE_ETH:
-            if (xETH_tx[ptr->num] != NULL) {
-                //xStreamBufferSend(xETH_tx[ptr->num],data, len,200 /portTICK_RATE_MS);
-                xStreamBufferSend(xETH_tx[ptr->num],data, len,portMAX_DELAY);
-		    }
-        break;
-    }
+    if (ptr->tx != NULL) {
+        xStreamBufferSend(ptr->tx,data, len,portMAX_DELAY);
+	}
 #endif
 }

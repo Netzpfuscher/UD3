@@ -60,6 +60,7 @@ port_str eth_port[NUM_ETH_CON];
 #include "tsk_usb.h"
 #include "tsk_eth.h"
 #include <project.h>
+#include "tsk_eth_common.h"
 
 #define UNUSED_VARIABLE(N) \
 	do {                   \
@@ -95,22 +96,12 @@ void initialize_cli(ntshell_t *ptr, port_str *port) {
 
 static int write(const char *buf, int cnt, void *extobj) {
     port_str *port = extobj;
-    switch(port->type){
-        case PORT_TYPE_SERIAL:
-            xStreamBufferSend(xUART_tx,buf, cnt,portMAX_DELAY);
-        break;
-        case PORT_TYPE_USB:
-            if (0u != USBMIDI_1_GetConfiguration()) {
-		        for (int i = 0; i < cnt; i++) {
-			        xQueueSend(qUSB_tx, &buf[i], portMAX_DELAY);
-		        }
-	        }
-        break; 
-        case PORT_TYPE_ETH:
-            xStreamBufferSend(xETH_tx[port->num],buf, cnt,portMAX_DELAY);
-        break; 
+    if(port->type==PORT_TYPE_USB){
+        if (0u != USBMIDI_1_GetConfiguration()) {
+            return cnt;
+        }
     }
-    
+    xStreamBufferSend(port->tx,buf, cnt,portMAX_DELAY);
 	return cnt;
 }
 
@@ -120,48 +111,11 @@ static int nt_callback(const char *text, void *extobj) {
 	return 0;
 }
 
-uint8_t handle_uart_terminal(ntshell_t *ptr, port_str *port) {
-	static uint8_t blink = 0;
-	char c;
-	if (blink)
-		blink--;
-	if (blink == 1)
-		rx_blink_Control = 1;
 
-	if (xStreamBufferReceive(xUART_rx, &c,1, portMAX_DELAY)) {
+uint8_t handle_terminal(ntshell_t *ptr, port_str *port) {
+	char c;
+	if (xStreamBufferReceive(port->rx, &c,1, portMAX_DELAY)) {
 		if (xSemaphoreTake(port->term_block, portMAX_DELAY)) {
-			rx_blink_Control = 0;
-			blink = 240;
-			ntshell_execute_nb(ptr, c);
-			xSemaphoreGive(port->term_block);
-		} 
-	}
-
-	return 0;
-}
-
-uint8_t handle_USB_terminal(ntshell_t *ptr, port_str *port) {
-	static uint8_t blink = 0;
-	char c;
-	if (blink)
-		blink--;
-	if (blink == 1)
-		rx_blink_Control = 1;
-	if (xQueueReceive(qUSB_rx, &c, portMAX_DELAY)) {
-		xSemaphoreTake(port->term_block, portMAX_DELAY);
-		rx_blink_Control = 0;
-		blink = 240;
-		ntshell_execute_nb(ptr, c);
-		xSemaphoreGive(port->term_block);
-	}
-
-	return 0;
-}
-
-uint8_t handle_ETH_terminal(ntshell_t *ptr, port_str *port) {
-	char c;
-	if (xStreamBufferReceive(xETH_rx[port->num], &c,1, 20 /portTICK_RATE_MS)) {
-		if (xSemaphoreTake(port->term_block, 20 /portTICK_RATE_MS)) {
 			ntshell_execute_nb(ptr, c);
 			xSemaphoreGive(port->term_block);
 		} 
@@ -203,17 +157,7 @@ void tsk_cli_TaskProc(void *pvParameters) {
 
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
-        switch(port->type){
-        case PORT_TYPE_SERIAL:
-            handle_uart_terminal(&ntsh,port);
-        break;
-        case PORT_TYPE_USB:
-            handle_USB_terminal(&ntsh, port);
-        break;
-        case PORT_TYPE_ETH:
-            handle_ETH_terminal(&ntsh, port);
-        break;
-    }
+        handle_terminal(&ntsh,port);
         
 		/* `#END` */
 
@@ -236,11 +180,15 @@ void tsk_cli_Start(void) {
         serial_port.type = PORT_TYPE_SERIAL;
         serial_port.term_mode = PORT_TERM_VT100;
         serial_port.term_block = xSemaphoreCreateBinary();
+        serial_port.rx = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
+        serial_port.tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,1);
         xSemaphoreGive(serial_port.term_block);
         
         usb_port.type = PORT_TYPE_USB;
         usb_port.term_mode = PORT_TERM_VT100;
         usb_port.term_block = xSemaphoreCreateBinary();
+        usb_port.rx = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
+        usb_port.tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,64);
         xSemaphoreGive(usb_port.term_block);
         
         for(uint8_t i=0;i<NUM_ETH_CON;i++){
@@ -248,6 +196,8 @@ void tsk_cli_Start(void) {
             eth_port[i].num = i;
             eth_port[i].term_mode = PORT_TERM_VT100;
             eth_port[i].term_block = xSemaphoreCreateBinary();
+            eth_port[i].rx = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
+            eth_port[i].tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,256);
             xSemaphoreGive(eth_port[i].term_block);
             xTaskCreate(tsk_cli_TaskProc, "ETH-CLI", STACK_TERMINAL, &eth_port[i], PRIO_TERMINAL, &ETH_Terminal_TaskHandle[i]);
         }

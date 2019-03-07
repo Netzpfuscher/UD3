@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include "FreeRTOS.h"
 #include "semphr.h"
-
+#include "stream_buffer.h" 
 
 #define PARAM_SIZE(param) sizeof(param) / sizeof(parameter_entry)
 
@@ -42,11 +42,14 @@
 #define PORT_TERM_VT100  0
 #define PORT_TERM_TT     1
     
+   
 typedef struct port_struct port_str;
 struct port_struct {
     uint8_t type;
     uint8_t num;
     uint8_t term_mode;
+    StreamBufferHandle_t tx;
+    StreamBufferHandle_t rx;
     xSemaphoreHandle term_block;
 };
 

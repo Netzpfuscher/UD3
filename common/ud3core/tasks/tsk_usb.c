@@ -41,6 +41,7 @@
 #include "cli_common.h"
 #include "interrupter.h"
 #include "tsk_midi.h"
+#include "tsk_cli.h"
 uint8 tsk_usb_initVar;
 xTaskHandle tsk_usb_TaskHandle;
 
@@ -88,9 +89,6 @@ void tsk_usb_Task(void *pvParameters) {
 	uint8 buffer[tsk_usb_BUFFER_LEN];
 	uint16 idx;
 
-	qUSB_tx = xQueueCreate(3096, sizeof(char));
-	qUSB_rx = xQueueCreate(64, sizeof(char));
-
 	for (;;) {
 		/* Handle enumeration of USB port */
 		if (USBMIDI_1_IsConfigurationChanged() != 0u) /* Host could send double SET_INTERFACE request */
@@ -119,9 +117,7 @@ void tsk_usb_Task(void *pvParameters) {
 				count = USBMIDI_1_GetAll(buffer);
 				if (count != 0u) {
 					/* insert data in to Receive FIFO */
-					for (idx = 0; idx < count; ++idx) {
-						xQueueSend(qUSB_rx, (void *)&buffer[idx], 0);
-					}
+                    xStreamBufferSend(usb_port.rx, &buffer,count, 0);
 				}
 			}
 			/*
@@ -129,8 +125,9 @@ void tsk_usb_Task(void *pvParameters) {
 			 * by checkig to see if there is data to send, then sending
 			 * up to the BUFFER_LEN of data (64 bytes)
 			 */
-			count = uxQueueMessagesWaiting(qUSB_tx);
-			count = (count > tsk_usb_BUFFER_LEN) ? tsk_usb_BUFFER_LEN : count;
+            
+			//count = uxQueueMessagesWaiting(qUSB_tx);
+            count = xStreamBufferBytesAvailable(usb_port.tx);
 
 			/* When component is ready to send more data to the PC */
 			if ((USBMIDI_1_CDCIsReady() != 0u) && (count > 0)) {
@@ -138,9 +135,8 @@ void tsk_usb_Task(void *pvParameters) {
 				 * Read the data from the transmit queue and buffer it
 				 * locally so that the data can be utilized.
 				 */
-				for (idx = 0; idx < count; ++idx) {
-					xQueueReceive(qUSB_tx, &buffer[idx], 0);
-				}
+
+                count = xStreamBufferReceive(usb_port.tx,&buffer,tsk_usb_BUFFER_LEN,0);
 				/* Send data back to host */
 				USBMIDI_1_PutData(buffer, count);
 
@@ -157,8 +153,9 @@ void tsk_usb_Task(void *pvParameters) {
 				}
 			}
 		}
-
-		vTaskDelay(10 / portTICK_PERIOD_MS);
+        if(xStreamBufferBytesAvailable(usb_port.tx)==0 || xStreamBufferBytesAvailable(usb_port.rx)==0){
+		    vTaskDelay(2 / portTICK_PERIOD_MS);
+        }
 	}
 }
 /* ======================================================================== */

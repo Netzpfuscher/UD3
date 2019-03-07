@@ -59,8 +59,7 @@ uint8 tsk_eth_initVar = 0u;
 /* `#START USER_TASK_LOCAL_CODE` */
 
 
-#define STREAMBUFFER_RX_SIZE    256     //bytes
-#define STREAMBUFFER_TX_SIZE    1024    //bytes
+
 
 #define LOCAL_ETH_BUFFER_SIZE 256
 
@@ -117,8 +116,8 @@ void tsk_eth_TaskProc(void *pvParameters) {
         synth_socket[i]=0xFF;
         cli_socket[i]=0xFF;
         flow_ctl[i]=1;
-        xETH_rx[i] = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
-        xETH_tx[i] = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,256);
+       // xETH_rx[i] = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
+       // xETH_tx[i] = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,256);
     }
     
     
@@ -166,12 +165,12 @@ void tsk_eth_TaskProc(void *pvParameters) {
     				 */
     				len = ETH_TcpReceive(cli_socket[i],buffer,LOCAL_ETH_BUFFER_SIZE,0);
                     if(len){
-    				    xStreamBufferSend(xETH_rx[i], buffer, len, 0);
+    				    xStreamBufferSend(eth_port[i].rx, buffer, len, 0);
                     }
     				/*
     				 * check for data waiting to be sent over the telnet port
     				 */
-    				len = xStreamBufferReceive(xETH_tx[i], buffer, LOCAL_ETH_BUFFER_SIZE, 1);
+    				len = xStreamBufferReceive(eth_port[i].tx, buffer, LOCAL_ETH_BUFFER_SIZE, 1);
                     if(len){
     				    ETH_TcpSend(cli_socket[i],buffer,len,0);
                     }

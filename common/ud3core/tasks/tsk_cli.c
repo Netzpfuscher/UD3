@@ -40,10 +40,10 @@ xTaskHandle USB_Terminal_TaskHandle;
 xTaskHandle ETH_Terminal_TaskHandle[NUM_ETH_CON];
 uint8 tsk_cli_initVar = 0u;
 
-port_str null_port;
 port_str serial_port;
 port_str usb_port;
 port_str eth_port[NUM_ETH_CON];
+port_str null_port;
 
 
 /* ------------------------------------------------------------------------ */
@@ -81,14 +81,6 @@ static int nt_callback(const char *text, void *extobj);
 /* `#START USER_TASK_LOCAL_CODE` */
 
 void initialize_cli(ntshell_t *ptr, port_str *port) {
-    switch(port->type){
-        case PORT_TYPE_SERIAL:
-            //UART_2_Start();
-        break;
-        case PORT_TYPE_USB:
-            USBMIDI_1_Start(0, USBMIDI_1_5V_OPERATION);
-        break;
-    }
     ntshell_init(ptr, write, nt_callback, port);
 	ntshell_set_prompt(ptr, ":>");
 	ntshell_show_promt(ptr);
@@ -96,10 +88,8 @@ void initialize_cli(ntshell_t *ptr, port_str *port) {
 
 static int write(const char *buf, int cnt, void *extobj) {
     port_str *port = extobj;
-    if(port->type==PORT_TYPE_USB){
-        if (0u != USBMIDI_1_GetConfiguration()) {
+    if(port->type==PORT_TYPE_USB && 0u == USBMIDI_1_GetConfiguration()){
             return cnt;
-        }
     }
     xStreamBufferSend(port->tx,buf, cnt,portMAX_DELAY);
 	return cnt;
@@ -120,7 +110,6 @@ uint8_t handle_terminal(ntshell_t *ptr, port_str *port) {
 			xSemaphoreGive(port->term_block);
 		} 
 	}
-
 	return 0;
 }
 
@@ -158,10 +147,8 @@ void tsk_cli_TaskProc(void *pvParameters) {
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
         handle_terminal(&ntsh,port);
-        
-		/* `#END` */
 
-		//vTaskDelay( 20/ portTICK_PERIOD_MS);
+        /* `#END` */
 	}
 }
 /* ------------------------------------------------------------------------ */

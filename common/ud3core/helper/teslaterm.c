@@ -64,7 +64,7 @@ void send_gauge_config(uint8_t gauge, int16_t min, int16_t max, char * text, por
 }
 
 void send_chart_clear(port_str *ptr){
-    send_buffer((uint8_t*)chartclear,sizeof(chartdraw),ptr); 
+    send_buffer((uint8_t*)chartclear,sizeof(chartclear),ptr); 
 }
 
 void send_chart_line(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint8_t color, port_str *ptr){

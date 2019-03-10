@@ -128,9 +128,6 @@ void tsk_uart_TaskProc(void *pvParameters) {
 	char c;
 
 	/* `#END` */
-	//char buffer[30];
-	//uint16_t num;
-	//uint8_t cnt;
 
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */

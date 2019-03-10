@@ -36,10 +36,6 @@
 #include "timers.h"
 #include "tasks/tsk_eth.h"
 
-#define MODE_MIDI 0
-#define MODE_CLASSIC 1
-#define MODE_UDCLASSIC 2
-
 #define TERM_MODE_VT100 0xFF
 
 

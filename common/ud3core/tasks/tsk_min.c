@@ -46,7 +46,6 @@ uint8 tsk_min_initVar = 0u;
 /* `#START USER_INCLUDE SECTION` */
 #include "cli_common.h"
 #include "tsk_priority.h"
-//#include <stdio.h>
 #include "min.h"
 #include "min_id.h"
 #include "telemetry.h"
@@ -85,7 +84,6 @@ void min_tx_byte(uint8_t port, uint8_t byte){
 
 uint32_t min_time_ms(void){
   return (xTaskGetTickCount() * portTICK_RATE_MS);
-    //return 4294967296ul-SG_Timer_ReadCounter(); //3,3us
 }
 
 void min_tx_start(uint8_t port){
@@ -305,7 +303,6 @@ void tsk_min_TaskProc(void *pvParameters) {
              
             poll_UART(buffer_u);
             if(socket_info[i].socket==SOCKET_DISCONNECTED) goto end;   
-            //min_reset_wd();
             
             if(param.synth==SYNTH_SID){
                 if(uxQueueSpacesAvailable(qSID) < 30 && flow_ctl){
@@ -325,9 +322,7 @@ void tsk_min_TaskProc(void *pvParameters) {
                 bytes_cnt = xStreamBufferReceive(eth_port[i].tx, buffer, LOCAL_UART_BUFFER_SIZE, 0);
                 if(bytes_cnt){
                     uint8_t res=0;
-                   
                     res = min_queue_frame(&min_ctx,i,buffer,bytes_cnt);
-                    //min_send_frame(&min_ctx,i,buffer,bytes_cnt);
                     while(!res){
                         poll_UART(buffer_u);
                         vTaskDelay(1);   

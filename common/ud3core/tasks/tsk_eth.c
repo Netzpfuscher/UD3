@@ -116,8 +116,6 @@ void tsk_eth_TaskProc(void *pvParameters) {
         synth_socket[i]=0xFF;
         cli_socket[i]=0xFF;
         flow_ctl[i]=1;
-       // xETH_rx[i] = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
-       // xETH_tx[i] = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,256);
     }
     
     
@@ -126,9 +124,7 @@ void tsk_eth_TaskProc(void *pvParameters) {
     SPIM0_Start();
     uint8_t ret;
     if(strcmp(configuration.ip_addr,"NULL")){
-        //ret= ETH_StartEx(configuration.ip_gw,configuration.ip_subnet,"58:E9:40:31:CB:9B",configuration.ip_addr);
-        ret= ETH_StartEx(configuration.ip_gw,configuration.ip_subnet,configuration.ip_mac,configuration.ip_addr);
-        
+        ret= ETH_StartEx(configuration.ip_gw,configuration.ip_subnet,configuration.ip_mac,configuration.ip_addr);  
     }else{
         ret=CYRET_TIMEOUT;
     }
@@ -145,9 +141,7 @@ void tsk_eth_TaskProc(void *pvParameters) {
 
 	/* `#END` */
     /* `#START TASK_LOOP_CODE` */
-   
-    
-    
+
 	for (;;) {
         
         

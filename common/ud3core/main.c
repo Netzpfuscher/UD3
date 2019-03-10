@@ -61,6 +61,8 @@ int main() {
     EEPROM_1_Start();
     
     null_port.type = PORT_TYPE_NULL;
+    null_port.tx = NULL;
+    null_port.rx = NULL;
     
     eeprom_load(&null_port);
    

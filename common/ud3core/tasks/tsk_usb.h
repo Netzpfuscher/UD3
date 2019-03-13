@@ -38,10 +38,6 @@
 #include "queue.h"
 #include "semphr.h"
 
-#define tsk_usb_YES (1)
-#define tsk_usb_NO (0)
-
-#define tsk_usb_BLOCKING_GETS (tsk_usb_NO)
 
 void tsk_usb_Start(void);
 void tsk_usb_Init(void);
@@ -50,23 +46,11 @@ void tsk_usb_Enable(void);
 void tsk_usb_Task(void *pvParameters);
 
 
-/*
- * Driver API interfaces.
- */
-cystatus tsk_usb_Read(uint8 *value, uint32 length);
-cystatus tsk_usb_ReadByte(uint8 *value);
-uint32 tsk_usb_DataWaiting(void);
-void tsk_usb_UnRead(uint8 *value, uint32 len);
-
-cystatus tsk_usb_WriteByte(uint8 ch);
-cystatus tsk_usb_Write(uint8 *str, uint32 len);
-
 /* The size of the buffer is equal to maximum packet size of the 
 *  IN and OUT bulk endpoints. 
 */
 #define tsk_usb_BUFFER_LEN (64u)
-#define tsk_usb_RX_SIZE ()
-#define tsk_usb_TX_SIZE ()
+
 
 /* ------------------------------------------------------------------------ */
 

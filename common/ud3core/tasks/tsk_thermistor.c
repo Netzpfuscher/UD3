@@ -68,7 +68,6 @@ uint8 tsk_thermistor_initVar = 0u;
 #define therm_dma_DST_BASE (therm_sample)
 
 uint16_t therm_sample[2];
-uint16_t temp_fault_counter;
 
 //temperature *128
 const uint16 count_temp_table[] = {
@@ -88,10 +87,6 @@ void initialize_thermistor(void) {
 	IDAC_therm_Start();
 	ADC_therm_Start();
 	IDAC_therm_SetValue(THERM_DAC_VAL);
-	//this enables the thermistor conversion ISR
-	//    therm_sample_StartEx(therm_sample_ISR);
-
-	temp_fault_counter = 0;
 
 	/* Variable declarations for therm1_dma */
 	/* Move these variable declarations to the top of the function */
@@ -162,7 +157,8 @@ void tsk_thermistor_TaskProc(void *pvParameters) {
 	 * in the task.
 	 */
 	/* `#START TASK_INIT_CODE` */
-
+    uint16_t temp_fault_counter=0;
+    
 	initialize_thermistor();
     
     
@@ -179,7 +175,6 @@ void tsk_thermistor_TaskProc(void *pvParameters) {
 				bus_command = BUS_COMMAND_FAULT;
 			}
 		} else {
-			//system_fault_Control = 1;
 			temp_fault_counter = 0;
 		}
         

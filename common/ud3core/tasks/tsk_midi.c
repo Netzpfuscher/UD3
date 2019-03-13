@@ -615,8 +615,6 @@ void tsk_midi_TaskProc(void *pvParameters) {
 	PORT port[N_CHANNEL];
 	isr_port_ptr = port;
 
-	new_midi_data = xSemaphoreCreateBinary();
-
 	/* `#END` */
 
 	/*

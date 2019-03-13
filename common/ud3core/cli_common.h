@@ -36,30 +36,16 @@
 #include "timers.h"
 #include "tasks/tsk_eth.h"
 
-#define TERM_MODE_VT100 0xFF
-
-
-uint8_t input_handle();
-
-//extern uint8_t term_mode[NUM_CON];
 
 void nt_interpret(char *text, port_str *ptr);
 void init_config();
 void eeprom_load(port_str *ptr);
 
-void initialize_term(void);
-void task_terminal_overlay(void);
 uint8_t command_cls(char *commandline, port_str *ptr);
-void task_terminal();
 void stop_overlay_task(port_str *ptr);
 
-extern parameter_entry tparameters[];
 volatile uint8_t qcw_reg;
 extern parameter_entry confparam[];
-
-//xSemaphoreHandle block_term[NUM_CON];
-extern xTaskHandle overlay_ETH_TaskHandle0;
-extern xTaskHandle overlay_ETH_TaskHandle1;
 
 struct config_struct{
     uint8_t watchdog;

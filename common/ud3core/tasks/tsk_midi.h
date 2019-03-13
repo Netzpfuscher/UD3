@@ -39,7 +39,6 @@
 #include "semphr.h"
 
 xQueueHandle qMIDI_rx;
-xSemaphoreHandle new_midi_data;
 
 /* `#END` */
 

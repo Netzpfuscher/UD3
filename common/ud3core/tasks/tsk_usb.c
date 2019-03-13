@@ -87,7 +87,6 @@ void tsk_usb_Enable(void) {
 void tsk_usb_Task(void *pvParameters) {
 	uint16 count;
 	uint8 buffer[tsk_usb_BUFFER_LEN];
-	uint16 idx;
 
 	for (;;) {
 		/* Handle enumeration of USB port */
@@ -126,7 +125,6 @@ void tsk_usb_Task(void *pvParameters) {
 			 * up to the BUFFER_LEN of data (64 bytes)
 			 */
             
-			//count = uxQueueMessagesWaiting(qUSB_tx);
             count = xStreamBufferBytesAvailable(usb_port.tx);
 
 			/* When component is ready to send more data to the PC */
@@ -147,13 +145,13 @@ void tsk_usb_Task(void *pvParameters) {
 				if (count == tsk_usb_BUFFER_LEN) {
 					/* Wait till component is ready to send more data to the PC */
 					while (USBMIDI_1_CDCIsReady() == 0u) {
-						vTaskDelay(10 / portTICK_RATE_MS);
+						vTaskDelay(1);
 					}
 					USBMIDI_1_PutData(NULL, 0u); /* Send zero-length packet to PC */
 				}
 			}
 		}
-        if(xStreamBufferBytesAvailable(usb_port.tx)==0 || xStreamBufferBytesAvailable(usb_port.rx)==0){
+        if(xStreamBufferBytesAvailable(usb_port.tx)==0 || xStreamBufferBytesAvailable(usb_port.rx)==0 || USBMIDI_1_CDCIsReady()==0){
 		    vTaskDelay(2 / portTICK_PERIOD_MS);
         }
 	}

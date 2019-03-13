@@ -29,7 +29,6 @@
 
 #define CPU_CLK_PERIOD 1000.0/BCLK__BUS_CLK__MHZ  
 #define DAC_VOLTS_PER_STEP 0.016
-#define R_BURDEN 3.3
 
 typedef struct
 {
@@ -58,7 +57,6 @@ volatile parameters params;
 uint16 pwma_init_val; //holds the initial PWMA compare2 value, DMA transfers it to the PWMA module
 uint16 fb_filter_in;
 uint16 fb_filter_out;
-uint16 fb_fake;
 uint8 ct1_dac_val[3];
 
 void initialize_ZCD_to_PWM(void);

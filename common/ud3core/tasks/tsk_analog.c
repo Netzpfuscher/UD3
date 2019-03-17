@@ -102,9 +102,7 @@ uint32_t i2t_integral;
 
 void i2t_set_limit(uint32_t const_current, uint32_t ovr_current, uint32_t limit_ms){
     i2t_leak = const_current * const_current;
-    
-    i2t_limit= (limit_ms/NEW_DATA_RATE_MS)*((ovr_current*ovr_current)-i2t_leak);
-    
+    i2t_limit= floor((float)((float)limit_ms/NEW_DATA_RATE_MS)*(float)((ovr_current*ovr_current)-i2t_leak));
     i2t_set_warning(i2t_warning_level);
 }
 
@@ -133,19 +131,16 @@ uint8_t i2t_calculate(){
     
     if(i2t_integral < i2t_warning)
 	{
-		//Lower than the warning treshold
 		return I2T_NORMAL;
 	}
 	else
 	{
 		if(i2t_integral < i2t_limit)
 		{
-			//Warning - getting close to the limit
 			return I2T_WARNING;
 		}
 		else
 		{
-			//Problems!
             i2t_integral=i2t_limit;
 			return I2T_LIMIT;
 		}

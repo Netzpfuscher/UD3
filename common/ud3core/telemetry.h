@@ -78,10 +78,10 @@
 #define GAUGE5_VAR telemetry.midi_voices
 #define GAUGE5_SLOW 0
     
-#define GAUGE6_NAME "Pulsewidth"
+#define GAUGE6_NAME "Fuse"
 #define GAUGE6_MIN 0
-#define GAUGE6_MAX 500
-#define GAUGE6_VAR interrupter.pw
+#define GAUGE6_MAX 100
+#define GAUGE6_VAR telemetry.i2t_i
 #define GAUGE6_SLOW 0
     
 #define CHART0_NAME "Bus Voltage"
@@ -123,6 +123,7 @@ typedef struct
 	uint8 bus_status;   //0 = charging, 1 = ready
 	uint16 avg_power;   //Average power in watts
 	uint16 batt_i;		//battery current in centiamps
+    uint32 i2t_i;
 	uint8 uvlo_stat;	//uvlo status
 	uint16_t primary_i;
     uint8_t midi_voices;

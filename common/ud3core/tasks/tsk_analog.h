@@ -34,6 +34,11 @@
 
 #define CT_PRIMARY 0
 #define CT_SECONDARY 1
+    
+    
+#define I2T_NORMAL			0
+#define I2T_WARNING			1
+#define I2T_LIMIT			2
 
 /* `#END` */
 
@@ -41,7 +46,9 @@ void tsk_analog_Start(void);
 uint16_t CT1_Get_Current(uint8_t channel);
 float CT1_Get_Current_f(uint8_t channel);
 uint16_t get_max(void);
-
+void i2t_set_limit(uint32_t const_current, uint32_t ovr_current, uint32_t limit_ms);
+void i2t_set_warning(uint8_t percent);
+void i2t_reset();
 /*
  * Add user function prototypes in the below merge region to add user
  * functionality to the task definition.

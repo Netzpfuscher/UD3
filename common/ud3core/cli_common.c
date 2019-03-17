@@ -75,6 +75,7 @@ uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, port_str *p
 uint8_t callback_OfftimeFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_SynthFunction(parameter_entry * params, uint8_t index, port_str *ptr);
+uint8_t callback_i2tFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 
 uint8_t command_help(char *commandline, port_str *ptr);
 uint8_t command_get(char *commandline, port_str *ptr);
@@ -96,6 +97,7 @@ uint8_t command_minstat(char *commandline, port_str *ptr);
 uint8_t command_config_get(char *commandline, port_str *ptr);
 uint8_t command_exit(char *commandline, port_str *ptr);
 uint8_t command_ethcon(char *commandline, port_str *ptr);
+uint8_t command_fuse(char *commandline, port_str *ptr);
 
 
 uint8_t burst_state = 0;
@@ -146,8 +148,8 @@ void init_config(){
     ntlibc_strcpy(configuration.ssid,"NULL");
     ntlibc_strcpy(configuration.passwd,"NULL");
     configuration.minprot = 0;
-    configuration.max_inst_i = 80;
-    configuration.max_therm_i = 16;
+    configuration.max_const_i = 160;
+    configuration.max_fault_i = 250;
     configuration.eth_hw = 2; //ESP32
     
     param.pw = 0;
@@ -163,7 +165,8 @@ void init_config(){
     param.qcw_repeat = 500;
     param.transpose = 0;
     param.synth = SYNTH_MIDI;
-
+    
+    i2t_set_limit(configuration.max_const_i,configuration.max_fault_i,10000);
 }
 
 // clang-format off
@@ -219,8 +222,8 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,"ip_subnet"       , configuration.ip_subnet       , TYPE_STRING   ,0      ,0      ,0      ,NULL                        ,"Subnet")
     ADD_PARAM(PARAM_CONFIG  ,"ip_mac"          , configuration.ip_mac          , TYPE_STRING   ,0      ,0      ,0      ,NULL                        ,"MAC adress")
     ADD_PARAM(PARAM_CONFIG  ,"min_enable"      , configuration.minprot         , TYPE_UNSIGNED ,0      ,1      ,0      ,NULL                        ,"Use MIN-Protocol")
-    ADD_PARAM(PARAM_CONFIG  ,"max_inst_i"      , configuration.max_inst_i      , TYPE_UNSIGNED ,0      ,1000   ,0      ,NULL                        ,"Maximum instantaneous current [A]")
-    ADD_PARAM(PARAM_CONFIG  ,"max_therm_i"     , configuration.max_therm_i     , TYPE_UNSIGNED ,0      ,1000   ,0      ,NULL                        ,"Maximum thermal current [A]")
+    ADD_PARAM(PARAM_CONFIG  ,"max_const_i"     , configuration.max_const_i     , TYPE_UNSIGNED ,0      ,2000   ,10     ,callback_i2tFunction        ,"Maximum constant current [A]")
+    ADD_PARAM(PARAM_CONFIG  ,"max_fault_i"     , configuration.max_fault_i     , TYPE_UNSIGNED ,0      ,2000   ,10     ,callback_i2tFunction        ,"Maximum fault current for 10s [A]")
     ADD_PARAM(PARAM_CONFIG  ,"eth_hw"          , configuration.eth_hw          , TYPE_UNSIGNED ,0      ,2      ,0      ,NULL                        ,"0=Disabled 1=W5500 2=ESP32")
     ADD_PARAM(PARAM_CONFIG  ,"ssid"            , configuration.ssid            , TYPE_STRING   ,0      ,0      ,0      ,NULL                        ,"WLAN SSID")
     ADD_PARAM(PARAM_CONFIG  ,"passwd"          , configuration.passwd          , TYPE_STRING   ,0      ,0      ,0      ,NULL                        ,"WLAN password")
@@ -250,6 +253,7 @@ command_entry commands[] = {
     ADD_COMMAND("minstat"	    ,command_minstat        ,"Prints the min statistics")
     ADD_COMMAND("ethcon"	    ,command_ethcon         ,"Prints the eth connections")
     ADD_COMMAND("config_get"    ,command_config_get     ,"Internal use")
+    ADD_COMMAND("fuse_reset"    ,command_fuse           ,"Reset the internal fuse")
 };
 // clang-format on
 
@@ -404,6 +408,13 @@ uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, port_s
 }
 
 /*****************************************************************************
+* Callback for overcurrent module
+******************************************************************************/
+uint8_t callback_i2tFunction(parameter_entry * params, uint8_t index, port_str *ptr){
+    i2t_set_limit(configuration.max_const_i,configuration.max_fault_i,10000);
+    return 1;  
+}
+/*****************************************************************************
 * Prints the ethernet connections
 ******************************************************************************/
 uint8_t command_ethcon(char *commandline, port_str *ptr) {
@@ -463,6 +474,13 @@ uint8_t command_bus(char *commandline, port_str *ptr) {
 	}
 
 	return 1;
+}
+/*****************************************************************************
+* Resets the software fuse
+******************************************************************************/
+uint8_t command_fuse(char *commandline, port_str *ptr){
+    i2t_reset();
+    return 1;
 }
 
 /*****************************************************************************
@@ -945,7 +963,8 @@ uint8_t command_set(char *commandline, port_str *ptr) {
 
 
 void eeprom_load(port_str *ptr){
-   EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,ptr); 
+    EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,ptr);
+    i2t_set_limit(configuration.max_const_i,configuration.max_fault_i,10000);
 }
 
 /*****************************************************************************

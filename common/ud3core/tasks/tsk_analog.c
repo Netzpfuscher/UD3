@@ -33,6 +33,8 @@
 #include "queue.h"
 #include "semphr.h"
 #include "interrupter.h"
+#include "math.h"
+
 
 xTaskHandle tsk_analog_TaskHandle;
 uint8 tsk_analog_initVar = 0u;
@@ -40,6 +42,8 @@ uint8 tsk_analog_initVar = 0u;
 SemaphoreHandle_t adc_ready_Semaphore;
 
 xQueueHandle adc_data;
+
+#define NEW_DATA_RATE_MS 3.125  //ms
 
 
 /* ------------------------------------------------------------------------ */
@@ -89,6 +93,65 @@ int16 ADC_sample[4];
 uint16 ADC_sample_buf[4];
 rms_t current_idc;
 uint8_t ADC_mux_ctl[4] = {0x05, 0x02, 0x03, 0x00};
+
+uint32_t i2t_limit=0;
+uint32_t i2t_warning=0;
+uint32_t i2t_leak=0;
+uint8_t i2t_warning_level=80;
+uint32_t i2t_integral;
+
+void i2t_set_limit(uint32_t const_current, uint32_t ovr_current, uint32_t limit_ms){
+    i2t_leak = const_current * const_current;
+    
+    i2t_limit= (limit_ms/NEW_DATA_RATE_MS)*((ovr_current*ovr_current)-i2t_leak);
+    
+    i2t_set_warning(i2t_warning_level);
+}
+
+void i2t_set_warning(uint8_t percent){
+    i2t_warning_level = percent;
+    i2t_warning = floor((float)i2t_limit*((float)percent/100.0));
+}
+
+void i2t_reset(){
+    i2t_integral=0;
+}
+
+uint8_t i2t_calculate(){
+    uint32_t squaredCurrent = (uint32_t)telemetry.batt_i * (uint32_t)telemetry.batt_i;
+    i2t_integral = i2t_integral + squaredCurrent;
+	if(i2t_integral > i2t_leak)
+	{
+		i2t_integral -= i2t_leak;
+	}
+	else
+	{
+		i2t_integral = 0;
+	}
+    
+    telemetry.i2t_i=(100*(i2t_integral>>8))/(i2t_limit>>8);
+    
+    if(i2t_integral < i2t_warning)
+	{
+		//Lower than the warning treshold
+		return I2T_NORMAL;
+	}
+	else
+	{
+		if(i2t_integral < i2t_limit)
+		{
+			//Warning - getting close to the limit
+			return I2T_WARNING;
+		}
+		else
+		{
+			//Problems!
+            i2t_integral=i2t_limit;
+			return I2T_LIMIT;
+		}
+	}
+  
+}
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */
@@ -166,6 +229,7 @@ uint16_t average_filter(uint32_t *ptr, uint16_t sample) {
 	return *ptr;
 }
 
+/*
 void regulate_current(){
     int16_t e = (telemetry.batt_i/10)-configuration.max_inst_i;
     if(e>0){
@@ -181,7 +245,7 @@ void regulate_current(){
     }
    
 }
-
+*/
 void calculate_rms(void) {
     static uint8_t count=0;
 	while (uxQueueMessagesWaiting(adc_data)) {
@@ -200,8 +264,13 @@ void calculate_rms(void) {
 
 		telemetry.avg_power = telemetry.batt_i * telemetry.bus_v / 10;
 	}
-	control_precharge();
+    if(i2t_calculate()==I2T_LIMIT){
+        interrupter_kill();   
+    }
     
+    
+	control_precharge();
+    /*
     if(count>10){
         count=0;
     if(configuration.max_inst_i>0){
@@ -212,7 +281,7 @@ void calculate_rms(void) {
     }else{
         count++;
     }
-   
+   */
 }
 
 

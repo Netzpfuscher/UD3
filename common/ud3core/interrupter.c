@@ -73,6 +73,7 @@ uint8_t interrupter_get_kill(void){
 
 void interrupter_kill(void){
     blocked=1;
+    tr_running=0;
     interrupter.pw =0;
     param.pw=0;
     update_interrupter();

@@ -46,7 +46,6 @@ CY_ISR(int_wd_ISR) {
 	ramp.modulation_value = 0;
     interrupter_kill();
     USBMIDI_1_callbackLocalMidiEvent(0, (uint8_t*)kill_msg);
-    //send_string("WD\r\n",ETH);
 }
 
 CY_ISR(qcw_end_ISR) {

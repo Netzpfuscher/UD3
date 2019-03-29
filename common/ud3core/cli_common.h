@@ -103,6 +103,7 @@ struct parameter_struct{
     uint16_t    burst_off;
     int8_t      transpose;
     uint8_t     synth;
+    uint16_t    temp_duty;
 };
 typedef struct parameter_struct cli_parameter;
 

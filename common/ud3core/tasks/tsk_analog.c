@@ -33,6 +33,8 @@
 #include "queue.h"
 #include "semphr.h"
 #include "interrupter.h"
+
+#include <stdlib.h>
 #include "math.h"
 
 
@@ -242,7 +244,7 @@ void regulate_current(){
 }
 */
 void calculate_rms(void) {
-    static uint8_t count=0;
+    static uint16_t count=0;
 	while (uxQueueMessagesWaiting(adc_data)) {
 
 		xQueueReceive(adc_data, ADC_sample, portMAX_DELAY);
@@ -259,10 +261,29 @@ void calculate_rms(void) {
 
 		telemetry.avg_power = telemetry.batt_i * telemetry.bus_v / 10;
 	}
-    if(i2t_calculate()==I2T_LIMIT){
-        interrupter_kill();   
-    }
     
+    if(count<100){
+        int16_t e= abs(telemetry.batt_i-configuration.max_const_i);
+        count += e/10;
+    }else{
+        count = 0;   
+    }
+    switch (i2t_calculate()){
+        case I2T_LIMIT:
+            interrupter_kill();   
+            break;
+        case I2T_WARNING:
+            if(telemetry.batt_i>configuration.max_const_i && !count){
+                  if(param.temp_duty<configuration.max_tr_duty) param.temp_duty++; 
+            }
+            break;
+        case I2T_NORMAL:
+            if(telemetry.batt_i<configuration.max_const_i && !count){
+                if(param.temp_duty>0) param.temp_duty--; 
+            }
+            break;
+            
+    }
     
 	control_precharge();
     /*

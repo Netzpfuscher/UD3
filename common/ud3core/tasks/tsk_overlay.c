@@ -198,7 +198,9 @@ void show_overlay_400ms(port_str *ptr) {
 
         send_status(telemetry.bus_status!=BUS_OFF,
                     tr_running!=0,
-                    configuration.ps_scheme!=AC_NO_RELAY_BUS_SCHEME, ptr);
+                    configuration.ps_scheme!=AC_NO_RELAY_BUS_SCHEME,
+                    blocked,
+                    ptr);
     }
 }
 

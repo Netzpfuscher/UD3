@@ -140,8 +140,8 @@ void process_sid(uint8_t* ptr, uint16_t len) {
                         }
                     }
                     telemetry.duty = dutycycle;
-                    if(dutycycle>configuration.max_tr_duty){
-                        SID_frame.master_pw = (param.pw * configuration.max_tr_duty) / dutycycle;
+                    if(dutycycle>configuration.max_tr_duty - param.temp_duty){
+                        SID_frame.master_pw = (param.pw * (configuration.max_tr_duty - param.temp_duty)) / dutycycle;
                     }else{
                         SID_frame.master_pw = param.pw;
                     }  

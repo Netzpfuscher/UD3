@@ -498,8 +498,8 @@ void update_midi_duty(){
 	}
   
     telemetry.duty = dutycycle;
-    if(dutycycle>configuration.max_tr_duty){
-        interrupter.pw = (param.pw * configuration.max_tr_duty) / dutycycle;
+    if(dutycycle>(configuration.max_tr_duty-param.temp_duty)){
+        interrupter.pw = (param.pw * (configuration.max_tr_duty-param.temp_duty)) / dutycycle;
     }else{
         interrupter.pw = param.pw;
     }
@@ -539,8 +539,8 @@ void reflect(PORT port[], CHANNEL channel[], MIDICH midich[]) {
     
     
     telemetry.duty = dutycycle;
-    if(dutycycle>configuration.max_tr_duty){
-        interrupter.pw = (param.pw * configuration.max_tr_duty) / dutycycle;
+    if(dutycycle>(configuration.max_tr_duty-param.temp_duty)){
+        interrupter.pw = (param.pw * (configuration.max_tr_duty-param.temp_duty)) / dutycycle;
     }else{
         interrupter.pw = param.pw;
     }

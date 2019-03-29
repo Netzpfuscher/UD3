@@ -64,6 +64,7 @@ ramp_params volatile ramp; //added volatile
 
 extern volatile uint8 qcw_dl_ovf_counter;
 extern uint8_t tr_running;
+extern uint8_t blocked; 
 
 void initialize_interrupter(void);
 void update_interrupter();

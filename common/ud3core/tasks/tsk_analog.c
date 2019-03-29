@@ -274,12 +274,22 @@ void calculate_rms(void) {
             break;
         case I2T_WARNING:
             if(telemetry.batt_i>configuration.max_const_i && !count){
-                  if(param.temp_duty<configuration.max_tr_duty) param.temp_duty++; 
+                if(param.temp_duty<configuration.max_tr_duty) param.temp_duty++; 
+                if(tr_running==1){
+                    update_interrupter();
+                }else{
+                    update_midi_duty();
+                }
             }
             break;
         case I2T_NORMAL:
             if(telemetry.batt_i<configuration.max_const_i && !count){
                 if(param.temp_duty>0) param.temp_duty--; 
+                if(tr_running==1){
+                    update_interrupter();
+                }else{
+                    update_midi_duty();
+                }
             }
             break;
             

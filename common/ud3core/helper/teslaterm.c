@@ -130,8 +130,8 @@ void send_chart_text_center(int16_t x, int16_t y, uint8_t color, uint8_t size, c
     send_string(text, ptr);
 }
 
-void send_status(uint8_t bus_active, uint8_t transient_active, uint8_t bus_controlled, port_str *ptr) {
+void send_status(uint8_t bus_active, uint8_t transient_active, uint8_t bus_controlled,uint8_t killbit ,port_str *ptr) {
     statusbuf[2] = TT_STATUS;
-	statusbuf[3] = bus_active|(transient_active<<1)|(bus_controlled<<2);
+	statusbuf[3] = bus_active|(transient_active<<1)|(bus_controlled<<2)|(killbit<<3);
     send_buffer(statusbuf, sizeof(statusbuf), ptr);
 }

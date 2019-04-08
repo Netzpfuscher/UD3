@@ -181,8 +181,8 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_DEFAULT ,"pwd"             , param.pwd                     , TYPE_UNSIGNED ,0      ,60000  ,0      ,callback_TRFunction         ,"Pulsewidthdelay")
     ADD_PARAM(PARAM_DEFAULT ,"bon"             , param.burst_on                , TYPE_UNSIGNED ,0      ,1000   ,0      ,callback_BurstFunction      ,"Burst mode ontime [ms] 0=off")
     ADD_PARAM(PARAM_DEFAULT ,"boff"            , param.burst_off               , TYPE_UNSIGNED ,0      ,1000   ,0      ,callback_BurstFunction      ,"Burst mode offtime [ms]")
-    ADD_PARAM(PARAM_DEFAULT ,"tune_start"      , param.tune_start              , TYPE_UNSIGNED ,5      ,1000   ,10     ,callback_TuneFunction       ,"Start frequency [kHz]")
-    ADD_PARAM(PARAM_DEFAULT ,"tune_end"        , param.tune_end                , TYPE_UNSIGNED ,5      ,1000   ,10     ,callback_TuneFunction       ,"End frequency [kHz]")
+    ADD_PARAM(PARAM_DEFAULT ,"tune_start"      , param.tune_start              , TYPE_UNSIGNED ,5      ,5000   ,10     ,callback_TuneFunction       ,"Start frequency [kHz]")
+    ADD_PARAM(PARAM_DEFAULT ,"tune_end"        , param.tune_end                , TYPE_UNSIGNED ,5      ,5000   ,10     ,callback_TuneFunction       ,"End frequency [kHz]")
     ADD_PARAM(PARAM_DEFAULT ,"tune_pw"         , param.tune_pw                 , TYPE_UNSIGNED ,0      ,800    ,0      ,NULL                        ,"Tune pulsewidth")
     ADD_PARAM(PARAM_DEFAULT ,"tune_delay"      , param.tune_delay              , TYPE_UNSIGNED ,1      ,200    ,0      ,NULL                        ,"Tune delay")
     ADD_PARAM(PARAM_CONFIG  ,"offtime"         , param.offtime                 , TYPE_UNSIGNED ,2      ,250    ,0      ,callback_OfftimeFunction    ,"Offtime for MIDI")
@@ -239,7 +239,7 @@ command_entry commands[] = {
     ADD_COMMAND("eeprom"	    ,command_eprom          ,"Save/Load config [load/save]")
 	ADD_COMMAND("get"		    ,command_get            ,"Usage get [param]")
     ADD_COMMAND("help"          ,command_help           ,"This text")
-    ADD_COMMAND("kill"		    ,command_udkill         ,"Kills all UD Coils") 
+    ADD_COMMAND("kill"		    ,command_udkill         ,"Kills all UD Coils")
     ADD_COMMAND("load_default"  ,command_load_default   ,"Loads the default parameters")
     ADD_COMMAND("qcw"           ,command_qcw            ,"QCW [start/stop]")
     ADD_COMMAND("reset"         ,command_reset          ,"Resets UD3")
@@ -248,7 +248,7 @@ command_entry commands[] = {
     ADD_COMMAND("tasks"	        ,command_tasks          ,"Show running Tasks")
     ADD_COMMAND("tr"		    ,command_tr             ,"Transient [start/stop]")
     ADD_COMMAND("tune_p"	    ,command_tune_p         ,"Autotune Primary")
-    ADD_COMMAND("tune_s"	    ,command_tune_s         ,"Autotune Secondary")        
+    ADD_COMMAND("tune_s"	    ,command_tune_s         ,"Autotune Secondary")
     ADD_COMMAND("tterm"	        ,command_tterm          ,"Changes terminal mode")
     ADD_COMMAND("minstat"	    ,command_minstat        ,"Prints the min statistics")
     ADD_COMMAND("ethcon"	    ,command_ethcon         ,"Prints the eth connections")
@@ -319,7 +319,7 @@ void vBurst_Timer_Callback(TimerHandle_t xTimer){
         }else{
             boff_lim=param.burst_off;
         }
-        xTimerChangePeriod( xTimer, boff_lim / portTICK_PERIOD_MS, 0 );                                                   
+        xTimerChangePeriod( xTimer, boff_lim / portTICK_PERIOD_MS, 0 );
     }else{
         interrupter.pw = param.pw;
         update_interrupter();
@@ -330,7 +330,7 @@ void vBurst_Timer_Callback(TimerHandle_t xTimer){
             bon_lim=param.burst_on;
         }
         xTimerChangePeriod( xTimer, bon_lim / portTICK_PERIOD_MS, 0 );
-    }          
+    }
 }
 
 
@@ -359,7 +359,7 @@ uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, port_str
                     interrupter.pw =0;
                     update_interrupter();
                     tr_running=1;
-                    SEND_CONST_STRING("\r\nBurst Disabled\r\n", ptr);    
+                    SEND_CONST_STRING("\r\nBurst Disabled\r\n", ptr);
                 }else{
                     SEND_CONST_STRING("Cannot delete burst Timer\r\n", ptr);
                     burst_state = BURST_ON;
@@ -373,15 +373,14 @@ uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, port_str
                     interrupter.pw =param.pw;
                     update_interrupter();
                     tr_running=1;
-                    SEND_CONST_STRING("\r\nBurst Disabled\r\n", ptr);    
+                    SEND_CONST_STRING("\r\nBurst Disabled\r\n", ptr);
                 }else{
                     SEND_CONST_STRING("Cannot delete burst Timer\r\n", ptr);
                     burst_state = BURST_ON;
                 }
             }
 
-        } 
-        
+        }
     }
 	return 1;
 }
@@ -412,7 +411,7 @@ uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, port_s
 ******************************************************************************/
 uint8_t callback_i2tFunction(parameter_entry * params, uint8_t index, port_str *ptr){
     i2t_set_limit(configuration.max_const_i,configuration.max_fault_i,10000);
-    return 1;  
+    return 1;
 }
 /*****************************************************************************
 * Prints the ethernet connections
@@ -716,7 +715,7 @@ void vQCW_Timer_Callback(TimerHandle_t xTimer){
 		    ramp_control(); 
     }
     if(param.qcw_repeat<100) param.qcw_repeat = 100;
-    xTimerChangePeriod( xTimer, param.qcw_repeat / portTICK_PERIOD_MS, 0 );                                                   
+    xTimerChangePeriod( xTimer, param.qcw_repeat / portTICK_PERIOD_MS, 0 );
 }
 
 /*****************************************************************************

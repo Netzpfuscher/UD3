@@ -150,7 +150,7 @@ void init_config(){
     configuration.minprot = 0;
     configuration.max_const_i = 160;
     configuration.max_fault_i = 250;
-    configuration.eth_hw = 2; //ESP32
+    configuration.eth_hw = 0; //ESP32
     
     param.pw = 0;
     param.pwd = 50000;

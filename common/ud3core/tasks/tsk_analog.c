@@ -99,7 +99,7 @@ uint8_t ADC_mux_ctl[4] = {0x05, 0x02, 0x03, 0x00};
 uint32_t i2t_limit=0;
 uint32_t i2t_warning=0;
 uint32_t i2t_leak=0;
-uint8_t i2t_warning_level=80;
+uint8_t i2t_warning_level=60;
 uint32_t i2t_integral;
 
 void i2t_set_limit(uint32_t const_current, uint32_t ovr_current, uint32_t limit_ms){
@@ -264,7 +264,7 @@ void calculate_rms(void) {
     
     if(count<100){
         int16_t e= abs(telemetry.batt_i-configuration.max_const_i);
-        count += e/10;
+        count += e;
     }else{
         count = 0;   
     }

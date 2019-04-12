@@ -200,7 +200,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,"temp1_max"       , configuration.temp1_max       , TYPE_UNSIGNED ,0      ,100    ,0      ,NULL                        ,"Max temperature 1 [*C]")
     ADD_PARAM(PARAM_CONFIG  ,"temp2_max"       , configuration.temp2_max       , TYPE_UNSIGNED ,0      ,100    ,0      ,NULL                        ,"Max temperature 2 [*C]")
     ADD_PARAM(PARAM_CONFIG  ,"ct1_ratio"       , configuration.ct1_ratio       , TYPE_UNSIGNED ,1      ,2000   ,0      ,callback_ConfigFunction     ,"CT1 [N Turns]")
-    ADD_PARAM(PARAM_CONFIG  ,"ct2_ratio"       , configuration.ct2_ratio       , TYPE_UNSIGNED ,1      ,2000   ,0      ,callback_ConfigFunction     ,"CT2 [N Turns]")
+    ADD_PARAM(PARAM_CONFIG  ,"ct2_ratio"       , configuration.ct2_ratio       , TYPE_UNSIGNED ,1      ,5000   ,0      ,callback_ConfigFunction     ,"CT2 [N Turns]")
     ADD_PARAM(PARAM_CONFIG  ,"ct3_ratio"       , configuration.ct3_ratio       , TYPE_UNSIGNED ,1      ,2000   ,0      ,callback_ConfigFunction     ,"CT3 [N Turns]")
     ADD_PARAM(PARAM_CONFIG  ,"ct1_burden"      , configuration.ct1_burden      , TYPE_UNSIGNED ,1      ,1000   ,10     ,callback_ConfigFunction     ,"CT1 burden [Ohm]")
     ADD_PARAM(PARAM_CONFIG  ,"ct2_burden"      , configuration.ct2_burden      , TYPE_UNSIGNED ,1      ,1000   ,10     ,callback_ConfigFunction     ,"CT2 burden [Ohm]")

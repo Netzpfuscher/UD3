@@ -102,7 +102,7 @@ void tsk_fault_TaskProc(void *pvParameters) {
 		/* `#START TASK_LOOP_CODE` */
 		handle_UVLO();
 		handle_watchdog_reset();
-
+        rx_blink_Write(0);
 		/* `#END` */
 
 		vTaskDelay(100 / portTICK_PERIOD_MS);

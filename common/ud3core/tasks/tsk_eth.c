@@ -159,6 +159,7 @@ void tsk_eth_TaskProc(void *pvParameters) {
     				 */
     				len = ETH_TcpReceive(cli_socket[i],buffer,LOCAL_ETH_BUFFER_SIZE,0);
                     if(len){
+                        rx_blink_Write(1);
     				    xStreamBufferSend(eth_port[i].rx, buffer, len, 0);
                     }
     				/*
@@ -166,6 +167,7 @@ void tsk_eth_TaskProc(void *pvParameters) {
     				 */
     				len = xStreamBufferReceive(eth_port[i].tx, buffer, LOCAL_ETH_BUFFER_SIZE, 1);
                     if(len){
+                        rx_blink_Write(1);
     				    ETH_TcpSend(cli_socket[i],buffer,len,0);
                     }
     			}
@@ -203,6 +205,7 @@ void tsk_eth_TaskProc(void *pvParameters) {
                         case SYNTH_MIDI:
                             len = ETH_TcpReceive(synth_socket[i],buffer,LOCAL_ETH_BUFFER_SIZE,0);
             				if(len){
+                                rx_blink_Write(1);
                                 process_midi(buffer,len);
                             }
                             break;
@@ -221,6 +224,7 @@ void tsk_eth_TaskProc(void *pvParameters) {
                             if(uxQueueSpacesAvailable(qSID) > 15){
             				    len = ETH_TcpReceive(synth_socket[i],buffer,LOCAL_ETH_BUFFER_SIZE,0);
             				    if(len){
+                                    rx_blink_Write(1);
                                     process_sid(buffer,len);
                                 }
                             }

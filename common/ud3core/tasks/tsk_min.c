@@ -200,6 +200,7 @@ void poll_UART(uint8_t* ptr){
     uint16_t bytes = UART_2_GetRxBufferSize();
     uint16_t bytes_cnt=0;
     if(bytes){
+        rx_blink_Write(1);
         if (bytes > LOCAL_UART_BUFFER_SIZE) bytes = LOCAL_UART_BUFFER_SIZE;
             while(bytes_cnt < bytes){
                 ptr[bytes_cnt] = UART_2_GetByte();

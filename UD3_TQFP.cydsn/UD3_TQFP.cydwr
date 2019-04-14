@@ -51,30 +51,6 @@
         <Data key="sync_with_bus_clk" value="True" />
         <Data key="user_set_domain" value="False" />
       </Group>
-      <Group key="ee586430-ba48-4dd2-b0a3-8e5e3b54f3ad">
-        <Data key="check_tolerance" value="True" />
-        <Data key="clock_version" value="v1" />
-        <Data key="derive_type" value="NAMED_FREQ" />
-        <Data key="desired_freq" value="16" />
-        <Data key="desired_unit" value="6" />
-        <Data key="divider" value="4" />
-        <Data key="domain" value="0" />
-        <Data key="enabled" value="True" />
-        <Data key="minus_accuracy" value="0.25" />
-        <Data key="minus_tolerance" value="5" />
-        <Data key="name" value="UART_2_CL" />
-        <Data key="named_src_direct_connect" value="False" />
-        <Data key="netlist_name" value="UART_2_CL" />
-        <Data key="placement" value="AUTO" />
-        <Data key="plus_accuracy" value="0.25" />
-        <Data key="plus_tolerance" value="5" />
-        <Data key="scope" value="GLOBAL" />
-        <Data key="src_clk_id" value="61737EF6-3B74-48f9-8B91-F7473A442AE7" />
-        <Data key="src_clk_name" value="MASTER_CLK" />
-        <Data key="start_on_reset" value="True" />
-        <Data key="sync_with_bus_clk" value="True" />
-        <Data key="user_set_domain" value="False" />
-      </Group>
     </Group>
     <Group key="LocalClks">
       <Group key="0e7954a6-2e5f-476a-9c56-6bc09bc35a57">
@@ -825,16 +801,16 @@
         <Data key="divider" value="0" />
         <Data key="domain" value="DIGITAL" />
         <Data key="enabled" value="True" />
-        <Data key="minus_accuracy" value="0" />
+        <Data key="minus_accuracy" value="0.25" />
         <Data key="minus_tolerance" value="5" />
         <Data key="name" value="Clock_22" />
         <Data key="named_src_direct_connect" value="True" />
         <Data key="netlist_name" value="Clock_22" />
         <Data key="placement" value="AUTO" />
-        <Data key="plus_accuracy" value="0" />
+        <Data key="plus_accuracy" value="0.25" />
         <Data key="plus_tolerance" value="5" />
         <Data key="scope" value="LOCAL" />
-        <Data key="src_clk_id" value="36253cf5-fac7-4c76-a965-5e08560af556" />
+        <Data key="src_clk_id" value="ee586430-ba48-4dd2-b0a3-8e5e3b54f3ad" />
         <Data key="src_clk_name" value="UART_2_CL" />
         <Data key="start_on_reset" value="True" />
         <Data key="sync_with_bus_clk" value="True" />

@@ -43,6 +43,7 @@ void eeprom_load(port_str *ptr);
 
 uint8_t command_cls(char *commandline, port_str *ptr);
 void stop_overlay_task(port_str *ptr);
+void uart_baudrate(uint32_t baudrate);
 
 volatile uint8_t qcw_reg;
 extern parameter_entry confparam[];
@@ -86,6 +87,7 @@ struct config_struct{
     uint8_t eth_hw;
     char ssid[16];
     char passwd[20];
+    uint32_t baudrate;
 };
 typedef struct config_struct cli_config;
 

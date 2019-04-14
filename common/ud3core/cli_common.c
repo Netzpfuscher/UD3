@@ -47,6 +47,7 @@
 #include "tasks/tsk_min.h"
 #include "min_id.h"
 #include "helper/teslaterm.h"
+#include "math.h"
 
 #define UNUSED_VARIABLE(N) \
 	do {                   \
@@ -76,6 +77,7 @@ uint8_t callback_OfftimeFunction(parameter_entry * params, uint8_t index, port_s
 uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_SynthFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_i2tFunction(parameter_entry * params, uint8_t index, port_str *ptr);
+uint8_t callback_baudrateFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 
 uint8_t command_help(char *commandline, port_str *ptr);
 uint8_t command_get(char *commandline, port_str *ptr);
@@ -140,6 +142,7 @@ void init_config(){
     configuration.slr_vbus = 200;
     configuration.ps_scheme = 2;
     configuration.autotune_s = 1;
+    configuration.baudrate = 2000000;
     ntlibc_strcpy(configuration.ud_name,"UD3-Tesla");
     ntlibc_strcpy(configuration.ip_addr,"192.168.50.250");
     ntlibc_strcpy(configuration.ip_subnet,"255.255.255.0");
@@ -227,6 +230,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,"eth_hw"          , configuration.eth_hw          , TYPE_UNSIGNED ,0      ,2      ,0      ,NULL                        ,"0=Disabled 1=W5500 2=ESP32")
     ADD_PARAM(PARAM_CONFIG  ,"ssid"            , configuration.ssid            , TYPE_STRING   ,0      ,0      ,0      ,NULL                        ,"WLAN SSID")
     ADD_PARAM(PARAM_CONFIG  ,"passwd"          , configuration.passwd          , TYPE_STRING   ,0      ,0      ,0      ,NULL                        ,"WLAN password")
+    ADD_PARAM(PARAM_CONFIG  ,"baudrate"        , configuration.baudrate        , TYPE_UNSIGNED ,1200   ,4000000,0      ,callback_baudrateFunction   ,"Serial baudrate")
 };
 
 /*****************************************************************************
@@ -281,6 +285,36 @@ uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, port_str 
 ******************************************************************************/
 uint8_t callback_SynthFunction(parameter_entry * params, uint8_t index, port_str *ptr){
     switch_synth(param.synth);
+    return 1;
+}
+
+/*****************************************************************************
+* Callback if the baudrate is changed
+******************************************************************************/
+void uart_baudrate(uint32_t baudrate){
+    float divider = (float)(BCLK__BUS_CLK__HZ/8)/(float)baudrate;
+   
+    uint32_t down_rate = (BCLK__BUS_CLK__HZ/8)/floor(divider);
+    uint32_t up_rate = (BCLK__BUS_CLK__HZ/8)/ceil(divider);
+   
+    float down_rate_error = (down_rate/(float)baudrate)-1;
+    float up_rate_error = (up_rate/(float)baudrate)-1;
+    
+    UART_2_Stop();
+    if(fabs(down_rate_error) < fabs(up_rate_error)){
+        //selected round down divider
+        UART_CLK_SetDividerValue(floor(divider));
+    }else{
+        //selected round up divider
+        UART_CLK_SetDividerValue(ceil(divider));
+    }
+    UART_2_Start();    
+    
+}
+
+uint8_t callback_baudrateFunction(parameter_entry * params, uint8_t index, port_str *ptr){
+    uart_baudrate(configuration.baudrate);
+ 
     return 1;
 }
 

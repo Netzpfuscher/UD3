@@ -65,7 +65,7 @@ int main() {
     null_port.rx = NULL;
     
     eeprom_load(&null_port);
-   
+    uart_baudrate(configuration.baudrate);   
     
 	initialize_DMA();		  //sets up all DMA channels
 	initialize_interrupter(); //initializes hardware related to the interrupter

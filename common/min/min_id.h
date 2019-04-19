@@ -15,6 +15,7 @@
 #define COMMAND_PASSWD      5
 #define COMMAND_INFO        6
 #define COMMAND_ETH_STATE   7
+#define COMMAND_GET_CONFIG  8
     
 #define SOCKET_DISCONNECTED  0
 #define SOCKET_CONNECTED     1

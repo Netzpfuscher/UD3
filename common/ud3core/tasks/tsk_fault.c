@@ -32,6 +32,7 @@
 #include "task.h"
 #include "queue.h"
 #include "semphr.h"
+#include "ZCDtoPWM.h"
 
 xTaskHandle tsk_fault_TaskHandle;
 uint8 tsk_fault_initVar = 0u;
@@ -74,6 +75,18 @@ void handle_UVLO(void) {
 	}
 }
 
+void handle_no_fb(void){
+    //if(no_fb_reg_Read()){
+        //no feedback
+     //   telemetry.fres = -1;
+    //}else{
+        //feedback
+        uint32_t time = ((uint32_t)fb_filter_out * 15625ul)/1000; //ns
+        telemetry.fres = (5000000ul / time);
+    //}
+    
+}
+
 /* `#END` */
 /* ------------------------------------------------------------------------ */
 /*
@@ -103,6 +116,7 @@ void tsk_fault_TaskProc(void *pvParameters) {
 		handle_UVLO();
 		handle_watchdog_reset();
         rx_blink_Write(0);
+        handle_no_fb();
 		/* `#END` */
 
 		vTaskDelay(100 / portTICK_PERIOD_MS);

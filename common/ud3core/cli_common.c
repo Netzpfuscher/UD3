@@ -100,6 +100,7 @@ uint8_t command_config_get(char *commandline, port_str *ptr);
 uint8_t command_exit(char *commandline, port_str *ptr);
 uint8_t command_ethcon(char *commandline, port_str *ptr);
 uint8_t command_fuse(char *commandline, port_str *ptr);
+uint8_t command_signals(char *commandline, port_str *ptr);
 
 
 uint8_t burst_state = 0;
@@ -258,6 +259,7 @@ command_entry commands[] = {
     ADD_COMMAND("ethcon"	    ,command_ethcon         ,"Prints the eth connections")
     ADD_COMMAND("config_get"    ,command_config_get     ,"Internal use")
     ADD_COMMAND("fuse_reset"    ,command_fuse           ,"Reset the internal fuse")
+    ADD_COMMAND("signals"       ,command_signals        ,"For debugging")
 };
 // clang-format on
 
@@ -487,6 +489,91 @@ uint8_t command_ethcon(char *commandline, port_str *ptr) {
         }
     }
     Term_Color_White(ptr);
+	return 1;
+}
+
+/*****************************************************************************
+* Signal debugging
+******************************************************************************/
+void send_true(port_str *ptr){
+    Term_Color_Red(ptr);
+    SEND_CONST_STRING("true\r\n",ptr);
+    Term_Color_White(ptr);
+}
+void send_false(port_str *ptr){
+    Term_Color_Green(ptr);
+    SEND_CONST_STRING("false\r\n",ptr);
+    Term_Color_White(ptr);
+}
+
+uint8_t command_signals(char *commandline, port_str *ptr) {
+    SKIP_SPACE(commandline);
+    
+    SEND_CONST_STRING("\r\nSignal state:\r\n", ptr);
+    SEND_CONST_STRING("*************\r\n", ptr);
+    SEND_CONST_STRING("UVLO: ", ptr);
+    if(telemetry.uvlo_stat){
+        send_false(ptr);
+    }else{
+        send_true(ptr);
+    }
+    SEND_CONST_STRING("Watchdog: ", ptr);
+    if(interrupter_watchdog_ReadCounter()){
+        send_false(ptr);
+    }else{
+        send_true(ptr);
+    }
+    SEND_CONST_STRING("System fault: ", ptr);
+    if(system_fault_Read()){
+        send_true(ptr);
+    }else{
+        send_false(ptr);
+    }
+    SEND_CONST_STRING("No feedback: ", ptr);
+    if(no_fb_reg_Read()){
+        send_true(ptr);
+    }else{
+        send_false(ptr);
+    }
+    SEND_CONST_STRING("Relay 1: ", ptr);
+    if((relay_Read()&0b1)){
+        send_true(ptr);
+    }else{
+        send_false(ptr);
+    }
+    SEND_CONST_STRING("Relay 2: ", ptr);
+    if((relay_Read()&0b10)){
+        send_true(ptr);
+    }else{
+        send_false(ptr);
+    }
+    SEND_CONST_STRING("Fan: ", ptr);
+    if(fan_ctrl_Read()){
+        send_true(ptr);
+    }else{
+        send_false(ptr);
+    }
+    SEND_CONST_STRING("Bus status: ", ptr);
+    Term_Color_Cyan(ptr);
+    switch(telemetry.bus_status){
+        case BUS_BATT_OV_FLT:
+            SEND_CONST_STRING("Overvoltage", ptr);
+        break;
+        case BUS_BATT_UV_FLT:
+            SEND_CONST_STRING("Undervoltage", ptr);
+        break;
+        case BUS_CHARGING:
+            SEND_CONST_STRING("Charging", ptr);
+        break;
+        case BUS_OFF:
+            SEND_CONST_STRING("Off", ptr);
+        break;
+        case BUS_READY:
+            SEND_CONST_STRING("Ready", ptr);
+        break;
+    }
+    SEND_CONST_STRING("\r\n", ptr);
+    Term_Color_White(ptr);        
 	return 1;
 }
 

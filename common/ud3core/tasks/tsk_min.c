@@ -56,7 +56,7 @@ uint8 tsk_min_initVar = 0u;
 struct min_context min_ctx;
 
 eth_info *pEth_info[2];
-
+void send_config_to_esp();
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */
@@ -144,6 +144,9 @@ void process_command(uint8_t *min_payload, uint8_t len_payload){
             min_payload++;
             len_payload--;
             pEth_info[interface]->eth_state = *min_payload;
+            break;
+        case COMMAND_GET_CONFIG:
+            send_config_to_esp();
             break;
   }
 }
@@ -233,6 +236,21 @@ void min_reset_flow(void){
     flow_ctl=0;
 }
 
+void send_config_to_esp(){
+    uint8_t len;
+    uint8_t buf[40];
+    len = assemble_command(COMMAND_IP,configuration.ip_addr,buf);
+    min_send_frame(&min_ctx,MIN_ID_COMMAND,buf,len);
+    len = assemble_command(COMMAND_GW,configuration.ip_gw,buf);
+    min_send_frame(&min_ctx,MIN_ID_COMMAND,buf,len);
+    len = assemble_command(COMMAND_MAC,configuration.ip_mac,buf);
+    min_send_frame(&min_ctx,MIN_ID_COMMAND,buf,len);
+    len = assemble_command(COMMAND_SSID,configuration.ssid,buf);
+    min_send_frame(&min_ctx,MIN_ID_COMMAND,buf,len);
+    len = assemble_command(COMMAND_PASSWD,configuration.passwd,buf);
+    min_send_frame(&min_ctx,MIN_ID_COMMAND,buf,len);
+}
+
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */
@@ -277,17 +295,7 @@ void tsk_min_TaskProc(void *pvParameters) {
     }
     
     if(configuration.eth_hw==ETH_HW_ESP32){
-        uint8_t len;
-        len = assemble_command(COMMAND_IP,configuration.ip_addr,buffer);
-        min_send_frame(&min_ctx,MIN_ID_COMMAND,buffer,len);
-        len = assemble_command(COMMAND_GW,configuration.ip_gw,buffer);
-        min_send_frame(&min_ctx,MIN_ID_COMMAND,buffer,len);
-        len = assemble_command(COMMAND_MAC,configuration.ip_mac,buffer);
-        min_send_frame(&min_ctx,MIN_ID_COMMAND,buffer,len);
-        len = assemble_command(COMMAND_SSID,configuration.ssid,buffer);
-        min_send_frame(&min_ctx,MIN_ID_COMMAND,buffer,len);
-        len = assemble_command(COMMAND_PASSWD,configuration.passwd,buffer);
-        min_send_frame(&min_ctx,MIN_ID_COMMAND,buffer,len);
+        send_config_to_esp();
     }
         
 	/* `#END` */

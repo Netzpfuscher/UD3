@@ -71,18 +71,18 @@
 #define GAUGE4_MAX 1000
 #define GAUGE4_VAR telemetry.primary_i
 #define GAUGE4_SLOW 0
-/*   
+/*
 #define GAUGE5_NAME "Voices"
 #define GAUGE5_MIN 0
 #define GAUGE5_MAX 4        
 #define GAUGE5_VAR telemetry.midi_voices
 #define GAUGE5_SLOW 0
- */
+*/  
     
-#define GAUGE5_NAME "temp_duty"
+#define GAUGE5_NAME "Fres"
 #define GAUGE5_MIN 0
-#define GAUGE5_MAX 500        
-#define GAUGE5_VAR param.temp_duty
+#define GAUGE5_MAX 1000        
+#define GAUGE5_VAR telemetry.fres
 #define GAUGE5_SLOW 0
     
 #define GAUGE6_NAME "Fuse"
@@ -142,6 +142,7 @@ typedef struct
     uint8_t min_frames_max;
     uint16_t duty;
     uint16_t num_bytes;
+    int16 fres;
 } telemetry_struct;
 telemetry_struct telemetry;
 

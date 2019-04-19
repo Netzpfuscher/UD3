@@ -130,7 +130,11 @@ void show_overlay_100ms(port_str *ptr) {
         send_buffer((uint8_t*)buffer,ret,ptr);
         
         Term_Move_Cursor(row_pos + 10, col_pos + 1, ptr);
-    	ret = snprintf(buffer, sizeof(buffer), "DAC Value:           %3i", ct1_dac_val[0]);
+        if(telemetry.fres==-1){
+            ret = snprintf(buffer, sizeof(buffer), "Fres:        no feedback");
+        }else{
+    	    ret = snprintf(buffer, sizeof(buffer), "Fres:          %4i.%ikHz", telemetry.fres / 10, telemetry.fres % 10);
+        }
         send_buffer((uint8_t*)buffer,ret,ptr);
 
     	Term_Restore_Cursor(ptr);

@@ -32,7 +32,7 @@
 #define PRIO_UART 3
 #define PRIO_USB 3
 #define PRIO_ETH 3
-#define PRIO_FAULT 3
+#define PRIO_FAULT 4
 #define PRIO_MIDI 2
 #define PRIO_QCW 3
     
@@ -43,7 +43,7 @@
 #define STACK_THERMISTOR 100
 #define STACK_UART 256
 #define STACK_MIN 512
-#define STACK_USB 400
+#define STACK_USB 128
 #define STACK_ETH 256
 #define STACK_FAULT 100
 #define STACK_MIDI 160

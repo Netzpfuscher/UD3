@@ -58,7 +58,6 @@ uint8 tsk_fault_initVar = 0u;
 /* `#START USER_TASK_LOCAL_CODE` */
 
 void handle_watchdog_reset(void) {
-	//for test use: set wd_kill = 1 to defeat the watchdog timeout
 	if (!configuration.watchdog) {
 		watchdog_reset_Control = 1;
 		watchdog_reset_Control = 0;
@@ -76,15 +75,8 @@ void handle_UVLO(void) {
 }
 
 void handle_no_fb(void){
-    //if(no_fb_reg_Read()){
-        //no feedback
-     //   telemetry.fres = -1;
-    //}else{
-        //feedback
-        uint32_t time = ((uint32_t)fb_filter_out * 15625ul)/1000; //ns
-        telemetry.fres = (5000000ul / time);
-    //}
-    
+    uint32_t time = ((uint32_t)fb_filter_out * 15625ul)/1000; //ns
+    telemetry.fres = (5000000ul / time);
 }
 
 /* `#END` */
@@ -119,7 +111,7 @@ void tsk_fault_TaskProc(void *pvParameters) {
         handle_no_fb();
 		/* `#END` */
 
-		vTaskDelay(100 / portTICK_PERIOD_MS);
+		vTaskDelay(50 / portTICK_PERIOD_MS);
 	}
 }
 /* ------------------------------------------------------------------------ */

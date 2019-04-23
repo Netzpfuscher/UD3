@@ -9,13 +9,16 @@
 #define PARAM_SIZE(param) sizeof(param) / sizeof(parameter_entry)
 
 #define SIZEP(x) ((char*)(&(x) + 1) - (char*)&(x))
-#define ADD_PARAM(para_type,text, value_var, type, min, max, div, update_func, help_text) {para_type,text, &value_var, SIZEP(value_var), type,min, max, div, update_func, help_text},
+#define ADD_PARAM(para_type, visible,text, value_var, type, min, max, div, update_func, help_text) {para_type, visible,text, &value_var, SIZEP(value_var), type,min, max, div, update_func, help_text},
 #define ADD_COMMAND(command, command_func, help_text) {command, command_func, help_text},
 #define TYPE_UNSIGNED   0
 #define TYPE_SIGNED     1
 #define TYPE_FLOAT      2
 #define TYPE_CHAR       3
 #define TYPE_STRING     4
+    
+#define VISIBLE_TRUE    1
+#define VISIBLE_FALSE   0
 
 #define PARAM_DEFAULT   0
 #define PARAM_CONFIG    1
@@ -42,6 +45,9 @@
 #define PORT_TERM_VT100  0
 #define PORT_TERM_TT     1
     
+#define ETH_HW_DISABLED  0
+#define ETH_HW_W5500     1
+#define ETH_HW_ESP32     2
    
 typedef struct port_struct port_str;
 struct port_struct {
@@ -57,6 +63,7 @@ struct port_struct {
 typedef struct parameter_entry_struct parameter_entry;
 struct parameter_entry_struct {
     const uint8_t parameter_type;
+    uint8_t visible;
 	const char *name;
 	void *value;
 	const uint8_t size;
@@ -95,5 +102,6 @@ void send_string(char *data, port_str *ptr);
 void send_buffer(uint8_t *data, uint16_t len, port_str *ptr);
 uint8_t term_config_changed(void);
 uint32_t djb_hash(const char* cp);
+uint8_t set_visibility(parameter_entry * params, uint8_t param_size, char* text, uint8_t visible);
 
 #endif

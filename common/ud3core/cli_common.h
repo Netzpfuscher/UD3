@@ -44,6 +44,7 @@ void eeprom_load(port_str *ptr);
 uint8_t command_cls(char *commandline, port_str *ptr);
 void stop_overlay_task(port_str *ptr);
 void uart_baudrate(uint32_t baudrate);
+void update_visibilty(void);
 
 volatile uint8_t qcw_reg;
 extern parameter_entry confparam[];
@@ -111,5 +112,7 @@ typedef struct parameter_struct cli_parameter;
 
 extern cli_config configuration;
 extern cli_parameter param;
+
+#define CONF_SIZE sizeof(confparam) / sizeof(parameter_entry)
 
 #endif

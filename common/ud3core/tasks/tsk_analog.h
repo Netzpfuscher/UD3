@@ -39,6 +39,10 @@
 #define I2T_NORMAL			0
 #define I2T_WARNING			1
 #define I2T_LIMIT			2
+    
+#define DATA_VBATT 1
+#define DATA_VBUS 0
+#define DATA_IBUS 3
 
 /* `#END` */
 
@@ -49,6 +53,7 @@ uint16_t get_max(void);
 void i2t_set_limit(uint32_t const_current, uint32_t ovr_current, uint32_t limit_ms);
 void i2t_set_warning(uint8_t percent);
 void i2t_reset();
+extern uint16 ADC_sample_buf[4];
 /*
  * Add user function prototypes in the below merge region to add user
  * functionality to the task definition.

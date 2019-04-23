@@ -128,7 +128,7 @@ void print_param_helperfunc(parameter_entry * params, uint8_t param_size, port_s
     Term_Move_cursor_right(COL_C,ptr);
     SEND_CONST_STRING("| Text\r\n", ptr);
     for (current_parameter = 0; current_parameter < param_size; current_parameter++) {
-        if(params[current_parameter].parameter_type==param_type){
+        if(params[current_parameter].parameter_type==param_type && params[current_parameter].visible){
             Term_Move_cursor_right(COL_A,ptr);
             ret = snprintf(buffer,sizeof(buffer), "\033[36m%s", params[current_parameter].name);
             send_buffer((uint8_t*)buffer,ret,ptr);
@@ -286,6 +286,28 @@ void print_param(parameter_entry * params, uint8_t index, port_str *ptr){
             send_buffer((uint8_t*)buffer,ret,ptr);
             break;
         }
+}
+
+uint8_t set_visibility(parameter_entry * params, uint8_t param_size, char* text, uint8_t visible){
+    int8_t max_len=-1;
+    int8_t max_index=-1;
+    
+	for (uint8_t current_parameter = 0; current_parameter < param_size; current_parameter++) {
+        uint8_t text_len = strlen(params[current_parameter].name);
+		if (memcmp(text, params[current_parameter].name, text_len) == 0) {
+            if(text_len > max_len){
+			    max_len = text_len;
+                max_index = current_parameter;
+            }
+		}
+	}
+    
+    if(max_index != -1){
+       params[max_index].visible = visible;
+       return pdTRUE; 
+    } else {
+        return pdFALSE;
+    }
 }
 
 void print_param_buffer(char * buffer, parameter_entry * params, uint8_t index){

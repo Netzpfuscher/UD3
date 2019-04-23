@@ -111,6 +111,12 @@ void show_overlay_100ms(port_str *ptr) {
     	case BUS_OFF:
             SEND_CONST_STRING("         OFF", ptr);
     		break;
+        case BUS_BATT_UV_FLT:
+            SEND_CONST_STRING("  Battery UV", ptr);
+    		break;
+        case BUS_TEMP1_FAULT:
+            SEND_CONST_STRING("  Temp fault", ptr);
+    		break;
     	}
 
     	Term_Move_Cursor(row_pos + 6, col_pos + 1, ptr);

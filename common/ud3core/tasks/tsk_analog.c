@@ -74,9 +74,7 @@ xQueueHandle adc_data;
 #define ADC_DMA_SRC_BASE (CYDEV_PERIPH_BASE)
 #define ADC_DMA_DST_BASE (CYDEV_SRAM_BASE)
 
-#define DATA_VBATT 1
-#define DATA_VBUS 0
-#define DATA_IBUS 3
+
 
 #define SAMPLES_COUNT 2048
 
@@ -226,23 +224,6 @@ uint16_t average_filter(uint32_t *ptr, uint16_t sample) {
 	return *ptr;
 }
 
-/*
-void regulate_current(){
-    int16_t e = (telemetry.batt_i/10)-configuration.max_inst_i;
-    if(e>0){
-        int16_t temp = (int16_t)configuration.max_tr_duty - 1;
-        if(temp>-1) configuration.max_tr_duty = temp;
-        if(tr_running){
-            update_interrupter();
-        }
-        if(telemetry.midi_voices){
-            update_midi_duty();
-        }
-   
-    }
-   
-}
-*/
 void calculate_rms(void) {
     static uint16_t count=0;
 	while (uxQueueMessagesWaiting(adc_data)) {
@@ -262,52 +243,43 @@ void calculate_rms(void) {
 		telemetry.avg_power = telemetry.batt_i * telemetry.bus_v / 10;
 	}
     
-    if(count<100){
-        int16_t e= abs(telemetry.batt_i-configuration.max_const_i);
-        count += e;
-    }else{
-        count = 0;   
-    }
-    switch (i2t_calculate()){
-        case I2T_LIMIT:
-            interrupter_kill();   
-            break;
-        case I2T_WARNING:
-            if(telemetry.batt_i>configuration.max_const_i && !count){
-                if(param.temp_duty<configuration.max_tr_duty) param.temp_duty++; 
-                if(tr_running==1){
-                    update_interrupter();
-                }else{
-                    update_midi_duty();
+    if(configuration.max_const_i){  //Only do i2t calculation if enabled
+        if(count<100){
+            int16_t e= abs(telemetry.batt_i-configuration.max_const_i);
+            count += e;
+        }else{
+            count = 0;   
+        }
+        switch (i2t_calculate()){
+            case I2T_LIMIT:
+                interrupter_kill();   
+                break;
+            case I2T_WARNING:
+                if(telemetry.batt_i>configuration.max_const_i && !count){
+                    if(param.temp_duty<configuration.max_tr_duty) param.temp_duty++; 
+                    if(tr_running==1){
+                        update_interrupter();
+                    }else{
+                        update_midi_duty();
+                    }
                 }
-            }
-            break;
-        case I2T_NORMAL:
-            if(telemetry.batt_i<configuration.max_const_i && !count){
-                if(param.temp_duty>0) param.temp_duty--; 
-                if(tr_running==1){
-                    update_interrupter();
-                }else{
-                    update_midi_duty();
+                break;
+            case I2T_NORMAL:
+                if(telemetry.batt_i<configuration.max_const_i && !count){
+                    if(param.temp_duty>0) param.temp_duty--; 
+                    if(tr_running==1){
+                        update_interrupter();
+                    }else{
+                        update_midi_duty();
+                    }
                 }
-            }
-            break;
-            
+                break;
+                
+        }
     }
     
 	control_precharge();
-    /*
-    if(count>10){
-        count=0;
-    if(configuration.max_inst_i>0){
-        if(tr_running || telemetry.midi_voices){
-            regulate_current();
-        }
-    }
-    }else{
-        count++;
-    }
-   */
+
 }
 
 

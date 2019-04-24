@@ -156,6 +156,10 @@ void init_config(){
     configuration.max_const_i = 0;
     configuration.max_fault_i = 250;
     configuration.eth_hw = 0; //ESP32
+    configuration.ct2_type = CT2_TYPE_CURRENT;
+    configuration.ct2_voltage = 4000;
+    configuration.ct2_offset = 0;
+    configuration.ct2_current = 0;
     
     param.pw = 0;
     param.pwd = 50000;
@@ -210,6 +214,10 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ct1_burden"      , configuration.ct1_burden      , TYPE_UNSIGNED ,1      ,1000   ,10     ,callback_ConfigFunction     ,"CT1 burden [Ohm]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ct2_burden"      , configuration.ct2_burden      , TYPE_UNSIGNED ,1      ,1000   ,10     ,callback_ConfigFunction     ,"CT2 burden [Ohm]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ct3_burden"      , configuration.ct3_burden      , TYPE_UNSIGNED ,1      ,1000   ,10     ,callback_ConfigFunction     ,"CT3 burden [Ohm]")
+    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ct2_type"        , configuration.ct2_type        , TYPE_UNSIGNED ,0      ,1      ,0      ,callback_ConfigFunction     ,"CT2 type 0=current 1=voltage")
+    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ct2_current"     , configuration.ct2_current     , TYPE_UNSIGNED ,0      ,20000  ,10     ,callback_ConfigFunction     ,"CT2 current @ ct_voltage")
+    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ct2_voltage"     , configuration.ct2_voltage     , TYPE_UNSIGNED ,0      ,5000   ,1000   ,callback_ConfigFunction     ,"CT2 voltage @ ct_current")
+    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ct2_offset"      , configuration.ct2_offset      , TYPE_UNSIGNED ,0      ,5000   ,1000   ,callback_ConfigFunction     ,"CT2 offset voltage")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"lead_time"       , configuration.lead_time       , TYPE_UNSIGNED ,0      ,2000   ,0      ,callback_ConfigFunction     ,"Lead time [nSec]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"start_freq"      , configuration.start_freq      , TYPE_UNSIGNED ,0      ,5000   ,10     ,callback_ConfigFunction     ,"Resonant freq [kHz]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"start_cycles"    , configuration.start_cycles    , TYPE_UNSIGNED ,0      ,20     ,0      ,callback_ConfigFunction     ,"Start Cyles [N]")
@@ -264,7 +272,7 @@ command_entry commands[] = {
 };
 
 void update_visibilty(void){
-    
+
     switch(configuration.eth_hw){
         case ETH_HW_DISABLED:
             set_visibility(confparam,CONF_SIZE, "ip_addr",VISIBLE_FALSE);
@@ -291,6 +299,23 @@ void update_visibilty(void){
             set_visibility(confparam,CONF_SIZE, "passwd",VISIBLE_TRUE);
         break;
     }
+    switch(configuration.ct2_type){
+        case CT2_TYPE_CURRENT:
+            set_visibility(confparam,CONF_SIZE, "ct2_current",VISIBLE_FALSE);
+            set_visibility(confparam,CONF_SIZE, "ct2_voltage",VISIBLE_FALSE);
+            set_visibility(confparam,CONF_SIZE, "ct2_offset",VISIBLE_FALSE);
+            set_visibility(confparam,CONF_SIZE, "ct2_ratio",VISIBLE_TRUE);
+            set_visibility(confparam,CONF_SIZE, "ct2_burden",VISIBLE_TRUE);
+        break;
+        case CT2_TYPE_VOLTAGE:
+            set_visibility(confparam,CONF_SIZE, "ct2_ratio",VISIBLE_FALSE);
+            set_visibility(confparam,CONF_SIZE, "ct2_burden",VISIBLE_FALSE);
+            set_visibility(confparam,CONF_SIZE, "ct2_current",VISIBLE_TRUE);
+            set_visibility(confparam,CONF_SIZE, "ct2_voltage",VISIBLE_TRUE);
+            set_visibility(confparam,CONF_SIZE, "ct2_offset",VISIBLE_TRUE);
+        break;
+    }
+    
     
 }
 
@@ -471,6 +496,7 @@ uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, port_st
     initialize_interrupter();
 	initialize_charging();
 	configure_ZCD_to_PWM();
+    update_visibilty();
 	system_fault_Control = sfflag;
     return 1;
 }

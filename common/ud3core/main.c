@@ -65,11 +65,13 @@ int main() {
     null_port.rx = NULL;
     
     eeprom_load(&null_port);
+    update_visibilty();
     uart_baudrate(configuration.baudrate);   
     
 	initialize_DMA();		  //sets up all DMA channels
 	initialize_interrupter(); //initializes hardware related to the interrupter
 	initialize_ZCD_to_PWM();  //initializes hardware related to ZCD to PWM
+    
 	initialize_charging();
 
 	CyGlobalIntEnable; //enables interrupts

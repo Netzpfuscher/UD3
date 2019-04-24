@@ -89,6 +89,10 @@ struct config_struct{
     char ssid[16];
     char passwd[20];
     uint32_t baudrate;
+    uint8_t ct2_type;
+    uint16_t ct2_current;
+    uint16_t ct2_voltage;
+    uint16_t ct2_offset;
 };
 typedef struct config_struct cli_config;
 

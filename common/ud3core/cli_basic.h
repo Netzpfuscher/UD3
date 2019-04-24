@@ -48,6 +48,9 @@
 #define ETH_HW_DISABLED  0
 #define ETH_HW_W5500     1
 #define ETH_HW_ESP32     2
+    
+#define CT2_TYPE_CURRENT      0
+#define CT2_TYPE_VOLTAGE      1
    
 typedef struct port_struct port_str;
 struct port_struct {

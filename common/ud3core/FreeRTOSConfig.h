@@ -89,7 +89,7 @@
 #define configCPU_CLOCK_HZ			( ( unsigned long ) BCLK__BUS_CLK__HZ )
 #define configTICK_RATE_HZ			( ( TickType_t ) 500 )
 #define configMINIMAL_STACK_SIZE	( ( unsigned short ) 100 )
-#define configTOTAL_HEAP_SIZE		( ( size_t ) ( 54 * 1024 ) ) //54k
+#define configTOTAL_HEAP_SIZE		( ( size_t ) ( 53 * 1024 ) ) //53k
 #define configMAX_TASK_NAME_LEN		( 12 )
 #define configUSE_16_BIT_TICKS		0
 #define configIDLE_SHOULD_YIELD		0

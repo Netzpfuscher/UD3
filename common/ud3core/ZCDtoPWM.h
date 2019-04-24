@@ -49,7 +49,7 @@ typedef struct
 	uint8 min_tr_cl_dac_val;
 	uint8 diff_tr_cl_dac_val;
 	uint16_t idc_ma_count;
-	float Idc_fs;
+    uint16_t ct2_offset_cnt;
 } parameters;
 volatile parameters params;
 

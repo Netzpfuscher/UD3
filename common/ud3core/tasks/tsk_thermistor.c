@@ -121,10 +121,10 @@ uint8 run_temp_check(void) {
 	telemetry.temp1 = get_temp_128(therm_sample[0]) / 128;
 	telemetry.temp2 = get_temp_128(therm_sample[1]) / 128;
 
-	if (telemetry.temp1 > configuration.temp1_max) {
+	if (telemetry.temp1 > configuration.temp1_max && configuration.temp1_max) {
 		fault |= TEMP1_FAULT;
 	}
-	if (telemetry.temp2 > configuration.temp2_max) {
+	if (telemetry.temp2 > configuration.temp2_max && configuration.temp2_max) {
 		fault |= TEMP2_FAULT;
 	}
 

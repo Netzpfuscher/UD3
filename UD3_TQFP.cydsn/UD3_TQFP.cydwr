@@ -1,5 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <DesignWideResources xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://cypress.com/xsd/cydwr">
+  <Group key="Analog2">
+    <Group key="PLACEMENT">
+      <Group key="F(VIDAC,0)">
+        <Data key="INST_GUID_PATH" value="6698ab58-f6b9-4901-a7a6-7d94d7b392dd/77277736-35f9-4c5f-acca-40955c679352" />
+        <Data key="RTL_NAME_SUFFIX" value="" />
+      </Group>
+    </Group>
+  </Group>
   <Group key="Clock2">
     <Data key="ClockSolver" value="1" />
     <Group key="DesigneWideClks">

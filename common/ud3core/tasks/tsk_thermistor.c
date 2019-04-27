@@ -61,14 +61,6 @@ uint8 tsk_thermistor_initVar = 0u;
 
 #define TEMP_FAULT_COUNTER_MAX 5
 
-/* DMA Configuration for therm_dma */
-#define therm_dma_BYTES_PER_BURST 2
-#define therm_dma_REQUEST_PER_BURST 1
-#define therm_dma_SRC_BASE (CYDEV_PERIPH_BASE)
-#define therm_dma_DST_BASE (therm_sample)
-
-uint16_t therm_sample[2];
-
 //temperature *128
 const uint16 count_temp_table[] = {
 	15508, 10939, 8859, 7536, 6579, 5826, 5220, 4715, 4275, 3879, 3551, 3229, 2965, 2706, 2469, 2261,
@@ -86,19 +78,8 @@ const uint16 count_temp_table[] = {
 void initialize_thermistor(void) {
 	IDAC_therm_Start();
 	ADC_therm_Start();
+    Therm_Mux_Start();
 	IDAC_therm_SetValue(THERM_DAC_VAL);
-
-	/* Variable declarations for therm1_dma */
-	/* Move these variable declarations to the top of the function */
-	uint8 therm_dma_Chan;
-	uint8 therm_dma_TD[1];
-	therm_dma_Chan = therm_dma_DmaInitialize(therm_dma_BYTES_PER_BURST, therm_dma_REQUEST_PER_BURST,
-											 HI16(therm_dma_SRC_BASE), HI16(therm_dma_DST_BASE));
-	therm_dma_TD[0] = CyDmaTdAllocate();
-	CyDmaTdSetConfiguration(therm_dma_TD[0], 4, therm_dma_TD[0], TD_INC_DST_ADR);
-	CyDmaTdSetAddress(therm_dma_TD[0], LO16((uint32)ADC_therm_SAR_WRK0_PTR), LO16((uint32)therm_sample));
-	CyDmaChSetInitialTd(therm_dma_Chan, therm_dma_TD[0]);
-	CyDmaChEnable(therm_dma_Chan, 1);
 }
 
 uint16_t get_temp_128(uint16_t counts) {
@@ -114,12 +95,20 @@ uint16_t get_temp_128(uint16_t counts) {
 		return count_temp_table[counts_div] - (((uint32_t)(count_temp_table[counts_div - 1] - count_temp_table[counts_div]) * ((uint32_t)counts - counts_window)) / 128);
 	}
 }
+int16_t get_temp_counts(uint8_t channel){
+    Therm_Mux_Select(channel);
+    vTaskDelay(1);
+    ADC_therm_StartConvert();
+    vTaskDelay(1);
+    return ADC_therm_GetResult16();
+}
 
 uint8 run_temp_check(void) {
 	//this function looks at all the thermistor temperatures, compares them against limits and returns any faults
 	uint8 fault = 0;
-	telemetry.temp1 = get_temp_128(therm_sample[0]) / 128;
-	telemetry.temp2 = get_temp_128(therm_sample[1]) / 128;
+    
+	telemetry.temp1 = get_temp_128(get_temp_counts(0)) / 128;
+	telemetry.temp2 = get_temp_128(get_temp_counts(1)) / 128;
 
 	if (telemetry.temp1 > configuration.temp1_max && configuration.temp1_max) {
 		fault |= TEMP1_FAULT;

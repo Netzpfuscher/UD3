@@ -56,12 +56,13 @@
         
 
 #define SKIP_SPACE(ptr) 	if (*ptr == 0x20 && ptr != 0) ptr++ //skip space
+#define CHECK_NULL(ptr)     if (*ptr == 0 || ptr == 0) goto helptext;
 #define HELP_TEXT(text)        \
-	if (*commandline == 0 || commandline == 0) {    \
-		Term_Color_Red(ptr);       \
-		send_string(text, ptr);  \
-		Term_Color_White(ptr);     \
-		return 1;}                  \
+	helptext:;                  \
+	Term_Color_Red(ptr);       \
+	send_string(text, ptr);  \
+	Term_Color_White(ptr);     \
+	return 1;                  \
 	
 typedef struct {
 	const char *text;
@@ -662,18 +663,20 @@ uint8_t command_signals(char *commandline, port_str *ptr) {
 ******************************************************************************/
 uint8_t command_bus(char *commandline, port_str *ptr) {
     SKIP_SPACE(commandline);
-    HELP_TEXT("Usage: bus [on|off]\r\n");
+    CHECK_NULL(commandline);
 
 	if (ntlibc_stricmp(commandline, "on") == 0) {
 		bus_command = BUS_COMMAND_ON;
 		SEND_CONST_STRING("BUS ON\r\n", ptr);
+        return 1;
 	}
 	if (ntlibc_stricmp(commandline, "off") == 0) {
 		bus_command = BUS_COMMAND_OFF;
 		SEND_CONST_STRING("BUS OFF\r\n", ptr);
+        return 1;
 	}
-
-	return 1;
+    
+    HELP_TEXT("Usage: bus [on|off]\r\n");
 }
 /*****************************************************************************
 * Resets the software fuse
@@ -762,10 +765,10 @@ void stop_overlay_task(port_str *ptr){
 * 
 ******************************************************************************/
 uint8_t command_status(char *commandline, port_str *ptr) {
-	SKIP_SPACE(commandline);
-	HELP_TEXT("Usage: status [start|stop]\r\n");
+    SKIP_SPACE(commandline);
+    CHECK_NULL(commandline);
+	
 
-    
 	if (ntlibc_stricmp(commandline, "start") == 0) {
 		start_overlay_task(ptr);
 	}
@@ -773,7 +776,7 @@ uint8_t command_status(char *commandline, port_str *ptr) {
 		stop_overlay_task(ptr);
 	}
 
-	return 1;
+	HELP_TEXT("Usage: status [start|stop]\r\n");
 }
 
 /*****************************************************************************
@@ -782,9 +785,8 @@ uint8_t command_status(char *commandline, port_str *ptr) {
 ******************************************************************************/
 uint8_t command_tterm(char *commandline, port_str *ptr){
     SKIP_SPACE(commandline);
-    HELP_TEXT("Usage: tterm [start|stop]\r\n");
-
-
+    CHECK_NULL(commandline);
+    
 	if (ntlibc_stricmp(commandline, "start") == 0) {
         ptr->term_mode = PORT_TERM_TT;
         send_gauge_config(0, GAUGE0_MIN, GAUGE0_MAX, GAUGE0_NAME, ptr);
@@ -809,7 +811,7 @@ uint8_t command_tterm(char *commandline, port_str *ptr){
 
 	} 
     
-    return 1;
+    HELP_TEXT("Usage: tterm [start|stop]\r\n");
 }
 
 /*****************************************************************************
@@ -876,8 +878,8 @@ uint8_t command_bootloader(char *commandline, port_str *ptr) {
 ******************************************************************************/
 uint8_t command_tr(char *commandline, port_str *ptr) {
     SKIP_SPACE(commandline);
-    HELP_TEXT("Usage: tr [start|stop]\r\n");
-
+    CHECK_NULL(commandline);
+    
 	if (ntlibc_stricmp(commandline, "start") == 0) {
         interrupter.pw = param.pw;
 		interrupter.prd = param.pwd;
@@ -895,7 +897,7 @@ uint8_t command_tr(char *commandline, port_str *ptr) {
         interrupter.pw = 0;
 		update_interrupter();
      
-        SEND_CONST_STRING("\r\nTransient Disabled\r\n", ptr);    
+        SEND_CONST_STRING("Transient Disabled\r\n", ptr);    
  
 		interrupter.pw = 0;
 		update_interrupter();
@@ -903,7 +905,7 @@ uint8_t command_tr(char *commandline, port_str *ptr) {
 		
 		return 0;
 	}
-	return 1;
+	HELP_TEXT("Usage: tr [start|stop]\r\n");
 }
 
 /*****************************************************************************
@@ -924,8 +926,8 @@ void vQCW_Timer_Callback(TimerHandle_t xTimer){
 ******************************************************************************/
 uint8_t command_qcw(char *commandline, port_str *ptr) {
     SKIP_SPACE(commandline);
-    HELP_TEXT("Usage: qcw [start|stop]\r\n");
-    
+    CHECK_NULL(commandline);
+        
 	if (ntlibc_stricmp(commandline, "start") == 0) {
         if(param.qcw_repeat>99){
             if(xQCW_Timer==NULL){
@@ -959,7 +961,7 @@ uint8_t command_qcw(char *commandline, port_str *ptr) {
 		SEND_CONST_STRING("QCW Disabled\r\n", ptr);
 		return 0;
 	}
-	return 1;
+	HELP_TEXT("Usage: qcw [start|stop]\r\n");
 }
 
 /*****************************************************************************
@@ -967,7 +969,7 @@ uint8_t command_qcw(char *commandline, port_str *ptr) {
 ******************************************************************************/
 uint8_t command_udkill(char *commandline, port_str *ptr) {
     SKIP_SPACE(commandline);
-    HELP_TEXT("Usage: kill [set|reset|get]\r\n");
+    CHECK_NULL(commandline);
     
     if (ntlibc_stricmp(commandline, "set") == 0) {
         interrupter_kill();
@@ -1000,7 +1002,7 @@ uint8_t command_udkill(char *commandline, port_str *ptr) {
     }
     
         
-	return 0;
+    HELP_TEXT("Usage: kill [set|reset|get]\r\n");
 }
 
 /*****************************************************************************
@@ -1172,7 +1174,8 @@ void eeprom_load(port_str *ptr){
 ******************************************************************************/
 uint8_t command_eprom(char *commandline, port_str *ptr) {
 	SKIP_SPACE(commandline);
-    HELP_TEXT("Usage: eprom [load|save]\r\n");
+    CHECK_NULL(commandline);
+    
     EEPROM_1_UpdateTemperature();
 	uint8 sfflag = system_fault_Read();
 	system_fault_Control = 0; //halt tesla coil operation during updates!
@@ -1194,7 +1197,7 @@ uint8_t command_eprom(char *commandline, port_str *ptr) {
 	    system_fault_Control = sfflag;
 		return 0;
 	}
-	return 1;
+	HELP_TEXT("Usage: eprom [load|save]\r\n");
 }
 
 /*****************************************************************************

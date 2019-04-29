@@ -44,9 +44,12 @@ volatile uint8_t timeout_byte;
 volatile uint8_t timeout_wd;
 volatile uint8_t transparent = 0;
 char sbuf[128];
+
+
 uint16_t byte_tx = 0;
 uint16_t byte_rx = 0;
 uint16_t byte_msg = 0;
+
 
 void USB_Send_Data(uint8_t* data, uint16_t len);
 void USB_send_string(char* str);
@@ -79,6 +82,10 @@ uint16_t min_tx_space(uint8_t port){
     return (UART_1_TX_BUFFER_SIZE-UART_1_GetTxBufferSize());
 }
 
+uint32_t min_rx_space(uint8_t port){
+    return (UART_1_RX_BUFFER_SIZE - UART_1_GetRxBufferSize());
+}
+
 void min_tx_byte(uint8_t port, uint8_t byte)
 {
     UART_1_PutChar(byte);
@@ -107,9 +114,6 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
         break;
         case MIN_ID_TERM:
             USB_Send_Data(min_payload, len_payload);
-        break;
-        case MIN_ID_RESET:
-            reset  = min_time_ms();  
         break;
 
     }
@@ -220,21 +224,30 @@ int main(void) {
 	uint8_t btn = 1;
 	uint8_t mnu = 0;
 	uint8_t execute_mnu = 0;
-	uint16_t byte_s_tx = 0;
-	uint16_t byte_s_rx = 0;
-	uint16_t byte_s_msg = 0;
+
     uint32_t last=0;
 
+    
+    uint16_t byte_s_tx = 0;
+	uint16_t byte_s_rx = 0;
+	uint16_t byte_s_msg = 0;
 	const char *mnu_str[3];
 	mnu_str[1] = "Kill";
 	mnu_str[2] = "Transparent";
 	mnu_str[0] = "Bootloader";
+   
     
-    const char * str_kill = "/r/nkill/r/n";
+    const char * str_kill = "/r/nkill set/r/n";
     
     min_transport_reset(&min_ctx,1);
     min_transport_reset(&min_ctx,1);
     min_transport_reset(&min_ctx,1);
+    
+    char temp[11];
+    temp[1]=SOCKET_CONNECTED;
+    temp[0]=0;
+    strcpy(&temp[2],"USB IF");
+    min_queue_frame(&min_ctx,MIN_ID_SOCKET,(uint8_t*)temp,sizeof("USB IF")+3);
 	for (;;) {
 
 		btn = Status_Reg_1_Read();
@@ -261,7 +274,7 @@ int main(void) {
 
 			switch (mnu) {
 			case 1:
-                min_queue_frame(&min_ctx, MIN_ID_TERM, str_kill ,strlen(str_kill));
+                min_queue_frame(&min_ctx, MIN_ID_TERM, (uint8_t*)str_kill ,strlen(str_kill));
 				break;
 			case 2:
 				if (transparent == 0) {
@@ -389,14 +402,9 @@ int main(void) {
             }else{
                 min_poll(&min_ctx,buffer,0);
             }
-            
-            if((min_time_ms()-reset)>CONNECTION_TIMEOUT){
-                min_transport_reset(&min_ctx,true);
-            }
-            
             if((min_time_ms()-last) > CONNECTION_HEARTBEAT){
                 last = min_time_ms();
-                min_send_frame(&min_ctx,MIN_ID_RESET,buffer,1);
+                min_send_frame(&min_ctx,MIN_ID_WD,buffer,1);
             }
         }
       

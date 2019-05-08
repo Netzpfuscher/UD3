@@ -93,6 +93,7 @@ struct config_struct{
     uint16_t ct2_current;
     uint16_t ct2_voltage;
     uint16_t ct2_offset;
+    uint32_t r_top;
 };
 typedef struct config_struct cli_config;
 

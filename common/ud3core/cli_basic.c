@@ -17,6 +17,35 @@ uint16_t byte_cnt;
 #define EEPROM_READ_BYTE(x) EEPROM_1_ReadByte(x)
 #define EEPROM_WRITE_ROW(x,y) EEPROM_1_Write(y,x)
 
+uint8_t n_number(uint32_t n){
+  if(n < 100000) {
+    if(n < 1000) {
+      if(n < 100) {
+        if(n < 10)
+          return 1;
+        return 2;
+      }
+      return 3;
+    }
+    if(n < 10000)
+      return 4;
+    else
+      return 5;
+  }
+  if(n < 100000000) {
+    if(n < 10000000) {
+      if(n < 1000000)
+        return 6;
+      return 7;
+    }
+    return 8;
+  }
+  if(n < 1000000000)
+    return 9;
+  else
+    return 10;   
+}
+
 uint8_t updateDefaultFunction(parameter_entry * params, char * newValue, uint8_t index, port_str *ptr) {
     char buffer[60];
     int ret=0;
@@ -112,6 +141,8 @@ uint8_t updateDefaultFunction(parameter_entry * params, char * newValue, uint8_t
     return 0;
 }
 
+
+
 void print_param_helperfunc(parameter_entry * params, uint8_t param_size, port_str *ptr, uint8_t param_type){
     char buffer[100];
     int ret=0;
@@ -149,7 +180,10 @@ void print_param_helperfunc(parameter_entry * params, uint8_t param_size, port_s
 
                 Term_Move_cursor_right(COL_B,ptr);
                 if(params[current_parameter].div){
-                    ret = snprintf(buffer, sizeof(buffer), "\033[37m| \033[32m%u.%u", (u_temp_buffer/params[current_parameter].div),(u_temp_buffer%params[current_parameter].div));
+                    ret = snprintf(buffer, sizeof(buffer), "\033[37m| \033[32m%u.%0*u", 
+                        (u_temp_buffer/params[current_parameter].div),
+                        n_number(params[current_parameter].div)-1,
+                        (u_temp_buffer%params[current_parameter].div));
                 }else{
                     ret = snprintf(buffer, sizeof(buffer), "\033[37m| \033[32m%u", u_temp_buffer);
                 }
@@ -177,7 +211,11 @@ void print_param_helperfunc(parameter_entry * params, uint8_t param_size, port_s
                     }else{
                         mod=i_temp_buffer%params[current_parameter].div;
                     }
-                    ret = snprintf(buffer, sizeof(buffer), "\033[37m| \033[32m%i.%u", (i_temp_buffer/params[current_parameter].div),mod);
+                    
+                    ret = snprintf(buffer, sizeof(buffer), "\033[37m| \033[32m%i.%0*u",
+                    (i_temp_buffer/params[current_parameter].div),
+                    n_number(params[current_parameter].div)-1,
+                    mod);
                 }else{
                     ret = snprintf(buffer, sizeof(buffer), "\033[37m| \033[32m%i", i_temp_buffer);
                 }
@@ -241,7 +279,10 @@ void print_param(parameter_entry * params, uint8_t index, port_str *ptr){
                     break;
             }
             if(params[index].div){
-                ret = snprintf(buffer, sizeof(buffer), "\t%s=%u.%u\r\n", params[index].name,(u_temp_buffer/params[index].div),(u_temp_buffer%params[index].div));
+                ret = snprintf(buffer, sizeof(buffer), "\t%s=%u.%0*u\r\n",
+                                params[index].name,(u_temp_buffer/params[index].div),
+                                n_number(params[index].div)-1,
+                (u_temp_buffer%params[index].div));
             }else{
                 ret = snprintf(buffer, sizeof(buffer), "\t%s=%u\r\n", params[index].name,u_temp_buffer);
             }
@@ -266,7 +307,10 @@ void print_param(parameter_entry * params, uint8_t index, port_str *ptr){
                 }else{
                     mod=i_temp_buffer%params[index].div;
                 }
-                ret = snprintf(buffer, sizeof(buffer), "\t%s=%i.%u\r\n", params[index].name,(i_temp_buffer/params[index].div),mod);
+                ret = snprintf(buffer, sizeof(buffer), "\t%s=%i.%0*u\r\n",
+                                params[index].name,(i_temp_buffer/params[index].div),
+                                n_number(params[index].div)-1,
+                                mod);
             }else{
                 ret = snprintf(buffer, sizeof(buffer), "\t%s=%i\r\n", params[index].name,i_temp_buffer);
             }
@@ -328,9 +372,10 @@ void print_param_buffer(char * buffer, parameter_entry * params, uint8_t index){
                     break;
             }
             if(params[index].div){
-                sprintf(buffer, "%s;%u.%u;%u;%u;%i.%u;%i.%u",
+                sprintf(buffer, "%s;%u.%0*u;%u;%u;%i.%u;%i.%u",
                     params[index].name,
                     (u_temp_buffer/params[index].div),
+                    n_number(params[index].div)-1,
                     (u_temp_buffer%params[index].div),
                     params[index].type,
                     params[index].size,
@@ -362,9 +407,10 @@ void print_param_buffer(char * buffer, parameter_entry * params, uint8_t index){
                 break;
             }
             if(params[index].div){
-                sprintf(buffer, "%s;%i.%u;%u;%u;%i.%u;%i.%u",
+                sprintf(buffer, "%s;%i.%0*u;%u;%u;%i.%u;%i.%u",
                     params[index].name,
                     (i_temp_buffer/params[index].div),
+                    n_number(params[index].div)-1,
                     i_temp_buffer%params[index].div,
                     params[index].type,
                     params[index].size,

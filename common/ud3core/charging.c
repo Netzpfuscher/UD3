@@ -29,7 +29,6 @@
 #include <math.h>
 
 uint32 low_battery_counter;
-uint8 charger_pwm;
 int16 initial_vbus, final_vbus, delta_vbus;
 uint32 charging_counter;
 

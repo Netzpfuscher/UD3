@@ -78,7 +78,7 @@ xQueueHandle adc_data;
 
 #define SAMPLES_COUNT 2048
 
-#define BUSV_R_TOP 500000UL
+//#define BUSV_R_TOP 500000UL
 #define BUSV_R_BOT 5000UL
 
 #define INITIAL 0 /* Initial value of the filter memory. */
@@ -173,9 +173,11 @@ CY_ISR(isr_primary) {
     }*/
 }
 
+
+
 uint32_t read_bus_mv(uint16_t raw_adc) {
 	uint32_t bus_voltage;
-	bus_voltage = ((BUSV_R_TOP + BUSV_R_BOT) * raw_adc) / (BUSV_R_BOT * 819 / 1000);
+	bus_voltage = ((configuration.r_top + BUSV_R_BOT) * raw_adc) / (BUSV_R_BOT * 819 / 1000);
 	return bus_voltage;
 }
 

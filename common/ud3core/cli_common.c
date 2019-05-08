@@ -146,6 +146,7 @@ void init_config(){
     configuration.ps_scheme = 2;
     configuration.autotune_s = 1;
     configuration.baudrate = 2000000;
+    configuration.r_top = 500000;
     ntlibc_strcpy(configuration.ud_name,"UD3-Tesla");
     ntlibc_strcpy(configuration.ip_addr,"192.168.50.250");
     ntlibc_strcpy(configuration.ip_subnet,"255.255.255.0");
@@ -242,6 +243,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ssid"            , configuration.ssid            , TYPE_STRING   ,0      ,0      ,0      ,NULL                        ,"WLAN SSID")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"passwd"          , configuration.passwd          , TYPE_STRING   ,0      ,0      ,0      ,NULL                        ,"WLAN password")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"baudrate"        , configuration.baudrate        , TYPE_UNSIGNED ,1200   ,4000000,0      ,callback_baudrateFunction   ,"Serial baudrate")
+    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"r_top"           , configuration.r_top           , TYPE_UNSIGNED ,100    ,1000000 ,1000  ,NULL                        ,"Series resistor of voltage input [kOhm]")
 };
 
 /*****************************************************************************
@@ -771,9 +773,11 @@ uint8_t command_status(char *commandline, port_str *ptr) {
 
 	if (ntlibc_stricmp(commandline, "start") == 0) {
 		start_overlay_task(ptr);
+        return 1;
 	}
 	if (ntlibc_stricmp(commandline, "stop") == 0) {
 		stop_overlay_task(ptr);
+        return 1;
 	}
 
 	HELP_TEXT("Usage: status [start|stop]\r\n");
@@ -803,12 +807,13 @@ uint8_t command_tterm(char *commandline, port_str *ptr){
         send_chart_config(3, CHART3_MIN, CHART3_MAX, CHART3_OFFSET, CHART3_UNIT, CHART3_NAME, ptr);
 
         start_overlay_task(ptr);
+        return 1;
 
     }
 	if (ntlibc_stricmp(commandline, "stop") == 0) {
         ptr->term_mode = PORT_TERM_VT100;
         stop_overlay_task(ptr);
-
+        return 1;
 	} 
     
     HELP_TEXT("Usage: tterm [start|stop]\r\n");

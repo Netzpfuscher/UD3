@@ -35,7 +35,7 @@
 #define UART_TX_INTERRUPT_ENABLED           (1u)
 #define UART_INTERNAL_CLOCK_USED            (0u)
 #define UART_RXHW_ADDRESS_ENABLED           (0u)
-#define UART_OVER_SAMPLE_COUNT              (16u)
+#define UART_OVER_SAMPLE_COUNT              (8u)
 #define UART_PARITY_TYPE                    (0u)
 #define UART_PARITY_TYPE_SW                 (0u)
 #define UART_BREAK_DETECT                   (0u)
@@ -179,9 +179,9 @@ void UART_Wakeup(void) ;
     #endif  /* (CYDEV_BOOTLOADER_IO_COMP == CyBtldr_UART) */
 
     /* Byte to Byte time out for detecting end of block data from host */
-    #define UART_BYTE2BYTE_TIME_OUT (100u)
+    #define UART_BYTE2BYTE_TIME_OUT (25u)
     #define UART_PACKET_EOP         (0x17u) /* End of packet defined by bootloader */
-    #define UART_WAIT_EOP_DELAY     (1u)    /* Additional 5ms to wait for End of packet */
+    #define UART_WAIT_EOP_DELAY     (5u)    /* Additional 5ms to wait for End of packet */
     #define UART_BL_CHK_DELAY_MS    (1u)    /* Time Out quantity equal 1mS */
 
 #endif /* CYDEV_BOOTLOADER_IO_COMP */

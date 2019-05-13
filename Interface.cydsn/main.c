@@ -51,6 +51,8 @@ uint16_t byte_rx = 0;
 uint16_t byte_msg = 0;
 
 
+
+
 void USB_Send_Data(uint8_t* data, uint16_t len);
 void USB_send_string(char* str);
 struct min_context min_ctx;
@@ -64,6 +66,8 @@ void USBMIDI_1_callbackLocalMidiEvent(uint8 cable, uint8 *midiMsg) {
 #define SYSTICK_RELOAD (BCLK__BUS_CLK__HZ / 10)
 
 uint8 wd_reset[3] = {0xF0, 0x0F, 0x0F};
+
+uint8_t wd_port =0;
 
 void tick(void) {
 
@@ -404,7 +408,7 @@ int main(void) {
             }
             if((min_time_ms()-last) > CONNECTION_HEARTBEAT){
                 last = min_time_ms();
-                min_send_frame(&min_ctx,MIN_ID_WD,buffer,1);
+                min_send_frame(&min_ctx,MIN_ID_WD,&wd_port,1);
             }
         }
       

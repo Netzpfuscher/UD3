@@ -37,6 +37,8 @@
 xTaskHandle tsk_min_TaskHandle;
 uint8 tsk_min_initVar = 0u;
 
+#define SOCKET_TIMEOUT 1000
+
 
 /* ------------------------------------------------------------------------ */
 /*
@@ -155,7 +157,7 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
 {
     if(min_id<10){
         if(min_id>NUM_ETH_CON) return;
-        if(socket_info[min_id].socket==SOCKET_DISCONNECTED) return;
+        //if(socket_info[min_id].socket==SOCKET_DISCONNECTED) return;
         xStreamBufferSend(eth_port[min_id].rx,min_payload, len_payload,1);
         return;
     }else if(min_id>=20 && min_id <30){
@@ -174,8 +176,10 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
     }
     switch(min_id){
         case MIN_ID_WD:
+            if(*min_payload>NUM_ETH_CON) return;
             watchdog_reset_Control = 1;
 			watchdog_reset_Control = 0;
+            socket_info[*min_payload].timeout = min_time_ms() + SOCKET_TIMEOUT;
             break;
         case MIN_ID_SOCKET:
             if(*min_payload>NUM_ETH_CON) return;
@@ -311,7 +315,8 @@ void tsk_min_TaskProc(void *pvParameters) {
     		/* `#START TASK_LOOP_CODE` */
              
             poll_UART(buffer_u);
-            if(socket_info[i].socket==SOCKET_DISCONNECTED) goto end;   
+            //if(socket_info[i].socket==SOCKET_DISCONNECTED) goto end;   
+            
             
             if(param.synth==SYNTH_SID){
                 if(uxQueueSpacesAvailable(qSID) < 30 && flow_ctl){
@@ -339,7 +344,10 @@ void tsk_min_TaskProc(void *pvParameters) {
                     }
                 }
             }
-            
+            if(min_time_ms() > (socket_info[i].timeout)){
+                socket_info[i].socket=SOCKET_DISCONNECTED;
+                socket_info[i].info[0]='\0';
+            }
             end:;
         }
         if(bytes_waiting==0){

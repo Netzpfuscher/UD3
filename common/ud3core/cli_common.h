@@ -94,6 +94,7 @@ struct config_struct{
     uint16_t ct2_voltage;
     uint16_t ct2_offset;
     uint32_t r_top;
+    uint16_t chargedelay;
 };
 typedef struct config_struct cli_config;
 

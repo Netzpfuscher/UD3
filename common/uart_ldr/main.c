@@ -86,12 +86,14 @@
 #include "UART.h"
 #include "ETH.h"
 #include "cli_basic.h"
+#include <math.h>
 
 struct config_struct{
     char ip_addr[16];
     char ip_gw[16];
     char ip_mac[18];
     char ip_subnet[16];
+    uint32_t baudrate;
 };
 typedef struct config_struct cli_config;
 cli_config configuration;
@@ -104,7 +106,32 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,"ip_gateway"      , configuration.ip_gw           , TYPE_STRING)
     ADD_PARAM(PARAM_CONFIG  ,"ip_subnet"       , configuration.ip_subnet       , TYPE_STRING)
     ADD_PARAM(PARAM_CONFIG  ,"ip_mac"          , configuration.ip_mac          , TYPE_STRING)
+    ADD_PARAM(PARAM_CONFIG  ,"baudrate"        , configuration.baudrate        , TYPE_UNSIGNED)
 };
+
+/*****************************************************************************
+* Callback if the baudrate is changed
+******************************************************************************/
+void uart_baudrate(uint32_t baudrate){
+    float divider = (float)(BCLK__BUS_CLK__HZ/8)/(float)baudrate;
+   
+    uint32_t down_rate = (BCLK__BUS_CLK__HZ/8)/floor(divider);
+    uint32_t up_rate = (BCLK__BUS_CLK__HZ/8)/ceil(divider);
+   
+    float down_rate_error = (down_rate/(float)baudrate)-1;
+    float up_rate_error = (up_rate/(float)baudrate)-1;
+    
+    UART_Stop();
+    if(fabs(down_rate_error) < fabs(up_rate_error)){
+        //selected round down divider
+        UART_CLK_SetDividerValue(floor(divider));
+    }else{
+        //selected round up divider
+        UART_CLK_SetDividerValue(ceil(divider));
+    }
+    UART_Start();    
+    
+}
 
 int main()
 {
@@ -117,6 +144,7 @@ int main()
     if(ETH_StartEx(configuration.ip_gw, configuration.ip_subnet, configuration.ip_mac, configuration.ip_addr)==CYRET_SUCCESS){
         com_type=ETH;   
     }else{
+        uart_baudrate(configuration.baudrate);
         com_type=SERIAL;
     }
 	

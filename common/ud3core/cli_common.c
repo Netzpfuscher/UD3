@@ -145,7 +145,7 @@ void init_config(){
     configuration.slr_vbus = 200;
     configuration.ps_scheme = 2;
     configuration.autotune_s = 1;
-    configuration.baudrate = 2000000;
+    configuration.baudrate = 115200;
     configuration.r_top = 500000;
     ntlibc_strcpy(configuration.ud_name,"UD3-Tesla");
     ntlibc_strcpy(configuration.ip_addr,"192.168.50.250");
@@ -162,6 +162,7 @@ void init_config(){
     configuration.ct2_voltage = 4000;
     configuration.ct2_offset = 0;
     configuration.ct2_current = 0;
+    configuration.chargedelay = 1000;
     
     param.pw = 0;
     param.pwd = 50000;
@@ -243,7 +244,8 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ssid"            , configuration.ssid            , TYPE_STRING   ,0      ,0      ,0      ,NULL                        ,"WLAN SSID")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"passwd"          , configuration.passwd          , TYPE_STRING   ,0      ,0      ,0      ,NULL                        ,"WLAN password")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"baudrate"        , configuration.baudrate        , TYPE_UNSIGNED ,1200   ,4000000,0      ,callback_baudrateFunction   ,"Serial baudrate")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"r_top"           , configuration.r_top           , TYPE_UNSIGNED ,100    ,1000000 ,1000  ,NULL                        ,"Series resistor of voltage input [kOhm]")
+    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"r_bus"           , configuration.r_top           , TYPE_UNSIGNED ,100    ,1000000,1000   ,NULL                        ,"Series resistor of voltage input [kOhm]")
+    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_FALSE,"charge_delay"    , configuration.chargedelay     , TYPE_UNSIGNED ,0      ,60000  ,0      ,NULL                        ,"Delay for the charge relay [ms]")
 };
 
 /*****************************************************************************

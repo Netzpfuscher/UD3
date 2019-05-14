@@ -337,7 +337,7 @@ void initialize_analogs(void) {
 uint32 low_battery_counter;
 int16 initial_vbus, final_vbus, delta_vbus;
 uint32 charging_counter;
-
+uint8_t timer_triggerd=0;
 
 
 void initialize_charging(void) {
@@ -365,8 +365,10 @@ void bat_precharge_bus_scheme(){
     v_threshold = (float)telemetry.batt_v * 0.95;
 	if (telemetry.batt_v >= (configuration.batt_lockout_v - 1)) {
 		if (telemetry.bus_v >= v_threshold) {
-			relay_Write(RELAY_ON);
-			telemetry.bus_status = BUS_READY;
+            if(!timer_triggerd && telemetry.bus_status == BUS_CHARGING){
+                timer_triggerd=1;
+			    xTimerStart(xCharge_Timer,0);
+            }
 		} else if (telemetry.bus_status != BUS_READY) {
 			telemetry.bus_status = BUS_CHARGING;
 			relay_Write(RELAY_CHARGE);
@@ -406,16 +408,21 @@ void bat_boost_bus_scheme(){
 void ac_precharge_bus_scheme(){
 	//we cant know the AC line voltage so we will watch the bus voltage climb and infer when its charged by it not increasing fast enough
 	//this logic is part of a charging counter
+    if(telemetry.bus_status == BUS_READY && telemetry.bus_v <20){
+        telemetry.bus_status=BUS_BATT_UV_FLT;
+        bus_command=BUS_COMMAND_FAULT;
+    }
 	if (charging_counter == 0)
 		initial_vbus = telemetry.bus_v;
 	charging_counter++;
 	if (charging_counter > AC_PRECHARGE_TIMEOUT) {
-
 		final_vbus = telemetry.bus_v;
 		delta_vbus = final_vbus - initial_vbus;
-		if ((delta_vbus < 4) && (telemetry.bus_v > 20)) {
-			relay_Write(RELAY_ON);
-			telemetry.bus_status = BUS_READY;
+		if ((delta_vbus < 4) && (telemetry.bus_v > 20) && telemetry.bus_status == BUS_CHARGING) {
+            if(!timer_triggerd){
+                timer_triggerd=1;
+			    xTimerStart(xCharge_Timer,0);
+            }
 		} else if (telemetry.bus_status != BUS_READY) {
 			relay_Write(RELAY_CHARGE);
 			telemetry.bus_status = BUS_CHARGING;
@@ -428,21 +435,27 @@ void ac_dual_meas_scheme(){
 }
 
 void ac_precharge_fixed_delay(){
+    if(relay_Read()==RELAY_OFF){
+        xTimerStart(xCharge_Timer,0);
+        relay_Write(RELAY_CHARGE);
+        telemetry.bus_status = BUS_CHARGING;
+    }    
 }
 
 void vCharge_Timer_Callback(TimerHandle_t xTimer){
+    timer_triggerd=0;
     if(bus_command== BUS_COMMAND_ON){
         if(relay_Read()==RELAY_CHARGE){
             relay_Write(RELAY_ON);
+            telemetry.bus_status = BUS_READY;
         }
     }else{
         relay_Write(RELAY_OFF);
+        telemetry.bus_status = BUS_OFF;
     }
 }
 
 void control_precharge(void) { //this gets called from tsk_analogs.c when the ADC data set is ready, 8khz rep rate
-	
-	static uint8_t cnt = 0;
 
 	if (bus_command == BUS_COMMAND_ON) {
         switch(configuration.ps_scheme){
@@ -463,17 +476,19 @@ void control_precharge(void) { //this gets called from tsk_analogs.c when the AD
             break;
         } 
 	} else {
-		if (relay_Read()) {
-			relay_Write(RELAY_CHARGE);
-			if (cnt > 100) {
-				relay_Write(RELAY_OFF);
-				telemetry.bus_status = BUS_OFF;
-				cnt = 0;
-			}
-			cnt++;
+		if (relay_Read()==RELAY_ON) {
+			relay_Write(RELAY_CHARGE_OFF);
+            timer_triggerd=1;
+            xTimerStart(xCharge_Timer,0);
 		}
 		SLR_Control = 0;
 	}
+}
+
+void reconfig_charge_timer(){
+    if(xCharge_Timer!=NULL){
+        xTimerChangePeriod(xCharge_Timer,configuration.chargedelay / portTICK_PERIOD_MS,0);
+    }
 }
 
 /* `#END` */

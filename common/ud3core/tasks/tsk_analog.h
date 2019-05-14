@@ -78,6 +78,7 @@ uint16_t get_max(void);
 void i2t_set_limit(uint32_t const_current, uint32_t ovr_current, uint32_t limit_ms);
 void i2t_set_warning(uint8_t percent);
 void i2t_reset();
+void reconfig_charge_timer();
 extern uint16 ADC_sample_buf[4];
 /*
  * Add user function prototypes in the below merge region to add user

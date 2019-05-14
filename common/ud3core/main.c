@@ -30,7 +30,6 @@
 
 #include "DMA.h"
 #include "ZCDtoPWM.h"
-#include "charging.h"
 #include "interrupter.h"
 #include "telemetry.h"
 #include <device.h>

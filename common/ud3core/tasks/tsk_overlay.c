@@ -42,7 +42,6 @@
 /* `#START USER_INCLUDE SECTION` */
 #include "cli_common.h"
 #include "telemetry.h"
-#include "charging.h"
 #include "tsk_analog.h"
 #include "tsk_uart.h"
 #include <project.h>

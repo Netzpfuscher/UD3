@@ -25,7 +25,6 @@
 #include "cli_common.h"
 #include "ZCDtoPWM.h"
 #include "autotune.h"
-#include "charging.h"
 #include "interrupter.h"
 #include "ntshell.h"
 #include "ntlibc.h"
@@ -230,7 +229,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"batt_lockout_v"  , configuration.batt_lockout_v  , TYPE_UNSIGNED ,0      ,500    ,0      ,NULL                        ,"Battery lockout voltage [V]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"slr_fswitch"     , configuration.slr_fswitch     , TYPE_UNSIGNED ,0      ,1000   ,10     ,callback_ConfigFunction     ,"SLR switch frequency [kHz]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"slr_vbus"        , configuration.slr_vbus        , TYPE_UNSIGNED ,0      ,1000   ,0      ,NULL                        ,"SLR Vbus [V]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ps_scheme"       , configuration.ps_scheme       , TYPE_UNSIGNED ,0      ,4      ,0      ,callback_ConfigFunction     ,"Power supply sheme")
+    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ps_scheme"       , configuration.ps_scheme       , TYPE_UNSIGNED ,0      ,5      ,0      ,callback_ConfigFunction     ,"Power supply sheme")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"autotune_s"      , configuration.autotune_s      , TYPE_UNSIGNED ,1      ,32     ,0      ,NULL                        ,"Number of samples for Autotune")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ud_name"         , configuration.ud_name         , TYPE_STRING   ,0      ,0      ,0      ,NULL                        ,"Name of the Coil [15 chars]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ip_addr"         , configuration.ip_addr         , TYPE_STRING   ,0      ,0      ,0      ,NULL                        ,"IP-Adress of the UD3")
@@ -245,7 +244,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"passwd"          , configuration.passwd          , TYPE_STRING   ,0      ,0      ,0      ,NULL                        ,"WLAN password")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"baudrate"        , configuration.baudrate        , TYPE_UNSIGNED ,1200   ,4000000,0      ,callback_baudrateFunction   ,"Serial baudrate")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"r_bus"           , configuration.r_top           , TYPE_UNSIGNED ,100    ,1000000,1000   ,NULL                        ,"Series resistor of voltage input [kOhm]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_FALSE,"charge_delay"    , configuration.chargedelay     , TYPE_UNSIGNED ,0      ,60000  ,0      ,NULL                        ,"Delay for the charge relay [ms]")
+    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_FALSE,"charge_delay"    , configuration.chargedelay     , TYPE_UNSIGNED ,1      ,60000  ,0      ,NULL                        ,"Delay for the charge relay [ms]")
 };
 
 /*****************************************************************************

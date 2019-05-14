@@ -42,7 +42,7 @@ uint8 tsk_thermistor_initVar = 0u;
  * below merge region section.
  */
 /* `#START USER_INCLUDE SECTION` */
-#include "charging.h"
+#include "tsk_analog.h"
 #include "cli_common.h"
 #include "telemetry.h"
 #include "tsk_priority.h"

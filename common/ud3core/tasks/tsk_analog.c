@@ -32,6 +32,7 @@
 #include "task.h"
 #include "queue.h"
 #include "semphr.h"
+#include "timers.h"
 #include "interrupter.h"
 
 #include <stdlib.h>
@@ -45,6 +46,8 @@ SemaphoreHandle_t adc_ready_Semaphore;
 
 xQueueHandle adc_data;
 
+TimerHandle_t xCharge_Timer;
+
 #define NEW_DATA_RATE_MS 3.125  //ms
 
 
@@ -55,7 +58,6 @@ xQueueHandle adc_data;
  */
 /* `#START USER_INCLUDE SECTION` */
 #include "ZCDtoPWM.h"
-#include "charging.h"
 #include "cli_common.h"
 #include "telemetry.h"
 #include "tsk_priority.h"
@@ -332,6 +334,148 @@ void initialize_analogs(void) {
     ADC_Start();
 }
 
+uint32 low_battery_counter;
+int16 initial_vbus, final_vbus, delta_vbus;
+uint32 charging_counter;
+
+
+
+void initialize_charging(void) {
+	telemetry.bus_status = BUS_OFF;
+	if (configuration.ps_scheme == BAT_BOOST_BUS_SCHEME) {
+		SLR_Control = 0;
+		SLRPWM_Start();
+		if (configuration.slr_fswitch == 0) {
+			configuration.slr_fswitch = 500; //just in case it wasnt ever programmed
+		}
+		uint16 x;
+		x = (320000 / (configuration.slr_fswitch));
+		if ((x % 2) != 0)
+			x++; //we want x to be even
+		SLRPWM_WritePeriod(x + 1);
+		SLRPWM_WriteCompare(x >> 1);
+	}
+	initial_vbus = 0;
+	final_vbus = 0;
+	charging_counter = 0;
+}
+
+void bat_precharge_bus_scheme(){
+    uint32 v_threshold;
+    v_threshold = (float)telemetry.batt_v * 0.95;
+	if (telemetry.batt_v >= (configuration.batt_lockout_v - 1)) {
+		if (telemetry.bus_v >= v_threshold) {
+			relay_Write(RELAY_ON);
+			telemetry.bus_status = BUS_READY;
+		} else if (telemetry.bus_status != BUS_READY) {
+			telemetry.bus_status = BUS_CHARGING;
+			relay_Write(RELAY_CHARGE);
+		}
+		low_battery_counter = 0;
+	} else {
+		low_battery_counter++;
+		if (low_battery_counter > LOW_BATTERY_TIMEOUT) {
+			relay_Write(RELAY_OFF);
+			telemetry.bus_status = BUS_BATT_UV_FLT;
+			bus_command = BUS_COMMAND_FAULT;
+		}
+	}
+}
+
+void bat_boost_bus_scheme(){
+    if (telemetry.bus_v < (configuration.slr_vbus - 15)) {
+		SLR_Control = 1;
+		telemetry.bus_status = BUS_READY; //its OK to operate the TC when charging from SLR
+	} else if (telemetry.bus_v > configuration.slr_vbus) {
+		SLR_Control = 0;
+		telemetry.bus_status = BUS_READY;
+	}
+
+	if (telemetry.batt_v >= (configuration.batt_lockout_v - 1)) {
+		low_battery_counter = 0;
+	} else {
+		low_battery_counter++;
+		if (low_battery_counter > LOW_BATTERY_TIMEOUT) {
+			SLR_Control = 0;
+			telemetry.bus_status = BUS_BATT_UV_FLT;
+			bus_command = BUS_COMMAND_FAULT;
+		}
+	}
+}
+
+void ac_precharge_bus_scheme(){
+	//we cant know the AC line voltage so we will watch the bus voltage climb and infer when its charged by it not increasing fast enough
+	//this logic is part of a charging counter
+	if (charging_counter == 0)
+		initial_vbus = telemetry.bus_v;
+	charging_counter++;
+	if (charging_counter > AC_PRECHARGE_TIMEOUT) {
+
+		final_vbus = telemetry.bus_v;
+		delta_vbus = final_vbus - initial_vbus;
+		if ((delta_vbus < 4) && (telemetry.bus_v > 20)) {
+			relay_Write(RELAY_ON);
+			telemetry.bus_status = BUS_READY;
+		} else if (telemetry.bus_status != BUS_READY) {
+			relay_Write(RELAY_CHARGE);
+			telemetry.bus_status = BUS_CHARGING;
+		}
+		charging_counter = 0;
+	}
+}
+
+void ac_dual_meas_scheme(){
+}
+
+void ac_precharge_fixed_delay(){
+}
+
+void vCharge_Timer_Callback(TimerHandle_t xTimer){
+    if(bus_command== BUS_COMMAND_ON){
+        if(relay_Read()==RELAY_CHARGE){
+            relay_Write(RELAY_ON);
+        }
+    }else{
+        relay_Write(RELAY_OFF);
+    }
+}
+
+void control_precharge(void) { //this gets called from tsk_analogs.c when the ADC data set is ready, 8khz rep rate
+	
+	static uint8_t cnt = 0;
+
+	if (bus_command == BUS_COMMAND_ON) {
+        switch(configuration.ps_scheme){
+            case BAT_PRECHARGE_BUS_SCHEME:
+                bat_precharge_bus_scheme();
+            break;
+            case BAT_BOOST_BUS_SCHEME:
+                bat_boost_bus_scheme();
+            break;
+            case AC_PRECHARGE_BUS_SCHEME:
+                ac_precharge_bus_scheme();
+            break;
+            case AC_DUAL_MEAS_SCHEME:
+                ac_dual_meas_scheme();
+            break;
+            case AC_PRECHARGE_FIXED_DELAY:
+                ac_precharge_fixed_delay();
+            break;
+        } 
+	} else {
+		if (relay_Read()) {
+			relay_Write(RELAY_CHARGE);
+			if (cnt > 100) {
+				relay_Write(RELAY_OFF);
+				telemetry.bus_status = BUS_OFF;
+				cnt = 0;
+			}
+			cnt++;
+		}
+		SLR_Control = 0;
+	}
+}
+
 /* `#END` */
 /* ------------------------------------------------------------------------ */
 /*
@@ -347,8 +491,10 @@ void tsk_analog_TaskProc(void *pvParameters) {
 	/* `#START TASK_VARIABLES` */
 
 	adc_data = xQueueCreate(128, sizeof(ADC_sample));
+    
+    xCharge_Timer = xTimerCreate("Chrg-Tmr", configuration.chargedelay / portTICK_PERIOD_MS, pdFALSE,(void * ) 0, vCharge_Timer_Callback);
 
-	/* `#END` */
+    /* `#END` */
 
 	/*
 	 * Add the task initialzation code in the below merge region to be included

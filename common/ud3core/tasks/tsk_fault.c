@@ -27,6 +27,7 @@
 
 #include "tsk_fault.h"
 
+
 /* RTOS includes. */
 #include "FreeRTOS.h"
 #include "task.h"
@@ -43,10 +44,10 @@ uint8 tsk_fault_initVar = 0u;
  * below merge region section.
  */
 /* `#START USER_INCLUDE SECTION` */
-#include "charging.h"
 #include "cli_common.h"
 #include "telemetry.h"
 #include "tsk_priority.h"
+#include "tsk_analog.h"
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */

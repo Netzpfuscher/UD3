@@ -45,7 +45,6 @@
 struct _socket_info{
     uint8_t socket;
     uint8_t old_state;
-    uint16_t timeout;
     char info[16];
 };
 #define ETH_INFO_ETH  0

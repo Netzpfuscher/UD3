@@ -45,8 +45,8 @@
 #define UART_USE23POLLING                   (1u)
 #define UART_FLOW_CONTROL                   (0u)
 #define UART_CLK_FREQ                       (0u)
-#define UART_TX_BUFFER_SIZE                 (64u)
-#define UART_RX_BUFFER_SIZE                 (64u)
+#define UART_TX_BUFFER_SIZE                 (1024ul)
+#define UART_RX_BUFFER_SIZE                 (1024ul)
 
 /* Check to see if required defines such as CY_PSOC5LP are available */
 /* They are defined starting with cy_boot v3.0 */
@@ -179,9 +179,9 @@ void UART_Wakeup(void) ;
     #endif  /* (CYDEV_BOOTLOADER_IO_COMP == CyBtldr_UART) */
 
     /* Byte to Byte time out for detecting end of block data from host */
-    #define UART_BYTE2BYTE_TIME_OUT (25u)
+    #define UART_BYTE2BYTE_TIME_OUT (100u)
     #define UART_PACKET_EOP         (0x17u) /* End of packet defined by bootloader */
-    #define UART_WAIT_EOP_DELAY     (5u)    /* Additional 5ms to wait for End of packet */
+    #define UART_WAIT_EOP_DELAY     (1u)    /* Additional 5ms to wait for End of packet */
     #define UART_BL_CHK_DELAY_MS    (1u)    /* Time Out quantity equal 1mS */
 
 #endif /* CYDEV_BOOTLOADER_IO_COMP */

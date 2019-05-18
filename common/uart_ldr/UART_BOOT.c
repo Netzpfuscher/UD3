@@ -234,6 +234,7 @@ cystatus UART_CyBtldrCommRead(uint8 pData[], uint16 size, uint16 * count, uint8 
             {
                 oldDataCount = UART_GetRxBufferSize();
                 CyDelayUs(UART_BYTE2BYTE_TIME_OUT);
+                //CyDelay(UART_BYTE2BYTE_TIME_OUT);
             }
             while(UART_GetRxBufferSize() > oldDataCount);
 

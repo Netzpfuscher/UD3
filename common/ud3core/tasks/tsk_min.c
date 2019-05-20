@@ -68,6 +68,7 @@ void send_config_to_esp();
 /* `#START USER_TASK_LOCAL_CODE` */
 
 #define LOCAL_UART_BUFFER_SIZE  127     //bytes
+#define FLOW_RETRANSMIT_TICKS 50
 
 
 uint16_t min_tx_space(uint8_t port){
@@ -303,6 +304,8 @@ void tsk_min_TaskProc(void *pvParameters) {
     uint8_t i=0;
     uint16_t bytes_waiting=0;
     
+    uint32_t next_sid_flow = 0;
+    
 	for (;;) {
         write_telemetry(&min_ctx);
         bytes_waiting=UART_2_GetRxBufferSize();
@@ -323,8 +326,11 @@ void tsk_min_TaskProc(void *pvParameters) {
                     min_queue_frame(&min_ctx, MIN_ID_MIDI, &min_start,1);
                     flow_ctl=1;
                 }else if(uxQueueSpacesAvailable(qSID) > 59){
-                    min_send_frame(&min_ctx, MIN_ID_MIDI, &min_start,1);
-                    flow_ctl=1;
+                    if(xTaskGetTickCount()>next_sid_flow){
+                        next_sid_flow = xTaskGetTickCount() + FLOW_RETRANSMIT_TICKS;
+                        min_send_frame(&min_ctx, MIN_ID_MIDI, &min_start,1);
+                        flow_ctl=1;
+                    }
                 }
             }
             uint16_t eth_bytes=xStreamBufferBytesAvailable(eth_port[i].tx);

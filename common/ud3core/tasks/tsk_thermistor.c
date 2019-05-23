@@ -97,9 +97,9 @@ uint16_t get_temp_128(uint16_t counts) {
 }
 int16_t get_temp_counts(uint8_t channel){
     Therm_Mux_Select(channel);
-    vTaskDelay(1);
+    vTaskDelay(20);
     ADC_therm_StartConvert();
-    vTaskDelay(1);
+    vTaskDelay(20);
     return ADC_therm_GetResult16();
 }
 

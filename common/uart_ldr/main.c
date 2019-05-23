@@ -139,6 +139,7 @@ int main()
 	/* Initialize PWM */
     PWM_Start();  
     SPIM0_Start();
+    configuration.baudrate=2000000;
     EEPROM_1_Start();
     EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,NONE); 
     if(ETH_StartEx(configuration.ip_gw, configuration.ip_subnet, configuration.ip_mac, configuration.ip_addr)==CYRET_SUCCESS){

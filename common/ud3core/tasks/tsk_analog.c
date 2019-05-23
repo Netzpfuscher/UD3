@@ -476,8 +476,9 @@ void control_precharge(void) { //this gets called from tsk_analogs.c when the AD
             break;
         } 
 	} else {
-		if (relay_Read()==RELAY_ON) {
-			relay_Write(RELAY_CHARGE_OFF);
+		if ((relay_Read()==RELAY_ON || relay_Read()==RELAY_CHARGE) && timer_triggerd==0){
+            
+			relay_Write(RELAY_CHARGE);
             timer_triggerd=1;
             xTimerStart(xCharge_Timer,0);
 		}

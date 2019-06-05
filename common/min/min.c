@@ -576,6 +576,7 @@ static void rx_byte(struct min_context *self, uint8_t byte)
             if(self->rx_frame_checksum != crc) {
                 // Frame fails the checksum and so is dropped
                 self->rx_frame_state = SEARCHING_FOR_SOF;
+                self->transport_fifo.crc_fails++;
             }
             else {
                 // Checksum passes, go on to check for the end-of-frame marker
@@ -672,6 +673,7 @@ void min_init_context(struct min_context *self, uint8_t port)
     self->transport_fifo.resets_received = 0;
     self->transport_fifo.n_ring_buffer_bytes_max = 0;
     self->transport_fifo.n_frames_max = 0;
+    self->transport_fifo.crc_fails = 0;
     transport_fifo_reset(self);
 #endif // TRANSPORT_PROTOCOL
 }

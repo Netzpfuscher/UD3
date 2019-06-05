@@ -144,7 +144,7 @@ void init_config(){
     configuration.slr_vbus = 200;
     configuration.ps_scheme = 2;
     configuration.autotune_s = 1;
-    configuration.baudrate = 115200;
+    configuration.baudrate = 500000;
     configuration.r_top = 500000;
     ntlibc_strcpy(configuration.ud_name,"UD3-Tesla");
     ntlibc_strcpy(configuration.ip_addr,"192.168.50.250");
@@ -153,7 +153,7 @@ void init_config(){
     ntlibc_strcpy(configuration.ip_gw,"192.168.50.1");
     ntlibc_strcpy(configuration.ssid,"NULL");
     ntlibc_strcpy(configuration.passwd,"NULL");
-    configuration.minprot = 0;
+    configuration.minprot = 1;
     configuration.max_const_i = 0;
     configuration.max_fault_i = 250;
     configuration.eth_hw = 0; //ESP32
@@ -597,9 +597,9 @@ uint8_t command_signals(char *commandline, port_str *ptr) {
     }
     SEND_CONST_STRING("System fault: ", ptr);
     if(system_fault_Read()){
-        send_true(ptr);
-    }else{
         send_false(ptr);
+    }else{
+        send_true(ptr);
     }
     /*SEND_CONST_STRING("No feedback: ", ptr);
     if(no_fb_reg_Read()){
@@ -852,6 +852,8 @@ uint8_t command_minstat(char *commandline, port_str *ptr){
     ret = snprintf(buffer, sizeof(buffer),"Sequence mismatch drop: %lu\r\n",telemetry.sequence_mismatch_drop);
     send_buffer((uint8_t*)buffer,ret,ptr);
     ret = snprintf(buffer, sizeof(buffer),"Max frames in buffer  : %u\r\n",telemetry.min_frames_max);
+    send_buffer((uint8_t*)buffer,ret,ptr);
+    ret = snprintf(buffer, sizeof(buffer),"CRC errors            : %u\r\n",telemetry.crc_errors);
     send_buffer((uint8_t*)buffer,ret,ptr);
     return 1; 
 }

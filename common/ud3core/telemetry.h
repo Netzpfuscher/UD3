@@ -139,6 +139,7 @@ typedef struct
     uint32_t sequence_mismatch_drop;
     uint32_t resets_received;
     uint32_t remote_rx_buffer;
+    uint32_t crc_errors;
     uint8_t min_frames_max;
     uint16_t duty;
     uint16_t num_bytes;

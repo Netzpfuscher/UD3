@@ -123,6 +123,7 @@ struct transport_fifo {
     uint32_t spurious_acks;
     uint32_t sequence_mismatch_drop;
     uint32_t resets_received;
+    uint32_t crc_fails;
     uint16_t n_ring_buffer_bytes;                   // Number of bytes used in the payload ring buffer
     uint16_t n_ring_buffer_bytes_max;               // Largest number of bytes ever used
     uint16_t ring_buffer_tail_offset;               // Tail of the payload ring buffer

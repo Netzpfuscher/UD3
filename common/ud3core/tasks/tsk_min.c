@@ -223,6 +223,7 @@ void write_telemetry(struct min_context* ptr){
     telemetry.resets_received = ptr->transport_fifo.resets_received;
     telemetry.min_frames_max = ptr->transport_fifo.n_frames_max;
     telemetry.remote_rx_buffer = ptr->remote_rx_space;
+    telemetry.crc_errors = ptr->transport_fifo.crc_fails;
 }
 
 uint8_t assemble_command(uint8_t cmd, char *str, uint8_t *buf){

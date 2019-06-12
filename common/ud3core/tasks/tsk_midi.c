@@ -548,6 +548,7 @@ void reflect(PORT port[], CHANNEL channel[], MIDICH midich[]) {
 }
 
 void kill_accu(){
+    if(isr_port_ptr==NULL) return;
     for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
                 isr_port_ptr[ch].volume=0;
                 isr_port_ptr[ch].freq=0;

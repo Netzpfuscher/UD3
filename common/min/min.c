@@ -3,6 +3,7 @@
 // Use authorized under the MIT license.
 
 #include "min.h"
+#include ".\tasks\tsk_midi.h"
 
 #define TRANSPORT_FIFO_SIZE_FRAMES_MASK             ((uint8_t)((1U << TRANSPORT_FIFO_SIZE_FRAMES_BITS) - 1U))
 #define TRANSPORT_FIFO_SIZE_FRAME_DATA_MASK         ((uint16_t)((1U << TRANSPORT_FIFO_SIZE_FRAME_DATA_BITS) - 1U))
@@ -47,7 +48,7 @@ enum {
 #define TRANSPORT_MAX_WINDOW_SIZE                   (16U)
 #endif
 #ifndef TRANSPORT_IDLE_TIMEOUT_MS
-#define TRANSPORT_IDLE_TIMEOUT_MS                   (1000U)
+#define TRANSPORT_IDLE_TIMEOUT_MS                   (500U)
 #endif
 
 enum {
@@ -270,6 +271,9 @@ static void transport_fifo_reset(struct min_context *self)
     self->transport_fifo.sn_max = 0;
     self->transport_fifo.sn_min = 0;
     self->transport_fifo.rn = 0;
+    
+    kill_accu();
+    USBMIDI_1_callbackLocalMidiEvent(0, (uint8_t*)kill_msg);
 
     // Reset the timers
     self->transport_fifo.last_received_anything_ms = now;

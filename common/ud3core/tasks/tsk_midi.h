@@ -48,6 +48,8 @@ void update_midi_duty();
 
 void switch_synth(uint8_t synth);
 
+void kill_accu();
+
 extern xQueueHandle qSID;
 
 extern const uint8_t kill_msg[3];

@@ -81,7 +81,8 @@ uint32_t alarm_get_num(){
 
 uint32_t alarm_get(uint32_t index, ALARMS * alm){
     if(uxQueueMessagesWaiting(qAlarms)){
-        xQueuePeekIndex(qAlarms, alm,0,index);
+        xQueuePeekIndex(qAlarms, alm, index,0);
+       // xQueueReceive(qAlarms, alm,0);
         return pdPASS;
     }else{
         return pdFAIL;
@@ -91,7 +92,9 @@ uint32_t alarm_get(uint32_t index, ALARMS * alm){
 void alarm_clear(){
     xQueueReset(qAlarms);    
 }
-
+void alarm_init(){
+    qAlarms = xQueueCreate(50, sizeof(ALARMS));
+}
 
 void WD_enable(uint8_t enable){
     if(xWD_Timer!=NULL){
@@ -196,7 +199,7 @@ void tsk_fault_Start(void) {
 	 */
 	/* `#START TASK_GLOBAL_INIT` */
     
-    qAlarms = xQueueCreate(50, sizeof(ALARMS));
+    
 
 	/* `#END` */
 

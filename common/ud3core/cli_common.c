@@ -103,7 +103,7 @@ uint8_t command_exit(char *commandline, port_str *ptr);
 uint8_t command_ethcon(char *commandline, port_str *ptr);
 uint8_t command_fuse(char *commandline, port_str *ptr);
 uint8_t command_signals(char *commandline, port_str *ptr);
-
+uint8_t command_alarms(char *commandline, port_str *ptr);
 
 uint8_t burst_state = 0;
 
@@ -274,6 +274,7 @@ command_entry commands[] = {
     ADD_COMMAND("config_get"    ,command_config_get     ,"Internal use")
     ADD_COMMAND("fuse_reset"    ,command_fuse           ,"Reset the internal fuse")
     ADD_COMMAND("signals"       ,command_signals        ,"For debugging")
+    ADD_COMMAND("alarms"        ,command_alarms         ,"Alarms [show/reset]")
 };
 
 void update_visibilty(void){
@@ -836,6 +837,22 @@ uint8_t command_cls(char *commandline, port_str *ptr) {
     SEND_CONST_STRING("\tCoil: ",ptr);
     send_string(configuration.ud_name,ptr);
     SEND_CONST_STRING("\r\n\r\n",ptr);
+	return 1;
+}
+
+/*****************************************************************************
+* Clears the terminal screen and displays the logo
+******************************************************************************/
+uint8_t command_alarms(char *commandline, port_str *ptr) {
+    char buffer[80];
+    int ret=0;
+    ALARMS temp;
+    for(uint16_t i=0;i<alarm_get_num();i++){
+        if(alarm_get(i,&temp)==pdPASS){
+            ret = snprintf(buffer, sizeof(buffer),"NUM: %d Time: %lu MSG: %s\r\n",i,temp.timestamp, temp.message);
+            send_buffer((uint8_t*)buffer,ret,ptr);  
+        }
+    }
 	return 1;
 }
 

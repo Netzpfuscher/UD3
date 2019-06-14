@@ -54,7 +54,7 @@ static void prvFreeRTOSSetup( void );
 int main() {
     
     prvFreeRTOSSetup();
-    
+    alarm_init();
 	system_fault_Control = 0; //this should suppress any start-up sparking until the system is ready
 	init_config();
     EEPROM_1_Start();

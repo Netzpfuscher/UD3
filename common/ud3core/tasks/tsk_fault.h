@@ -45,6 +45,7 @@ void WD_enable(uint8_t enable);
 
 void alarm_push(uint8_t level, const char* message);
 uint32_t alarm_get_num();
+void alarm_init();
 uint32_t alarm_get(uint32_t index, ALARMS * alm);
 void alarm_clear();
 

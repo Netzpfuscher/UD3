@@ -741,7 +741,7 @@ BaseType_t xQueueGenericSend( QueueHandle_t xQueue, const void * const pvItemToQ
  * \ingroup QueueManagement
  */
 BaseType_t xQueuePeek( QueueHandle_t xQueue, void * const pvBuffer, TickType_t xTicksToWait ) PRIVILEGED_FUNCTION;
-BaseType_t xQueuePeekIndex( QueueHandle_t xQueue, void * const pvBuffer, TickType_t xTicksToWait, uint32_t index ) PRIVILEGED_FUNCTION;
+BaseType_t xQueuePeekIndex( QueueHandle_t xQueue, void * const pvBuffer, uint32_t index, TickType_t xTicksToWait ) PRIVILEGED_FUNCTION;
 
 /**
  * queue. h

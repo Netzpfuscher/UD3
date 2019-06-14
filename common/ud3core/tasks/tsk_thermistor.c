@@ -26,6 +26,7 @@
 #include <cytypes.h>
 
 #include "tsk_thermistor.h"
+#include "tsk_fault.h"
 
 /* RTOS includes. */
 #include "FreeRTOS.h"
@@ -153,7 +154,7 @@ void tsk_thermistor_TaskProc(void *pvParameters) {
     
 
 	/* `#END` */
-
+    alarm_push(ALM_PRIO_INFO,warn_task_thermistor);
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
 

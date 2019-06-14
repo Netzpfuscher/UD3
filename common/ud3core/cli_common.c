@@ -44,6 +44,7 @@
 #include "tasks/tsk_midi.h"
 #include "tasks/tsk_cli.h"
 #include "tasks/tsk_min.h"
+#include "tasks/tsk_fault.h"
 #include "min_id.h"
 #include "helper/teslaterm.h"
 #include "math.h"
@@ -201,7 +202,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"qcw_repeat"      , param.qcw_repeat              , TYPE_UNSIGNED ,0      ,1000   ,0      ,NULL                        ,"QCW pulse repeat time [ms] <100=single shot")
     ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"transpose"       , param.transpose               , TYPE_SIGNED   ,-48    ,48     ,0      ,NULL                        ,"Transpose MIDI")
     ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"synth"           , param.synth                   , TYPE_UNSIGNED ,0      ,2      ,0      ,callback_SynthFunction      ,"0=off 1=MIDI 2=SID")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"watchdog"        , configuration.watchdog        , TYPE_UNSIGNED ,0      ,1      ,0      ,NULL                        ,"Watchdog Enable")
+    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"watchdog"        , configuration.watchdog        , TYPE_UNSIGNED ,0      ,1      ,0      ,callback_ConfigFunction     ,"Watchdog Enable")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_tr_pw"       , configuration.max_tr_pw       , TYPE_UNSIGNED ,0      ,3000   ,0      ,callback_ConfigFunction     ,"Maximum TR PW [uSec]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_tr_prf"      , configuration.max_tr_prf      , TYPE_UNSIGNED ,0      ,3000   ,0      ,callback_ConfigFunction     ,"Maximum TR frequency [Hz]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_qcw_pw"      , configuration.max_qcw_pw      , TYPE_UNSIGNED ,0      ,30000  ,1000   ,callback_ConfigFunction     ,"Maximum QCW PW [ms]")
@@ -497,6 +498,7 @@ uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, port_str
 uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, port_str *ptr){
     uint8 sfflag = system_fault_Read();
     system_fault_Control = 0; //halt tesla coil operation during updates!
+    WD_enable(configuration.watchdog);
     initialize_interrupter();
 	initialize_charging();
 	configure_ZCD_to_PWM();
@@ -589,12 +591,12 @@ uint8_t command_signals(char *commandline, port_str *ptr) {
     }else{
         send_true(ptr);
     }
-    SEND_CONST_STRING("Watchdog: ", ptr);
+    /*SEND_CONST_STRING("Watchdog: ", ptr);
     if(interrupter_watchdog_ReadCounter()){
         send_false(ptr);
     }else{
         send_true(ptr);
-    }
+    }*/
     SEND_CONST_STRING("System fault: ", ptr);
     if(system_fault_Read()){
         send_false(ptr);
@@ -998,6 +1000,7 @@ uint8_t command_udkill(char *commandline, port_str *ptr) {
     	Term_Color_White(ptr);
     }else if (ntlibc_stricmp(commandline, "reset") == 0) {
         interrupter_unkill();
+        system_fault_Control = 0xFF;
         Term_Color_Green(ptr);
     	SEND_CONST_STRING("Killbit reset\r\n", ptr);
     	Term_Color_White(ptr);

@@ -26,6 +26,7 @@
 #include <cytypes.h>
 
 #include "tsk_analog.h"
+#include "tsk_fault.h"
 
 /* RTOS includes. */
 #include "FreeRTOS.h"
@@ -410,6 +411,10 @@ void ac_precharge_bus_scheme(){
 	//this logic is part of a charging counter
     if(telemetry.bus_status == BUS_READY && telemetry.bus_v <20){
         telemetry.bus_status=BUS_BATT_UV_FLT;
+        if(telemetry.sys_fault[SYS_FAULT_BUS_UV]==0){
+            alarm_push(ALM_PRIO_ALARM,warn_bus_undervoltage);
+        }
+        telemetry.sys_fault[SYS_FAULT_BUS_UV]=1;
         bus_command=BUS_COMMAND_FAULT;
     }
 	if (charging_counter == 0)
@@ -446,11 +451,13 @@ void vCharge_Timer_Callback(TimerHandle_t xTimer){
     timer_triggerd=0;
     if(bus_command== BUS_COMMAND_ON){
         if(relay_Read()==RELAY_CHARGE){
+            alarm_push(ALM_PRIO_INFO,warn_bus_ready);
             relay_Write(RELAY_ON);
             telemetry.bus_status = BUS_READY;
         }
     }else{
         relay_Write(RELAY_OFF);
+        alarm_push(ALM_PRIO_INFO,warn_bus_off);
         telemetry.bus_status = BUS_OFF;
     }
 }
@@ -477,7 +484,7 @@ void control_precharge(void) { //this gets called from tsk_analogs.c when the AD
         } 
 	} else {
 		if ((relay_Read()==RELAY_ON || relay_Read()==RELAY_CHARGE) && timer_triggerd==0){
-            
+            alarm_push(ALM_PRIO_INFO,warn_bus_charging);
 			relay_Write(RELAY_CHARGE);
             timer_triggerd=1;
             xTimerStart(xCharge_Timer,0);
@@ -523,6 +530,8 @@ void tsk_analog_TaskProc(void *pvParameters) {
 	initialize_analogs();
     
     isr_primary_current_StartEx(isr_primary);
+    
+    alarm_push(ALM_PRIO_INFO,warn_task_analog);
 
 	/* `#END` */
 

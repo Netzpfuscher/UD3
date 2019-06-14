@@ -117,8 +117,19 @@
 #define CHART3_MAX 10000
 #define CHART3_OFFSET 0
 #define CHART3_UNIT TT_UNIT_W
-#define CHART3_VAR telemetry.avg_power       
-        
+#define CHART3_VAR telemetry.avg_power   
+    
+    
+
+#define SYS_FAULT_UVLO      0
+#define SYS_FAULT_TEMP      1
+#define SYS_FAULT_FUSE      2
+#define SYS_FAULT_CHARGE    3
+#define SYS_FAULT_WD        4
+#define SYS_FAULT_UPDATE    5
+#define SYS_FAULT_BUS_UV    6
+#define SYS_FAULT_NUM       7
+    
 typedef struct
 {
 	uint16 bus_v;		//in volts
@@ -144,6 +155,7 @@ typedef struct
     uint16_t duty;
     uint16_t num_bytes;
     int16 fres;
+    uint8_t sys_fault[SYS_FAULT_NUM];
 } telemetry_struct;
 telemetry_struct telemetry;
 

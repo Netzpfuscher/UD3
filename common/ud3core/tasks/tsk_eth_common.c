@@ -46,8 +46,8 @@ void process_midi(uint8_t* ptr, uint16_t len) {
 			midi_count = 0;
 			if (midiMsg[0] == 0xF0) {
 				if (midiMsg[1] == 0x0F) {
-					watchdog_reset_Control = 1;
-					watchdog_reset_Control = 0;
+					//------------------>watchdog_reset_Control = 1;
+					//------------------>watchdog_reset_Control = 0;
 					goto end;
 				}
 			}

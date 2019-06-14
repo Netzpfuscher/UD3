@@ -26,6 +26,7 @@
 #include <cytypes.h>
 
 #include "tsk_cli.h"
+#include "tsk_fault.h"
 #include "cli_basic.h"
 
 
@@ -141,7 +142,8 @@ void tsk_cli_TaskProc(void *pvParameters) {
 	/* `#START TASK_INIT_CODE` */
 
 	initialize_cli(&ntsh, port);
-
+    
+    alarm_push(ALM_PRIO_INFO,warn_task_cli);
 	/* `#END` */
 
 	for (;;) {

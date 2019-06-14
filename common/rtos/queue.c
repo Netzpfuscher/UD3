@@ -191,6 +191,8 @@ static BaseType_t prvCopyDataToQueue( Queue_t * const pxQueue, const void *pvIte
  */
 static void prvCopyDataFromQueue( Queue_t * const pxQueue, void * const pvBuffer ) PRIVILEGED_FUNCTION;
 
+static void prvCopyItemFromQueue( Queue_t * const pxQueue, void * const pvBuffer, uint32_t index ) PRIVILEGED_FUNCTION;
+
 #if ( configUSE_QUEUE_SETS == 1 )
 	/*
 	 * Checks to see if a queue is a member of a queue set, and if so, notifies
@@ -1748,6 +1750,148 @@ Queue_t * const pxQueue = ( Queue_t * ) xQueue;
 }
 /*-----------------------------------------------------------*/
 
+BaseType_t xQueuePeekIndex( QueueHandle_t xQueue, void * const pvBuffer, uint32_t index , TickType_t xTicksToWait )
+{
+BaseType_t xEntryTimeSet = pdFALSE;
+TimeOut_t xTimeOut;
+Queue_t * const pxQueue = ( Queue_t * ) xQueue;
+
+	/* Check the pointer is not NULL. */
+	configASSERT( ( pxQueue ) );
+
+	/* The buffer into which data is received can only be NULL if the data size
+	is zero (so no data is copied into the buffer. */
+	configASSERT( !( ( ( pvBuffer ) == NULL ) && ( ( pxQueue )->uxItemSize != ( UBaseType_t ) 0U ) ) );
+
+	/* Cannot block if the scheduler is suspended. */
+	#if ( ( INCLUDE_xTaskGetSchedulerState == 1 ) || ( configUSE_TIMERS == 1 ) )
+	{
+		configASSERT( !( ( xTaskGetSchedulerState() == taskSCHEDULER_SUSPENDED ) && ( xTicksToWait != 0 ) ) );
+	}
+	#endif
+
+
+	/* This function relaxes the coding standard somewhat to allow return
+	statements within the function itself.  This is done in the interest
+	of execution time efficiency. */
+
+	for( ;; )
+	{
+		taskENTER_CRITICAL();
+		{
+			const UBaseType_t uxMessagesWaiting = pxQueue->uxMessagesWaiting;
+
+			/* Is there data in the queue now?  To be running the calling task
+			must be the highest priority task wanting to access the queue. */
+			if( uxMessagesWaiting > index )
+			{
+
+				prvCopyItemFromQueue( pxQueue, pvBuffer, index );
+				traceQUEUE_PEEK( pxQueue );
+
+                /* The data is being left in the queue, so see if there are
+				any other tasks waiting for the data. */
+				if( listLIST_IS_EMPTY( &( pxQueue->xTasksWaitingToReceive ) ) == pdFALSE )
+				{
+					if( xTaskRemoveFromEventList( &( pxQueue->xTasksWaitingToReceive ) ) != pdFALSE )
+					{
+						/* The task waiting has a higher priority than this task. */
+						queueYIELD_IF_USING_PREEMPTION();
+					}
+					else
+					{
+						mtCOVERAGE_TEST_MARKER();
+					}
+				}
+				else
+				{
+					mtCOVERAGE_TEST_MARKER();
+				}
+
+				taskEXIT_CRITICAL();
+				return pdPASS;
+			}
+			else
+			{
+				if( xTicksToWait == ( TickType_t ) 0 )
+				{
+					/* The queue was empty and no block time is specified (or
+					the block time has expired) so leave now. */
+					taskEXIT_CRITICAL();
+					traceQUEUE_PEEK_FAILED( pxQueue );
+					return errQUEUE_EMPTY;
+				}
+				else if( xEntryTimeSet == pdFALSE )
+				{
+					/* The queue was empty and a block time was specified so
+					configure the timeout structure ready to enter the blocked
+					state. */
+					vTaskInternalSetTimeOutState( &xTimeOut );
+					xEntryTimeSet = pdTRUE;
+				}
+				else
+				{
+					/* Entry time was already set. */
+					mtCOVERAGE_TEST_MARKER();
+				}
+			}
+		}
+		taskEXIT_CRITICAL();
+
+		/* Interrupts and other tasks can send to and receive from the queue
+		now the critical section has been exited. */
+
+		vTaskSuspendAll();
+		prvLockQueue( pxQueue );
+
+		/* Update the timeout state to see if it has expired yet. */
+		if( xTaskCheckForTimeOut( &xTimeOut, &xTicksToWait ) == pdFALSE )
+		{
+			/* Timeout has not expired yet, check to see if there is data in the
+			queue now, and if not enter the Blocked state to wait for data. */
+			if( prvIsQueueEmpty( pxQueue ) != pdFALSE )
+			{
+				traceBLOCKING_ON_QUEUE_PEEK( pxQueue );
+				vTaskPlaceOnEventList( &( pxQueue->xTasksWaitingToReceive ), xTicksToWait );
+				prvUnlockQueue( pxQueue );
+				if( xTaskResumeAll() == pdFALSE )
+				{
+					portYIELD_WITHIN_API();
+				}
+				else
+				{
+					mtCOVERAGE_TEST_MARKER();
+				}
+			}
+			else
+			{
+				/* There is data in the queue now, so don't enter the blocked
+				state, instead return to try and obtain the data. */
+				prvUnlockQueue( pxQueue );
+				( void ) xTaskResumeAll();
+			}
+		}
+		else
+		{
+			/* The timeout has expired.  If there is still no data in the queue
+			exit, otherwise go back and try to read the data again. */
+			prvUnlockQueue( pxQueue );
+			( void ) xTaskResumeAll();
+
+			if( prvIsQueueEmpty( pxQueue ) != pdFALSE )
+			{
+				traceQUEUE_PEEK_FAILED( pxQueue );
+				return errQUEUE_EMPTY;
+			}
+			else
+			{
+				mtCOVERAGE_TEST_MARKER();
+			}
+		}
+	}
+}
+/*-----------------------------------------------------------*/
+
 BaseType_t xQueueReceiveFromISR( QueueHandle_t xQueue, void * const pvBuffer, BaseType_t * const pxHigherPriorityTaskWoken )
 {
 BaseType_t xReturn;
@@ -2131,6 +2275,20 @@ static void prvCopyDataFromQueue( Queue_t * const pxQueue, void * const pvBuffer
 			mtCOVERAGE_TEST_MARKER();
 		}
 		( void ) memcpy( ( void * ) pvBuffer, ( void * ) pxQueue->u.pcReadFrom, ( size_t ) pxQueue->uxItemSize ); /*lint !e961 !e418 MISRA exception as the casts are only redundant for some ports.  Also previous logic ensures a null pointer can only be passed to memcpy() when the count is 0. */
+	}
+}
+/*-----------------------------------------------------------*/
+
+static void prvCopyItemFromQueue( Queue_t * const pxQueue, void * const pvBuffer, uint32_t index)
+{
+	if( pxQueue->uxItemSize != ( UBaseType_t ) 0 && pxQueue->uxMessagesWaiting <= index)
+	{
+        int8_t* temp_ReadFrom = pxQueue->u.pcReadFrom + (index*pxQueue->uxItemSize);
+        if(temp_ReadFrom>pxQueue->pcHead){
+            temp_ReadFrom = ((index*pxQueue->uxItemSize)-(pxQueue->pcTail-pxQueue->u.pcReadFrom+1))+pxQueue->pcHead;
+        }
+      
+		( void ) memcpy( ( void * ) pvBuffer, ( void * ) temp_ReadFrom, ( size_t ) pxQueue->uxItemSize ); /*lint !e961 !e418 MISRA exception as the casts are only redundant for some ports.  Also previous logic ensures a null pointer can only be passed to memcpy() when the count is 0. */
 	}
 }
 /*-----------------------------------------------------------*/

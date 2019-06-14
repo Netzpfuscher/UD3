@@ -34,6 +34,7 @@
 #include "USBMIDI_1_cdc.h"
 #include "tsk_priority.h"
 #include "tsk_usb.h"
+#include "tsk_fault.h"
 
 
 /* ======================================================================== */
@@ -87,7 +88,7 @@ void tsk_usb_Enable(void) {
 void tsk_usb_Task(void *pvParameters) {
 	uint16 count;
 	uint8 buffer[tsk_usb_BUFFER_LEN];
-
+    alarm_push(ALM_PRIO_INFO,warn_task_usb);
 	for (;;) {
 		/* Handle enumeration of USB port */
 		if (USBMIDI_1_IsConfigurationChanged() != 0u) /* Host could send double SET_INTERFACE request */

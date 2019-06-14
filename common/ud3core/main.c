@@ -99,7 +99,7 @@ int main() {
 	tsk_analog_Start();		//Reads bus voltage and currents
 	tsk_thermistor_Start(); //Reads thermistors
 	tsk_fault_Start();		//Handles fault conditions
-
+    alarm_push(ALM_PRIO_INFO, warn_general_startup);
 	vTaskStartScheduler();
     
 	for (;;) {

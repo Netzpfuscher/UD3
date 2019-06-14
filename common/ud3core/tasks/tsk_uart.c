@@ -26,6 +26,7 @@
 #include <cytypes.h>
 
 #include "tsk_uart.h"
+#include "tsk_fault.h"
 
 xTaskHandle tsk_uart_TaskHandle;
 uint8 tsk_uart_initVar = 0u;
@@ -86,8 +87,8 @@ CY_ISR(isr_uart_rx) {
 			midi_count = 0;
 			if (midiMsg[0] == 0xF0) {
 				if (midiMsg[1] == 0x0F) {
-					watchdog_reset_Control = 1;
-					watchdog_reset_Control = 0;
+					//------------------>watchdog_reset_Control = 1;
+					//------------------>watchdog_reset_Control = 0;
 					goto end;
 				}
 			}
@@ -129,7 +130,7 @@ void tsk_uart_TaskProc(void *pvParameters) {
 	char c;
 
 	/* `#END` */
-
+    alarm_push(ALM_PRIO_INFO,warn_task_uart);
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
 

@@ -26,6 +26,7 @@
 #include <cytypes.h>
 
 #include "tsk_midi.h"
+#include "tsk_fault.h"
 
 xTaskHandle tsk_midi_TaskHandle;
 uint8 tsk_midi_initVar = 0u;
@@ -639,7 +640,7 @@ void tsk_midi_TaskProc(void *pvParameters) {
 	isr_interrupter_StartEx(isr_interrupter);
 
 	/* `#END` */
-
+    alarm_push(ALM_PRIO_INFO,warn_task_midi);
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
 

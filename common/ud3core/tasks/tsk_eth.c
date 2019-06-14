@@ -28,6 +28,7 @@
 
 #include "tsk_eth.h"
 #include "tsk_cli.h"
+#include "tsk_fault.h"
 #include "tsk_eth_common.h"
 
 xTaskHandle tsk_eth_TaskHandle;
@@ -138,7 +139,8 @@ void tsk_eth_TaskProc(void *pvParameters) {
         }
         vTaskDelete(tsk_eth_TaskHandle);    
     }
-
+    
+    alarm_push(ALM_PRIO_INFO,warn_task_eth);
 	/* `#END` */
     /* `#START TASK_LOOP_CODE` */
 

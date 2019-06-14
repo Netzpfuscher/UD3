@@ -30,6 +30,7 @@
 #include "tsk_midi.h"
 #include "tsk_uart.h"
 #include "tsk_cli.h"
+#include "tsk_fault.h"
 #include "tsk_eth_common.h"
 
 #include "helper/printf.h"
@@ -176,8 +177,8 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
     switch(min_id){
         case MIN_ID_WD:
             if(*min_payload>NUM_ETH_CON) return;
-            watchdog_reset_Control = 1;
-			watchdog_reset_Control = 0;
+            //------------------>watchdog_reset_Control = 1;
+			//------------------>watchdog_reset_Control = 0;
             break;
         case MIN_ID_SOCKET:
             if(*min_payload>NUM_ETH_CON) return;
@@ -306,7 +307,7 @@ void tsk_min_TaskProc(void *pvParameters) {
     uint16_t bytes_waiting=0;
     
     uint32_t next_sid_flow = 0;
-    
+    alarm_push(ALM_PRIO_INFO,warn_task_min);
 	for (;;) {
         write_telemetry(&min_ctx);
         bytes_waiting=UART_2_GetRxBufferSize();

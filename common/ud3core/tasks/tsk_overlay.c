@@ -26,6 +26,7 @@
 #include <cytypes.h>
 
 #include "tsk_overlay.h"
+#include "tsk_fault.h"
 
 /* RTOS includes. */
 #include "FreeRTOS.h"
@@ -241,7 +242,7 @@ void tsk_overlay_TaskProc(void *pvParameters) {
 	/* `#START TASK_INIT_CODE` */
 
 	/* `#END` */
-
+    alarm_push(ALM_PRIO_INFO,warn_task_overlay);
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
         xSemaphoreTake(port->term_block, portMAX_DELAY);

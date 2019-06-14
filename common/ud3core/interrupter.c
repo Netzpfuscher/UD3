@@ -105,10 +105,7 @@ void initialize_interrupter(void) {
 	//Start up timers
 	interrupter1_Start();
 	QCW_duty_limiter_Start();
-	interrupter_watchdog_Start();
-	interrupter_watchdog_WriteCompare(255 - WATCH_DOG_PERIOD);
 
-	int_wd_StartEx(int_wd_ISR);
 
 	qcw_dl_ovf_StartEx(qcw_dl_ovf_ISR);
 	qcw_end_StartEx(qcw_end_ISR);
@@ -156,8 +153,8 @@ void ramp_control(void) {
 			QCW_duty_limiter_WriteCompare(65535 - ramp.qcw_limiter_pw); //put in limiting compare match value
 			//now enable the QCW interrupter
 			QCW_enable_Control = 1;
-			watchdog_reset_Control = 1;
-			watchdog_reset_Control = 0;
+			//------------------>watchdog_reset_Control = 1;
+			//------------------>watchdog_reset_Control = 0;
 			params.pwmb_psb_val = params.pwm_top - params.pwmb_start_psb_val;
 			CyGlobalIntEnable;
 		} else {

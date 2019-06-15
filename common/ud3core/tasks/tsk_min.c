@@ -32,6 +32,7 @@
 #include "tsk_cli.h"
 #include "tsk_fault.h"
 #include "tsk_eth_common.h"
+#include "alarmevent.h"
 
 #include "helper/printf.h"
 

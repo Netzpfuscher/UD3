@@ -35,6 +35,7 @@
 #include "tsk_priority.h"
 #include "tsk_usb.h"
 #include "tsk_fault.h"
+#include "alarmevent.h"
 
 
 /* ======================================================================== */

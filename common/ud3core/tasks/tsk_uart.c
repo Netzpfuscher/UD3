@@ -27,6 +27,7 @@
 
 #include "tsk_uart.h"
 #include "tsk_fault.h"
+#include "alarmevent.h"
 
 xTaskHandle tsk_uart_TaskHandle;
 uint8 tsk_uart_initVar = 0u;

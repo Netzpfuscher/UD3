@@ -43,6 +43,7 @@ uint8 tsk_midi_initVar = 0u;
 #include "tsk_midi.h"
 #include "tsk_priority.h"
 #include "telemetry.h"
+#include "alarmevent.h"
 #include <device.h>
 #include <math.h>
 #include <stdlib.h>

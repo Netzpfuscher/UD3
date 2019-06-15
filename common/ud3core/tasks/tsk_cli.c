@@ -28,6 +28,7 @@
 #include "tsk_cli.h"
 #include "tsk_fault.h"
 #include "cli_basic.h"
+#include "alarmevent.h"
 
 
 /* RTOS includes. */

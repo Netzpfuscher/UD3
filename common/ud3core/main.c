@@ -35,6 +35,7 @@
 #include <device.h>
 
 #include "cli_common.h"
+#include "alarmevent.h"
 #include "tasks/tsk_analog.h"
 #include "tasks/tsk_cli.h"
 #include "tasks/tsk_fault.h"

@@ -27,6 +27,7 @@
 
 #include "tsk_analog.h"
 #include "tsk_fault.h"
+#include "alarmevent.h"
 
 /* RTOS includes. */
 #include "FreeRTOS.h"
@@ -368,6 +369,7 @@ void bat_precharge_bus_scheme(){
 		if (telemetry.bus_v >= v_threshold) {
             if(!timer_triggerd && telemetry.bus_status == BUS_CHARGING){
                 timer_triggerd=1;
+                alarm_push(ALM_PRIO_INFO,warn_bus_charging);
 			    xTimerStart(xCharge_Timer,0);
             }
 		} else if (telemetry.bus_status != BUS_READY) {
@@ -429,6 +431,9 @@ void ac_precharge_bus_scheme(){
 			    xTimerStart(xCharge_Timer,0);
             }
 		} else if (telemetry.bus_status != BUS_READY) {
+            if(telemetry.bus_status != BUS_CHARGING){
+                alarm_push(ALM_PRIO_INFO,warn_bus_charging);
+            }
 			relay_Write(RELAY_CHARGE);
 			telemetry.bus_status = BUS_CHARGING;
 		}
@@ -441,6 +446,7 @@ void ac_dual_meas_scheme(){
 
 void ac_precharge_fixed_delay(){
     if(relay_Read()==RELAY_OFF){
+        alarm_push(ALM_PRIO_INFO,warn_bus_charging);
         xTimerStart(xCharge_Timer,0);
         relay_Write(RELAY_CHARGE);
         telemetry.bus_status = BUS_CHARGING;
@@ -484,7 +490,6 @@ void control_precharge(void) { //this gets called from tsk_analogs.c when the AD
         } 
 	} else {
 		if ((relay_Read()==RELAY_ON || relay_Read()==RELAY_CHARGE) && timer_triggerd==0){
-            alarm_push(ALM_PRIO_INFO,warn_bus_charging);
 			relay_Write(RELAY_CHARGE);
             timer_triggerd=1;
             xTimerStart(xCharge_Timer,0);

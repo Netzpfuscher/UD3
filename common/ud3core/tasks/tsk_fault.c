@@ -26,6 +26,7 @@
 #include <cytypes.h>
 
 #include "tsk_fault.h"
+#include "alarmevent.h"
 
 
 /* RTOS includes. */
@@ -38,7 +39,7 @@
 xTaskHandle tsk_fault_TaskHandle;
 uint8 tsk_fault_initVar = 0u;
 
-xQueueHandle qAlarms;
+
 
 
 
@@ -64,37 +65,7 @@ xQueueHandle qAlarms;
 
 TimerHandle_t xWD_Timer;
 
-void alarm_push(uint8_t level, const char* message){
-    ALARMS temp;
-    if(uxQueueSpacesAvailable(qAlarms)==0){
-        xQueueReceive(qAlarms,&temp,0);
-    }
-    temp.alarm_level = level;
-    temp.message = message;
-    temp.timestamp = xTaskGetTickCount() * portTICK_RATE_MS;
-    xQueueSend(qAlarms,&temp,0);   
-}
 
-uint32_t alarm_get_num(){
-    return uxQueueMessagesWaiting(qAlarms);    
-}
-
-uint32_t alarm_get(uint32_t index, ALARMS * alm){
-    if(uxQueueMessagesWaiting(qAlarms)){
-        xQueuePeekIndex(qAlarms, alm, index,0);
-       // xQueueReceive(qAlarms, alm,0);
-        return pdPASS;
-    }else{
-        return pdFAIL;
-    }
-}
-
-void alarm_clear(){
-    xQueueReset(qAlarms);    
-}
-void alarm_init(){
-    qAlarms = xQueueCreate(50, sizeof(ALARMS));
-}
 
 void WD_enable(uint8_t enable){
     if(xWD_Timer!=NULL){
@@ -131,6 +102,12 @@ void handle_UVLO(void) {
 		system_fault_Control = 1;
 	}
     */
+}
+
+void reset_fault(){
+    for(uint8_t i=0;i<SYS_FAULT_NUM;i++){
+        telemetry.sys_fault[i]=0;
+    }
 }
 
 void handle_FAULT(void) {

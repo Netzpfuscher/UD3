@@ -142,7 +142,6 @@ typedef struct
 	uint16 avg_power;   //Average power in watts
 	uint16 batt_i;		//battery current in centiamps
     uint32 i2t_i;
-	uint8 uvlo_stat;	//uvlo status
 	uint16_t primary_i;
     uint8_t midi_voices;
     uint32_t dropped_frames;                        // Diagnostic counters

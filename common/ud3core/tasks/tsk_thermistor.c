@@ -27,6 +27,7 @@
 
 #include "tsk_thermistor.h"
 #include "tsk_fault.h"
+#include "alarmevent.h"
 
 /* RTOS includes. */
 #include "FreeRTOS.h"

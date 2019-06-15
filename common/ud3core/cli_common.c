@@ -48,6 +48,7 @@
 #include "min_id.h"
 #include "helper/teslaterm.h"
 #include "math.h"
+#include "alarmevent.h"
 
 #define UNUSED_VARIABLE(N) \
 	do {                   \
@@ -587,7 +588,7 @@ uint8_t command_signals(char *commandline, port_str *ptr) {
     SEND_CONST_STRING("\r\nSignal state:\r\n", ptr);
     SEND_CONST_STRING("*************\r\n", ptr);
     SEND_CONST_STRING("UVLO: ", ptr);
-    if(telemetry.uvlo_stat){
+    if(UVLO_status_Status){
         send_false(ptr);
     }else{
         send_true(ptr);
@@ -844,16 +845,66 @@ uint8_t command_cls(char *commandline, port_str *ptr) {
 * Clears the terminal screen and displays the logo
 ******************************************************************************/
 uint8_t command_alarms(char *commandline, port_str *ptr) {
+    SKIP_SPACE(commandline);
+    CHECK_NULL(commandline);
+    
+ 
+    
     char buffer[80];
     int ret=0;
     ALARMS temp;
-    for(uint16_t i=0;i<alarm_get_num();i++){
-        if(alarm_get(i,&temp)==pdPASS){
-            ret = snprintf(buffer, sizeof(buffer),"NUM: %d Time: %lu MSG: %s\r\n",i,temp.timestamp, temp.message);
-            send_buffer((uint8_t*)buffer,ret,ptr);  
+    
+    if (ntlibc_stricmp(commandline, "get") == 0) {
+        static const uint8_t c_A = 9;
+        static const uint8_t c_B = 20;
+        static const uint8_t c_C = 40;
+        Term_Move_cursor_right(c_A,ptr);
+        SEND_CONST_STRING("Number", ptr);
+        Term_Move_cursor_right(c_B,ptr);
+        SEND_CONST_STRING("| Timestamp", ptr);
+        Term_Move_cursor_right(c_C,ptr);
+        SEND_CONST_STRING("| Message\r\n", ptr);
+        
+        for(uint16_t i=0;i<alarm_get_num();i++){
+            if(alarm_get(i,&temp)==pdPASS){
+                Term_Move_cursor_right(c_A,ptr);
+                ret = snprintf(buffer, sizeof(buffer),"%u",temp.num);
+                send_buffer((uint8_t*)buffer,ret,ptr); 
+                
+                Term_Move_cursor_right(c_B,ptr);
+                ret = snprintf(buffer, sizeof(buffer),"| %u ms",temp.timestamp);
+                send_buffer((uint8_t*)buffer,ret,ptr); 
+                
+                Term_Move_cursor_right(c_C,ptr);
+                send_char('|',ptr);
+                switch(temp.alarm_level){
+                    case ALM_PRIO_INFO:
+                        Term_Color_Green(ptr);
+                    break;
+                    case ALM_PRIO_WARN:
+                        Term_Color_White(ptr);
+                    break;
+                    case ALM_PRIO_ALARM:
+                        Term_Color_Cyan(ptr);
+                    break;
+                    case ALM_PRIO_CRITICAL:
+                        Term_Color_Red(ptr);
+                    break;
+                }
+                ret = snprintf(buffer, sizeof(buffer)," %s\r\n",temp.message);
+                send_buffer((uint8_t*)buffer,ret,ptr); 
+                Term_Color_White(ptr);
+            }
         }
+    	return 1;
     }
-	return 1;
+    if (ntlibc_stricmp(commandline, "reset") == 0) {
+        alarm_clear();
+        SEND_CONST_STRING("Alarms reset...\r\n", ptr);
+        return 1;
+    }
+    
+    HELP_TEXT("Usage: alarms [get|reset]\r\n");
 }
 
 /*****************************************************************************
@@ -1014,12 +1065,16 @@ uint8_t command_udkill(char *commandline, port_str *ptr) {
     	QCW_enable_Control = 0;
     	Term_Color_Green(ptr);
     	SEND_CONST_STRING("Killbit set\r\n", ptr);
+        alarm_push(ALM_PRIO_CRITICAL,warn_kill_set);
     	Term_Color_White(ptr);
+        return 1;
     }else if (ntlibc_stricmp(commandline, "reset") == 0) {
         interrupter_unkill();
+        reset_fault();
         system_fault_Control = 0xFF;
         Term_Color_Green(ptr);
     	SEND_CONST_STRING("Killbit reset\r\n", ptr);
+        alarm_push(ALM_PRIO_INFO,warn_kill_reset);
     	Term_Color_White(ptr);
         return 1;
     }else if (ntlibc_stricmp(commandline, "get") == 0) {
@@ -1028,6 +1083,7 @@ uint8_t command_udkill(char *commandline, port_str *ptr) {
         sprintf(buf, "Killbit: %u\r\n",interrupter_get_kill());
         send_string(buf,ptr);
         Term_Color_White(ptr);
+        return 1;
     }
     
         

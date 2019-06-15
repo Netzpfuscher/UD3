@@ -1753,7 +1753,6 @@ Queue_t * const pxQueue = ( Queue_t * ) xQueue;
 BaseType_t xQueuePeekIndex( QueueHandle_t xQueue, void * const pvBuffer, uint32_t index , TickType_t xTicksToWait )
 {
 BaseType_t xEntryTimeSet = pdFALSE;
-int8_t *pcOriginalReadPosition;
 TimeOut_t xTimeOut;
 Queue_t * const pxQueue = ( Queue_t * ) xQueue;
 
@@ -1787,16 +1786,8 @@ Queue_t * const pxQueue = ( Queue_t * ) xQueue;
 			if( uxMessagesWaiting > index )
 			{
 
-				/* Remember the read position so it can be reset after the data
-				is read from the queue as this function is only peeking the
-				data, not removing it. */
-				pcOriginalReadPosition = pxQueue->u.pcReadFrom;
-
 				prvCopyItemFromQueue( pxQueue, pvBuffer, index );
 				traceQUEUE_PEEK( pxQueue );
-
-				/* The data is not being removed, so reset the read pointer. */
-				pxQueue->u.pcReadFrom = pcOriginalReadPosition;
 
                 /* The data is being left in the queue, so see if there are
 				any other tasks waiting for the data. */
@@ -2290,24 +2281,19 @@ static void prvCopyDataFromQueue( Queue_t * const pxQueue, void * const pvBuffer
 
 static void prvCopyItemFromQueue( Queue_t * const pxQueue, void * const pvBuffer, uint32_t index)
 {
-     
+    int8* temp = pxQueue->u.pcReadFrom;// + pxQueue->uxItemSize;
 	if( pxQueue->uxItemSize != ( UBaseType_t ) 0 )
 	{
-        for(uint16_t i=0;i<index+1;i++){
-		    pxQueue->u.pcReadFrom += pxQueue->uxItemSize;
-            if( pxQueue->u.pcReadFrom >= pxQueue->pcTail ) /*lint !e946 MISRA exception justified as use of the relational operator is the cleanest solutions. */
-		    {
-			    pxQueue->u.pcReadFrom = pxQueue->pcHead;
-		    }else
-		    {
-			    mtCOVERAGE_TEST_MARKER();
-		    }
+           
+        temp = temp+ (pxQueue->uxItemSize*(index+1));
+        if(temp>=pxQueue->pcTail){
+            temp=(temp-pxQueue->pcTail)+pxQueue->pcHead;
         }
-		
-		
-		( void ) memcpy( ( void * ) pvBuffer, ( void * ) pxQueue->u.pcReadFrom, ( size_t ) pxQueue->uxItemSize ); /*lint !e961 !e418 MISRA exception as the casts are only redundant for some ports.  Also previous logic ensures a null pointer can only be passed to memcpy() when the count is 0. */
+
+		( void ) memcpy( ( void * ) pvBuffer, ( void * ) temp, ( size_t ) pxQueue->uxItemSize ); /*lint !e961 !e418 MISRA exception as the casts are only redundant for some ports.  Also previous logic ensures a null pointer can only be passed to memcpy() when the count is 0. */
 	}
 }
+
 /*-----------------------------------------------------------*/
 
 static void prvUnlockQueue( Queue_t * const pxQueue )

@@ -1,3 +1,27 @@
+/*
+ * UD3
+ *
+ * Copyright (c) 2018 Jens Kerrinnes
+ * Copyright (c) 2015 Steve Ward
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+
 #include "cli_basic.h"
 #include "helper/printf.h"
 #include <stdlib.h>
@@ -7,6 +31,7 @@
 #include "tasks/tsk_usb.h"
 #include "tasks/tsk_eth.h"
 #include "tasks/tsk_eth_common.h"
+#include "alarmevent.h"
 #endif
 
 uint8_t EEPROM_Read_Row(uint8_t row, uint8_t * buffer);
@@ -568,6 +593,7 @@ void EEPROM_write_conf(parameter_entry * params, uint8_t param_size, uint16_t ee
 		EEPROM_buffer_write(0xEF, count,0);
         count++;
 		EEPROM_buffer_write(0x00, count,1);
+        alarm_push(ALM_PRIO_INFO,warn_eeprom_written);
 		ret = snprintf(buffer, sizeof(buffer),"%i / %i new config params written. %i bytes from 2048 used.\r\n", change_count, param_count, byte_cnt);
         send_buffer((uint8_t*)buffer, ret, ptr);
 }
@@ -587,6 +613,7 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
         }
         if(!(data[0]== 0x00 && data[1] == 0xC0 && data[2] == 0xFF && data[3] == 0xEE)) {
             #ifndef BOOT
+            alarm_push(ALM_PRIO_WARN,warn_eeprom_no_dataset);
             SEND_CONST_STRING("WARNING: No or old EEPROM dataset found\r\n",ptr);
             #endif
             return;
@@ -618,6 +645,7 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
         
         if(current_parameter == param_size){
             #ifndef BOOT
+            alarm_push(ALM_PRIO_WARN,warn_eeprom_unknown_id);
             ret = snprintf(buffer, sizeof(buffer), "WARNING: Unknown param ID %i found in EEPROM\r\n", data[0]);
             send_buffer((uint8_t*)buffer, ret, ptr);
             #endif
@@ -643,6 +671,7 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
             }
             if(!found_param){
                 //#ifndef BOOT
+                alarm_push(ALM_PRIO_WARN,warn_eeprom_unknown_param);
                 ret = snprintf(buffer, sizeof(buffer), "WARNING: Param [%s] not found in EEPROM\r\n",params[current_parameter].name);
                 send_buffer((uint8_t*)buffer, ret, ptr);
                 //#endif
@@ -650,6 +679,7 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
         }
     }
     #ifndef BOOT
+    alarm_push(ALM_PRIO_INFO,warn_eeprom_loaded);
     ret = snprintf(buffer, sizeof(buffer), "%i / %i config params loaded\r\n", change_count, param_count);
     send_buffer((uint8_t*)buffer, ret, ptr);
     #endif

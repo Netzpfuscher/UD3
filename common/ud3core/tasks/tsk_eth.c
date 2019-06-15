@@ -30,6 +30,7 @@
 #include "tsk_cli.h"
 #include "tsk_fault.h"
 #include "tsk_eth_common.h"
+#include "alarmevent.h"
 
 xTaskHandle tsk_eth_TaskHandle;
 uint8 tsk_eth_initVar = 0u;

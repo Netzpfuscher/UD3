@@ -182,6 +182,7 @@ void interrupter_oneshot(uint16_t pw, uint8_t vol) {
 	int1_cmp = prd - pw - 3;
 	interrupter1_control_Control = 0b01;
 	interrupter1_control_Control = 0b00;
+    CyGlobalIntEnable;
 }
 
 void update_interrupter() {

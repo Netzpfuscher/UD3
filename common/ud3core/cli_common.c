@@ -23,7 +23,6 @@
 */
 
 #include "cli_common.h"
-#include "cli_commands.h"
 #include "ZCDtoPWM.h"
 #include "autotune.h"
 #include "interrupter.h"

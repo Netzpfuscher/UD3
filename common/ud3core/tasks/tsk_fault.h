@@ -39,6 +39,8 @@
 void tsk_fault_Start(void);
 void WD_enable(uint8_t enable);
 void reset_fault();
+void WD_reset();
+void WD_reset_from_ISR();
 
 /*
  * Add user function prototypes in the below merge region to add user

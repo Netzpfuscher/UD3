@@ -29,24 +29,14 @@
 #include <device.h>
 #include <math.h>
 
-uint16 int1_prd, int1_cmp, int2_prd, int2_cmp, int3_prd, int3_cmp;
+uint16 int1_prd, int1_cmp;
 
-uint16 min_tr_prd;
 uint8_t tr_running = 0;
 
 volatile uint8 qcw_dl_ovf_counter;
 
 uint8_t blocked=0; 
 
-extern const uint8_t kill_msg[3];
-
-CY_ISR(int_wd_ISR) {
-	interrupter1_control_Control = 0;
-	QCW_enable_Control = 0;
-	ramp.modulation_value = 0;
-    interrupter_kill();
-    USBMIDI_1_callbackLocalMidiEvent(0, (uint8_t*)kill_msg);
-}
 
 CY_ISR(qcw_end_ISR) {
 	if (qcw_reg && ramp.modulation_value > 0) {
@@ -97,8 +87,6 @@ void initialize_interrupter(void) {
 
 	int1_prd = 65000;
 	int1_cmp = 64999;
-	int2_prd = 65000;
-	int2_cmp = 64999;
 	ramp.modulation_value = 0;
 	ramp.modulation_value_previous = 0;
 
@@ -194,21 +182,17 @@ void interrupter_oneshot(uint16_t pw, uint8_t vol) {
 	int1_cmp = prd - pw - 3;
 	interrupter1_control_Control = 0b01;
 	interrupter1_control_Control = 0b00;
-	CyGlobalIntEnable;
-	return;
 }
 
 void update_interrupter() {
-    if(blocked){
-        interrupter.pw=0;
-    }
     
 	/* Check if PW = 0, this indicates that the interrupter should be shut off */
-	if (interrupter.pw == 0) {
+	if (interrupter.pw == 0 || blocked) {
 		interrupter1_control_Control = 0b00;
-		interrupter.duty = 0;
+        return;
 	}
-
+    uint16_t limited_pw;
+    
 	/* Check the pulsewidth command */
 	if (interrupter.pw > configuration.max_tr_pw) {
 		interrupter.pw = configuration.max_tr_pw;
@@ -220,11 +204,11 @@ void update_interrupter() {
 	}
 
 	/* Compute the duty cycle and mod the PW if required */
-	interrupter.duty = (uint32)((uint32)interrupter.pw * 1000ul) / interrupter.prd; //gives duty cycle as 0.1% increment
-	if (interrupter.duty > configuration.max_tr_duty - param.temp_duty) {
-		interrupter.duty_limited_pw = (uint32)(configuration.max_tr_duty - param.temp_duty) * (uint32)interrupter.prd / 1000ul;
+	limited_pw = (uint32)((uint32)interrupter.pw * 1000ul) / interrupter.prd; //gives duty cycle as 0.1% increment
+	if (limited_pw > configuration.max_tr_duty - param.temp_duty) {
+		limited_pw = (uint32)(configuration.max_tr_duty - param.temp_duty) * (uint32)interrupter.prd / 1000ul;
 	} else {
-		interrupter.duty_limited_pw = interrupter.pw;
+		limited_pw = interrupter.pw;
 	}
 	ct1_dac_val[0] = params.max_tr_cl_dac_val;
 
@@ -232,7 +216,7 @@ void update_interrupter() {
 	CyGlobalIntDisable;
 	if (interrupter.pw != 0) {
 		int1_prd = interrupter.prd - 3;
-		int1_cmp = interrupter.prd - interrupter.duty_limited_pw - 3;
+		int1_cmp = interrupter.prd - limited_pw - 3;
 		if (interrupter1_control_Control == 0) {
 			interrupter1_control_Control = 0b11;
 			interrupter1_control_Control = 0b10;
@@ -240,3 +224,4 @@ void update_interrupter() {
 	}
 	CyGlobalIntEnable;
 }
+

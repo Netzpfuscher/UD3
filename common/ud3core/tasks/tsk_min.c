@@ -48,7 +48,7 @@ uint8 tsk_min_initVar = 0u;
 /* `#START USER_INCLUDE SECTION` */
 #include "cli_common.h"
 #include "tsk_priority.h"
-#include "min.h"
+
 #include "min_id.h"
 #include "telemetry.h"
 #include "stream_buffer.h" 
@@ -178,13 +178,12 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
     switch(min_id){
         case MIN_ID_WD:
             if(*min_payload>NUM_ETH_CON) return;
-            //------------------>watchdog_reset_Control = 1;
-			//------------------>watchdog_reset_Control = 0;
+                WD_reset();
             break;
         case MIN_ID_SOCKET:
             if(*min_payload>NUM_ETH_CON) return;
             socket_info[*min_payload].socket = *(min_payload+1);
-            strcpy(socket_info[*min_payload].info,(char*)min_payload+2);
+            strncpy(socket_info[*min_payload].info,(char*)min_payload+2,sizeof(socket_info[0].info);
             if(socket_info[*min_payload].socket==SOCKET_CONNECTED){
                 command_cls("",&eth_port[*min_payload]);
                 send_string(":>", &eth_port[*min_payload]);
@@ -216,16 +215,6 @@ void poll_UART(uint8_t* ptr){
     }
     min_poll(&min_ctx, ptr, bytes_cnt);
     
-}
-
-void write_telemetry(struct min_context* ptr){
-    telemetry.dropped_frames = ptr->transport_fifo.dropped_frames;
-    telemetry.spurious_acks = ptr->transport_fifo.spurious_acks;
-    telemetry.sequence_mismatch_drop = ptr->transport_fifo.sequence_mismatch_drop;
-    telemetry.resets_received = ptr->transport_fifo.resets_received;
-    telemetry.min_frames_max = ptr->transport_fifo.n_frames_max;
-    telemetry.remote_rx_buffer = ptr->remote_rx_space;
-    telemetry.crc_errors = ptr->transport_fifo.crc_fails;
 }
 
 uint8_t assemble_command(uint8_t cmd, char *str, uint8_t *buf){
@@ -310,7 +299,7 @@ void tsk_min_TaskProc(void *pvParameters) {
     uint32_t next_sid_flow = 0;
     alarm_push(ALM_PRIO_INFO,warn_task_min);
 	for (;;) {
-        write_telemetry(&min_ctx);
+
         bytes_waiting=UART_2_GetRxBufferSize();
         
         for(i=0;i<NUM_ETH_CON;i++){

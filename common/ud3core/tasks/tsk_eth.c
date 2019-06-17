@@ -66,8 +66,8 @@ uint8 tsk_eth_initVar = 0u;
 #define LOCAL_ETH_BUFFER_SIZE 256
 
 
-#define PORT_TELNET     23
-#define PORT_MIDI       123
+#define PORT_TELNET     2323
+#define PORT_MIDI       2324
 
 
 uint8_t stop = 'x';

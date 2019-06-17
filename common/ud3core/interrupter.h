@@ -44,9 +44,7 @@ Its a 16 bit PWM clocked at 1MHz, so thats 1uS per count.
 typedef struct
 {
 	uint16 pw;
-	uint16 duty_limited_pw;
 	uint16 prd;
-	uint16 duty;
 } interrupter_params;
 
 interrupter_params interrupter;

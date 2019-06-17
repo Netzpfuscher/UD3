@@ -263,9 +263,11 @@ void calculate_rms(void) {
         }
         switch (i2t_calculate()){
             case I2T_LIMIT:
+                telemetry.sys_fault[SYS_FAULT_FUSE]=1;
                 interrupter_kill();   
                 break;
             case I2T_WARNING:
+                telemetry.sys_fault[SYS_FAULT_FUSE]=1
                 if(telemetry.batt_i>configuration.max_const_i && !count){
                     if(param.temp_duty<configuration.max_tr_duty) param.temp_duty++; 
                     if(tr_running==1){
@@ -276,6 +278,7 @@ void calculate_rms(void) {
                 }
                 break;
             case I2T_NORMAL:
+                telemetry.sys_fault[SYS_FAULT_FUSE]=0;
                 if(telemetry.batt_i<configuration.max_const_i && !count){
                     if(param.temp_duty>0) param.temp_duty--; 
                     if(tr_running==1){
@@ -434,6 +437,7 @@ void ac_precharge_bus_scheme(){
             if(telemetry.bus_status != BUS_CHARGING){
                 alarm_push(ALM_PRIO_INFO,warn_bus_charging);
             }
+            telemetry.sys_fault[SYS_FAULT_CHARGE]=1;
 			relay_Write(RELAY_CHARGE);
 			telemetry.bus_status = BUS_CHARGING;
 		}
@@ -447,6 +451,7 @@ void ac_dual_meas_scheme(){
 void ac_precharge_fixed_delay(){
     if(relay_Read()==RELAY_OFF){
         alarm_push(ALM_PRIO_INFO,warn_bus_charging);
+        telemetry.sys_fault[SYS_FAULT_CHARGE]=1;
         xTimerStart(xCharge_Timer,0);
         relay_Write(RELAY_CHARGE);
         telemetry.bus_status = BUS_CHARGING;
@@ -460,6 +465,7 @@ void vCharge_Timer_Callback(TimerHandle_t xTimer){
             alarm_push(ALM_PRIO_INFO,warn_bus_ready);
             relay_Write(RELAY_ON);
             telemetry.bus_status = BUS_READY;
+            telemetry.sys_fault[SYS_FAULT_CHARGE]=0;
         }
     }else{
         relay_Write(RELAY_OFF);
@@ -490,6 +496,7 @@ void control_precharge(void) { //this gets called from tsk_analogs.c when the AD
         } 
 	} else {
 		if ((relay_Read()==RELAY_ON || relay_Read()==RELAY_CHARGE) && timer_triggerd==0){
+            telemetry.sys_fault[SYS_FAULT_CHARGE]=1;
 			relay_Write(RELAY_CHARGE);
             timer_triggerd=1;
             xTimerStart(xCharge_Timer,0);

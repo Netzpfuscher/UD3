@@ -39,7 +39,7 @@
 #include "semphr.h"
 #include "tsk_eth.h"
 #include "tsk_eth_common.h"
-  
+#include "min.h"
 
 /* `#END` */
 struct _socket_info{
@@ -58,7 +58,7 @@ typedef struct {
 }eth_info;
 
 extern eth_info *pEth_info[2];
-    
+extern struct min_context min_ctx;    
     
 void tsk_min_Start(void);
 void min_reset_flow(void);

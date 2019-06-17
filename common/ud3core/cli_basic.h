@@ -51,6 +51,16 @@
     
 #define CT2_TYPE_CURRENT      0
 #define CT2_TYPE_VOLTAGE      1
+    
+    
+#define SKIP_SPACE(ptr) 	if (*ptr == 0x20 && ptr != 0) ptr++ //skip space
+#define CHECK_NULL(ptr)     if (*ptr == 0 || ptr == 0) goto helptext;
+#define HELP_TEXT(text)        \
+	helptext:;                  \
+	Term_Color_Red(ptr);       \
+	send_string(text, ptr);  \
+	Term_Color_White(ptr);     \
+	return 1;                  \
    
 typedef struct port_struct port_str;
 struct port_struct {

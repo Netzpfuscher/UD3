@@ -83,6 +83,12 @@ void WD_reset(){
     }
 }
 
+void WD_reset_from_ISR(){
+    if(xWD_Timer!=NULL && configuration.watchdog){
+        xTimerStartFromISR(xWD_Timer, pdFALSE);
+    }
+}
+
 
 void handle_UVLO(void) {
 	//UVLO feedback via system_fault (LED2)
@@ -126,6 +132,11 @@ void handle_no_fb(void){
 
 void vWD_Timer_Callback(TimerHandle_t xTimer){
     telemetry.sys_fault[SYS_FAULT_WD] = 1;
+    interrupter1_control_Control = 0;
+	QCW_enable_Control = 0;
+	ramp.modulation_value = 0;
+    interrupter_kill();
+    USBMIDI_1_callbackLocalMidiEvent(0, (uint8_t*)kill_msg);
 }
 
 /* `#END` */

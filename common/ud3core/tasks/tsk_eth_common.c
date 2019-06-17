@@ -18,6 +18,7 @@
 #include "telemetry.h"
 #include "cli_common.h"
 #include "tasks/tsk_midi.h"
+#include "tasks/tsk_fault.h"
 
 void process_midi(uint8_t* ptr, uint16_t len) {
 	uint8_t c;
@@ -46,8 +47,7 @@ void process_midi(uint8_t* ptr, uint16_t len) {
 			midi_count = 0;
 			if (midiMsg[0] == 0xF0) {
 				if (midiMsg[1] == 0x0F) {
-					//------------------>watchdog_reset_Control = 1;
-					//------------------>watchdog_reset_Control = 0;
+					WD_reset();
 					goto end;
 				}
 			}
@@ -145,7 +145,6 @@ void process_sid(uint8_t* ptr, uint16_t len) {
                     }else{
                         SID_frame.master_pw = param.pw;
                     }  
-                    interrupter.pw = SID_frame.master_pw;
                     xQueueSend(qSID,&SID_frame,0);
                     SID_register=0;
                     start_frame=0;

@@ -42,14 +42,12 @@ void initialize_ZCD_to_PWM(void) {
 	CT1_comp_Start();
 
 	//initialize the DACs
-	CT1_dac_Start(); //hier
-	ZCDref_Start();  //hier
+	CT1_dac_Start();
+	ZCDref_Start();
 
 	//start the feedback filter block
 	FB_Filter_Start();
 	FB_Filter_SetCoherency(FB_Filter_CHANNEL_A, FB_Filter_KEY_MID);
-	//	FB_Filter_SetDalign(FB_Filter_STAGEA_DALIGN, FB_Filter_ENABLED);
-	//	FB_Filter_SetDalign(FB_Filter_HOLDA_DALIGN, FB_Filter_ENABLED);
 
 	configure_ZCD_to_PWM();
 }
@@ -65,13 +63,12 @@ void configure_CT1(void) {
 	if (max_tr_cl_dac_val_temp > 255) {
 		max_tr_cl_dac_val_temp = 255;
 	}
-	params.max_tr_cl_dac_val = round(max_tr_cl_dac_val_temp);
+
 	max_qcw_cl_dac_val_temp = (((float)configuration.max_qcw_current / (float)configuration.ct1_ratio) * configuration.ct1_burden) / (DAC_VOLTS_PER_STEP * 10);
 	if (max_qcw_cl_dac_val_temp > 255) {
 		max_qcw_cl_dac_val_temp = 255;
 	}
 
-	params.max_qcw_cl_dac_val = round(max_qcw_cl_dac_val_temp);
 	min_tr_cl_dac_val_temp = (((float)configuration.min_tr_current / (float)configuration.ct1_ratio) * configuration.ct1_burden) / (DAC_VOLTS_PER_STEP * 10);
 	if (min_tr_cl_dac_val_temp > 255) {
 		min_tr_cl_dac_val_temp = 255;
@@ -80,7 +77,7 @@ void configure_CT1(void) {
 
 	ct1_dac_val[0] = params.max_tr_cl_dac_val;
 	ct1_dac_val[1] = params.max_tr_cl_dac_val;
-	ct1_dac_val[2] = params.max_qcw_cl_dac_val;
+	ct1_dac_val[2] = round(max_qcw_cl_dac_val_temp);
 
 	params.diff_tr_cl_dac_val = params.max_tr_cl_dac_val - params.min_tr_cl_dac_val;
 }
@@ -100,8 +97,9 @@ void configure_ZCD_to_PWM(void) {
 	//this function calculates the variables used at run-time for the ZCD to PWM hardware
 	//it also initializes that hardware so its ready for interrupter control
 
-	float lead_time_temp;
+	
 	float pwm_start_prd_temp;
+    uint16 fb_glitch_cmp;
 
 	configure_CT1();
 	configure_CT2();
@@ -114,27 +112,26 @@ void configure_ZCD_to_PWM(void) {
 		ZCD_counter_WritePeriod(configuration.start_cycles * 2);
 		ZCD_counter_WriteCompare(4);
 	}
-
-	//calculate lead time
-	lead_time_temp = (float)configuration.lead_time / CPU_CLK_PERIOD;
-	params.lead_time = round(lead_time_temp);
+    
+    uint16_t lead_time_temp;
+	//calculate lead time in cycles
+	lead_time_temp = round((float)configuration.lead_time / CPU_CLK_PERIOD);
 
 	//calculate starting period
 	pwm_start_prd_temp = BCLK__BUS_CLK__HZ / (configuration.start_freq * 200); //why 200? well 2 because its half-periods, and 100 because frequency is in hz*100
 	params.pwm_top = round(pwm_start_prd_temp * 2);								  //top value for FB capture and pwm generators to avoid ULF crap
-	params.pwma_start_prd = params.pwm_top - params.lead_time;
+	params.pwma_start_prd = params.pwm_top - lead_time_temp;
 	params.pwma_start_cmp = params.pwm_top - pwm_start_prd_temp + 4; //untested, was just 4;
-	params.pwma_run_prd = params.pwm_top - params.lead_time;
 	params.pwmb_start_prd = round(pwm_start_prd_temp); //experimental start up mode, 2 cycles of high frequency to start things up but stay ahead of the game.
 	params.pwmb_start_cmp = 4;
 	params.pwmb_start_psb_val = 15;				   //config.psb_start_val;// params.pwmb_start_prd>>3;
 												   //Set up FB_GLITCH PWM
-	params.fb_glitch_cmp = pwm_start_prd_temp / 4; //set the lock out period to be 1/4 of a cycle long
-	if (params.fb_glitch_cmp > 255) {
-		params.fb_glitch_cmp = 255;
+	fb_glitch_cmp = pwm_start_prd_temp / 4; //set the lock out period to be 1/4 of a cycle long
+	if (fb_glitch_cmp > 255) {
+		fb_glitch_cmp = 255;
 	}
 	FB_glitch_detect_WritePeriod(255);
-	FB_glitch_detect_WriteCompare1(255 - params.fb_glitch_cmp);
+	FB_glitch_detect_WriteCompare1(255 - fb_glitch_cmp);
 	FB_glitch_detect_WriteCompare2(255);
 
 	//initialize PWM generator

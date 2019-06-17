@@ -46,7 +46,7 @@
 #define STACK_USB 128
 #define STACK_ETH 256
 #define STACK_FAULT 100
-#define STACK_MIDI 160
+#define STACK_MIDI 200
     
 
     

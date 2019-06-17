@@ -183,7 +183,7 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
         case MIN_ID_SOCKET:
             if(*min_payload>NUM_ETH_CON) return;
             socket_info[*min_payload].socket = *(min_payload+1);
-            strncpy(socket_info[*min_payload].info,(char*)min_payload+2,sizeof(socket_info[0].info);
+            strncpy(socket_info[*min_payload].info,(char*)min_payload+2,sizeof(socket_info[0].info));
             if(socket_info[*min_payload].socket==SOCKET_CONNECTED){
                 command_cls("",&eth_port[*min_payload]);
                 send_string(":>", &eth_port[*min_payload]);

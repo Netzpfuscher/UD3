@@ -26,6 +26,7 @@
 #include <cytypes.h>
 
 #include "tsk_fault.h"
+#include "tsk_midi.h"
 #include "alarmevent.h"
 
 
@@ -137,6 +138,8 @@ void vWD_Timer_Callback(TimerHandle_t xTimer){
 	ramp.modulation_value = 0;
     interrupter_kill();
     USBMIDI_1_callbackLocalMidiEvent(0, (uint8_t*)kill_msg);
+    alarm_push(ALM_PRIO_CRITICAL, warn_watchdog);
+    xTimerReset(xTimer,0);
 }
 
 /* `#END` */
@@ -162,6 +165,7 @@ void tsk_fault_TaskProc(void *pvParameters) {
 	/* `#START TASK_INIT_CODE` */
     
     xWD_Timer = xTimerCreate("WD-Tmr", 500 / portTICK_PERIOD_MS, pdFALSE,(void * ) 0, vWD_Timer_Callback);
+    
     WD_enable(configuration.watchdog);
     
     alarm_push(ALM_PRIO_INFO,warn_task_fault);

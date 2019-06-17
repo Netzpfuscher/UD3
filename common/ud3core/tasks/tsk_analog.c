@@ -267,7 +267,7 @@ void calculate_rms(void) {
                 interrupter_kill();   
                 break;
             case I2T_WARNING:
-                telemetry.sys_fault[SYS_FAULT_FUSE]=1
+                telemetry.sys_fault[SYS_FAULT_FUSE]=1;
                 if(telemetry.batt_i>configuration.max_const_i && !count){
                     if(param.temp_duty<configuration.max_tr_duty) param.temp_duty++; 
                     if(tr_running==1){

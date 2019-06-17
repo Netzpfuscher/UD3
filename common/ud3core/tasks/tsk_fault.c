@@ -86,7 +86,7 @@ void WD_reset(){
 
 void WD_reset_from_ISR(){
     if(xWD_Timer!=NULL && configuration.watchdog){
-        xTimerStartFromISR(xWD_Timer, pdFALSE);
+        xTimerStartFromISR(xWD_Timer, NULL);
     }
 }
 
@@ -95,20 +95,12 @@ void handle_UVLO(void) {
 	//UVLO feedback via system_fault (LED2)
 	if(UVLO_status_Status==0){
         if(telemetry.sys_fault[SYS_FAULT_UVLO]==0){
-            alarm_push(ALM_PRIO_CRITICAL,warn_driver_undervoltage);
+            alarm_push(ALM_PRIO_CRITICAL,warn_driver_undervoltage, ALM_NO_VALUE);
         }
         telemetry.sys_fault[SYS_FAULT_UVLO]=1;
     }else{
         telemetry.sys_fault[SYS_FAULT_UVLO]=0;
     }
-    
-    /*
-	if ((bus_command == BUS_COMMAND_FAULT) || (telemetry.uvlo_stat == 0) || (telemetry.bus_status == BUS_CHARGING)) {
-		system_fault_Control = 0;
-	} else {
-		system_fault_Control = 1;
-	}
-    */
 }
 
 void reset_fault(){
@@ -132,13 +124,15 @@ void handle_no_fb(void){
 }
 
 void vWD_Timer_Callback(TimerHandle_t xTimer){
+    if(telemetry.sys_fault[SYS_FAULT_WD]==0){
+        alarm_push(ALM_PRIO_CRITICAL, warn_watchdog, ALM_NO_VALUE);
+    }
     telemetry.sys_fault[SYS_FAULT_WD] = 1;
     interrupter1_control_Control = 0;
 	QCW_enable_Control = 0;
 	ramp.modulation_value = 0;
     interrupter_kill();
     USBMIDI_1_callbackLocalMidiEvent(0, (uint8_t*)kill_msg);
-    alarm_push(ALM_PRIO_CRITICAL, warn_watchdog);
     xTimerReset(xTimer,0);
 }
 
@@ -168,7 +162,7 @@ void tsk_fault_TaskProc(void *pvParameters) {
     
     WD_enable(configuration.watchdog);
     
-    alarm_push(ALM_PRIO_INFO,warn_task_fault);
+    alarm_push(ALM_PRIO_INFO,warn_task_fault, ALM_NO_VALUE);
 	/* `#END` */
 
 	for (;;) {

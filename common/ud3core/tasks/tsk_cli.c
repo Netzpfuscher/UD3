@@ -144,7 +144,7 @@ void tsk_cli_TaskProc(void *pvParameters) {
 
 	initialize_cli(&ntsh, port);
     
-    alarm_push(ALM_PRIO_INFO,warn_task_cli);
+    alarm_push(ALM_PRIO_INFO,warn_task_cli, ALM_NO_VALUE);
 	/* `#END` */
 
 	for (;;) {

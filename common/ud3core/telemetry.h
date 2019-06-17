@@ -122,13 +122,14 @@
     
 
 #define SYS_FAULT_UVLO      0
-#define SYS_FAULT_TEMP      1
-#define SYS_FAULT_FUSE      2
-#define SYS_FAULT_CHARGE    3
-#define SYS_FAULT_WD        4
-#define SYS_FAULT_UPDATE    5
-#define SYS_FAULT_BUS_UV    6
-#define SYS_FAULT_NUM       7
+#define SYS_FAULT_TEMP1     1
+#define SYS_FAULT_TEMP2     2
+#define SYS_FAULT_FUSE      3
+#define SYS_FAULT_CHARGE    4
+#define SYS_FAULT_WD        5
+#define SYS_FAULT_UPDATE    6
+#define SYS_FAULT_BUS_UV    7
+#define SYS_FAULT_NUM       8
     
 typedef struct
 {

@@ -32,10 +32,11 @@ uint16 num;
 uint8 alarm_level;
 char* message;
 uint32_t timestamp;
+uint32_t value;
 } ALARMS;
     
 
-void alarm_push(uint8_t level, const char* message);
+void alarm_push(uint8_t level, const char* message, int32_t value);
 uint32_t alarm_get_num();
 void alarm_init();
 uint32_t alarm_get(uint32_t index, ALARMS * alm);
@@ -45,6 +46,8 @@ void alarm_clear();
 #define ALM_PRIO_WARN       1
 #define ALM_PRIO_ALARM      2
 #define ALM_PRIO_CRITICAL   3
+
+#define ALM_NO_VALUE        0x80000000
 
 
 static const char warn_general_startup[]= "INFO: UD3 startup";
@@ -66,7 +69,8 @@ static const char warn_bus_fault[]= "BUS: Fault";
 static const char warn_bus_off[]= "BUS: Off";
 static const char warn_bus_undervoltage[]= "BUS: Undervoltage";
 
-static const char warn_temp_fault[]= "NTC: Temperature fault";
+static const char warn_temp1_fault[]= "NTC: Temperature Therm1 high";
+static const char warn_temp2_fault[]= "NTC: Temperature Therm2 high";
 
 static const char warn_driver_undervoltage[]= "DRIVER: Undervoltage";
 
@@ -77,7 +81,7 @@ static const char warn_eeprom_no_dataset[]= "EEPROM: No or old dataset found";
 static const char warn_eeprom_unknown_id[]= "EEPROM: Found unknown ID";
 static const char warn_eeprom_unknown_param[]= "EEPROM: Found unknown parameter";
 static const char warn_eeprom_loaded[]= "EEPROM: Dataset loaded";
-static const char warn_eeprom_written[]= "EEPROM: Dataset written";
+static const char warn_eeprom_written[]= "EEPROM: Dataset written changes";
 
 static const char warn_W5500_failed[]= "W5550: Timeout, check connection";
 

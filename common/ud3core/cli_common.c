@@ -538,8 +538,8 @@ uint8_t command_alarms(char *commandline, port_str *ptr) {
     
     if (ntlibc_stricmp(commandline, "get") == 0) {
         static const uint8_t c_A = 9;
-        static const uint8_t c_B = 20;
-        static const uint8_t c_C = 40;
+        static const uint8_t c_B = 15;
+        static const uint8_t c_C = 35;
         Term_Move_cursor_right(c_A,ptr);
         SEND_CONST_STRING("Number", ptr);
         Term_Move_cursor_right(c_B,ptr);
@@ -573,7 +573,11 @@ uint8_t command_alarms(char *commandline, port_str *ptr) {
                         Term_Color_Red(ptr);
                     break;
                 }
-                ret = snprintf(buffer, sizeof(buffer)," %s\r\n",temp.message);
+                if(temp.value==ALM_NO_VALUE){
+                    ret = snprintf(buffer, sizeof(buffer)," %s\r\n",temp.message);
+                }else{
+                    ret = snprintf(buffer, sizeof(buffer)," %s | Value: %i\r\n",temp.message ,temp.value);
+                }
                 send_buffer((uint8_t*)buffer,ret,ptr); 
                 Term_Color_White(ptr);
             }
@@ -748,7 +752,7 @@ uint8_t command_udkill(char *commandline, port_str *ptr) {
     	QCW_enable_Control = 0;
     	Term_Color_Green(ptr);
     	SEND_CONST_STRING("Killbit set\r\n", ptr);
-        alarm_push(ALM_PRIO_CRITICAL,warn_kill_set);
+        alarm_push(ALM_PRIO_CRITICAL,warn_kill_set, ALM_NO_VALUE);
     	Term_Color_White(ptr);
         return 1;
     }else if (ntlibc_stricmp(commandline, "reset") == 0) {
@@ -757,7 +761,7 @@ uint8_t command_udkill(char *commandline, port_str *ptr) {
         system_fault_Control = 0xFF;
         Term_Color_Green(ptr);
     	SEND_CONST_STRING("Killbit reset\r\n", ptr);
-        alarm_push(ALM_PRIO_INFO,warn_kill_reset);
+        alarm_push(ALM_PRIO_INFO,warn_kill_reset, ALM_NO_VALUE);
     	Term_Color_White(ptr);
         return 1;
     }else if (ntlibc_stricmp(commandline, "get") == 0) {
@@ -1225,19 +1229,21 @@ uint8_t command_signals(char *commandline, port_str *ptr) {
     SEND_CONST_STRING("UVLO pin: ", ptr);
     send_signal_state(UVLO_status_Status,pdTRUE,ptr);
     
-    SEND_CONST_STRING("Sysfault bit driver undervoltage: ", ptr);
+    SEND_CONST_STRING("Sysfault driver undervoltage: ", ptr);
     send_signal_state(telemetry.sys_fault[SYS_FAULT_UVLO],pdFALSE,ptr);
-    SEND_CONST_STRING("Sysfault bit temperature: ", ptr);
-    send_signal_state(telemetry.sys_fault[SYS_FAULT_TEMP],pdFALSE,ptr);
-    SEND_CONST_STRING("Sysfault bit fuse: ", ptr);
+    SEND_CONST_STRING("Sysfault temp1: ", ptr);
+    send_signal_state(telemetry.sys_fault[SYS_FAULT_TEMP1],pdFALSE,ptr);
+    SEND_CONST_STRING("Sysfault temp2: ", ptr);
+    send_signal_state(telemetry.sys_fault[SYS_FAULT_TEMP2],pdFALSE,ptr);
+    SEND_CONST_STRING("Sysfault fuse: ", ptr);
     send_signal_state(telemetry.sys_fault[SYS_FAULT_FUSE],pdFALSE,ptr);
-    SEND_CONST_STRING("Sysfault bit charging: ", ptr);
+    SEND_CONST_STRING("Sysfault charging: ", ptr);
     send_signal_state(telemetry.sys_fault[SYS_FAULT_CHARGE],pdFALSE,ptr);
-    SEND_CONST_STRING("Sysfault bit watchdog: ", ptr);
+    SEND_CONST_STRING("Sysfault watchdog: ", ptr);
     send_signal_state(telemetry.sys_fault[SYS_FAULT_WD],pdFALSE,ptr);
-    SEND_CONST_STRING("Sysfault bit updating: ", ptr);
+    SEND_CONST_STRING("Sysfault updating: ", ptr);
     send_signal_state(telemetry.sys_fault[SYS_FAULT_UPDATE],pdFALSE,ptr);
-    SEND_CONST_STRING("Sysfault bit bus undervoltage: ", ptr);
+    SEND_CONST_STRING("Sysfault bus undervoltage: ", ptr);
     send_signal_state(telemetry.sys_fault[SYS_FAULT_BUS_UV],pdFALSE,ptr);
     SEND_CONST_STRING("Sysfault combined: ", ptr);
     send_signal_state(system_fault_Read(),pdTRUE,ptr);

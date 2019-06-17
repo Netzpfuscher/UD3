@@ -130,7 +130,7 @@ void tsk_uart_TaskProc(void *pvParameters) {
 	char c;
 
 	/* `#END` */
-    alarm_push(ALM_PRIO_INFO,warn_task_uart);
+    alarm_push(ALM_PRIO_INFO,warn_task_uart, ALM_NO_VALUE);
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
 

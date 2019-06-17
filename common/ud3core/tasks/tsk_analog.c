@@ -372,7 +372,7 @@ void bat_precharge_bus_scheme(){
 		if (telemetry.bus_v >= v_threshold) {
             if(!timer_triggerd && telemetry.bus_status == BUS_CHARGING){
                 timer_triggerd=1;
-                alarm_push(ALM_PRIO_INFO,warn_bus_charging);
+                alarm_push(ALM_PRIO_INFO,warn_bus_charging, ALM_NO_VALUE);
 			    xTimerStart(xCharge_Timer,0);
             }
 		} else if (telemetry.bus_status != BUS_READY) {
@@ -417,7 +417,7 @@ void ac_precharge_bus_scheme(){
     if(telemetry.bus_status == BUS_READY && telemetry.bus_v <20){
         telemetry.bus_status=BUS_BATT_UV_FLT;
         if(telemetry.sys_fault[SYS_FAULT_BUS_UV]==0){
-            alarm_push(ALM_PRIO_ALARM,warn_bus_undervoltage);
+            alarm_push(ALM_PRIO_ALARM,warn_bus_undervoltage,telemetry.bus_v);
         }
         telemetry.sys_fault[SYS_FAULT_BUS_UV]=1;
         bus_command=BUS_COMMAND_FAULT;
@@ -435,7 +435,7 @@ void ac_precharge_bus_scheme(){
             }
 		} else if (telemetry.bus_status != BUS_READY) {
             if(telemetry.bus_status != BUS_CHARGING){
-                alarm_push(ALM_PRIO_INFO,warn_bus_charging);
+                alarm_push(ALM_PRIO_INFO,warn_bus_charging, ALM_NO_VALUE);
             }
             telemetry.sys_fault[SYS_FAULT_CHARGE]=1;
 			relay_Write(RELAY_CHARGE);
@@ -450,7 +450,7 @@ void ac_dual_meas_scheme(){
 
 void ac_precharge_fixed_delay(){
     if(relay_Read()==RELAY_OFF){
-        alarm_push(ALM_PRIO_INFO,warn_bus_charging);
+        alarm_push(ALM_PRIO_INFO,warn_bus_charging, ALM_NO_VALUE);
         telemetry.sys_fault[SYS_FAULT_CHARGE]=1;
         xTimerStart(xCharge_Timer,0);
         relay_Write(RELAY_CHARGE);
@@ -462,14 +462,16 @@ void vCharge_Timer_Callback(TimerHandle_t xTimer){
     timer_triggerd=0;
     if(bus_command== BUS_COMMAND_ON){
         if(relay_Read()==RELAY_CHARGE){
-            alarm_push(ALM_PRIO_INFO,warn_bus_ready);
+            alarm_push(ALM_PRIO_INFO,warn_bus_ready, ALM_NO_VALUE);
             relay_Write(RELAY_ON);
             telemetry.bus_status = BUS_READY;
             telemetry.sys_fault[SYS_FAULT_CHARGE]=0;
+            telemetry.sys_fault[SYS_FAULT_BUS_UV]=0;
         }
     }else{
         relay_Write(RELAY_OFF);
-        alarm_push(ALM_PRIO_INFO,warn_bus_off);
+        telemetry.sys_fault[SYS_FAULT_CHARGE]=0;
+        alarm_push(ALM_PRIO_INFO,warn_bus_off, ALM_NO_VALUE);
         telemetry.bus_status = BUS_OFF;
     }
 }
@@ -543,7 +545,7 @@ void tsk_analog_TaskProc(void *pvParameters) {
     
     isr_primary_current_StartEx(isr_primary);
     
-    alarm_push(ALM_PRIO_INFO,warn_task_analog);
+    alarm_push(ALM_PRIO_INFO,warn_task_analog, ALM_NO_VALUE);
 
 	/* `#END` */
 

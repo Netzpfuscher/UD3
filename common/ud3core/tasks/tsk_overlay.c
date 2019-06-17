@@ -243,7 +243,7 @@ void tsk_overlay_TaskProc(void *pvParameters) {
 	/* `#START TASK_INIT_CODE` */
 
 	/* `#END` */
-    alarm_push(ALM_PRIO_INFO,warn_task_overlay);
+    alarm_push(ALM_PRIO_INFO,warn_task_overlay, ALM_NO_VALUE);
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
         xSemaphoreTake(port->term_block, portMAX_DELAY);

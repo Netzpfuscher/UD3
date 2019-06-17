@@ -33,7 +33,7 @@
 xQueueHandle qAlarms;
 
 
-void alarm_push(uint8_t level, const char* message){
+void alarm_push(uint8_t level, const char* message, int32_t value){
     static uint16_t num=0;
     ALARMS temp;
     if(uxQueueSpacesAvailable(qAlarms)==0){
@@ -42,6 +42,7 @@ void alarm_push(uint8_t level, const char* message){
     temp.alarm_level = level;
     temp.message = message;
     temp.num = num;
+    temp.value = value;
     temp.timestamp = xTaskGetTickCount() * portTICK_RATE_MS;
     xQueueSend(qAlarms,&temp,0);   
     num++;

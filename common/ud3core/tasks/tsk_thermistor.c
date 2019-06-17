@@ -56,8 +56,8 @@ uint8 tsk_thermistor_initVar = 0u;
 #define THERM_DAC_VAL 23
 #define THERM_DAC_STEP 8 //micro amps
 
-#define TEMP1_FAULT 0b0001
-#define TEMP2_FAULT 0b0010
+#define TEMP1_FAULT 0x00FF
+#define TEMP2_FAULT 0xFF00
 
 #define TEMP_FAULT_LOW 0xFFFF
 
@@ -105,9 +105,9 @@ int16_t get_temp_counts(uint8_t channel){
     return ADC_therm_GetResult16();
 }
 
-uint8 run_temp_check(void) {
+uint16 run_temp_check(void) {
 	//this function looks at all the thermistor temperatures, compares them against limits and returns any faults
-	uint8 fault = 0;
+	uint16 fault = 0;
     
 	telemetry.temp1 = get_temp_128(get_temp_counts(0)) / 128;
 	telemetry.temp2 = get_temp_128(get_temp_counts(1)) / 128;
@@ -155,15 +155,25 @@ void tsk_thermistor_TaskProc(void *pvParameters) {
     
 
 	/* `#END` */
-    alarm_push(ALM_PRIO_INFO,warn_task_thermistor);
+    alarm_push(ALM_PRIO_INFO,warn_task_thermistor, ALM_NO_VALUE);
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
-
-		if (run_temp_check()) {
+        uint16_t ret = run_temp_check();
+		if (ret) {
 			temp_fault_counter++;
 			if (temp_fault_counter > TEMP_FAULT_COUNTER_MAX) {
-				telemetry.bus_status = BUS_TEMP1_FAULT;
-				bus_command = BUS_COMMAND_FAULT;
+                if(ret&0x00FF){
+                    if(telemetry.sys_fault[SYS_FAULT_TEMP1]==0){
+                        alarm_push(ALM_PRIO_CRITICAL, warn_temp1_fault, telemetry.temp1);
+                    }
+                    telemetry.sys_fault[SYS_FAULT_TEMP1] = 1;
+                }
+                if(ret&0xFF00){
+                    if(telemetry.sys_fault[SYS_FAULT_TEMP2]==0){
+                        alarm_push(ALM_PRIO_CRITICAL, warn_temp2_fault, telemetry.temp2);
+                    }
+                    telemetry.sys_fault[SYS_FAULT_TEMP2] = 1;
+                }
 			}
 		} else {
 			temp_fault_counter = 0;

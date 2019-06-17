@@ -297,7 +297,7 @@ void tsk_min_TaskProc(void *pvParameters) {
     uint16_t bytes_waiting=0;
     
     uint32_t next_sid_flow = 0;
-    alarm_push(ALM_PRIO_INFO,warn_task_min);
+    alarm_push(ALM_PRIO_INFO,warn_task_min, ALM_NO_VALUE);
 	for (;;) {
 
         bytes_waiting=UART_2_GetRxBufferSize();

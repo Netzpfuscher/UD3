@@ -593,7 +593,7 @@ void EEPROM_write_conf(parameter_entry * params, uint8_t param_size, uint16_t ee
 		EEPROM_buffer_write(0xEF, count,0);
         count++;
 		EEPROM_buffer_write(0x00, count,1);
-        alarm_push(ALM_PRIO_INFO,warn_eeprom_written);
+        alarm_push(ALM_PRIO_INFO,warn_eeprom_written, change_count);
 		ret = snprintf(buffer, sizeof(buffer),"%i / %i new config params written. %i bytes from 2048 used.\r\n", change_count, param_count, byte_cnt);
         send_buffer((uint8_t*)buffer, ret, ptr);
 }
@@ -613,7 +613,7 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
         }
         if(!(data[0]== 0x00 && data[1] == 0xC0 && data[2] == 0xFF && data[3] == 0xEE)) {
             #ifndef BOOT
-            alarm_push(ALM_PRIO_WARN,warn_eeprom_no_dataset);
+            alarm_push(ALM_PRIO_WARN,warn_eeprom_no_dataset, ALM_NO_VALUE);
             SEND_CONST_STRING("WARNING: No or old EEPROM dataset found\r\n",ptr);
             #endif
             return;
@@ -645,7 +645,7 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
         
         if(current_parameter == param_size){
             #ifndef BOOT
-            alarm_push(ALM_PRIO_WARN,warn_eeprom_unknown_id);
+            alarm_push(ALM_PRIO_WARN,warn_eeprom_unknown_id, data[0]);
             ret = snprintf(buffer, sizeof(buffer), "WARNING: Unknown param ID %i found in EEPROM\r\n", data[0]);
             send_buffer((uint8_t*)buffer, ret, ptr);
             #endif
@@ -671,7 +671,7 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
             }
             if(!found_param){
                 //#ifndef BOOT
-                alarm_push(ALM_PRIO_WARN,warn_eeprom_unknown_param);
+                alarm_push(ALM_PRIO_WARN,warn_eeprom_unknown_param, current_parameter);
                 ret = snprintf(buffer, sizeof(buffer), "WARNING: Param [%s] not found in EEPROM\r\n",params[current_parameter].name);
                 send_buffer((uint8_t*)buffer, ret, ptr);
                 //#endif
@@ -679,7 +679,7 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
         }
     }
     #ifndef BOOT
-    alarm_push(ALM_PRIO_INFO,warn_eeprom_loaded);
+    alarm_push(ALM_PRIO_INFO,warn_eeprom_loaded, ALM_NO_VALUE);
     ret = snprintf(buffer, sizeof(buffer), "%i / %i config params loaded\r\n", change_count, param_count);
     send_buffer((uint8_t*)buffer, ret, ptr);
     #endif

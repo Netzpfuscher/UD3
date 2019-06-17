@@ -132,7 +132,7 @@ void tsk_eth_TaskProc(void *pvParameters) {
     }
 	  
     if(ret==CYRET_TIMEOUT){
-        alarm_push(ALM_PRIO_CRITICAL, warn_W5500_failed);
+        alarm_push(ALM_PRIO_CRITICAL, warn_W5500_failed, ALM_NO_VALUE);
         for(uint8_t i=0;i<NUM_ETH_CON;i++){
             if(ETH_Terminal_TaskHandle[i]!=NULL){
                 vTaskDelete(ETH_Terminal_TaskHandle[i]);
@@ -142,7 +142,7 @@ void tsk_eth_TaskProc(void *pvParameters) {
         vTaskDelete(tsk_eth_TaskHandle);    
     }
     
-    alarm_push(ALM_PRIO_INFO,warn_task_eth);
+    alarm_push(ALM_PRIO_INFO,warn_task_eth, ALM_NO_VALUE);
 	/* `#END` */
     /* `#START TASK_LOOP_CODE` */
 

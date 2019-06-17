@@ -641,7 +641,7 @@ void tsk_midi_TaskProc(void *pvParameters) {
 	isr_interrupter_StartEx(isr_interrupter);
 
 	/* `#END` */
-    alarm_push(ALM_PRIO_INFO,warn_task_midi);
+    alarm_push(ALM_PRIO_INFO,warn_task_midi, ALM_NO_VALUE);
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
 

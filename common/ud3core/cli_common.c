@@ -695,6 +695,7 @@ uint8_t command_qcw(char *commandline, port_str *ptr) {
     CHECK_NULL(commandline);
         
 	if (ntlibc_stricmp(commandline, "start") == 0) {
+        switch_synth(SYNTH_MIDI);
         if(param.qcw_repeat>99){
             if(xQCW_Timer==NULL){
                 xQCW_Timer = xTimerCreate("QCW-Tmr", param.qcw_repeat / portTICK_PERIOD_MS, pdFALSE,(void * ) 0, vQCW_Timer_Callback);
@@ -725,6 +726,7 @@ uint8_t command_qcw(char *commandline, port_str *ptr) {
         QCW_enable_Control = 0;
         qcw_reg = 0;
 		SEND_CONST_STRING("QCW Disabled\r\n", ptr);
+        switch_synth(param.synth);
 		return 0;
 	}
 	HELP_TEXT("Usage: qcw [start|stop]\r\n");
@@ -1230,21 +1232,21 @@ uint8_t command_signals(char *commandline, port_str *ptr) {
     send_signal_state(UVLO_status_Status,pdTRUE,ptr);
     
     SEND_CONST_STRING("Sysfault driver undervoltage: ", ptr);
-    send_signal_state(telemetry.sys_fault[SYS_FAULT_UVLO],pdFALSE,ptr);
+    send_signal_state(sysfault.uvlo,pdFALSE,ptr);
     SEND_CONST_STRING("Sysfault temp1: ", ptr);
-    send_signal_state(telemetry.sys_fault[SYS_FAULT_TEMP1],pdFALSE,ptr);
+    send_signal_state(sysfault.temp1,pdFALSE,ptr);
     SEND_CONST_STRING("Sysfault temp2: ", ptr);
-    send_signal_state(telemetry.sys_fault[SYS_FAULT_TEMP2],pdFALSE,ptr);
+    send_signal_state(sysfault.temp2,pdFALSE,ptr);
     SEND_CONST_STRING("Sysfault fuse: ", ptr);
-    send_signal_state(telemetry.sys_fault[SYS_FAULT_FUSE],pdFALSE,ptr);
+    send_signal_state(sysfault.fuse,pdFALSE,ptr);
     SEND_CONST_STRING("Sysfault charging: ", ptr);
-    send_signal_state(telemetry.sys_fault[SYS_FAULT_CHARGE],pdFALSE,ptr);
+    send_signal_state(sysfault.charge,pdFALSE,ptr);
     SEND_CONST_STRING("Sysfault watchdog: ", ptr);
-    send_signal_state(telemetry.sys_fault[SYS_FAULT_WD],pdFALSE,ptr);
+    send_signal_state(sysfault.watchdog,pdFALSE,ptr);
     SEND_CONST_STRING("Sysfault updating: ", ptr);
-    send_signal_state(telemetry.sys_fault[SYS_FAULT_UPDATE],pdFALSE,ptr);
+    send_signal_state(sysfault.update,pdFALSE,ptr);
     SEND_CONST_STRING("Sysfault bus undervoltage: ", ptr);
-    send_signal_state(telemetry.sys_fault[SYS_FAULT_BUS_UV],pdFALSE,ptr);
+    send_signal_state(sysfault.bus_uv,pdFALSE,ptr);
     SEND_CONST_STRING("Sysfault combined: ", ptr);
     send_signal_state(system_fault_Read(),pdTRUE,ptr);
     

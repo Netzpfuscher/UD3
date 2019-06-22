@@ -89,14 +89,20 @@ uint32_t min_time_ms(void){
   return (xTaskGetTickCount() * portTICK_RATE_MS);
 }
 
+void min_reset(uint8_t port){
+    kill_accu();
+    USBMIDI_1_callbackLocalMidiEvent(0, (uint8_t*)kill_msg);   
+    alarm_push(ALM_PRIO_WARN,warn_min_reset,ALM_NO_VALUE);
+}
+
 void min_tx_start(uint8_t port){
 }
 void min_tx_finished(uint8_t port){
 }
-uint32_t reset;
+
 uint8_t flow_ctl=1;
-uint8_t min_stop = 'x';
-uint8_t min_start = 'o';
+static const uint8_t min_stop = 'x';
+static const uint8_t min_start = 'o';
 
 
 struct _socket_info socket_info[NUM_ETH_CON];
@@ -280,7 +286,6 @@ void tsk_min_TaskProc(void *pvParameters) {
 
     //Init MIN Protocol
     min_init_context(&min_ctx, 0);
-    min_transport_reset(&min_ctx,1);
     
     for(uint8_t i=0;i<NUM_ETH_CON;i++){
         socket_info[i].socket=SOCKET_DISCONNECTED;   
@@ -312,15 +317,15 @@ void tsk_min_TaskProc(void *pvParameters) {
             
             if(param.synth==SYNTH_SID){
                 if(uxQueueSpacesAvailable(qSID) < 30 && flow_ctl){
-                    min_queue_frame(&min_ctx, MIN_ID_MIDI, &min_stop,1);
+                    min_queue_frame(&min_ctx, MIN_ID_MIDI, (uint8_t*)&min_stop,1);
                     flow_ctl=0;
                 }else if(uxQueueSpacesAvailable(qSID) > 45 && !flow_ctl){ //
-                    min_queue_frame(&min_ctx, MIN_ID_MIDI, &min_start,1);
+                    min_queue_frame(&min_ctx, MIN_ID_MIDI, (uint8_t*)&min_start,1);
                     flow_ctl=1;
                 }else if(uxQueueSpacesAvailable(qSID) > 59){
                     if(xTaskGetTickCount()>next_sid_flow){
                         next_sid_flow = xTaskGetTickCount() + FLOW_RETRANSMIT_TICKS;
-                        min_send_frame(&min_ctx, MIN_ID_MIDI, &min_start,1);
+                        min_send_frame(&min_ctx, MIN_ID_MIDI, (uint8_t*)&min_start,1);
                         flow_ctl=1;
                     }
                 }

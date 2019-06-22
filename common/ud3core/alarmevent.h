@@ -53,12 +53,19 @@ void alarm_clear();
 static const char warn_general_startup[]= "INFO: UD3 startup";
 
 static const char warn_task_analog[]= "TASK: Analog started";
-static const char warn_task_cli[]= "TASK: CLI started";
+
+static const char warn_task_serial_cli[]= "TASK: Serial-CLI started";
+static const char warn_task_usb_cli[]= "TASK: USB-CLI started";
+static const char warn_task_eth_cli[]= "TASK: Ethernet/MIN-CLI started";
+
 static const char warn_task_eth[]= "TASK: ETH started";
 static const char warn_task_fault[]= "TASK: Fault started";
 static const char warn_task_midi[]= "TASK: MIDI started";
 static const char warn_task_min[]= "TASK: MIN started";
-static const char warn_task_overlay[]= "TASK: Overlay started";
+
+static const char warn_task_VT100_overlay[]= "TASK: Overlay started VT100";
+static const char warn_task_TT_overlay[]= "TASK: Overlay started TT";
+
 static const char warn_task_thermistor[]= "TASK: Thermistor started";
 static const char warn_task_uart[]= "TASK: UART started";
 static const char warn_task_usb[]= "TASK: USB started";
@@ -86,6 +93,11 @@ static const char warn_eeprom_written[]= "EEPROM: Dataset written changes";
 static const char warn_W5500_failed[]= "W5550: Timeout, check connection";
 
 static const char warn_watchdog[]= "WD: Watchdog triggerd";
+
+static const char warn_serial_overrun[]= "COM: Serial buffer overrun";
+static const char warn_midi_overrun[]= "COM: MIDI buffer overrun";
+
+static const char warn_min_reset[]= "COM: MIN reset";
     
     
     

@@ -193,13 +193,7 @@ void tsk_eth_TaskProc(void *pvParameters) {
     			if (synth_socket_state[i] == ETH_SR_ESTABLISHED) {
 
                     bytes_waiting[i] = ETH_RxDataReady(synth_socket[i]);
-                    
-                    if(!i){
-                        telemetry.num_bytes = bytes_waiting[i];
-                    }else{
-                        telemetry.num_bytes += bytes_waiting[i];
-                    }
-                    
+
                     switch(param.synth){
                         case SYNTH_OFF:
                             if(bytes_waiting>0){

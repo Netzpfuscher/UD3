@@ -179,6 +179,8 @@ void show_overlay_100ms(port_str *ptr) {
             send_chart_draw(ptr);
         }
         
+        
+        
     }
 	
 }
@@ -243,8 +245,13 @@ void tsk_overlay_TaskProc(void *pvParameters) {
 	/* `#START TASK_INIT_CODE` */
 
 	/* `#END` */
-    alarm_push(ALM_PRIO_INFO,warn_task_overlay, ALM_NO_VALUE);
-	for (;;) {
+    if(port->term_mode==PORT_TERM_VT100){
+        alarm_push(ALM_PRIO_INFO,warn_task_VT100_overlay, ALM_NO_VALUE);
+    }else{
+        alarm_push(ALM_PRIO_INFO,warn_task_TT_overlay, port->num);   
+    }
+	    
+    for (;;) {
 		/* `#START TASK_LOOP_CODE` */
         xSemaphoreTake(port->term_block, portMAX_DELAY);
         show_overlay_100ms(pvParameters);

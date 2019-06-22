@@ -3,7 +3,6 @@
 // Use authorized under the MIT license.
 
 #include "min.h"
-#include ".\tasks\tsk_midi.h"
 
 #define TRANSPORT_FIFO_SIZE_FRAMES_MASK             ((uint8_t)((1U << TRANSPORT_FIFO_SIZE_FRAMES_BITS) - 1U))
 #define TRANSPORT_FIFO_SIZE_FRAME_DATA_MASK         ((uint16_t)((1U << TRANSPORT_FIFO_SIZE_FRAME_DATA_BITS) - 1U))
@@ -272,9 +271,7 @@ static void transport_fifo_reset(struct min_context *self)
     self->transport_fifo.sn_min = 0;
     self->transport_fifo.rn = 0;
     
-    kill_accu();
-    USBMIDI_1_callbackLocalMidiEvent(0, (uint8_t*)kill_msg);
-
+        
     // Reset the timers
     self->transport_fifo.last_received_anything_ms = now;
     self->transport_fifo.last_sent_ack_time_ms = now;
@@ -290,6 +287,7 @@ void min_transport_reset(struct min_context *self, bool inform_other_side)
 
     // Throw our frames away
     transport_fifo_reset(self);
+    min_reset(self->port);  //Callback
 }
 
 // Queues a MIN ID / payload frame into the outgoing FIFO

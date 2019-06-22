@@ -33,7 +33,6 @@ Its a 16 bit PWM clocked at 1MHz, so thats 1uS per count.
 #include <device.h>
 
 #define INTERRUPTER_CLK_FREQ 1000000
-#define WATCH_DOG_PERIOD 225 //mS
 
 /* DMA Configuration for int1_dma */
 #define int1_dma_BYTES_PER_BURST 8

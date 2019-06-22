@@ -143,9 +143,19 @@ void tsk_cli_TaskProc(void *pvParameters) {
 	/* `#START TASK_INIT_CODE` */
 
 	initialize_cli(&ntsh, port);
-    
-    alarm_push(ALM_PRIO_INFO,warn_task_cli, ALM_NO_VALUE);
-	/* `#END` */
+    switch(port->type){
+        case PORT_TYPE_SERIAL:
+            alarm_push(ALM_PRIO_INFO,warn_task_serial_cli, ALM_NO_VALUE);
+        break;
+        case PORT_TYPE_USB:
+            alarm_push(ALM_PRIO_INFO,warn_task_usb_cli, ALM_NO_VALUE);
+        break;
+        case PORT_TYPE_ETH:
+            alarm_push(ALM_PRIO_INFO,warn_task_eth_cli, port->num);
+        break;      
+    }
+
+    /* `#END` */
 
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */

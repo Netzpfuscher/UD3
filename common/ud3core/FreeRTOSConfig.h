@@ -109,7 +109,7 @@
 #define configUSE_ALTERNATIVE_API 		0
     
     
-#define configCHECK_FOR_STACK_OVERFLOW	1
+#define configCHECK_FOR_STACK_OVERFLOW	0
 
 //#define configASSERT( x ) if( ( x ) == 0 ) { taskDISABLE_INTERRUPTS();for(;;); }
     
@@ -117,7 +117,7 @@
 #define configQUEUE_REGISTRY_SIZE		10
 #define configUSE_MALLOC_FAILED_HOOK	1
     
-#define ACTIVATE_TASK_INFO 1
+#define ACTIVATE_TASK_INFO 0
    
 #if ACTIVATE_TASK_INFO   
     #define configGENERATE_RUN_TIME_STATS	1  

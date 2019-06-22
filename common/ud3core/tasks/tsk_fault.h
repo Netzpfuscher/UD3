@@ -33,8 +33,19 @@
 #include <device.h>
 
 /* `#END` */
-    
 
+typedef struct __sysfault__ {
+uint8_t uvlo;
+uint8_t temp1;    
+uint8_t temp2;
+uint8_t fuse;    
+uint8_t charge;
+uint8_t watchdog;
+uint8_t update;    
+uint8_t bus_uv;    
+} SYSFAULT;
+
+extern SYSFAULT sysfault;
     
 void tsk_fault_Start(void);
 void WD_enable(uint8_t enable);

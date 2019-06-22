@@ -163,16 +163,16 @@ void tsk_thermistor_TaskProc(void *pvParameters) {
 			temp_fault_counter++;
 			if (temp_fault_counter > TEMP_FAULT_COUNTER_MAX) {
                 if(ret&0x00FF){
-                    if(telemetry.sys_fault[SYS_FAULT_TEMP1]==0){
+                    if(sysfault.temp1==0){
                         alarm_push(ALM_PRIO_CRITICAL, warn_temp1_fault, telemetry.temp1);
                     }
-                    telemetry.sys_fault[SYS_FAULT_TEMP1] = 1;
+                    sysfault.temp1 = 1;
                 }
                 if(ret&0xFF00){
-                    if(telemetry.sys_fault[SYS_FAULT_TEMP2]==0){
+                    if(sysfault.temp2==0){
                         alarm_push(ALM_PRIO_CRITICAL, warn_temp2_fault, telemetry.temp2);
                     }
-                    telemetry.sys_fault[SYS_FAULT_TEMP2] = 1;
+                    sysfault.temp2 = 1;
                 }
 			}
 		} else {

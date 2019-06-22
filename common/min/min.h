@@ -197,6 +197,9 @@ void min_tx_byte(uint8_t port, uint8_t byte);
 void min_tx_start(uint8_t port);
 void min_tx_finished(uint8_t port);
 
+// CALLBACK. Min reset.
+void min_reset(uint8_t port);
+
 // Initialize a MIN context ready for receiving bytes from a serial link
 // (Can have multiple MIN contexts)
 void min_init_context(struct min_context *self, uint8_t port);

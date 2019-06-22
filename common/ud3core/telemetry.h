@@ -120,25 +120,12 @@
 #define CHART3_VAR telemetry.avg_power   
     
     
-
-#define SYS_FAULT_UVLO      0
-#define SYS_FAULT_TEMP1     1
-#define SYS_FAULT_TEMP2     2
-#define SYS_FAULT_FUSE      3
-#define SYS_FAULT_CHARGE    4
-#define SYS_FAULT_WD        5
-#define SYS_FAULT_UPDATE    6
-#define SYS_FAULT_BUS_UV    7
-#define SYS_FAULT_NUM       8
-    
 typedef struct
 {
 	uint16 bus_v;		//in volts
 	uint16 batt_v;		//in volts
-	uint16 aux_batt_v;  //not used
 	uint8 temp1;		//in *C
 	uint8 temp2;		//in *C
-	uint8 temp3;		//not used
 	uint8 bus_status;   //0 = charging, 1 = ready
 	uint16 avg_power;   //Average power in watts
 	uint16 batt_i;		//battery current in centiamps
@@ -146,9 +133,7 @@ typedef struct
 	uint16_t primary_i;
     uint8_t midi_voices;
     uint16_t duty;
-    uint16_t num_bytes;
     int16 fres;
-    uint8_t sys_fault[SYS_FAULT_NUM];
 } telemetry_struct;
 telemetry_struct telemetry;
 

@@ -207,7 +207,21 @@ xQueueHandle qSID;
 xQueueHandle qPulse;
 struct sid_f sid_frm;
 
+void handle_qcw(){
+	if ((ramp.modulation_value < 255) && (ramp.modulation_value > 0)) {
+		ramp.modulation_value += param.qcw_ramp;
+		if (ramp.modulation_value > 255)
+			ramp.modulation_value = 255;
+		ramp_control();
+	}
+}
+
 CY_ISR(isr_midi) {
+    if(qcw_reg){
+        handle_qcw();
+        return;
+    }
+    
 	uint8_t ch;
 	uint8_t flag[N_CHANNEL];
 	static uint8_t old_flag[N_CHANNEL];
@@ -232,22 +246,20 @@ CY_ISR(isr_midi) {
         interrupter_oneshot(isr1_pulse.pw, isr1_pulse.volume);
     }
 
-	if (qcw_reg) {
-		if ((ramp.modulation_value < 255) && (ramp.modulation_value > 0)) {
-			ramp.modulation_value += param.qcw_ramp;
-			if (ramp.modulation_value > 255)
-				ramp.modulation_value = 255;
-			ramp_control();
-		}
-	}
 }
 
 #define SID_CHANNELS 3
 
 CY_ISR(isr_sid) {
+    
+    if(qcw_reg){
+        handle_qcw();
+        return;
+    }
+    
     telemetry.midi_voices=0;
     static uint8_t cnt=0;
-    if (cnt >212){
+    if (cnt >212){  // 50 Hz
         cnt=0;
         if(xQueueReceiveFromISR(qSID,&sid_frm,0)){
             isr_port_ptr[0].halfcount = sid_frm.half[0];
@@ -309,14 +321,8 @@ CY_ISR(isr_sid) {
         interrupter_oneshot(isr1_pulse.pw, isr1_pulse.volume);
     }
 
-	if (qcw_reg) {
-		if ((ramp.modulation_value < 255) && (ramp.modulation_value > 0)) {
-			ramp.modulation_value += param.qcw_ramp;
-			if (ramp.modulation_value > 255)
-				ramp.modulation_value = 255;
-			ramp_control();
-		}
-	}
+	
+    
 }
 
 CY_ISR(isr_interrupter) {
@@ -331,7 +337,7 @@ void USBMIDI_1_callbackLocalMidiEvent(uint8 cable, uint8 *midiMsg) {
 	
 	NOTE note_struct;
 	uint8_t message_filter = midiMsg[0] & 0xf0;
-
+    uint8_t ret=pdTRUE;
 	if (skip_flag) {
 		if (midiMsg[0] == 0xf7 || midiMsg[1] == 0xf7 || midiMsg[2] == 0xf7) {
 			skip_flag = 0;
@@ -340,19 +346,19 @@ void USBMIDI_1_callbackLocalMidiEvent(uint8 cable, uint8 *midiMsg) {
 		switch (message_filter) {
 		case 0x90:
 			v_NOTE_NOTEONOFF(&note_struct, midiMsg[0] & 0x0f, midiMsg[1], midiMsg[2]);
-			xQueueSendFromISR(qMIDI_rx, &note_struct, NULL);
+			ret = xQueueSendFromISR(qMIDI_rx, &note_struct, NULL);
 			break;
 		case 0x80:
 			v_NOTE_NOTEONOFF(&note_struct, midiMsg[0] & 0x0f, midiMsg[1], 0);
-			xQueueSendFromISR(qMIDI_rx, &note_struct, NULL);
+			ret = xQueueSendFromISR(qMIDI_rx, &note_struct, NULL);
 			break;
 		case 0xb0:
 			v_NOTE_CONTROLCHANGE(&note_struct, midiMsg[0] & 0x0f, midiMsg[1], midiMsg[2]);
-			xQueueSendFromISR(qMIDI_rx, &note_struct, NULL);
+			ret = xQueueSendFromISR(qMIDI_rx, &note_struct, NULL);
 			break;
 		case 0xe0:
 			v_NOTE_PITCHBEND(&note_struct, midiMsg[0] & 0x0f, midiMsg[1], midiMsg[2]);
-			xQueueSendFromISR(qMIDI_rx, &note_struct, NULL);
+			ret = xQueueSendFromISR(qMIDI_rx, &note_struct, NULL);
 			break;
 		case 0xf0:
 			skip_flag = 1;
@@ -363,6 +369,9 @@ void USBMIDI_1_callbackLocalMidiEvent(uint8 cable, uint8 *midiMsg) {
     	if (skip_flag && (midiMsg[1] == 0xf7 || midiMsg[2] == 0xf7)) {
     		skip_flag = 0;
     	}
+        if(ret==errQUEUE_FULL){
+             alarm_push(ALM_PRIO_WARN,warn_midi_overrun,ALM_NO_VALUE);
+        }
 	}
 }
 

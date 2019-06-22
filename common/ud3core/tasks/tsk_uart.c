@@ -75,7 +75,9 @@ CY_ISR(isr_uart_rx) {
 
 			goto end;
 		} else if (!midi_count) {
-            xStreamBufferSendFromISR(serial_port.rx, &c, 1, 0);
+            if(xStreamBufferSendFromISR(serial_port.rx, &c, 1, 0)==0){
+                alarm_push(ALM_PRIO_WARN,warn_serial_overrun,ALM_NO_VALUE);   
+            }
 			goto end;
 		}
 		switch (midi_count) {

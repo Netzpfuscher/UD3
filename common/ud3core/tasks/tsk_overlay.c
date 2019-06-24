@@ -169,18 +169,22 @@ void show_overlay_100ms(port_str *ptr) {
         #if GAUGE6_SLOW==0
         send_gauge(6, GAUGE6_VAR, ptr);
         #endif
-        
-        if(chart){
-            send_chart(0, CHART0_VAR, ptr);
-            send_chart(1, CHART1_VAR, ptr);
-            send_chart(2, CHART2_VAR, ptr);
-            send_chart(3, CHART3_VAR, ptr);
-        
-            send_chart_draw(ptr);
+
+        if(ptr->term_mode==PORT_TERM_MQTT){
+            ALARMS temp;
+            if(alarm_pop(&temp)==pdPASS){
+                send_event(&temp,ptr);
+            }
+        }else{
+            if(chart){
+                send_chart(0, CHART0_VAR, ptr);
+                send_chart(1, CHART1_VAR, ptr);
+                send_chart(2, CHART2_VAR, ptr);
+                send_chart(3, CHART3_VAR, ptr);
+            
+                send_chart_draw(ptr);
+            }
         }
-        
-        
-        
     }
 	
 }
@@ -208,12 +212,14 @@ void show_overlay_400ms(port_str *ptr) {
         #if GAUGE6_SLOW==1
         send_gauge(6, GAUGE6_VAR, ptr);
         #endif
-
-        send_status(telemetry.bus_status!=BUS_OFF,
-                    tr_running!=0,
-                    configuration.ps_scheme!=AC_NO_RELAY_BUS_SCHEME,
-                    blocked,
-                    ptr);
+        
+        if(ptr->term_mode!=PORT_TERM_MQTT){
+            send_status(telemetry.bus_status!=BUS_OFF,
+                        tr_running!=0,
+                        configuration.ps_scheme!=AC_NO_RELAY_BUS_SCHEME,
+                        blocked,
+                        ptr);
+        }
     }
 }
 
@@ -245,11 +251,18 @@ void tsk_overlay_TaskProc(void *pvParameters) {
 	/* `#START TASK_INIT_CODE` */
 
 	/* `#END` */
-    if(port->term_mode==PORT_TERM_VT100){
-        alarm_push(ALM_PRIO_INFO,warn_task_VT100_overlay, ALM_NO_VALUE);
-    }else{
-        alarm_push(ALM_PRIO_INFO,warn_task_TT_overlay, port->num);   
+    switch(port->term_mode){
+        case PORT_TERM_TT:
+            alarm_push(ALM_PRIO_INFO,warn_task_TT_overlay, port->num);
+        break;
+        case PORT_TERM_MQTT:
+            alarm_push(ALM_PRIO_INFO,warn_task_MQTT_overlay, port->num);
+        break;
+        case PORT_TERM_VT100:
+            alarm_push(ALM_PRIO_INFO,warn_task_VT100_overlay, ALM_NO_VALUE);
+        break; 
     }
+
 	    
     for (;;) {
 		/* `#START TASK_LOOP_CODE` */

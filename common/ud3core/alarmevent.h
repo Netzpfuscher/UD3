@@ -41,6 +41,7 @@ uint32_t alarm_get_num();
 void alarm_init();
 uint32_t alarm_get(uint32_t index, ALARMS * alm);
 void alarm_clear();
+uint32_t alarm_pop(ALARMS * alm);
 
 #define ALM_PRIO_INFO       0
 #define ALM_PRIO_WARN       1
@@ -65,6 +66,7 @@ static const char warn_task_min[]= "TASK: MIN started";
 
 static const char warn_task_VT100_overlay[]= "TASK: Overlay started VT100";
 static const char warn_task_TT_overlay[]= "TASK: Overlay started TT";
+static const char warn_task_MQTT_overlay[]= "TASK: Overlay started MQTT";
 
 static const char warn_task_thermistor[]= "TASK: Thermistor started";
 static const char warn_task_uart[]= "TASK: UART started";

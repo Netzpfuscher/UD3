@@ -1181,13 +1181,27 @@ uint8_t command_tterm(char *commandline, port_str *ptr){
         return 1;
 
     }
+    if (ntlibc_stricmp(commandline, "mqtt") == 0) {
+        ptr->term_mode = PORT_TERM_MQTT;
+        send_gauge_config(0, GAUGE0_MIN, GAUGE0_MAX, GAUGE0_NAME, ptr);
+        send_gauge_config(1, GAUGE1_MIN, GAUGE1_MAX, GAUGE1_NAME, ptr);
+        send_gauge_config(2, GAUGE2_MIN, GAUGE2_MAX, GAUGE2_NAME, ptr);
+        send_gauge_config(3, GAUGE3_MIN, GAUGE3_MAX, GAUGE3_NAME, ptr);
+        send_gauge_config(4, GAUGE4_MIN, GAUGE4_MAX, GAUGE4_NAME, ptr);
+        send_gauge_config(5, GAUGE5_MIN, GAUGE5_MAX, GAUGE5_NAME, ptr);
+        send_gauge_config(6, GAUGE6_MIN, GAUGE6_MAX, GAUGE6_NAME, ptr);
+
+        start_overlay_task(ptr);
+        return 1;
+
+    }
 	if (ntlibc_stricmp(commandline, "stop") == 0) {
         ptr->term_mode = PORT_TERM_VT100;
         stop_overlay_task(ptr);
         return 1;
 	} 
     
-    HELP_TEXT("Usage: tterm [start|stop]\r\n");
+    HELP_TEXT("Usage: tterm [start|stop|mqtt]\r\n");
 }
 
 /*****************************************************************************

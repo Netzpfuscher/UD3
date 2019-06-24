@@ -62,6 +62,15 @@ uint32_t alarm_get(uint32_t index, ALARMS * alm){
     }
 }
 
+uint32_t alarm_pop(ALARMS * alm){
+    if(uxQueueMessagesWaiting(qAlarms)){
+        xQueueReceive(qAlarms, alm,0);
+        return pdPASS;
+    }else{
+        return pdFAIL;
+    }
+}
+
 void alarm_clear(){
     xQueueReset(qAlarms);    
 }

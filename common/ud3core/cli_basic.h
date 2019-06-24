@@ -44,6 +44,7 @@
     
 #define PORT_TERM_VT100  0
 #define PORT_TERM_TT     1
+#define PORT_TERM_MQTT   2
     
 #define ETH_HW_DISABLED  0
 #define ETH_HW_W5500     1

@@ -71,7 +71,7 @@ void tsk_overlay_chart_start(){
     chart=1;
 }
 
-void show_overlay_100ms(port_str *ptr) {
+void show_overlay_100ms(port_str *ptr){
 
     if(ptr->term_mode == PORT_TERM_VT100){
         char buffer[50];
@@ -171,7 +171,7 @@ void show_overlay_100ms(port_str *ptr) {
         #endif
 
         if(ptr->term_mode==PORT_TERM_MQTT){
-            ALARMS temp;
+             ALARMS temp;
             if(alarm_pop(&temp)==pdPASS){
                 send_event(&temp,ptr);
             }

@@ -222,9 +222,6 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_tr_duty"     , configuration.max_tr_duty     , TYPE_UNSIGNED ,1      ,500    ,10     ,callback_ConfigFunction     ,"Max TR duty cycle [%]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_qcw_duty"    , configuration.max_qcw_duty    , TYPE_UNSIGNED ,1      ,500    ,10     ,callback_ConfigFunction     ,"Max QCW duty cycle [%]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"temp1_setpoint"  , configuration.temp1_setpoint  , TYPE_UNSIGNED ,0      ,100    ,0      ,NULL                        ,"Setpoint for fan [*C]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"batt_lockout_v"  , configuration.batt_lockout_v  , TYPE_UNSIGNED ,0      ,500    ,0      ,NULL                        ,"Battery lockout voltage [V]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"slr_fswitch"     , configuration.slr_fswitch     , TYPE_UNSIGNED ,0      ,1000   ,10     ,callback_ConfigFunction     ,"SLR switch frequency [kHz]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"slr_vbus"        , configuration.slr_vbus        , TYPE_UNSIGNED ,0      ,1000   ,0      ,NULL                        ,"SLR Vbus [V]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ps_scheme"       , configuration.ps_scheme       , TYPE_UNSIGNED ,0      ,5      ,0      ,callback_ConfigFunction     ,"Power supply sheme")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"autotune_s"      , configuration.autotune_s      , TYPE_UNSIGNED ,1      ,32     ,0      ,NULL                        ,"Number of samples for Autotune")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ud_name"         , configuration.ud_name         , TYPE_STRING   ,0      ,0      ,0      ,NULL                        ,"Name of the Coil [15 chars]")
@@ -321,8 +318,7 @@ void update_visibilty(void){
             set_visibility(confparam,CONF_SIZE, "ct2_offset",VISIBLE_TRUE);
         break;
     }
-    
-    
+
 }
 
 // clang-format on
@@ -392,12 +388,15 @@ uint8_t callback_baudrateFunction(parameter_entry * params, uint8_t index, port_
     return 1;
 }
 
+#define BURST_ON 0
+#define BURST_OFF 1
+
 /*****************************************************************************
 * Callback if a transient mode parameter is changed
 * Updates the interrupter hardware
 ******************************************************************************/
 uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, port_str *ptr) {
-    
+
 	interrupter.pw = param.pw;
 	interrupter.prd = param.pwd;
     
@@ -409,8 +408,7 @@ uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, port_str *p
 	return 1;
 }
 
-#define BURST_ON 0
-#define BURST_OFF 1
+
 
 /*****************************************************************************
 * Timer callback for burst mode
@@ -660,9 +658,14 @@ uint8_t command_tr(char *commandline, port_str *ptr) {
         return 0;
 	}
 	if (ntlibc_stricmp(commandline, "stop") == 0) {
-        interrupter.pw = 0;
-		update_interrupter();
-     
+        
+        if (xBurst_Timer != NULL) {
+			if(xTimerDelete(xBurst_Timer, 100 / portTICK_PERIOD_MS) != pdFALSE){
+			    xBurst_Timer = NULL;
+                burst_state = BURST_ON;
+            }
+        }
+
         SEND_CONST_STRING("Transient Disabled\r\n", ptr);    
  
 		interrupter.pw = 0;
@@ -769,8 +772,8 @@ uint8_t command_udkill(char *commandline, port_str *ptr) {
     }else if (ntlibc_stricmp(commandline, "get") == 0) {
         char buf[30];
         Term_Color_Red(ptr);
-        sprintf(buf, "Killbit: %u\r\n",interrupter_get_kill());
-        send_string(buf,ptr);
+        int ret = snprintf(buf,sizeof(buf), "Killbit: %u\r\n",interrupter_get_kill());
+        send_buffer((uint8_t*)buf,ret,ptr);
         Term_Color_White(ptr);
         return 1;
     }
@@ -1158,40 +1161,37 @@ uint8_t command_status(char *commandline, port_str *ptr) {
 * Initializes the teslaterm telemetry
 * Spawns the overlay task for telemetry stream generation
 ******************************************************************************/
+void init_tt(uint8_t with_chart, port_str *ptr){
+    send_gauge_config(0, GAUGE0_MIN, GAUGE0_MAX, GAUGE0_NAME, ptr);
+    send_gauge_config(1, GAUGE1_MIN, GAUGE1_MAX, GAUGE1_NAME, ptr);
+    send_gauge_config(2, GAUGE2_MIN, GAUGE2_MAX, GAUGE2_NAME, ptr);
+    send_gauge_config(3, GAUGE3_MIN, GAUGE3_MAX, GAUGE3_NAME, ptr);
+    send_gauge_config(4, GAUGE4_MIN, GAUGE4_MAX, GAUGE4_NAME, ptr);
+    send_gauge_config(5, GAUGE5_MIN, GAUGE5_MAX, GAUGE5_NAME, ptr);
+    send_gauge_config(6, GAUGE6_MIN, GAUGE6_MAX, GAUGE6_NAME, ptr);
+    
+    if(with_chart==pdTRUE){
+        send_chart_config(0, CHART0_MIN, CHART0_MAX, CHART0_OFFSET, CHART0_UNIT, CHART0_NAME, ptr);
+        send_chart_config(1, CHART1_MIN, CHART1_MAX, CHART1_OFFSET, CHART1_UNIT, CHART1_NAME, ptr);
+        send_chart_config(2, CHART2_MIN, CHART2_MAX, CHART2_OFFSET, CHART2_UNIT, CHART2_NAME, ptr);
+        send_chart_config(3, CHART3_MIN, CHART3_MAX, CHART3_OFFSET, CHART3_UNIT, CHART3_NAME, ptr);
+    }
+    start_overlay_task(ptr);
+}
+
 uint8_t command_tterm(char *commandline, port_str *ptr){
     SKIP_SPACE(commandline);
     CHECK_NULL(commandline);
     
 	if (ntlibc_stricmp(commandline, "start") == 0) {
         ptr->term_mode = PORT_TERM_TT;
-        send_gauge_config(0, GAUGE0_MIN, GAUGE0_MAX, GAUGE0_NAME, ptr);
-        send_gauge_config(1, GAUGE1_MIN, GAUGE1_MAX, GAUGE1_NAME, ptr);
-        send_gauge_config(2, GAUGE2_MIN, GAUGE2_MAX, GAUGE2_NAME, ptr);
-        send_gauge_config(3, GAUGE3_MIN, GAUGE3_MAX, GAUGE3_NAME, ptr);
-        send_gauge_config(4, GAUGE4_MIN, GAUGE4_MAX, GAUGE4_NAME, ptr);
-        send_gauge_config(5, GAUGE5_MIN, GAUGE5_MAX, GAUGE5_NAME, ptr);
-        send_gauge_config(6, GAUGE6_MIN, GAUGE6_MAX, GAUGE6_NAME, ptr);
-        
-        send_chart_config(0, CHART0_MIN, CHART0_MAX, CHART0_OFFSET, CHART0_UNIT, CHART0_NAME, ptr);
-        send_chart_config(1, CHART1_MIN, CHART1_MAX, CHART1_OFFSET, CHART1_UNIT, CHART1_NAME, ptr);
-        send_chart_config(2, CHART2_MIN, CHART2_MAX, CHART2_OFFSET, CHART2_UNIT, CHART2_NAME, ptr);
-        send_chart_config(3, CHART3_MIN, CHART3_MAX, CHART3_OFFSET, CHART3_UNIT, CHART3_NAME, ptr);
-
-        start_overlay_task(ptr);
+        init_tt(pdTRUE,ptr);
         return 1;
 
     }
     if (ntlibc_stricmp(commandline, "mqtt") == 0) {
         ptr->term_mode = PORT_TERM_MQTT;
-        send_gauge_config(0, GAUGE0_MIN, GAUGE0_MAX, GAUGE0_NAME, ptr);
-        send_gauge_config(1, GAUGE1_MIN, GAUGE1_MAX, GAUGE1_NAME, ptr);
-        send_gauge_config(2, GAUGE2_MIN, GAUGE2_MAX, GAUGE2_NAME, ptr);
-        send_gauge_config(3, GAUGE3_MIN, GAUGE3_MAX, GAUGE3_NAME, ptr);
-        send_gauge_config(4, GAUGE4_MIN, GAUGE4_MAX, GAUGE4_NAME, ptr);
-        send_gauge_config(5, GAUGE5_MIN, GAUGE5_MAX, GAUGE5_NAME, ptr);
-        send_gauge_config(6, GAUGE6_MIN, GAUGE6_MAX, GAUGE6_NAME, ptr);
-
-        start_overlay_task(ptr);
+        init_tt(pdFALSE,ptr);
         return 1;
 
     }

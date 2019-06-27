@@ -71,20 +71,20 @@
 #define GAUGE4_MAX 1000
 #define GAUGE4_VAR telemetry.primary_i
 #define GAUGE4_SLOW 0
-/*
+
 #define GAUGE5_NAME "Voices"
 #define GAUGE5_MIN 0
 #define GAUGE5_MAX 4        
 #define GAUGE5_VAR telemetry.midi_voices
 #define GAUGE5_SLOW 0
-*/  
-    
+ 
+/*    
 #define GAUGE5_NAME "Fres"
 #define GAUGE5_MIN 0
 #define GAUGE5_MAX 1000        
 #define GAUGE5_VAR telemetry.fres
 #define GAUGE5_SLOW 0
-    
+*/    
 #define GAUGE6_NAME "Fuse"
 #define GAUGE6_MIN 0
 #define GAUGE6_MAX 100

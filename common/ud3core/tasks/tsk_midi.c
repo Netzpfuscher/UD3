@@ -45,15 +45,12 @@ uint8 tsk_midi_initVar = 0u;
 #include "telemetry.h"
 #include "alarmevent.h"
 #include <device.h>
-#include <math.h>
 #include <stdlib.h>
 
 #define PITCHBEND_ZEROBIAS (0x2000)
 #define PITCHBEND_DIVIDER ((uint32_t)0x1fff)
 
 #define N_CHANNEL 4
-#define N_BUFFER 8
-#define N_DISPCHANNEL 4
 
 #define N_MIDICHANNEL 16
 
@@ -62,13 +59,6 @@ uint8 tsk_midi_initVar = 0u;
 #define COMMAND_CONTROLCHANGE 2
 #define COMMAND_PITCHBEND 3
 
-// MIDI Find the frequency from the tone number
-#define MIDITONENUM_FREQ(n) (440.0 * pow(2.0, ((n)-69.0) / 12.0))
-// Calculate 1/2 cycle count number from frequency
-// SG_Timer Is divided by this to judge the plus or minus of the square wave by odd number or even number
-// 2 counts = 1 / 150000 sec, n counts = 1 / f = n / (150000 * 2)
-// n = 300000 / f, n / 2 = 150000 / f
-#define FREQ_HALFCOUNT(f) ((int16)floor(150000.0 / (f)))
 
 const uint8_t kill_msg[3] = {0xb0, 0x77, 0x00};
 
@@ -88,13 +78,12 @@ typedef struct __note__ {
 	} data;
 } NOTE;
 
-struct pulse_str {
+typedef struct __pulse__ {
 	uint8_t  volume;
 	uint16_t pw;
-};
+} PULSE;
 
-struct pulse_str isr1_pulse;
-struct pulse_str isr2_pulse;
+
 
 uint8_t skip_flag = 0; // Skipping system exclusive messages
 
@@ -112,7 +101,6 @@ typedef struct __channel__ {
 	uint8 miditone;  // Midi's tone number (0-127)
 	uint8 volume;	// Volume (0 - 127) Not immediately reflected in port
 	uint8 updated;   // Was it updated?
-	uint8 displayed; // Displayed 0 ... Displayed, 1 ... Note On, 2 ... Note Off
 } CHANNEL;
 
 typedef struct __port__ {
@@ -123,7 +111,6 @@ typedef struct __port__ {
 
 PORT *isr_port_ptr;
 CHANNEL *channel_ptr;
-MIDICH *midich_ptr;
 
 // Note on & off
 
@@ -216,12 +203,13 @@ void handle_qcw(){
 	}
 }
 
+
 CY_ISR(isr_midi) {
     if(qcw_reg){
         handle_qcw();
         return;
     }
-    
+    PULSE pulse;
 	uint8_t ch;
 	uint8_t flag[N_CHANNEL];
 	static uint8_t old_flag[N_CHANNEL];
@@ -234,16 +222,16 @@ CY_ISR(isr_midi) {
 			}
 		}
 		if (flag[ch] > old_flag[ch]) {
-            isr1_pulse.volume = isr_port_ptr[ch].volume;
-            isr1_pulse.pw = interrupter.pw;
-            xQueueSendFromISR(qPulse,&isr1_pulse,0);;
+            pulse.volume = isr_port_ptr[ch].volume;
+            pulse.pw = interrupter.pw;
+            xQueueSendFromISR(qPulse,&pulse,0);;
 		}
 		old_flag[ch] = flag[ch];
    
 	}
 
-    if(xQueueReceiveFromISR(qPulse,&isr1_pulse,0)){
-        interrupter_oneshot(isr1_pulse.pw, isr1_pulse.volume);
+    if(xQueueReceiveFromISR(qPulse,&pulse,0)){
+        interrupter_oneshot(pulse.pw, pulse.volume);
     }
 
 }
@@ -295,7 +283,7 @@ CY_ISR(isr_sid) {
         isr_port_ptr[2].halfcount = random;
     }
     
-    
+    PULSE pulse;
 	uint8_t ch;
 	uint8_t flag[SID_CHANNELS];
 	static uint8_t old_flag[SID_CHANNELS];
@@ -309,16 +297,16 @@ CY_ISR(isr_sid) {
 			}
 		}
 		if (flag[ch] > old_flag[ch]) {
-            isr1_pulse.volume = isr_port_ptr[ch].volume;
-            isr1_pulse.pw = sid_frm.master_pw;
-            xQueueSendFromISR(qPulse,&isr1_pulse,0);
+            pulse.volume = isr_port_ptr[ch].volume;
+            pulse.pw = sid_frm.master_pw;
+            xQueueSendFromISR(qPulse,&pulse,0);
 		}
 		old_flag[ch] = flag[ch];
    
 	}
 
-    if(xQueueReceiveFromISR(qPulse,&isr1_pulse,0)){
-        interrupter_oneshot(isr1_pulse.pw, isr1_pulse.volume);
+    if(xQueueReceiveFromISR(qPulse,&pulse,0)){
+        interrupter_oneshot(pulse.pw, pulse.volume);
     }
 
 	
@@ -326,9 +314,9 @@ CY_ISR(isr_sid) {
 }
 
 CY_ISR(isr_interrupter) {
-
-    if(xQueueReceiveFromISR(qPulse,&isr2_pulse,0)){
-        interrupter_oneshot(isr2_pulse.pw, isr2_pulse.volume);
+    PULSE pulse;
+    if(xQueueReceiveFromISR(qPulse,&pulse,0)){
+        interrupter_oneshot(pulse.pw, pulse.volume);
     }
 	Offtime_ReadStatusRegister();
 }
@@ -380,8 +368,6 @@ void ChInit(CHANNEL channel[]) {
 	for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
 		channel[ch].volume = 0;
 		channel[ch].updated = 0;
-		if (ch < N_DISPCHANNEL)
-			channel[ch].displayed = 0;
 	}
 }
 
@@ -429,8 +415,6 @@ void process(NOTE *v, CHANNEL channel[], MIDICH midich[]) {
 				channel[ch].miditone = v->data.noteonoff.tone;
 				channel[ch].volume = v->data.noteonoff.vol;
 				channel[ch].updated = 1; // This port has been updated
-				if (ch < N_DISPCHANNEL)
-					channel[ch].displayed = 1; // This port is undrawn
 			}
 		} else {								 // Note OFF
 			for (ch = 0; ch < N_CHANNEL; ch++) { // Search for ports that are already ringing with the same MIDI channel & node number
@@ -441,8 +425,6 @@ void process(NOTE *v, CHANNEL channel[], MIDICH midich[]) {
 
 				channel[ch].volume = 0;
 				channel[ch].updated = 1; // This port has been updated
-				if (ch < N_DISPCHANNEL)
-					channel[ch].displayed = 2; // This port is undrawn
 			}
 		}
 	} else if (v->command == COMMAND_CONTROLCHANGE) { // Control Change Processing
@@ -478,7 +460,6 @@ void process(NOTE *v, CHANNEL channel[], MIDICH midich[]) {
 			for (ch = 0; ch < N_CHANNEL; ch++) {
 				channel[ch].volume = 0;
 				channel[ch].updated = 1;
-				channel[ch].displayed = 2;
 			}
 			break;
 		case 0x7B: //Kill all notes on channel
@@ -486,7 +467,6 @@ void process(NOTE *v, CHANNEL channel[], MIDICH midich[]) {
 				if (channel[ch].volume > 0 && channel[ch].midich == v->midich) {
 					channel[ch].volume = 0;
 					channel[ch].updated = 1;
-					channel[ch].displayed = 2;
 				}
 			}
 			break;
@@ -531,9 +511,6 @@ void reflect(PORT port[], CHANNEL channel[], MIDICH midich[]) {
                 port[ch].halfcount= (150000<<14) / (port[ch].freq>>2);
                 port[ch].freq = port[ch].freq >>16;
 
-                
-				if (ch < N_DISPCHANNEL)
-					channel[ch].displayed = 1; // Re-display required
 			}
 			port[ch].volume = (int32)channel[ch].volume * midich[mch].expression / 127; // Reflect Expression here
 			channel[ch].updated = 0;													// Mission channel update work done
@@ -611,7 +588,7 @@ void tsk_midi_TaskProc(void *pvParameters) {
 	/* `#START TASK_VARIABLES` */
 	qMIDI_rx = xQueueCreate(256, sizeof(NOTE));
     qSID = xQueueCreate(64, sizeof(struct sid_f));
-    qPulse = xQueueCreate(8, sizeof(struct pulse_str));
+    qPulse = xQueueCreate(8, sizeof(PULSE));
 
 	NOTE note_struct;
 
@@ -621,7 +598,6 @@ void tsk_midi_TaskProc(void *pvParameters) {
 
 	// MIDI channel status
 	MIDICH midich[N_MIDICHANNEL];
-    midich_ptr=midich_ptr;
 
 	// Port status (updated at regular time intervals according to the status of the sound source channel)
 	PORT port[N_CHANNEL];

@@ -63,6 +63,8 @@ void configure_CT1(void) {
 	if (max_tr_cl_dac_val_temp > 255) {
 		max_tr_cl_dac_val_temp = 255;
 	}
+    
+    params.max_tr_cl_dac_val = round(max_tr_cl_dac_val_temp);
 
 	max_qcw_cl_dac_val_temp = (((float)configuration.max_qcw_current / (float)configuration.ct1_ratio) * configuration.ct1_burden) / (DAC_VOLTS_PER_STEP * 10);
 	if (max_qcw_cl_dac_val_temp > 255) {

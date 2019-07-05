@@ -358,8 +358,8 @@ CY_ISR(isr_sid) {
 		}
 		if (flag[ch] > old_flag[ch]) {
             pulse.volume = isr_port_ptr[ch].volume;
-            //pulse.pw = sid_frm.master_pw;
-            pulse.pw = isr_port_ptr[ch].volume;
+            pulse.pw = sid_frm.master_pw;
+            //pulse.pw = isr_port_ptr[ch].volume;
             xQueueSendFromISR(qPulse,&pulse,0);
 		}
 		old_flag[ch] = flag[ch];

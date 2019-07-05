@@ -60,6 +60,10 @@ struct sid_f{
     uint16_t pw[3];
     uint8_t gate[3];
     uint8_t wave[3];
+    uint8_t attack[3];
+    uint8_t decay[3];
+    uint8_t sustain[3];
+    uint8_t release[3];
     uint16_t master_pw;
 };
 

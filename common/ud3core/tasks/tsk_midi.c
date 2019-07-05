@@ -238,6 +238,30 @@ CY_ISR(isr_midi) {
 
 #define SID_CHANNELS 3
 
+#define ADSR_IDLE    0
+#define ADSR_ATTACK  1
+#define ADSR_DECAY   2
+#define ADSR_SUSTAIN 3
+#define ADSR_RELEASE 4
+
+static const uint8_t envelope[16] = {
+    0,
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    8,
+    20,
+    41,
+    67,
+    83,
+    251,
+    255,
+    255};
+
 CY_ISR(isr_sid) {
     
     if(qcw_reg){
@@ -247,21 +271,22 @@ CY_ISR(isr_sid) {
     
     telemetry.midi_voices=0;
     static uint8_t cnt=0;
+    static uint8_t adsr_state[3]={ADSR_IDLE,ADSR_IDLE,ADSR_IDLE};
+    static uint8_t old_gate[3]={0,0,0};
+    static uint8_t adsr_cnt[3]={0,0,0};
+    
     if (cnt >212){  // 50 Hz
         cnt=0;
         if(xQueueReceiveFromISR(qSID,&sid_frm,0)){
-            isr_port_ptr[0].halfcount = sid_frm.half[0];
-            isr_port_ptr[1].halfcount = sid_frm.half[1];
-            isr_port_ptr[2].halfcount = sid_frm.half[2];
-            isr_port_ptr[0].volume = sid_frm.gate[0]*127;
-            isr_port_ptr[1].volume = sid_frm.gate[1]*127;
-            isr_port_ptr[2].volume = sid_frm.gate[2]*127;
-            sid_frm.pw[0]=sid_frm.pw[0]>>4;
-            sid_frm.pw[1]=sid_frm.pw[1]>>4;
-            sid_frm.pw[2]=sid_frm.pw[2]>>4;
-            //isr_port_ptr[0].volume = sid_frm.gate[0]* sid_frm.pw[0];
-            //isr_port_ptr[1].volume = sid_frm.gate[1]* sid_frm.pw[1];
-            //isr_port_ptr[2].volume = sid_frm.gate[2]* sid_frm.pw[2];
+            
+            for(uint8_t i=0;i<SID_CHANNELS;i++){
+                isr_port_ptr[i].halfcount = sid_frm.half[i];
+                if(sid_frm.gate[i] > old_gate[i]) adsr_state[i]=ADSR_ATTACK;  //Rising edge
+                if(sid_frm.gate[i] < old_gate[i]) adsr_state[i]=ADSR_RELEASE;  //Falling edge
+                //isr_port_ptr[i].volume=127*sid_frm.gate[i];
+                sid_frm.pw[i]=sid_frm.pw[i]>>4;
+                old_gate[i] = sid_frm.gate[i];
+            }
         }else{
             isr_port_ptr[0].volume = 0;
             isr_port_ptr[1].volume = 0;
@@ -289,6 +314,41 @@ CY_ISR(isr_sid) {
 	static uint8_t old_flag[SID_CHANNELS];
 	uint32 r = SG_Timer_ReadCounter();
 	for (ch = 0; ch < SID_CHANNELS; ch++) {
+        switch (adsr_state[ch]){
+            case ADSR_ATTACK:
+                if(adsr_cnt[ch]>=envelope[sid_frm.attack[ch]]){
+                    isr_port_ptr[ch].volume++;
+                    if(isr_port_ptr[ch].volume>=127) adsr_state[ch]=ADSR_DECAY;
+                    adsr_cnt[ch]=0;
+                }else{
+                    adsr_cnt[ch]++;
+                }
+            break;
+            case ADSR_DECAY:
+                if(adsr_cnt[ch]>=envelope[sid_frm.decay[ch]]){
+                    isr_port_ptr[ch].volume--;
+                    if(isr_port_ptr[ch].volume<=sid_frm.sustain[ch]) adsr_state[ch]=ADSR_SUSTAIN;
+                    adsr_cnt[ch]=0;
+                }else{
+                    adsr_cnt[ch]++;
+                }
+            break;
+            case ADSR_SUSTAIN:
+                isr_port_ptr[ch].volume = sid_frm.sustain[ch];
+            break;
+            case ADSR_RELEASE:
+                if(adsr_cnt[ch]>=envelope[sid_frm.release[ch]]){
+                    isr_port_ptr[ch].volume--;
+                    if(isr_port_ptr[ch].volume==0 || isr_port_ptr[ch].volume>127) adsr_state[ch]=ADSR_IDLE;
+                    adsr_cnt[ch]=0;
+                }else{
+                    adsr_cnt[ch]++;
+                }
+            break;
+        }
+        
+        
+        
 		flag[ch] = 0;
 		if (isr_port_ptr[ch].volume > 0) {
             telemetry.midi_voices++;
@@ -298,19 +358,20 @@ CY_ISR(isr_sid) {
 		}
 		if (flag[ch] > old_flag[ch]) {
             pulse.volume = isr_port_ptr[ch].volume;
-            pulse.pw = sid_frm.master_pw;
+            //pulse.pw = sid_frm.master_pw;
+            pulse.pw = isr_port_ptr[ch].volume;
             xQueueSendFromISR(qPulse,&pulse,0);
 		}
 		old_flag[ch] = flag[ch];
    
+        
 	}
 
     if(xQueueReceiveFromISR(qPulse,&pulse,0)){
         interrupter_oneshot(pulse.pw, pulse.volume);
     }
-
-	
-    
+ 
+   
 }
 
 CY_ISR(isr_interrupter) {

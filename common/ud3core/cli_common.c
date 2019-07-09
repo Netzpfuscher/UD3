@@ -171,6 +171,7 @@ void init_config(){
     param.qcw_ramp = 2;
     param.qcw_repeat = 500;
     param.transpose = 0;
+    param.env = 7;
     param.synth = SYNTH_MIDI;
     
     i2t_set_limit(configuration.max_const_i,configuration.max_fault_i,10000);
@@ -238,6 +239,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"baudrate"        , configuration.baudrate        , TYPE_UNSIGNED ,1200   ,4000000,0      ,callback_baudrateFunction   ,"Serial baudrate")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"r_bus"           , configuration.r_top           , TYPE_UNSIGNED ,100    ,1000000,1000   ,NULL                        ,"Series resistor of voltage input [kOhm]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"charge_delay"    , configuration.chargedelay     , TYPE_UNSIGNED ,1      ,60000  ,0      ,callback_ConfigFunction     ,"Delay for the charge relay [ms]")
+    ADD_PARAM(PARAM_DEFAULT  ,VISIBLE_TRUE ,"env"            , param.env                     , TYPE_UNSIGNED ,0      ,15     ,0      ,NULL                        ,"Envelope")
 };
 
 /*****************************************************************************

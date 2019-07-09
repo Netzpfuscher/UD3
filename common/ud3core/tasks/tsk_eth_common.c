@@ -211,12 +211,9 @@ void process_sid(uint8_t* ptr, uint16_t len) {
                 SID_register=0;
                 start_frame=1;
             }
-            
             len--;
-            ptr++;
-            
+            ptr++;   
         }
-        
     }
 }
 

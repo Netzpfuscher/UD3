@@ -50,7 +50,7 @@ uint8 tsk_midi_initVar = 0u;
 #define PITCHBEND_ZEROBIAS (0x2000)
 #define PITCHBEND_DIVIDER ((uint32_t)0x1fff)
 
-#define N_CHANNEL 4
+#define N_CHANNEL 8
 
 #define N_MIDICHANNEL 16
 
@@ -59,6 +59,8 @@ uint8 tsk_midi_initVar = 0u;
 #define COMMAND_CONTROLCHANGE 2
 #define COMMAND_PITCHBEND 3
 
+
+void reflect();
 
 const uint8_t kill_msg[3] = {0xb0, 0x77, 0x00};
 
@@ -88,7 +90,7 @@ typedef struct __pulse__ {
 uint8_t skip_flag = 0; // Skipping system exclusive messages
 
 typedef struct __midich__ {
-	uint8 expression; // Expression: Control change (Bxh) 0 bH
+	//uint8 expression; // Expression: Control change (Bxh) 0 bH
 	uint8 rpn_lsb;	// RPN (LSB): Control change (Bxh) 64 H
 	uint8 rpn_msb;	// RPN (MSB): Control change (Bxh) 65 H
 	uint8 bendrange;  // Pitch Bend Sensitivity (0 - ffh)
@@ -101,16 +103,42 @@ typedef struct __channel__ {
 	uint8 miditone;  // Midi's tone number (0-127)
 	uint8 volume;	// Volume (0 - 127) Not immediately reflected in port
 	uint8 updated;   // Was it updated?
+    uint16 halfcount;
+    uint32 freq;
+    uint8 adsr_state;
+    uint8 adsr_count;
+    uint8 sustain;
+    uint8 old_gate;
 } CHANNEL;
-
+/*
 typedef struct __port__ {
 	uint16 halfcount; // A count that determines the frequency of port (for 1/2 period)
 	uint8 volume;	 // Volume of port (0 - 127)
     uint32 freq;
 } PORT;
 
-PORT *isr_port_ptr;
-CHANNEL *channel_ptr;
+typedef struct __adsr__ {
+	uint8_t state;
+    uint8_t count;
+    uint8_t old_gate;
+} ADSR;
+
+*/
+
+//PORT *isr_port_ptr;
+//CHANNEL *channel_ptr;
+
+
+	// Tone generator channel status (updated according to MIDI messages)
+	CHANNEL channel[N_CHANNEL];
+   // channel_ptr=channel;
+
+	// MIDI channel status
+	MIDICH midich[N_MIDICHANNEL];
+
+	// Port status (updated at regular time intervals according to the status of the sound source channel)
+	//PORT port[N_CHANNEL];
+	//isr_port_ptr = port;
 
 // Note on & off
 
@@ -203,6 +231,18 @@ void handle_qcw(){
 	}
 }
 
+uint8_t old_flag[N_CHANNEL];
+
+#define ADSR_IDLE    0
+#define ADSR_ATTACK  1
+#define ADSR_DECAY   2
+#define ADSR_SUSTAIN 3
+#define ADSR_RELEASE 4
+
+//ADSR adsr[N_CHANNEL];
+
+static const uint8_t envelope[16] = {0,0,1,2,3,4,5,6,8,20,41,67,83,251,255,255};
+
 
 CY_ISR(isr_midi) {
     if(qcw_reg){
@@ -210,21 +250,62 @@ CY_ISR(isr_midi) {
         return;
     }
     PULSE pulse;
-	uint8_t ch;
 	uint8_t flag[N_CHANNEL];
-	static uint8_t old_flag[N_CHANNEL];
 	uint32 r = SG_Timer_ReadCounter();
-	for (ch = 0; ch < N_CHANNEL; ch++) {
-		flag[ch] = 0;
-		if (isr_port_ptr[ch].volume > 0) {
-			if ((r / isr_port_ptr[ch].halfcount) % 2 > 0) {
+    telemetry.midi_voices=0;
+	for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
+
+		switch (channel[ch].adsr_state){
+            case ADSR_ATTACK:
+                if(channel[ch].adsr_count>=envelope[param.env]){
+                    channel[ch].volume++;
+                    if(channel[ch].volume>=127){
+                        channel[ch].volume=127;
+                        channel[ch].adsr_state=ADSR_DECAY;
+                    }
+                    channel[ch].adsr_count=0;
+                }else{
+                    channel[ch].adsr_count++;
+                }
+            break;
+            case ADSR_DECAY:
+                if(channel[ch].adsr_count>=envelope[param.env]){
+                    channel[ch].volume--;
+                    if(channel[ch].volume<=channel[ch].sustain) channel[ch].adsr_state=ADSR_SUSTAIN;
+                    channel[ch].adsr_count=0;
+                }else{
+                    channel[ch].adsr_count++;
+                }
+            break;
+            case ADSR_SUSTAIN:
+                channel[ch].volume = channel[ch].sustain;
+            break;
+            case ADSR_RELEASE:
+                if(channel[ch].adsr_count>=envelope[param.env]){
+                    channel[ch].volume--;
+                    if(channel[ch].volume==0 || channel[ch].volume>127) {
+                        channel[ch].volume=0;
+                        channel[ch].adsr_state=ADSR_IDLE;
+                    }
+                    channel[ch].adsr_count=0;
+                }else{
+                    channel[ch].adsr_count++;
+                }
+            break;
+        }
+        
+        flag[ch] = 0;
+		if (channel[ch].volume > 0) {
+            telemetry.midi_voices++;
+			if ((r / channel[ch].halfcount) % 2 > 0) {
 				flag[ch] = 1;
 			}
 		}
 		if (flag[ch] > old_flag[ch]) {
-            pulse.volume = isr_port_ptr[ch].volume;
-            pulse.pw = interrupter.pw;
-            xQueueSendFromISR(qPulse,&pulse,0);;
+            pulse.volume = channel[ch].volume;
+            //pulse.pw = interrupter.pw;
+            pulse.pw = channel[ch].volume;
+            xQueueSendFromISR(qPulse,&pulse,0);
 		}
 		old_flag[ch] = flag[ch];
    
@@ -238,29 +319,6 @@ CY_ISR(isr_midi) {
 
 #define SID_CHANNELS 3
 
-#define ADSR_IDLE    0
-#define ADSR_ATTACK  1
-#define ADSR_DECAY   2
-#define ADSR_SUSTAIN 3
-#define ADSR_RELEASE 4
-
-static const uint8_t envelope[16] = {
-    0,
-    0,
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    8,
-    20,
-    41,
-    67,
-    83,
-    251,
-    255,
-    255};
 
 CY_ISR(isr_sid) {
     
@@ -271,26 +329,22 @@ CY_ISR(isr_sid) {
     
     telemetry.midi_voices=0;
     static uint8_t cnt=0;
-    static uint8_t adsr_state[3]={ADSR_IDLE,ADSR_IDLE,ADSR_IDLE};
-    static uint8_t old_gate[3]={0,0,0};
-    static uint8_t adsr_cnt[3]={0,0,0};
     
     if (cnt >212){  // 50 Hz
         cnt=0;
         if(xQueueReceiveFromISR(qSID,&sid_frm,0)){
             
             for(uint8_t i=0;i<SID_CHANNELS;i++){
-                isr_port_ptr[i].halfcount = sid_frm.half[i];
-                if(sid_frm.gate[i] > old_gate[i]) adsr_state[i]=ADSR_ATTACK;  //Rising edge
-                if(sid_frm.gate[i] < old_gate[i]) adsr_state[i]=ADSR_RELEASE;  //Falling edge
-                //isr_port_ptr[i].volume=127*sid_frm.gate[i];
+                channel[i].halfcount = sid_frm.half[i];
+                if(sid_frm.gate[i] > channel[i].old_gate) channel[i].adsr_state=ADSR_ATTACK;  //Rising edge
+                if(sid_frm.gate[i] < channel[i].old_gate) channel[i].adsr_state=ADSR_RELEASE;  //Falling edge
                 sid_frm.pw[i]=sid_frm.pw[i]>>4;
-                old_gate[i] = sid_frm.gate[i];
+                channel[i].old_gate = sid_frm.gate[i];
             }
         }else{
-            isr_port_ptr[0].volume = 0;
-            isr_port_ptr[1].volume = 0;
-            isr_port_ptr[2].volume = 0;
+            channel[0].volume = 0;
+            channel[1].volume = 0;
+            channel[2].volume = 0;
         }
     }else{
         cnt++;
@@ -299,67 +353,64 @@ CY_ISR(isr_sid) {
     uint16_t random = rand();
     random = random >>8;
     if(sid_frm.wave[0]){
-        isr_port_ptr[0].halfcount = random;
+        channel[0].halfcount = random;
     }
     if(sid_frm.wave[1]){
-        isr_port_ptr[1].halfcount = random;
+        channel[1].halfcount = random;
     }
     if(sid_frm.wave[2]){
-        isr_port_ptr[2].halfcount = random;
+        channel[2].halfcount = random;
     }
     
     PULSE pulse;
-	uint8_t ch;
 	uint8_t flag[SID_CHANNELS];
-	static uint8_t old_flag[SID_CHANNELS];
 	uint32 r = SG_Timer_ReadCounter();
-	for (ch = 0; ch < SID_CHANNELS; ch++) {
-        switch (adsr_state[ch]){
+	for (uint8_t ch = 0; ch < SID_CHANNELS; ch++) {
+        switch (channel[ch].adsr_state){
             case ADSR_ATTACK:
-                if(adsr_cnt[ch]>=envelope[sid_frm.attack[ch]]){
-                    isr_port_ptr[ch].volume++;
-                    if(isr_port_ptr[ch].volume>=127) adsr_state[ch]=ADSR_DECAY;
-                    adsr_cnt[ch]=0;
+                if(channel[ch].adsr_count>=envelope[sid_frm.attack[ch]]){
+                    channel[ch].volume++;
+                    if(channel[ch].volume>=127) channel[ch].adsr_state=ADSR_DECAY;
+                    channel[ch].adsr_count=0;
                 }else{
-                    adsr_cnt[ch]++;
+                    channel[ch].adsr_count++;
                 }
             break;
             case ADSR_DECAY:
-                if(adsr_cnt[ch]>=envelope[sid_frm.decay[ch]]){
-                    isr_port_ptr[ch].volume--;
-                    if(isr_port_ptr[ch].volume<=sid_frm.sustain[ch]) adsr_state[ch]=ADSR_SUSTAIN;
-                    adsr_cnt[ch]=0;
+                if(channel[ch].adsr_count>=envelope[sid_frm.decay[ch]]){
+                    channel[ch].volume--;
+                    if(channel[ch].volume<=sid_frm.sustain[ch]) channel[ch].adsr_state=ADSR_SUSTAIN;
+                    channel[ch].adsr_count=0;
                 }else{
-                    adsr_cnt[ch]++;
+                    channel[ch].adsr_count++;
                 }
             break;
             case ADSR_SUSTAIN:
-                isr_port_ptr[ch].volume = sid_frm.sustain[ch];
+                channel[ch].volume = sid_frm.sustain[ch];
             break;
             case ADSR_RELEASE:
-                if(adsr_cnt[ch]>=envelope[sid_frm.release[ch]]){
-                    isr_port_ptr[ch].volume--;
-                    if(isr_port_ptr[ch].volume==0 || isr_port_ptr[ch].volume>127) adsr_state[ch]=ADSR_IDLE;
-                    adsr_cnt[ch]=0;
+                if(channel[ch].adsr_count>=envelope[sid_frm.release[ch]]){
+                    channel[ch].volume--;
+                    if(channel[ch].volume==0 || channel[ch].volume>127) channel[ch].adsr_state=ADSR_IDLE;
+                    channel[ch].adsr_count=0;
                 }else{
-                    adsr_cnt[ch]++;
+                    channel[ch].adsr_count++;
                 }
             break;
         }
         
-        
-        
+
 		flag[ch] = 0;
-		if (isr_port_ptr[ch].volume > 0) {
+		if (channel[ch].volume > 0) {
             telemetry.midi_voices++;
-			if ((r / isr_port_ptr[ch].halfcount) % 2 > 0) {
+			if ((r / channel[ch].halfcount) % 2 > 0) {
 				flag[ch] = 1;
 			}
 		}
 		if (flag[ch] > old_flag[ch]) {
-            pulse.volume = isr_port_ptr[ch].volume;
-            pulse.pw = sid_frm.master_pw;
-            //pulse.pw = isr_port_ptr[ch].volume;
+            pulse.volume = channel[ch].volume;
+            //pulse.pw = sid_frm.master_pw;
+            pulse.pw = channel[ch].volume;
             xQueueSendFromISR(qPulse,&pulse,0);
 		}
 		old_flag[ch] = flag[ch];
@@ -433,15 +484,15 @@ void ChInit(CHANNEL channel[]) {
 }
 
 // All channels of the port volume off
-void PortVolumeAllOff(PORT port[]) {
+void PortVolumeAllOff() {
 	for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
-		port[ch].volume = 0;
+		channel[ch].volume = 0;
 	}
 }
 
 void MidichInit(MIDICH ptr[]) {
 	for (uint8_t cnt = 0; cnt < N_MIDICHANNEL; cnt++) {
-		ptr[cnt].expression = 127; // Expression (0 - 127): Control change (Bxh) 0 BH xx
+		//ptr[cnt].expression = 127; // Expression (0 - 127): Control change (Bxh) 0 BH xx
 
 		// Keep RPN in reset state: In order to avoid malfunctioning when data entry comes in suddenly
 		ptr[cnt].rpn_lsb = 127; // RPN (LSB): Control change (Bxh) 64H xx
@@ -456,13 +507,32 @@ void MidichInit(MIDICH ptr[]) {
 	}
 }
 
-void process(NOTE *v, CHANNEL channel[], MIDICH midich[]) {
+void reflect_ch(uint8_t ch) {
+	uint8_t mch;
+    uint32_t pb;
+	// Reflect the status of the updated tone generator channel & MIDI channel on the port
+	mch = channel[ch].midich;
+	if (channel[ch].adsr_state) {
+        pb = ((((uint32_t)midich[mch].pitchbend*midich[mch].bendrange)<<10) / PITCHBEND_DIVIDER)<<6;
+        channel[ch].freq=Q16n16_mtof((channel[ch].miditone<<16)+pb);
+        channel[ch].halfcount= (150000<<14) / (channel[ch].freq>>2);
+        channel[ch].freq = channel[ch].freq >>16;
+
+	}
+	//port[ch].volume = (int32)channel[ch].volume * midich[mch].expression / 127; // Reflect Expression here
+	channel[ch].updated = 0;													// Mission channel update work done
+}
+
+
+void process(NOTE *v) {
 	uint8_t ch;
 	if (v->command == COMMAND_NOTEONOFF) {		 // Processing of note on / off
 		if (v->data.noteonoff.vol > 0) {		 // Note ON
 			for (ch = 0; ch < N_CHANNEL; ch++) { // Search for ports that are already ringing with the same MIDI channel & node number
-				if (channel[ch].volume > 0 && channel[ch].midich == v->midich && channel[ch].miditone == v->data.noteonoff.tone)
+				if (channel[ch].volume > 0 && channel[ch].midich == v->midich && channel[ch].miditone == v->data.noteonoff.tone){
+                    
 					break;
+                }
 			}
 			if (ch == N_CHANNEL) { // When there is no already-sounding port
 				// First time ringing: search for port of off
@@ -474,26 +544,38 @@ void process(NOTE *v, CHANNEL channel[], MIDICH midich[]) {
 			if (ch < N_CHANNEL) { // A port was found
 				channel[ch].midich = v->midich;
 				channel[ch].miditone = v->data.noteonoff.tone;
-				channel[ch].volume = v->data.noteonoff.vol;
+				//channel[ch].volume = v->data.noteonoff.vol;
+                channel[ch].sustain = v->data.noteonoff.vol;
+  
+                if(v->data.noteonoff.vol>0){
+                    channel[ch].adsr_state = ADSR_ATTACK;
+                }else{
+                    channel[ch].adsr_state = ADSR_RELEASE;
+                }
+                
 				channel[ch].updated = 1; // This port has been updated
+                reflect_ch(ch);
+                
 			}
 		} else {								 // Note OFF
 			for (ch = 0; ch < N_CHANNEL; ch++) { // Search for ports that are already ringing with the same MIDI channel & node number
-				if (channel[ch].volume > 0 && channel[ch].midich == v->midich && channel[ch].miditone == v->data.noteonoff.tone)
+				if (channel[ch].volume > 0  && channel[ch].midich == v->midich && channel[ch].miditone == v->data.noteonoff.tone)
 					break;
 			}
 			if (ch < N_CHANNEL) { // A port was found
-
-				channel[ch].volume = 0;
-				channel[ch].updated = 1; // This port has been updated
+				//channel[ch].volume = 0;
+                channel[ch].sustain=0;
+                channel[ch].adsr_state=ADSR_RELEASE;
+				//channel[ch].updated = 1; // This port has been updated
+                //reflect();
 			}
 		}
 	} else if (v->command == COMMAND_CONTROLCHANGE) { // Control Change Processing
 
 		switch (v->data.controlchange.n) {
 		case 0x0b: // Expression
-			midich[v->midich].expression = v->data.controlchange.value;
-			midich[v->midich].updated = 1; // This MIDI channel has been updated
+			//midich[v->midich].expression = v->data.controlchange.value;
+			//midich[v->midich].updated = 1; // This MIDI channel has been updated
 			break;
 		case 0x62: // NRPN(LSB)
 		case 0x63: // NRPN(MSB)
@@ -520,6 +602,8 @@ void process(NOTE *v, CHANNEL channel[], MIDICH midich[]) {
 		case 0x77: //Panic Message
 			for (ch = 0; ch < N_CHANNEL; ch++) {
 				channel[ch].volume = 0;
+                channel[ch].adsr_state = ADSR_IDLE;
+                channel[ch].sustain = 0;
 				channel[ch].updated = 1;
 			}
 			break;
@@ -527,15 +611,18 @@ void process(NOTE *v, CHANNEL channel[], MIDICH midich[]) {
 			for (ch = 0; ch < N_CHANNEL; ch++) {
 				if (channel[ch].volume > 0 && channel[ch].midich == v->midich) {
 					channel[ch].volume = 0;
+                    channel[ch].adsr_state = ADSR_IDLE;
+                    channel[ch].sustain = 0;
 					channel[ch].updated = 1;
 				}
 			}
 			break;
 		}
 	} else if (v->command == COMMAND_PITCHBEND) { // Processing Pitch Bend
-
+        /*
 		midich[v->midich].pitchbend = v->data.pitchbend.value;
 		midich[v->midich].updated = 1; // This MIDI channel has been updated
+        reflect();*/
 	}
 }
 
@@ -544,8 +631,8 @@ void update_midi_duty(){
     uint32_t dutycycle=0;
 
     for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {    
-        if (channel_ptr[ch].volume > 0){
-            dutycycle+= ((uint32)channel_ptr[ch].volume*(uint32)param.pw)/(127000ul/(uint32)isr_port_ptr[ch].freq);
+        if (channel[ch].volume > 0){
+            dutycycle+= ((uint32)channel[ch].volume*(uint32)param.pw)/(127000ul/(uint32)channel[ch].freq);
         }
 	}
   
@@ -556,30 +643,29 @@ void update_midi_duty(){
         interrupter.pw = param.pw;
     }
 }
-void reflect(PORT port[], CHANNEL channel[], MIDICH midich[]) {
+
+void reflect() {
 	uint8_t ch;
 	uint8_t mch;
     uint32_t dutycycle=0;
     uint32_t pb;
-    telemetry.midi_voices =0;
 	// Reflect the status of the updated tone generator channel & MIDI channel on the port
 	for (ch = 0; ch < N_CHANNEL; ch++) {
 		mch = channel[ch].midich;
 		if (channel[ch].updated || midich[mch].updated) {
-			if (channel[ch].volume > 0) {
+			if (channel[ch].adsr_state) {
                 pb = ((((uint32_t)midich[mch].pitchbend*midich[mch].bendrange)<<10) / PITCHBEND_DIVIDER)<<6;
-                port[ch].freq=Q16n16_mtof((channel[ch].miditone<<16)+pb);
-                port[ch].halfcount= (150000<<14) / (port[ch].freq>>2);
-                port[ch].freq = port[ch].freq >>16;
+                channel[ch].freq=Q16n16_mtof((channel[ch].miditone<<16)+pb);
+                channel[ch].halfcount= (150000<<14) / (channel[ch].freq>>2);
+                channel[ch].freq = channel[ch].freq >>16;
 
 			}
-			port[ch].volume = (int32)channel[ch].volume * midich[mch].expression / 127; // Reflect Expression here
+			//port[ch].volume = (int32)channel[ch].volume * midich[mch].expression / 127; // Reflect Expression here
 			channel[ch].updated = 0;													// Mission channel update work done
 		}
         
         if (channel[ch].volume > 0){
-            telemetry.midi_voices++;
-            dutycycle+= ((uint32)channel[ch].volume*(uint32)param.pw)/(127000ul/(uint32)port[ch].freq);
+            dutycycle+= ((uint32)channel[ch].volume*(uint32)param.pw)/(127000ul/(uint32)channel[ch].freq);
         }
 	}
 	for (mch = 0; mch < N_MIDICHANNEL; mch++) {
@@ -597,11 +683,10 @@ void reflect(PORT port[], CHANNEL channel[], MIDICH midich[]) {
 }
 
 void kill_accu(){
-    if(isr_port_ptr==NULL) return;
     for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
-                isr_port_ptr[ch].volume=0;
-                isr_port_ptr[ch].freq=0;
-                isr_port_ptr[ch].halfcount=0;
+                channel[ch].volume=0;
+                channel[ch].freq=0;
+                channel[ch].halfcount=0;
 
 	}
 }
@@ -649,20 +734,11 @@ void tsk_midi_TaskProc(void *pvParameters) {
 	/* `#START TASK_VARIABLES` */
 	qMIDI_rx = xQueueCreate(256, sizeof(NOTE));
     qSID = xQueueCreate(64, sizeof(struct sid_f));
-    qPulse = xQueueCreate(8, sizeof(PULSE));
+    qPulse = xQueueCreate(16, sizeof(PULSE));
 
 	NOTE note_struct;
 
-	// Tone generator channel status (updated according to MIDI messages)
-	CHANNEL channel[N_CHANNEL];
-    channel_ptr=channel;
 
-	// MIDI channel status
-	MIDICH midich[N_MIDICHANNEL];
-
-	// Port status (updated at regular time intervals according to the status of the sound source channel)
-	PORT port[N_CHANNEL];
-	isr_port_ptr = port;
 
 	/* `#END` */
 
@@ -675,7 +751,7 @@ void tsk_midi_TaskProc(void *pvParameters) {
 	// Initialization of sound source channel
 	ChInit(channel);
 	// All channels of the port volume off
-	PortVolumeAllOff(port);
+	PortVolumeAllOff();
 	// MIDI Channel initialization
 	MidichInit(midich);
 	// Sound source relation module initialization
@@ -693,11 +769,13 @@ void tsk_midi_TaskProc(void *pvParameters) {
 
         if(param.synth==SYNTH_MIDI){
     		if (xQueueReceive(qMIDI_rx, &note_struct, portMAX_DELAY)) {
-    			process(&note_struct, channel, midich);
+    			process(&note_struct);
+                vTaskDelay(1);
     			while (xQueueReceive(qMIDI_rx, &note_struct, 0)) {
-    				process(&note_struct, channel, midich);
+    				process(&note_struct);
+                    vTaskDelay(1);
     			}
-    			reflect(port, channel, midich);
+    			reflect();
     		}
         }else{
         vTaskDelay(200 /portTICK_RATE_MS);

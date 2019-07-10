@@ -113,7 +113,9 @@ struct parameter_struct{
     int8_t      transpose;
     uint8_t     synth;
     uint16_t    temp_duty;
-    uint8_t     env;
+    uint8_t     attack;
+    uint8_t     decay;
+    uint8_t     release;
 };
 typedef struct parameter_struct cli_parameter;
 

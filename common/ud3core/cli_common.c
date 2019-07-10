@@ -171,7 +171,9 @@ void init_config(){
     param.qcw_ramp = 2;
     param.qcw_repeat = 500;
     param.transpose = 0;
-    param.env = 7;
+    param.attack = 6;
+    param.decay = 6;
+    param.release = 6;
     param.synth = SYNTH_MIDI;
     
     i2t_set_limit(configuration.max_const_i,configuration.max_fault_i,10000);
@@ -198,6 +200,9 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"qcw_repeat"      , param.qcw_repeat              , TYPE_UNSIGNED ,0      ,1000   ,0      ,NULL                        ,"QCW pulse repeat time [ms] <100=single shot")
     ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"transpose"       , param.transpose               , TYPE_SIGNED   ,-48    ,48     ,0      ,NULL                        ,"Transpose MIDI")
     ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"synth"           , param.synth                   , TYPE_UNSIGNED ,0      ,2      ,0      ,callback_SynthFunction      ,"0=off 1=MIDI 2=SID")
+    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"attack"          , param.attack                  , TYPE_UNSIGNED ,0      ,255    ,0      ,NULL                        ,"MIDI attack time")
+    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"decay"           , param.decay                   , TYPE_UNSIGNED ,0      ,255    ,0      ,NULL                        ,"MIDI decay time")
+    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"release"         , param.release                 , TYPE_UNSIGNED ,0      ,255    ,0      ,NULL                        ,"MIDI release time")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"watchdog"        , configuration.watchdog        , TYPE_UNSIGNED ,0      ,1      ,0      ,callback_ConfigFunction     ,"Watchdog Enable")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_tr_pw"       , configuration.max_tr_pw       , TYPE_UNSIGNED ,0      ,3000   ,0      ,callback_ConfigFunction     ,"Maximum TR PW [uSec]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_tr_prf"      , configuration.max_tr_prf      , TYPE_UNSIGNED ,0      ,3000   ,0      ,callback_ConfigFunction     ,"Maximum TR frequency [Hz]")
@@ -239,7 +244,6 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"baudrate"        , configuration.baudrate        , TYPE_UNSIGNED ,1200   ,4000000,0      ,callback_baudrateFunction   ,"Serial baudrate")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"r_bus"           , configuration.r_top           , TYPE_UNSIGNED ,100    ,1000000,1000   ,NULL                        ,"Series resistor of voltage input [kOhm]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"charge_delay"    , configuration.chargedelay     , TYPE_UNSIGNED ,1      ,60000  ,0      ,callback_ConfigFunction     ,"Delay for the charge relay [ms]")
-    ADD_PARAM(PARAM_DEFAULT  ,VISIBLE_TRUE ,"env"            , param.env                     , TYPE_UNSIGNED ,0      ,15     ,0      ,NULL                        ,"Envelope")
 };
 
 /*****************************************************************************

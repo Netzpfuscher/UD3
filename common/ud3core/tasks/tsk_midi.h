@@ -37,6 +37,22 @@
 #include "task.h"
 #include "queue.h"
 #include "semphr.h"
+    
+typedef struct __midich__ {
+	//uint8 expression; // Expression: Control change (Bxh) 0 bH
+	uint8 rpn_lsb;	// RPN (LSB): Control change (Bxh) 64 H
+	uint8 rpn_msb;	// RPN (MSB): Control change (Bxh) 65 H
+	uint8 bendrange;  // Pitch Bend Sensitivity (0 - ffh)
+	int16 pitchbend;  // Pitch Bend (0-3fffh)
+    uint8 attack;
+    uint8 decay;
+    uint8 release;
+	uint8 updated;	// Was it updated (whether BentRange or PitchBent was rewritten)
+} MIDICH;
+    
+#define N_CHANNEL 8
+
+#define N_MIDICHANNEL 16
 
 xQueueHandle qMIDI_rx;
 
@@ -51,6 +67,8 @@ void switch_synth(uint8_t synth);
 void kill_accu();
 
 extern xQueueHandle qSID;
+
+extern MIDICH midich[N_MIDICHANNEL];
 
 extern const uint8_t kill_msg[3];
 

@@ -50,9 +50,7 @@ uint8 tsk_midi_initVar = 0u;
 #define PITCHBEND_ZEROBIAS (0x2000)
 #define PITCHBEND_DIVIDER ((uint32_t)0x1fff)
 
-#define N_CHANNEL 8
 
-#define N_MIDICHANNEL 16
 
 #define COMMAND_NOTEONOFF 1
 #define COMMAND_NOTEOFF 4
@@ -89,14 +87,7 @@ typedef struct __pulse__ {
 
 uint8_t skip_flag = 0; // Skipping system exclusive messages
 
-typedef struct __midich__ {
-	//uint8 expression; // Expression: Control change (Bxh) 0 bH
-	uint8 rpn_lsb;	// RPN (LSB): Control change (Bxh) 64 H
-	uint8 rpn_msb;	// RPN (MSB): Control change (Bxh) 65 H
-	uint8 bendrange;  // Pitch Bend Sensitivity (0 - ffh)
-	int16 pitchbend;  // Pitch Bend (0-3fffh)
-	uint8 updated;	// Was it updated (whether BentRange or PitchBent was rewritten)
-} MIDICH;
+
 
 typedef struct __channel__ {
 	uint8 midich;	// Channel of midi (0 - 15)
@@ -110,35 +101,13 @@ typedef struct __channel__ {
     uint8 sustain;
     uint8 old_gate;
 } CHANNEL;
-/*
-typedef struct __port__ {
-	uint16 halfcount; // A count that determines the frequency of port (for 1/2 period)
-	uint8 volume;	 // Volume of port (0 - 127)
-    uint32 freq;
-} PORT;
-
-typedef struct __adsr__ {
-	uint8_t state;
-    uint8_t count;
-    uint8_t old_gate;
-} ADSR;
-
-*/
-
-//PORT *isr_port_ptr;
-//CHANNEL *channel_ptr;
 
 
 	// Tone generator channel status (updated according to MIDI messages)
 	CHANNEL channel[N_CHANNEL];
-   // channel_ptr=channel;
 
 	// MIDI channel status
 	MIDICH midich[N_MIDICHANNEL];
-
-	// Port status (updated at regular time intervals according to the status of the sound source channel)
-	//PORT port[N_CHANNEL];
-	//isr_port_ptr = port;
 
 // Note on & off
 
@@ -239,14 +208,13 @@ uint8_t old_flag[N_CHANNEL];
 #define ADSR_SUSTAIN 3
 #define ADSR_RELEASE 4
 
-//ADSR adsr[N_CHANNEL];
 
 static const uint8_t envelope[16] = {0,0,1,2,3,4,5,6,8,20,41,67,83,251,255,255};
 
 void compute_adsr(uint8_t ch){
 	switch (channel[ch].adsr_state){
         case ADSR_ATTACK:
-            if(channel[ch].adsr_count>=param.attack){
+            if(channel[ch].adsr_count>=midich[channel[ch].midich].attack){
                 channel[ch].volume++;
                 if(channel[ch].volume>=127){
                     channel[ch].volume=127;
@@ -258,7 +226,7 @@ void compute_adsr(uint8_t ch){
             }
         break;
         case ADSR_DECAY:
-            if(channel[ch].adsr_count>=param.decay){
+            if(channel[ch].adsr_count>=midich[channel[ch].midich].decay){
                 channel[ch].volume--;
                 if(channel[ch].volume<=channel[ch].sustain) channel[ch].adsr_state=ADSR_SUSTAIN;
                 channel[ch].adsr_count=0;
@@ -270,7 +238,7 @@ void compute_adsr(uint8_t ch){
             channel[ch].volume = channel[ch].sustain;
         break;
         case ADSR_RELEASE:
-            if(channel[ch].adsr_count>=param.release){
+            if(channel[ch].adsr_count>=midich[channel[ch].midich].release){
                 channel[ch].volume--;
                 if(channel[ch].volume==0 || channel[ch].volume>127) {
                     channel[ch].volume=0;
@@ -373,7 +341,10 @@ CY_ISR(isr_sid) {
             case ADSR_ATTACK:
                 if(channel[ch].adsr_count>=envelope[sid_frm.attack[ch]]){
                     channel[ch].volume++;
-                    if(channel[ch].volume>=127) channel[ch].adsr_state=ADSR_DECAY;
+                    if(channel[ch].volume>=127){
+                        channel[ch].volume=127;
+                        channel[ch].adsr_state=ADSR_DECAY;
+                    }
                     channel[ch].adsr_count=0;
                 }else{
                     channel[ch].adsr_count++;
@@ -394,7 +365,10 @@ CY_ISR(isr_sid) {
             case ADSR_RELEASE:
                 if(channel[ch].adsr_count>=envelope[sid_frm.release[ch]]){
                     channel[ch].volume--;
-                    if(channel[ch].volume==0 || channel[ch].volume>127) channel[ch].adsr_state=ADSR_IDLE;
+                    if(channel[ch].volume==0 || channel[ch].volume>127) {
+                        channel[ch].volume=0;
+                        channel[ch].adsr_state=ADSR_IDLE;
+                    }
                     channel[ch].adsr_count=0;
                 }else{
                     channel[ch].adsr_count++;
@@ -560,6 +534,15 @@ void process(NOTE *v) {
 			//midich[v->midich].expression = v->data.controlchange.value;
 			//midich[v->midich].updated = 1; // This MIDI channel has been updated
 			break;
+        case 0x48: //Release
+            midich[v->midich].release = v->data.controlchange.value;
+            break;
+        case 0x49: //Attack
+            midich[v->midich].attack = v->data.controlchange.value;
+            break;
+        case 0x4b: //Decay
+            midich[v->midich].decay = v->data.controlchange.value;
+            break;
 		case 0x62: // NRPN(LSB)
 		case 0x63: // NRPN(MSB)
 			// RPN Reset

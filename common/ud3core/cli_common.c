@@ -98,6 +98,8 @@ uint8_t callback_SynthFunction(parameter_entry * params, uint8_t index, port_str
 uint8_t callback_i2tFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_baudrateFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_VisibleFunction(parameter_entry * params, uint8_t index, port_str *ptr);
+uint8_t callback_MchFunction(parameter_entry * params, uint8_t index, port_str *ptr);
+uint8_t callback_MchCopyFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 
 
 uint8_t burst_state = 0;
@@ -171,9 +173,7 @@ void init_config(){
     param.qcw_ramp = 2;
     param.qcw_repeat = 500;
     param.transpose = 0;
-    param.attack = 6;
-    param.decay = 6;
-    param.release = 6;
+    param.mch = 0;
     param.synth = SYNTH_MIDI;
     
     i2t_set_limit(configuration.max_const_i,configuration.max_fault_i,10000);
@@ -200,9 +200,10 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"qcw_repeat"      , param.qcw_repeat              , TYPE_UNSIGNED ,0      ,1000   ,0      ,NULL                        ,"QCW pulse repeat time [ms] <100=single shot")
     ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"transpose"       , param.transpose               , TYPE_SIGNED   ,-48    ,48     ,0      ,NULL                        ,"Transpose MIDI")
     ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"synth"           , param.synth                   , TYPE_UNSIGNED ,0      ,2      ,0      ,callback_SynthFunction      ,"0=off 1=MIDI 2=SID")
-    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"attack"          , param.attack                  , TYPE_UNSIGNED ,0      ,255    ,0      ,NULL                        ,"MIDI attack time")
-    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"decay"           , param.decay                   , TYPE_UNSIGNED ,0      ,255    ,0      ,NULL                        ,"MIDI decay time")
-    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"release"         , param.release                 , TYPE_UNSIGNED ,0      ,255    ,0      ,NULL                        ,"MIDI release time")
+    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"mch"             , param.mch                     , TYPE_UNSIGNED ,0      ,16     ,0      ,callback_MchFunction        ,"MIDI channel 16=write to all channels")
+    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"attack"          , midich[0].attack              , TYPE_UNSIGNED ,0      ,127    ,0      ,callback_MchCopyFunction    ,"MIDI attack time of mch") //WARNING: Must be mch index +1
+    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"decay"           , midich[0].decay               , TYPE_UNSIGNED ,0      ,127    ,0      ,callback_MchCopyFunction    ,"MIDI decay time of mch")  //WARNING: Must be mch index +2
+    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"release"         , midich[0].release             , TYPE_UNSIGNED ,0      ,127    ,0      ,callback_MchCopyFunction    ,"MIDI release time of mch")//WARNING: Must be mch index +3
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"watchdog"        , configuration.watchdog        , TYPE_UNSIGNED ,0      ,1      ,0      ,callback_ConfigFunction     ,"Watchdog Enable")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_tr_pw"       , configuration.max_tr_pw       , TYPE_UNSIGNED ,0      ,3000   ,0      ,callback_ConfigFunction     ,"Maximum TR PW [uSec]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_tr_prf"      , configuration.max_tr_prf      , TYPE_UNSIGNED ,0      ,3000   ,0      ,callback_ConfigFunction     ,"Maximum TR frequency [Hz]")
@@ -328,6 +329,37 @@ void update_visibilty(void){
 }
 
 // clang-format on
+
+/*****************************************************************************
+* Callback if the MIDI channel is changed
+******************************************************************************/
+uint8_t callback_MchFunction(parameter_entry * params, uint8_t index, port_str *ptr){
+    if(param.mch<16){
+        params[index+1].value = &midich[param.mch].attack;
+        params[index+2].value = &midich[param.mch].decay;
+        params[index+3].value = &midich[param.mch].release;
+    }else{
+        params[index+1].value = &midich[0].attack;
+        params[index+2].value = &midich[0].decay;
+        params[index+3].value = &midich[0].release;
+    }
+    return 1;
+}
+
+/*****************************************************************************
+* Callback for mch==16
+******************************************************************************/
+uint8_t callback_MchCopyFunction(parameter_entry * params, uint8_t index, port_str *ptr){
+    if(param.mch<16) return 1;
+
+    for(uint8_t i=1;i<16;i++){
+        midich[i].attack = midich[0].attack;
+        midich[i].decay = midich[0].decay;
+        midich[i].release = midich[0].release;
+    }
+
+    return 1;
+}
 
 /*****************************************************************************
 * Callback if the offtime parameter is changed

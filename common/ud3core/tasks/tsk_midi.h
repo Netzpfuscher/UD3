@@ -38,6 +38,8 @@
 #include "queue.h"
 #include "semphr.h"
     
+#include "cli_basic.h"
+    
 typedef struct __midich__ {
 	//uint8 expression; // Expression: Control change (Bxh) 0 bH
 	uint8 rpn_lsb;	// RPN (LSB): Control change (Bxh) 64 H
@@ -88,6 +90,8 @@ struct sid_f{
 #define SYNTH_OFF  0
 #define SYNTH_MIDI 1
 #define SYNTH_SID  2
+
+uint8_t command_SynthMon(char *commandline, port_str *ptr);
 
 /*
  * Add user function prototypes in the below merge region to add user

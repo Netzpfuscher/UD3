@@ -749,6 +749,36 @@ void Term_Save_Cursor(port_str *ptr) {
 void Term_Restore_Cursor(port_str *ptr) {
 	SEND_CONST_STRING("\033[u", ptr);
 }
+void Term_Disable_Cursor(port_str *ptr) {
+	SEND_CONST_STRING("\033[?25l", ptr);
+}
+void Term_Enable_Cursor(port_str *ptr) {
+	SEND_CONST_STRING("\033[?25h", ptr);
+}
+
+
+uint8_t getch(port_str *ptr, TickType_t xTicksToWait){
+    uint8_t c=0;
+    xStreamBufferReceive(ptr->rx,&c,1,xTicksToWait);
+    return c;
+}
+
+uint8_t getche(port_str *ptr, TickType_t xTicksToWait){
+    uint8_t c=0;
+    xStreamBufferReceive(ptr->rx,&c,1,xTicksToWait);
+    if(c){
+        xStreamBufferSend(ptr->tx,&c,1,0);
+    }
+    return c;
+}
+
+uint8_t kbhit(port_str *ptr){
+    if(xStreamBufferIsEmpty(ptr->rx)){
+        return 0;
+    }else{
+        return 1;
+    }
+}
 
 /********************************************
 * Sends char to transmit queue

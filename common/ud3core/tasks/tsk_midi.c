@@ -44,6 +44,7 @@ uint8 tsk_midi_initVar = 0u;
 #include "tsk_priority.h"
 #include "telemetry.h"
 #include "alarmevent.h"
+#include "helper/printf.h"
 #include <device.h>
 #include <stdlib.h>
 
@@ -274,8 +275,8 @@ CY_ISR(isr_midi) {
 		}
 		if (flag[ch] > old_flag[ch]) {
             pulse.volume = channel[ch].volume;
-            pulse.pw = interrupter.pw;
-            //pulse.pw = channel[ch].volume;
+            //pulse.pw = interrupter.pw;
+            pulse.pw = channel[ch].volume;
             xQueueSendFromISR(qPulse,&pulse,0);
 		}
 		old_flag[ch] = flag[ch];
@@ -683,6 +684,50 @@ void switch_synth(uint8_t synth){
         break;
     }
     
+}
+
+uint8_t command_SynthMon(char *commandline, port_str *ptr){
+    char buf[80];
+    uint8_t ret;
+    uint32_t freq=0;
+    Term_Disable_Cursor(ptr);
+    Term_Erase_Screen(ptr);
+    SEND_CONST_STRING("Synthesizer monitor    (press q for quit)\r\n",ptr);
+    SEND_CONST_STRING("-----------------------------------------------------------\r\n",ptr);
+    xSemaphoreGive(ptr->term_block);
+    while(getch(ptr,100 /portTICK_RATE_MS) != 'q'){
+        xSemaphoreTake(ptr->term_block, portMAX_DELAY);
+        Term_Move_Cursor(3,1,ptr);
+        
+        for(uint8_t i=0;i<N_CHANNEL;i++){
+            ret=sprintf(buf,"Ch:   Freq:      \r");
+            send_buffer((uint8_t*)buf,ret,ptr);   
+            if(channel[i].volume>0){
+                freq=channel[i].freq;
+            }else{
+                freq=0;
+            }
+            ret=sprintf(buf,"Ch: %u Freq: %u",i+1,freq);
+            send_buffer((uint8_t*)buf,ret,ptr);                 
+            Term_Move_cursor_right(20,ptr);
+            ret=sprintf(buf,"Vol: ",i+1);
+            send_buffer((uint8_t*)buf,ret,ptr);
+            uint8_t cnt = channel[i].volume/12;
+            for(uint8_t w=0;w<10;w++){
+                if(w<cnt){
+                    send_char('o',ptr);
+                }else{
+                    send_char('_',ptr);
+                }
+            }
+            SEND_CONST_STRING("\r\n",ptr);
+        }
+        xSemaphoreGive(ptr->term_block);
+    }
+    xSemaphoreTake(ptr->term_block, portMAX_DELAY);
+    SEND_CONST_STRING("\r\n",ptr);
+    Term_Enable_Cursor(ptr);
+    return 1;
 }
 
 /* `#END` */

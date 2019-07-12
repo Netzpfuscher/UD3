@@ -77,7 +77,7 @@ void show_overlay_100ms(port_str *ptr){
         char buffer[50];
         int ret=0;
     	Term_Save_Cursor(ptr);
-    	SEND_CONST_STRING("\033[?25l", ptr);
+    	Term_Disable_Cursor(ptr);
 
     	uint8_t row_pos = 1;
     	uint8_t col_pos = 90;
@@ -145,7 +145,7 @@ void show_overlay_100ms(port_str *ptr){
         send_buffer((uint8_t*)buffer,ret,ptr);
 
     	Term_Restore_Cursor(ptr);
-    	SEND_CONST_STRING("\033[?25h", ptr);
+    	Term_Enable_Cursor(ptr);
     
     }else{
         #if GAUGE0_SLOW==0

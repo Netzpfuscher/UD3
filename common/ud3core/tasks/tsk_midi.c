@@ -275,8 +275,8 @@ CY_ISR(isr_midi) {
 		}
 		if (flag[ch] > old_flag[ch]) {
             pulse.volume = channel[ch].volume;
-            //pulse.pw = interrupter.pw;
-            pulse.pw = channel[ch].volume;
+            pulse.pw = interrupter.pw;
+            //pulse.pw = channel[ch].volume;
             xQueueSendFromISR(qPulse,&pulse,0);
 		}
 		old_flag[ch] = flag[ch];

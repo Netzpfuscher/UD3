@@ -160,6 +160,29 @@ void process_command(uint8_t *min_payload, uint8_t len_payload){
   }
 }
 
+void process_synth(uint8_t *min_payload, uint8_t len_payload){
+    len_payload--;
+    switch(*min_payload++){
+        case SYNTH_CMD_FLUSH:
+            if(qSID!=NULL){
+                xQueueReset(qSID);
+            }
+            break;
+        case SYNTH_CMD_SID:
+            param.synth=SYNTH_SID;
+            switch_synth(SYNTH_SID);
+            break;
+        case SYNTH_CMD_MIDI:
+            param.synth=SYNTH_MIDI;
+            switch_synth(SYNTH_MIDI);
+            break;
+        case SYNTH_CMD_OFF:
+            param.synth=SYNTH_OFF;
+            switch_synth(SYNTH_OFF);
+            break;
+  }
+}
+
 void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_payload, uint8_t port)
 {
     if(min_id<10){
@@ -200,6 +223,9 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
             break;
         case MIN_ID_COMMAND:
             process_command(min_payload,len_payload);
+            break;
+        case MIN_ID_SYNTH:
+            process_synth(min_payload,len_payload);
             break;
             
 

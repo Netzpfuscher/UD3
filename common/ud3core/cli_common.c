@@ -100,6 +100,9 @@ uint8_t callback_baudrateFunction(parameter_entry * params, uint8_t index, port_
 uint8_t callback_VisibleFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_MchFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_MchCopyFunction(parameter_entry * params, uint8_t index, port_str *ptr);
+uint8_t callback_ivoUART(parameter_entry * params, uint8_t index, port_str *ptr);
+
+void update_ivo_uart();
 
 
 uint8_t burst_state = 0;
@@ -136,10 +139,6 @@ void init_config(){
     configuration.max_tr_duty = 100;
     configuration.max_qcw_duty = 350;
     configuration.temp1_setpoint = 30;
-    configuration.ext_trig_enable = 1;
-    configuration.batt_lockout_v = 360;
-    configuration.slr_fswitch = 500;
-    configuration.slr_vbus = 200;
     configuration.ps_scheme = 2;
     configuration.autotune_s = 1;
     configuration.baudrate = 500000;
@@ -160,6 +159,7 @@ void init_config(){
     configuration.ct2_offset = 0;
     configuration.ct2_current = 0;
     configuration.chargedelay = 1000;
+    configuration.ivo_uart = 0;
     
     param.pw = 0;
     param.pwd = 50000;
@@ -177,6 +177,7 @@ void init_config(){
     param.synth = SYNTH_MIDI;
     
     i2t_set_limit(configuration.max_const_i,configuration.max_fault_i,10000);
+    update_ivo_uart();
 }
 
 // clang-format off
@@ -230,6 +231,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_qcw_duty"    , configuration.max_qcw_duty    , TYPE_UNSIGNED ,1      ,500    ,10     ,callback_ConfigFunction     ,"Max QCW duty cycle [%]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"temp1_setpoint"  , configuration.temp1_setpoint  , TYPE_UNSIGNED ,0      ,100    ,0      ,NULL                        ,"Setpoint for fan [*C]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ps_scheme"       , configuration.ps_scheme       , TYPE_UNSIGNED ,0      ,5      ,0      ,callback_ConfigFunction     ,"Power supply sheme")
+    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"charge_delay"    , configuration.chargedelay     , TYPE_UNSIGNED ,1      ,60000  ,0      ,callback_ConfigFunction     ,"Delay for the charge relay [ms]")  
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"autotune_s"      , configuration.autotune_s      , TYPE_UNSIGNED ,1      ,32     ,0      ,NULL                        ,"Number of samples for Autotune")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ud_name"         , configuration.ud_name         , TYPE_STRING   ,0      ,0      ,0      ,NULL                        ,"Name of the Coil [15 chars]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ip_addr"         , configuration.ip_addr         , TYPE_STRING   ,0      ,0      ,0      ,NULL                        ,"IP-Adress of the UD3")
@@ -243,8 +245,8 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ssid"            , configuration.ssid            , TYPE_STRING   ,0      ,0      ,0      ,NULL                        ,"WLAN SSID")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"passwd"          , configuration.passwd          , TYPE_STRING   ,0      ,0      ,0      ,NULL                        ,"WLAN password")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"baudrate"        , configuration.baudrate        , TYPE_UNSIGNED ,1200   ,4000000,0      ,callback_baudrateFunction   ,"Serial baudrate")
+    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ivo_uart"        , configuration.ivo_uart        , TYPE_UNSIGNED ,0      ,11     ,0      ,callback_ivoUART            ,"[RX][TX] 0=not inverted 1=inverted")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"r_bus"           , configuration.r_top           , TYPE_UNSIGNED ,100    ,1000000,1000   ,NULL                        ,"Series resistor of voltage input [kOhm]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"charge_delay"    , configuration.chargedelay     , TYPE_UNSIGNED ,1      ,60000  ,0      ,callback_ConfigFunction     ,"Delay for the charge relay [ms]")
 };
 
 /*****************************************************************************
@@ -273,14 +275,17 @@ command_entry commands[] = {
     ADD_COMMAND("config_get"    ,command_config_get     ,"Internal use")
     ADD_COMMAND("fuse_reset"    ,command_fuse           ,"Reset the internal fuse")
     ADD_COMMAND("signals"       ,command_signals        ,"For debugging")
-    ADD_COMMAND("alarms"        ,command_alarms         ,"Alarms [show/reset]")
+    ADD_COMMAND("alarms"        ,command_alarms         ,"Alarms [get/roll/reset]")
     ADD_COMMAND("synthmon"      ,command_SynthMon       ,"Synthesizer status")
 };
 
 void eeprom_load(port_str *ptr){
     EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,ptr);
     i2t_set_limit(configuration.max_const_i,configuration.max_fault_i,10000);
+    update_ivo_uart();
 }
+
+
 
 void update_visibilty(void){
 
@@ -330,6 +335,41 @@ void update_visibilty(void){
 }
 
 // clang-format on
+
+/*****************************************************************************
+* Callback for invert option UART
+******************************************************************************/
+
+void update_ivo_uart(){
+    switch(configuration.ivo_uart){
+    case 0:
+        IVO_UART_Control = 0b00;
+        break;
+    case 1:
+        IVO_UART_Control = 0b10;
+        break;
+    case 10:
+        IVO_UART_Control = 0b01;
+        break;
+    case 11:
+        IVO_UART_Control = 0b11;
+        break;
+    }
+}
+
+uint8_t callback_ivoUART(parameter_entry * params, uint8_t index, port_str *ptr){
+    if(configuration.ivo_uart == 0 || configuration.ivo_uart == 1 || configuration.ivo_uart == 10 || configuration.ivo_uart == 11){
+        update_ivo_uart();   
+        return 1;
+    }else{
+        SEND_CONST_STRING("Only the folowing combinations are allowed\r\n", ptr);
+        SEND_CONST_STRING("0  = no inversion\r\n", ptr);
+        SEND_CONST_STRING("1  = rx inverted, tx not inverted\r\n", ptr);
+        SEND_CONST_STRING("10 = rx not inverted, tx inverted\r\n", ptr);
+        SEND_CONST_STRING("11 = rx and tx inverted\r\n", ptr);
+        return 0;
+    }
+}
 
 /*****************************************************************************
 * Callback if the MIDI channel is changed

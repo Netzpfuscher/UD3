@@ -71,10 +71,6 @@ struct config_struct{
     uint16_t max_tr_duty;
     uint16_t max_qcw_duty;
     uint16_t temp1_setpoint;
-    uint16_t ext_trig_enable;
-    uint16_t batt_lockout_v;
-    uint16_t slr_fswitch;
-    uint16_t slr_vbus;
     uint8_t ps_scheme;
     uint8_t autotune_s;
     char ud_name[16];
@@ -95,6 +91,7 @@ struct config_struct{
     uint16_t ct2_offset;
     uint32_t r_top;
     uint16_t chargedelay;
+    uint8_t ivo_uart;
 };
 typedef struct config_struct cli_config;
 

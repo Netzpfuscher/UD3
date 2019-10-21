@@ -127,8 +127,8 @@ typedef struct
 	uint8 temp1;		//in *C
 	uint8 temp2;		//in *C
 	uint8 bus_status;   //0 = charging, 1 = ready
-	uint16 avg_power;   //Average power in watts
-	uint16 batt_i;		//battery current in centiamps
+	int32 avg_power;   //Average power in watts
+	int16 batt_i;		//battery current in centiamps
     uint32 i2t_i;
 	uint16_t primary_i;
     uint8_t midi_voices;

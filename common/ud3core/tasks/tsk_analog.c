@@ -246,9 +246,7 @@ void calculate_rms(void) {
         if(configuration.ct2_type==CT2_TYPE_CURRENT){
 		    telemetry.batt_i = (((uint32_t)rms_filter(&current_idc, ADC_sample[DATA_IBUS]) * params.idc_ma_count) / 100);
         }else{
-            ADC_sample[DATA_IBUS]-=params.ct2_offset_cnt;
-            if(ADC_sample[DATA_IBUS]<0) ADC_sample[DATA_IBUS]=0;
-            telemetry.batt_i = (((uint32_t)rms_filter(&current_idc, ADC_sample[DATA_IBUS]) * params.idc_ma_count) / 100);
+            telemetry.batt_i = ((((int32_t)rms_filter(&current_idc, ADC_sample[DATA_IBUS])-params.ct2_offset_cnt) * params.idc_ma_count) / 100);
         }
 
 		telemetry.avg_power = telemetry.batt_i * telemetry.bus_v / 10;

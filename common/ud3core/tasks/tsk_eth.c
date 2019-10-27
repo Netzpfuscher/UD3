@@ -113,7 +113,9 @@ void tsk_eth_TaskProc(void *pvParameters) {
     
     uint8_t flow_ctl[NUM_ETH_CON];
     uint16_t bytes_waiting[NUM_ETH_CON];
-    
+
+    uint8_t counter = 0;
+
     for(int i =0;i<NUM_ETH_CON;i++){
         synth_socket[i]=0xFF;
         cli_socket[i]=0xFF;
@@ -209,16 +211,18 @@ void tsk_eth_TaskProc(void *pvParameters) {
                             break;
                         case SYNTH_SID:
                             if(bytes_waiting[i]>1800){
-                                if(flow_ctl[i]){
+                                if(flow_ctl[i] || counter==0){
                                     ETH_TcpSend(synth_socket[i],&stop,1,0);
                                     flow_ctl[i]=0;
                                 }
                             }else{
-                                 if(!flow_ctl[i]){
+                                 if(!flow_ctl[i] || counter==0){
                                     flow_ctl[i]=1;
                                     ETH_TcpSend(synth_socket[i],&start,1,0);
                                 }
                             }
+                            ++counter;
+                            counter = counter%8;
                             if(uxQueueSpacesAvailable(qSID) > 15){
             				    len = ETH_TcpReceive(synth_socket[i],buffer,LOCAL_ETH_BUFFER_SIZE,0);
             				    if(len){

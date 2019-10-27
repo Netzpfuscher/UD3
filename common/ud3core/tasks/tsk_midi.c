@@ -314,9 +314,10 @@ CY_ISR(isr_sid) {
                 channel[i].old_gate = sid_frm.gate[i];
             }
         }else{
-            channel[0].volume = 0;
-            channel[1].volume = 0;
-            channel[2].volume = 0;
+            for (uint8_t i = 0;i<SID_CHANNELS;++i) {
+                channel[i].volume = 0;
+                channel[i].adsr_state = ADSR_IDLE;
+            }
         }
     }else{
         cnt++;

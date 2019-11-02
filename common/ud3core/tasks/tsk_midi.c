@@ -323,18 +323,8 @@ CY_ISR(isr_sid) {
         cnt++;
     }
     
-    uint16_t random = rand();
-    random = random >>8;
-    if(sid_frm.wave[0]){
-        channel[0].halfcount = random;
-    }
-    if(sid_frm.wave[1]){
-        channel[1].halfcount = random;
-    }
-    if(sid_frm.wave[2]){
-        channel[2].halfcount = random;
-    }
-    
+    uint8_t random = rand();
+
     PULSE pulse;
 	uint8_t flag[SID_CHANNELS];
 	uint32 r = SG_Timer_ReadCounter();
@@ -384,12 +374,17 @@ CY_ISR(isr_sid) {
             telemetry.midi_voices++;
 			if ((r / channel[ch].halfcount) % 2 > 0) {
 				flag[ch] = 1;
+                if(sid_frm.wave[ch]){
+                    if(random & 0x01){
+                        flag[ch] = 0;
+                    }
+                }
 			}
 		}
 		if (flag[ch] > old_flag[ch]) {
             pulse.volume = channel[ch].volume;
             pulse.pw = sid_frm.master_pw;
-            //pulse.pw = channel[ch].volume;
+            //pulse.pw = channel[ch].volume;   //For DEBUG with speaker
             xQueueSendFromISR(qPulse,&pulse,0);
 		}
 		old_flag[ch] = flag[ch];

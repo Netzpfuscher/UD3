@@ -7,9 +7,20 @@
 #include "stream_buffer.h" 
 
 #define PARAM_SIZE(param) sizeof(param) / sizeof(parameter_entry)
+    
+#define typename(x) _Generic((x), \
+    uint8_t:    0, \
+    uint16_t:   0, \
+    uint32_t:   0, \
+    int8_t:     1, \
+    int16_t:    1, \
+    int32_t:    1, \
+    float:    2, \
+    char:     3, \
+    char*:    4)
 
 #define SIZEP(x) ((char*)(&(x) + 1) - (char*)&(x))
-#define ADD_PARAM(para_type, visible,text, value_var, type, min, max, div, update_func, help_text) {para_type, visible,text, &value_var, SIZEP(value_var), type,min, max, div, update_func, help_text},
+#define ADD_PARAM(para_type, visible,text, value_var, min, max, div, update_func, help_text) {para_type, visible,text, &value_var, SIZEP(value_var), typename(value_var),min, max, div, update_func, help_text},
 #define ADD_COMMAND(command, command_func, help_text) {command, command_func, help_text},
 #define TYPE_UNSIGNED   0
 #define TYPE_SIGNED     1
@@ -88,8 +99,6 @@ struct parameter_entry_struct {
 	uint8_t (*callback_function)(parameter_entry * params, uint8_t index, port_str *ptr);
 	const char *help;
 };
-
-
 
 uint8_t updateDefaultFunction(parameter_entry * params, char * newValue, uint8_t index, port_str *ptr);
 void EEPROM_write_conf(parameter_entry * params, uint8_t param_size, uint16_t eeprom_offset ,port_str *ptr);

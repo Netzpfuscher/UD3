@@ -44,6 +44,7 @@ void eeprom_load(port_str *ptr);
 uint8_t command_cls(char *commandline, port_str *ptr);
 void stop_overlay_task(port_str *ptr);
 void uart_baudrate(uint32_t baudrate);
+void spi_speed(uint32_t speed);
 void update_visibilty(void);
 
 volatile uint8_t qcw_reg;
@@ -85,6 +86,7 @@ struct config_struct{
     char ssid[16];
     char passwd[20];
     uint32_t baudrate;
+    uint8_t spi_speed;
     uint8_t ct2_type;
     uint16_t ct2_current;
     uint16_t ct2_voltage;
@@ -111,6 +113,8 @@ struct parameter_struct{
     uint8_t     synth;
     uint16_t    temp_duty;
     uint8_t     mch;
+    uint8_t     sid_freq;
+    uint8_t     sid_divider;
 };
 typedef struct parameter_struct cli_parameter;
 

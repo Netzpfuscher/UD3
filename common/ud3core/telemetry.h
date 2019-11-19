@@ -118,7 +118,7 @@
 #define CHART3_OFFSET 0
 #define CHART3_UNIT TT_UNIT_W
 #define CHART3_VAR telemetry.avg_power   
-    
+
     
 typedef struct
 {

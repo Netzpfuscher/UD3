@@ -56,6 +56,8 @@ typedef struct __midich__ {
 
 #define N_MIDICHANNEL 16
 
+#define SID_CHANNELS 3
+
 xQueueHandle qMIDI_rx;
 
 /* `#END` */
@@ -75,15 +77,15 @@ extern MIDICH midich[N_MIDICHANNEL];
 extern const uint8_t kill_msg[3];
 
 struct sid_f{
-    uint16_t freq[3];
-    uint16_t half[3];
-    uint16_t pw[3];
-    uint8_t gate[3];
-    uint8_t wave[3];
-    uint8_t attack[3];
-    uint8_t decay[3];
-    uint8_t sustain[3];
-    uint8_t release[3];
+    uint16_t freq[SID_CHANNELS];
+    uint16_t half[SID_CHANNELS];
+    uint16_t pw[SID_CHANNELS];
+    uint8_t gate[SID_CHANNELS];
+    uint8_t wave[SID_CHANNELS];
+    uint8_t attack[SID_CHANNELS];
+    uint8_t decay[SID_CHANNELS];
+    uint8_t sustain[SID_CHANNELS];
+    uint8_t release[SID_CHANNELS];
     uint16_t master_pw;
 };
 

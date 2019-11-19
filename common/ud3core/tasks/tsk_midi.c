@@ -289,7 +289,7 @@ CY_ISR(isr_midi) {
 
 }
 
-#define SID_CHANNELS 3
+
 
 
 CY_ISR(isr_sid) {
@@ -302,7 +302,7 @@ CY_ISR(isr_sid) {
     telemetry.midi_voices=0;
     static uint8_t cnt=0;
     
-    if (cnt >212){  // 50 Hz
+    if (cnt > param.sid_divider){
         cnt=0;
         if(xQueueReceiveFromISR(qSID,&sid_frm,0)){
             

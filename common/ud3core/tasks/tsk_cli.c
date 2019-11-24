@@ -107,6 +107,10 @@ static int nt_callback(const char *text, void *extobj) {
 uint8_t handle_terminal(ntshell_t *ptr, port_str *port) {
 	char c;
 	if (xStreamBufferReceive(port->rx, &c,1, portMAX_DELAY)) {
+        if (c==0x07){
+            WD_reset();
+            return 0;
+        }
 		if (xSemaphoreTake(port->term_block, portMAX_DELAY)) {
 			ntshell_execute_nb(ptr, c);
 			xSemaphoreGive(port->term_block);

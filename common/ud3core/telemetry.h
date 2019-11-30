@@ -68,7 +68,7 @@
     
 #define GAUGE4_NAME "Primary Curr."
 #define GAUGE4_MIN 0
-#define GAUGE4_MAX 1000
+#define GAUGE4_MAX 2*configuration.max_tr_current
 #define GAUGE4_VAR telemetry.primary_i
 #define GAUGE4_SLOW 0
 
@@ -107,7 +107,7 @@
         
 #define CHART2_NAME "Primary Curr."
 #define CHART2_MIN 0
-#define CHART2_MAX 1000
+#define CHART2_MAX 2*configuration.max_tr_current
 #define CHART2_OFFSET 0
 #define CHART2_UNIT TT_UNIT_A
 #define CHART2_VAR telemetry.primary_i        

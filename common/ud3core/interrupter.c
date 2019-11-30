@@ -83,7 +83,7 @@ void initialize_interrupter(void) {
 	interrupter1_WriteCompare1(64999);
 
 	QCW_duty_limiter_WritePeriod(65535);
-	QCW_duty_limiter_WriteCompare(65535 - configuration.max_qcw_pw); //this register sets the max PW output
+	QCW_duty_limiter_WriteCompare(65535 - configuration.max_qcw_pw / 10); //this register sets the max PW output
 
 	int1_prd = 65000;
 	int1_cmp = 64999;
@@ -138,7 +138,7 @@ void ramp_control(void) {
 			//the next stuff is time sensitive, so disable interrupts to avoid glitches
 			CyGlobalIntDisable;
 			QCW_duty_limiter_WriteCounter(65535);						//restart counter at top value
-			QCW_duty_limiter_WriteCompare(65535 - ramp.qcw_limiter_pw); //put in limiting compare match value
+			QCW_duty_limiter_WriteCompare(65535 - ramp.qcw_limiter_pw / 10); //put in limiting compare match value
 			//now enable the QCW interrupter
 			QCW_enable_Control = 1;
 			//------------------>watchdog_reset_Control = 1;

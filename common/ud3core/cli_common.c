@@ -1256,34 +1256,22 @@ uint8_t command_reset(char *commandline, port_str *ptr){
     return 1;
 }
 
-
-/*****************************************************************************
-* Task handles for the overlay tasks
-******************************************************************************/
-xTaskHandle overlay_Serial_TaskHandle;
-xTaskHandle overlay_USB_TaskHandle;
-xTaskHandle overlay_ETH_TaskHandle[NUM_ETH_CON];
-
 /*****************************************************************************
 * Helper function for spawning the overlay task
 ******************************************************************************/
 void start_overlay_task(port_str *ptr){
-    switch(ptr->type){
+    if (ptr->telemetry_handle == NULL) {
+        switch(ptr->type){
         case PORT_TYPE_SERIAL:
-            if (overlay_Serial_TaskHandle == NULL) {
-        		xTaskCreate(tsk_overlay_TaskProc, "Overl_S", STACK_OVERLAY, ptr, PRIO_OVERLAY, &overlay_Serial_TaskHandle);
-            }
+        	xTaskCreate(tsk_overlay_TaskProc, "Overl_S", STACK_OVERLAY, ptr, PRIO_OVERLAY, &ptr->telemetry_handle);
         break;
         case PORT_TYPE_USB:
-            if (overlay_USB_TaskHandle == NULL) {
-    			xTaskCreate(tsk_overlay_TaskProc, "Overl_U", STACK_OVERLAY, ptr, PRIO_OVERLAY, &overlay_USB_TaskHandle);
-    		}
+    		xTaskCreate(tsk_overlay_TaskProc, "Overl_U", STACK_OVERLAY, ptr, PRIO_OVERLAY, &ptr->telemetry_handle);
         break;
         case PORT_TYPE_ETH:
-            if (overlay_ETH_TaskHandle[ptr->num] == NULL) {
-        		xTaskCreate(tsk_overlay_TaskProc, "Overl_E", STACK_OVERLAY, ptr, PRIO_OVERLAY, &overlay_ETH_TaskHandle[ptr->num]);
-        	}
+        	xTaskCreate(tsk_overlay_TaskProc, "Overl_E", STACK_OVERLAY, ptr, PRIO_OVERLAY, &ptr->telemetry_handle);
         break;
+        }    
     }
 }
 
@@ -1292,26 +1280,9 @@ void start_overlay_task(port_str *ptr){
 * Helper function for killing the overlay task
 ******************************************************************************/
 void stop_overlay_task(port_str *ptr){
-    
-    switch(ptr->type){
-        case PORT_TYPE_SERIAL:
-            if (overlay_Serial_TaskHandle != NULL) {
-    				vTaskDelete(overlay_Serial_TaskHandle);
-    				overlay_Serial_TaskHandle = NULL;
-    		}
-        break;
-        case PORT_TYPE_USB:
-            if (overlay_USB_TaskHandle != NULL) {
-    				vTaskDelete(overlay_USB_TaskHandle);
-    				overlay_USB_TaskHandle = NULL;
-    		}
-        break;
-        case PORT_TYPE_ETH:
-            if (overlay_ETH_TaskHandle[ptr->num] != NULL) {
-			    vTaskDelete(overlay_ETH_TaskHandle[ptr->num]);
-			    overlay_ETH_TaskHandle[ptr->num] = NULL;
-		    }
-        break;
+    if (ptr->telemetry_handle != NULL) {
+        vTaskDelete(ptr->telemetry_handle);
+    	ptr->telemetry_handle = NULL;
     }
 }
 

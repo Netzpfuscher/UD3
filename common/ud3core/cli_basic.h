@@ -5,6 +5,8 @@
 #include "FreeRTOS.h"
 #include "semphr.h"
 #include "stream_buffer.h" 
+#include "task.h"
+    
 
 #define PARAM_SIZE(param) sizeof(param) / sizeof(parameter_entry)
     
@@ -84,6 +86,7 @@ struct port_struct {
     StreamBufferHandle_t tx;
     StreamBufferHandle_t rx;
     xSemaphoreHandle term_block;
+    xTaskHandle telemetry_handle;
 };
 
    

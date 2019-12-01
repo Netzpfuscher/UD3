@@ -4,15 +4,27 @@
 #include <stdint.h>
 
 #define PARAM_SIZE(param) sizeof(param) / sizeof(parameter_entry)
-
-#define SIZEP(x) ((char*)(&(x) + 1) - (char*)&(x))
-#define ADD_PARAM(para_type,text, value_var, type) {para_type,text, &value_var, SIZEP(value_var), type},
-#define ADD_COMMAND(command, command_func, help_text) {command, command_func, help_text},
+    
 #define TYPE_UNSIGNED   0
 #define TYPE_SIGNED     1
 #define TYPE_FLOAT      2
 #define TYPE_CHAR       3
 #define TYPE_STRING     4
+    
+#define typename(x) _Generic((x), \
+    uint8_t:    TYPE_UNSIGNED, \
+    uint16_t:   TYPE_UNSIGNED, \
+    uint32_t:   TYPE_UNSIGNED, \
+    int8_t:     TYPE_SIGNED, \
+    int16_t:    TYPE_SIGNED, \
+    int32_t:    TYPE_SIGNED, \
+    float:      TYPE_FLOAT, \
+    char:       TYPE_CHAR, \
+    char*:      TYPE_STRING)
+
+#define SIZEP(x) ((char*)(&(x) + 1) - (char*)&(x))
+#define ADD_PARAM(para_type,text, value_var) {para_type,text, &value_var, SIZEP(value_var), typename(value_var)},
+#define ADD_COMMAND(command, command_func, help_text) {command, command_func, help_text},
 
 #define PARAM_DEFAULT   0
 #define PARAM_CONFIG    1

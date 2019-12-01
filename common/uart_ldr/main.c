@@ -94,6 +94,7 @@ struct config_struct{
     char ip_mac[18];
     char ip_subnet[16];
     uint32_t baudrate;
+    uint8_t ivo_uart;
 };
 typedef struct config_struct cli_config;
 cli_config configuration;
@@ -102,12 +103,30 @@ cli_config configuration;
 * Parameter struct
 ******************************************************************************/
 parameter_entry confparam[] = {
-    ADD_PARAM(PARAM_CONFIG  ,"ip_addr"         , configuration.ip_addr         , TYPE_STRING)
-    ADD_PARAM(PARAM_CONFIG  ,"ip_gateway"      , configuration.ip_gw           , TYPE_STRING)
-    ADD_PARAM(PARAM_CONFIG  ,"ip_subnet"       , configuration.ip_subnet       , TYPE_STRING)
-    ADD_PARAM(PARAM_CONFIG  ,"ip_mac"          , configuration.ip_mac          , TYPE_STRING)
-    ADD_PARAM(PARAM_CONFIG  ,"baudrate"        , configuration.baudrate        , TYPE_UNSIGNED)
+    ADD_PARAM(PARAM_CONFIG  ,"ip_addr"         , configuration.ip_addr)
+    ADD_PARAM(PARAM_CONFIG  ,"ip_gateway"      , configuration.ip_gw)
+    ADD_PARAM(PARAM_CONFIG  ,"ip_subnet"       , configuration.ip_subnet)
+    ADD_PARAM(PARAM_CONFIG  ,"ip_mac"          , configuration.ip_mac)
+    ADD_PARAM(PARAM_CONFIG  ,"baudrate"        , configuration.baudrate)
+    ADD_PARAM(PARAM_CONFIG  ,"ivo_uart"        , configuration.ivo_uart)
 };
+
+void update_ivo_uart(){
+    switch(configuration.ivo_uart){
+    case 0:
+        IVO_UART_Control = 0b00;
+        break;
+    case 1:
+        IVO_UART_Control = 0b10;
+        break;
+    case 10:
+        IVO_UART_Control = 0b01;
+        break;
+    case 11:
+        IVO_UART_Control = 0b11;
+        break;
+    }
+}
 
 /*****************************************************************************
 * Callback if the baudrate is changed
@@ -146,6 +165,7 @@ int main()
         com_type=ETH;   
     }else{
         uart_baudrate(configuration.baudrate);
+        update_ivo_uart();
         com_type=SERIAL;
     }
 	

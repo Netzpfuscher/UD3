@@ -3,16 +3,14 @@
 <!--This file is machine generated and read. It is not intended to be edited by hand.-->
 <!--Due to this, there is no schema for this file.-->
 <CyGuid_2867d519-54d2-4c01-9830-c51cb08bc3dd type_name="CyDesigner.Common.ProjMgmt.Model.CyPrjMgmtWorkspaceSerialize" version="5" xml_contents_version="3" name="UD31" persistent="UD31.cywrk" platform="NOT_USED">
-<current_project name=".\UD3_QFN.cydsn\UD3_QFN.cyprj" />
+<current_project name=".\UD3_TQFP.cydsn\UD3_TQFP.cyprj" />
 <wrkspc_folders />
 <files />
 <projects>
 <v>.\UD3_TQFP.cydsn\UD3_TQFP.cyprj</v>
-<v>.\Interface.cydsn\Interface.cyprj</v>
 <v>.\UARTldr_TQFP.cydsn\UARTldr_TQFP.cyprj</v>
 <v>.\UARTldr_QFN.cydsn\UARTldr_QFN.cyprj</v>
 <v>.\UD3_QFN.cydsn\UD3_QFN.cyprj</v>
-<v>.\USBldr.cydsn\USBldr.cyprj</v>
 </projects>
 <workspace_id v="78827bf6-66d6-4002-ae61-1c9dcd5a5ac2" />
 <WriteAppVersionLastSavedWith v="4.2.0.641" />

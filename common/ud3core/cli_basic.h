@@ -8,25 +8,27 @@
 
 #define PARAM_SIZE(param) sizeof(param) / sizeof(parameter_entry)
     
-#define typename(x) _Generic((x), \
-    uint8_t:    0, \
-    uint16_t:   0, \
-    uint32_t:   0, \
-    int8_t:     1, \
-    int16_t:    1, \
-    int32_t:    1, \
-    float:    2, \
-    char:     3, \
-    char*:    4)
-
-#define SIZEP(x) ((char*)(&(x) + 1) - (char*)&(x))
-#define ADD_PARAM(para_type, visible,text, value_var, min, max, div, update_func, help_text) {para_type, visible,text, &value_var, SIZEP(value_var), typename(value_var),min, max, div, update_func, help_text},
-#define ADD_COMMAND(command, command_func, help_text) {command, command_func, help_text},
 #define TYPE_UNSIGNED   0
 #define TYPE_SIGNED     1
 #define TYPE_FLOAT      2
 #define TYPE_CHAR       3
 #define TYPE_STRING     4
+    
+#define typename(x) _Generic((x), \
+    uint8_t:    TYPE_UNSIGNED, \
+    uint16_t:   TYPE_UNSIGNED, \
+    uint32_t:   TYPE_UNSIGNED, \
+    int8_t:     TYPE_SIGNED, \
+    int16_t:    TYPE_SIGNED, \
+    int32_t:    TYPE_SIGNED, \
+    float:      TYPE_FLOAT, \
+    char:       TYPE_CHAR, \
+    char*:      TYPE_STRING)
+
+#define SIZEP(x) ((char*)(&(x) + 1) - (char*)&(x))
+#define ADD_PARAM(para_type, visible,text, value_var, min, max, div, update_func, help_text) {para_type, visible,text, &value_var, SIZEP(value_var), typename(value_var),min, max, div, update_func, help_text},
+#define ADD_COMMAND(command, command_func, help_text) {command, command_func, help_text},
+
     
 #define VISIBLE_TRUE    1
 #define VISIBLE_FALSE   0

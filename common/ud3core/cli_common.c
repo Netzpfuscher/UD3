@@ -91,6 +91,7 @@ uint8_t command_alarms(char *commandline, port_str *ptr);
 uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, port_str *ptr);
+uint8_t callback_MaxCurrentFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_OfftimeFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, port_str *ptr);
@@ -105,6 +106,7 @@ uint8_t callback_ivoUART(parameter_entry * params, uint8_t index, port_str *ptr)
 uint8_t callback_SIDfreq(parameter_entry * params, uint8_t index, port_str *ptr);
 
 void update_ivo_uart();
+void init_tt(uint8_t with_chart, port_str *ptr);
 
 
 uint8_t burst_state = 0;
@@ -215,7 +217,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_tr_pw"       , configuration.max_tr_pw       , 0      ,3000   ,0      ,callback_ConfigFunction     ,"Maximum TR PW [uSec]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_tr_prf"      , configuration.max_tr_prf      , 0      ,3000   ,0      ,callback_ConfigFunction     ,"Maximum TR frequency [Hz]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_qcw_pw"      , configuration.max_qcw_pw      , 0      ,30000  ,1000   ,callback_ConfigFunction     ,"Maximum QCW PW [ms]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_tr_current"  , configuration.max_tr_current  , 0      ,2000   ,0      ,callback_ConfigFunction     ,"Maximum TR current [A]")
+    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_tr_current"  , configuration.max_tr_current  , 0      ,2000   ,0      ,callback_MaxCurrentFunction ,"Maximum TR current [A]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"min_tr_current"  , configuration.min_tr_current  , 0      ,2000   ,0      ,callback_ConfigFunction     ,"Minimum TR current [A]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_qcw_current" , configuration.max_qcw_current , 0      ,2000   ,0      ,callback_ConfigFunction     ,"Maximum QCW current [A]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"temp1_max"       , configuration.temp1_max       , 0      ,100    ,0      ,NULL                        ,"Max temperature 1 [*C]")
@@ -436,6 +438,22 @@ uint8_t callback_VisibleFunction(parameter_entry * params, uint8_t index, port_s
 uint8_t callback_OfftimeFunction(parameter_entry * params, uint8_t index, port_str *ptr){
     Offtime_WritePeriod(param.offtime);
     return 1;
+}
+
+/*****************************************************************************
+* Callback if the maximum current is changed
+******************************************************************************/
+uint8_t callback_MaxCurrentFunction(parameter_entry * params, uint8_t index, port_str *ptr) {
+    if (ptr->term_mode!=PORT_TERM_VT100) {
+        uint8_t include_chart;
+        if (ptr->term_mode==PORT_TERM_TT) {
+            include_chart = pdTRUE;
+        } else {
+            include_chart = pdFALSE;
+        }
+        init_tt(include_chart,ptr);
+    }
+	return 1;
 }
 
 /*****************************************************************************

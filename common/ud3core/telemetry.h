@@ -44,13 +44,13 @@
     
 #define GAUGE0_NAME "Bus Voltage"
 #define GAUGE0_MIN 0
-#define GAUGE0_MAX 600
+#define GAUGE0_MAX configuration.r_top / 1000
 #define GAUGE0_VAR telemetry.bus_v
 #define GAUGE0_SLOW 0
         
 #define GAUGE1_NAME "Temperature"
 #define GAUGE1_MIN 0
-#define GAUGE1_MAX 100
+#define GAUGE1_MAX configuration.temp1_max
 #define GAUGE1_VAR telemetry.temp1
 #define GAUGE1_SLOW 1
 
@@ -68,7 +68,7 @@
     
 #define GAUGE4_NAME "Primary Curr."
 #define GAUGE4_MIN 0
-#define GAUGE4_MAX 2*configuration.max_tr_current
+#define GAUGE4_MAX ((5000ul * configuration.ct1_ratio) / configuration.ct1_burden)/100
 #define GAUGE4_VAR telemetry.primary_i
 #define GAUGE4_SLOW 0
 
@@ -93,14 +93,14 @@
     
 #define CHART0_NAME "Bus Voltage"
 #define CHART0_MIN 0
-#define CHART0_MAX 600
+#define CHART0_MAX configuration.r_top / 1000
 #define CHART0_OFFSET 0
 #define CHART0_UNIT TT_UNIT_V
 #define CHART0_VAR telemetry.bus_v
         
 #define CHART1_NAME "Temperature"
 #define CHART1_MIN 0
-#define CHART1_MAX 100
+#define CHART1_MAX configuration.temp1_max
 #define CHART1_OFFSET 0
 #define CHART1_UNIT TT_UNIT_C
 #define CHART1_VAR telemetry.temp1

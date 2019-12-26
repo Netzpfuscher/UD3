@@ -274,6 +274,9 @@ void tsk_overlay_TaskProc(void *pvParameters) {
             cnt=0;
             show_overlay_400ms(pvParameters);
         }
+        
+        
+        
         xSemaphoreGive(port->term_block);
         
 		/* `#END` */

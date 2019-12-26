@@ -71,8 +71,7 @@ uint8_t command_tr(char *commandline, port_str *ptr);
 uint8_t command_udkill(char *commandline, port_str *ptr);
 uint8_t command_eprom(char *commandline, port_str *ptr);
 uint8_t command_status(char *commandline, port_str *ptr);
-uint8_t command_tune_p(char *commandline, port_str *ptr);
-uint8_t command_tune_s(char *commandline, port_str *ptr);
+uint8_t command_tune(char *commandline, port_str *ptr);
 uint8_t command_tasks(char *commandline, port_str *ptr);
 uint8_t command_bootloader(char *commandline, port_str *ptr);
 uint8_t command_qcw(char *commandline, port_str *ptr);
@@ -91,7 +90,7 @@ uint8_t command_alarms(char *commandline, port_str *ptr);
 uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, port_str *ptr);
-uint8_t callback_MaxCurrentFunction(parameter_entry * params, uint8_t index, port_str *ptr);
+uint8_t callback_TTupdateFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_OfftimeFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, port_str *ptr);
@@ -217,15 +216,15 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_tr_pw"       , configuration.max_tr_pw       , 0      ,3000   ,0      ,callback_ConfigFunction     ,"Maximum TR PW [uSec]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_tr_prf"      , configuration.max_tr_prf      , 0      ,3000   ,0      ,callback_ConfigFunction     ,"Maximum TR frequency [Hz]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_qcw_pw"      , configuration.max_qcw_pw      , 0      ,30000  ,1000   ,callback_ConfigFunction     ,"Maximum QCW PW [ms]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_tr_current"  , configuration.max_tr_current  , 0      ,2000   ,0      ,callback_MaxCurrentFunction ,"Maximum TR current [A]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"min_tr_current"  , configuration.min_tr_current  , 0      ,2000   ,0      ,callback_ConfigFunction     ,"Minimum TR current [A]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_qcw_current" , configuration.max_qcw_current , 0      ,2000   ,0      ,callback_ConfigFunction     ,"Maximum QCW current [A]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"temp1_max"       , configuration.temp1_max       , 0      ,100    ,0      ,NULL                        ,"Max temperature 1 [*C]")
+    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_tr_current"  , configuration.max_tr_current  , 0      ,8000   ,0      ,callback_TTupdateFunction   ,"Maximum TR current [A]")
+    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"min_tr_current"  , configuration.min_tr_current  , 0      ,8000   ,0      ,callback_ConfigFunction     ,"Minimum TR current [A]")
+    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_qcw_current" , configuration.max_qcw_current , 0      ,8000   ,0      ,callback_TTupdateFunction   ,"Maximum QCW current [A]")
+    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"temp1_max"       , configuration.temp1_max       , 0      ,100    ,0      ,callback_TTupdateFunction   ,"Max temperature 1 [*C]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"temp2_max"       , configuration.temp2_max       , 0      ,100    ,0      ,NULL                        ,"Max temperature 2 [*C]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ct1_ratio"       , configuration.ct1_ratio       , 1      ,2000   ,0      ,callback_ConfigFunction     ,"CT1 [N Turns]")
+    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ct1_ratio"       , configuration.ct1_ratio       , 1      ,5000   ,0      ,callback_TTupdateFunction   ,"CT1 [N Turns]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ct2_ratio"       , configuration.ct2_ratio       , 1      ,5000   ,0      ,callback_ConfigFunction     ,"CT2 [N Turns]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ct3_ratio"       , configuration.ct3_ratio       , 1      ,2000   ,0      ,callback_ConfigFunction     ,"CT3 [N Turns]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ct1_burden"      , configuration.ct1_burden      , 1      ,1000   ,10     ,callback_ConfigFunction     ,"CT1 burden [Ohm]")
+    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ct3_ratio"       , configuration.ct3_ratio       , 1      ,5000   ,0      ,callback_ConfigFunction     ,"CT3 [N Turns]")
+    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ct1_burden"      , configuration.ct1_burden      , 1      ,1000   ,10     ,callback_TTupdateFunction   ,"CT1 burden [Ohm]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ct2_burden"      , configuration.ct2_burden      , 1      ,1000   ,10     ,callback_ConfigFunction     ,"CT2 burden [Ohm]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ct3_burden"      , configuration.ct3_burden      , 1      ,1000   ,10     ,callback_ConfigFunction     ,"CT3 burden [Ohm]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ct2_type"        , configuration.ct2_type        , 0      ,1      ,0      ,callback_ConfigFunction     ,"CT2 type 0=current 1=voltage")
@@ -255,7 +254,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"baudrate"        , configuration.baudrate        , 1200   ,4000000,0      ,callback_baudrateFunction   ,"Serial baudrate")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ivo_uart"        , configuration.ivo_uart        , 0      ,11     ,0      ,callback_ivoUART            ,"[RX][TX] 0=not inverted 1=inverted")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"spi_speed"       , configuration.spi_speed       , 10     ,160    ,10     ,callback_SPIspeedFunction   ,"SPI speed [MHz]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"r_bus"           , configuration.r_top           , 100    ,1000000,1000   ,NULL                        ,"Series resistor of voltage input [kOhm]")
+    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"r_bus"           , configuration.r_top           , 100    ,1000000,1000   ,callback_TTupdateFunction   ,"Series resistor of voltage input [kOhm]")
 };
 
 /*****************************************************************************
@@ -276,8 +275,7 @@ command_entry commands[] = {
     ADD_COMMAND("status"	    ,command_status         ,"Displays coil status")
     ADD_COMMAND("tasks"	        ,command_tasks          ,"Show running Tasks")
     ADD_COMMAND("tr"		    ,command_tr             ,"Transient [start/stop]")
-    ADD_COMMAND("tune_p"	    ,command_tune_p         ,"Autotune Primary")
-    ADD_COMMAND("tune_s"	    ,command_tune_s         ,"Autotune Secondary")
+    ADD_COMMAND("tune"	        ,command_tune           ,"Autotune [prim/sec]")
     ADD_COMMAND("tterm"	        ,command_tterm          ,"Changes terminal mode")
     ADD_COMMAND("minstat"	    ,command_minstat        ,"Prints the min statistics")
     ADD_COMMAND("ethcon"	    ,command_ethcon         ,"Prints the eth connections")
@@ -443,7 +441,25 @@ uint8_t callback_OfftimeFunction(parameter_entry * params, uint8_t index, port_s
 /*****************************************************************************
 * Callback if the maximum current is changed
 ******************************************************************************/
-uint8_t callback_MaxCurrentFunction(parameter_entry * params, uint8_t index, port_str *ptr) {
+uint8_t callback_TTupdateFunction(parameter_entry * params, uint8_t index, port_str *ptr) {
+    
+    uint32_t max_current_cmp = ((4080ul * configuration.ct1_ratio) / configuration.ct1_burden)/100; //Amperes
+    uint32_t max_current_meas = ((5000ul * configuration.ct1_ratio) / configuration.ct1_burden)/100; //Amperes
+    
+    if(configuration.max_tr_current>max_current_cmp || configuration.max_qcw_current>max_current_cmp){
+        char buffer[120];
+        snprintf(buffer, sizeof(buffer),"Warning: Max CT1 current with the current setup is %uA for OCD and %uA for peak measurement\r\n",max_current_cmp,max_current_meas);
+        send_string(buffer, ptr);
+        if(configuration.max_tr_current>max_current_cmp) configuration.max_tr_current = max_current_cmp;
+        if(configuration.max_qcw_current>max_current_cmp) configuration.max_qcw_current = max_current_cmp;
+    }
+    uint8 sfflag = system_fault_Read();
+    system_fault_Control = 0; //halt tesla coil operation during updates!
+    
+    configure_ZCD_to_PWM();
+    
+    system_fault_Control = sfflag;
+    
     if (ptr->term_mode!=PORT_TERM_VT100) {
         uint8_t include_chart;
         if (ptr->term_mode==PORT_TERM_TT) {
@@ -964,25 +980,38 @@ uint8_t command_udkill(char *commandline, port_str *ptr) {
 * commands a frequency sweep for the primary coil. It searches for a peak
 * and makes a second run with +-6kHz around the peak
 ******************************************************************************/
-uint8_t command_tune_p(char *commandline, port_str *ptr) {
+uint8_t command_tune(char *commandline, port_str *ptr) {
+    SKIP_SPACE(commandline);
+    CHECK_NULL(commandline);
     
+    
+    SEND_CONST_STRING("Warning: The bridge will switch hard, make sure that the bus voltage is appropriate\r\n",ptr);
+    SEND_CONST_STRING("Press [y] to proceed\r\n",ptr);
+    
+    xSemaphoreGive(ptr->term_block);
+    if(getch(ptr, portMAX_DELAY) != 'y'){
+        xSemaphoreTake(ptr->term_block, portMAX_DELAY);
+        SEND_CONST_STRING("Tune aborted\r\n",ptr);
+        return 0;
+    }
+    xSemaphoreTake(ptr->term_block, portMAX_DELAY);
     if(ptr->term_mode == PORT_TERM_TT){
         tsk_overlay_chart_stop();
         send_chart_clear(ptr);
         
     }
-    
-	run_adc_sweep(param.tune_start, param.tune_end, param.tune_pw, CT_PRIMARY, param.tune_delay, ptr);
+    SEND_CONST_STRING("Start sweep:\r\n",ptr);
+    if (ntlibc_stricmp(commandline, "prim") == 0) {
+    	run_adc_sweep(param.tune_start, param.tune_end, param.tune_pw, CT_PRIMARY, param.tune_delay, ptr);
+        SEND_CONST_STRING("Type cls to go back to normal telemtry chart\r\n",ptr);
+        return 0;
+    }else if (ntlibc_stricmp(commandline, "sec") == 0) {
+        run_adc_sweep(param.tune_start, param.tune_end, param.tune_pw, CT_SECONDARY, param.tune_delay, ptr);
+        SEND_CONST_STRING("Type cls to go back to normal telemtry chart\r\n",ptr);
+        return 0;
+    }
 
-	return 0;
-}
-
-/*****************************************************************************
-* commands a frequency sweep for the secondary coil
-******************************************************************************/
-uint8_t command_tune_s(char *commandline, port_str *ptr) {
-	run_adc_sweep(param.tune_start, param.tune_end, param.tune_pw, CT_SECONDARY, param.tune_delay, ptr);
-	return 0;
+    HELP_TEXT("Usage: tune [prim|sec]\r\n");
 }
 
 /*****************************************************************************

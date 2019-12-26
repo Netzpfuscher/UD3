@@ -46,6 +46,7 @@ void stop_overlay_task(port_str *ptr);
 void uart_baudrate(uint32_t baudrate);
 void spi_speed(uint32_t speed);
 void update_visibilty(void);
+void init_tt(uint8_t with_chart, port_str *ptr);
 
 volatile uint8_t qcw_reg;
 extern parameter_entry confparam[];

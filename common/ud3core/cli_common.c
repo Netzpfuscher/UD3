@@ -1007,7 +1007,7 @@ uint8_t command_tune(char *commandline, port_str *ptr) {
         return 0;
     }else if (ntlibc_stricmp(commandline, "sec") == 0) {
         run_adc_sweep(param.tune_start, param.tune_end, param.tune_pw, CT_SECONDARY, param.tune_delay, ptr);
-        SEND_CONST_STRING("Type cls to go back to normal telemtry chart\r\n",ptr);
+        SEND_CONST_STRING("Type cls to go back to normal telemetry chart\r\n",ptr);
         return 0;
     }
 

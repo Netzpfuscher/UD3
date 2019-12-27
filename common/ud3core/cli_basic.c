@@ -759,13 +759,25 @@ void Term_Enable_Cursor(port_str *ptr) {
 
 uint8_t getch(port_str *ptr, TickType_t xTicksToWait){
     uint8_t c=0;
+    if(xTicksToWait>0){
+        xSemaphoreGive(ptr->term_block);
+    }
     xStreamBufferReceive(ptr->rx,&c,1,xTicksToWait);
+    if(xTicksToWait>0){
+        xSemaphoreTake(ptr->term_block, portMAX_DELAY);
+    }
     return c;
 }
 
 uint8_t getche(port_str *ptr, TickType_t xTicksToWait){
     uint8_t c=0;
+    if(xTicksToWait>0){
+        xSemaphoreGive(ptr->term_block);
+    }
     xStreamBufferReceive(ptr->rx,&c,1,xTicksToWait);
+    if(xTicksToWait>0){
+        xSemaphoreTake(ptr->term_block, portMAX_DELAY);
+    }
     if(c){
         xStreamBufferSend(ptr->tx,&c,1,0);
     }

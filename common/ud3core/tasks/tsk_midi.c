@@ -690,9 +690,7 @@ uint8_t command_SynthMon(char *commandline, port_str *ptr){
     Term_Erase_Screen(ptr);
     SEND_CONST_STRING("Synthesizer monitor    (press q for quit)\r\n",ptr);
     SEND_CONST_STRING("-----------------------------------------------------------\r\n",ptr);
-    xSemaphoreGive(ptr->term_block);
     while(getch(ptr,100 /portTICK_RATE_MS) != 'q'){
-        xSemaphoreTake(ptr->term_block, portMAX_DELAY);
         Term_Move_Cursor(3,1,ptr);
         
         for(uint8_t i=0;i<N_CHANNEL;i++){
@@ -718,9 +716,7 @@ uint8_t command_SynthMon(char *commandline, port_str *ptr){
             }
             SEND_CONST_STRING("\r\n",ptr);
         }
-        xSemaphoreGive(ptr->term_block);
     }
-    xSemaphoreTake(ptr->term_block, portMAX_DELAY);
     SEND_CONST_STRING("\r\n",ptr);
     Term_Enable_Cursor(ptr);
     return 1;

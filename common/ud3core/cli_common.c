@@ -988,13 +988,10 @@ uint8_t command_tune(char *commandline, port_str *ptr) {
     SEND_CONST_STRING("Warning: The bridge will switch hard, make sure that the bus voltage is appropriate\r\n",ptr);
     SEND_CONST_STRING("Press [y] to proceed\r\n",ptr);
     
-    xSemaphoreGive(ptr->term_block);
     if(getch(ptr, portMAX_DELAY) != 'y'){
-        xSemaphoreTake(ptr->term_block, portMAX_DELAY);
         SEND_CONST_STRING("Tune aborted\r\n",ptr);
         return 0;
     }
-    xSemaphoreTake(ptr->term_block, portMAX_DELAY);
     if(ptr->term_mode == PORT_TERM_TT){
         tsk_overlay_chart_stop();
         send_chart_clear(ptr);
@@ -1432,9 +1429,7 @@ uint8_t command_signals(char *commandline, port_str *ptr) {
     char buffer[80];
     Term_Disable_Cursor(ptr);
     Term_Erase_Screen(ptr);
-    xSemaphoreGive(ptr->term_block);
     while(getch(ptr,250 /portTICK_RATE_MS) != 'q'){
-        xSemaphoreTake(ptr->term_block, portMAX_DELAY);
         Term_Move_Cursor(1,1,ptr);
         SEND_CONST_STRING("Signal state (q for quit):\r\n", ptr);
         SEND_CONST_STRING("**************************\r\n", ptr);
@@ -1500,9 +1495,7 @@ uint8_t command_signals(char *commandline, port_str *ptr) {
         SEND_CONST_STRING("                                    \r", ptr);
         snprintf(buffer,sizeof(buffer),"Ibus: %u mV\r\n\r\n", ADC_CountsTo_mVolts(ADC_sample_buf[DATA_IBUS]));
         send_string(buffer, ptr);
-        xSemaphoreGive(ptr->term_block);
     }
-    xSemaphoreTake(ptr->term_block, portMAX_DELAY);
     Term_Enable_Cursor(ptr);
 	return 1;
 }

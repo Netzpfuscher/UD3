@@ -179,7 +179,7 @@ void process_sid(uint8_t* ptr, uint16_t len) {
                 for(uint8_t i=0;i<3;i++){
                     if (SID_frame.gate[i]){
                         if(SID_frame.wave[i]){
-                            dutycycle+= ((uint32)127*(uint32)param.pw)/(127000ul/(uint32)4000); //Noise
+                            dutycycle+= (((uint32)127*(uint32)param.pw)/(127000ul/(uint32)SID_frame.freq[i])/2); //Noise
                         }else{
                             dutycycle+= ((uint32)127*(uint32)param.pw)/(127000ul/(uint32)SID_frame.freq[i]); //Normal wave
                         }

@@ -373,20 +373,17 @@ CY_ISR(isr_sid) {
 		if (channel[ch].volume > 0) {
             telemetry.midi_voices++;
 			if ((r / channel[ch].halfcount) % 2 > 0) {
-				flag[ch] = 1;
-                if(sid_frm.wave[ch]){
-                    if(random & 0x01){
-                        flag[ch] = 0;
-                    }
-                }
+				flag[ch] = 1; 
 			}
 		}
 		if (flag[ch] > old_flag[ch]) {
-            pulse.volume = channel[ch].volume;
-            pulse.pw = sid_frm.master_pw;
-            //pulse.pw = channel[ch].volume;   //For DEBUG with speaker
-            xQueueSendFromISR(qPulse,&pulse,0);
-		}
+            if(!(sid_frm.wave[ch] && (random & 0x01))){
+                pulse.volume = channel[ch].volume;
+                pulse.pw = sid_frm.master_pw;
+                //pulse.pw = channel[ch].volume;   //For DEBUG with speaker
+                xQueueSendFromISR(qPulse,&pulse,0);
+            }
+		}   
 		old_flag[ch] = flag[ch];
    
         

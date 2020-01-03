@@ -76,6 +76,8 @@ extern MIDICH midich[N_MIDICHANNEL];
 
 extern const uint8_t kill_msg[3];
 
+extern volatile uint32_t next_frame;
+
 struct sid_f{
     uint16_t freq[SID_CHANNELS];
     uint16_t half[SID_CHANNELS];
@@ -87,6 +89,7 @@ struct sid_f{
     uint8_t sustain[SID_CHANNELS];
     uint8_t release[SID_CHANNELS];
     uint16_t master_pw;
+    uint32_t next_frame;
 };
 
 #define SYNTH_OFF  0

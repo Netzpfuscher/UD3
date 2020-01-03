@@ -289,7 +289,7 @@ CY_ISR(isr_midi) {
 
 }
 
-
+volatile uint32_t next_frame=4294967295;
 
 
 CY_ISR(isr_sid) {
@@ -298,12 +298,11 @@ CY_ISR(isr_sid) {
         handle_qcw();
         return;
     }
+    uint32 r = SG_Timer_ReadCounter();
     
     telemetry.midi_voices=0;
-    static uint8_t cnt=0;
     
-    if (cnt > param.sid_divider){
-        cnt=0;
+    if (r < next_frame){
         if(xQueueReceiveFromISR(qSID,&sid_frm,0)){
             
             for(uint8_t i=0;i<SID_CHANNELS;i++){
@@ -313,21 +312,20 @@ CY_ISR(isr_sid) {
                 sid_frm.pw[i]=sid_frm.pw[i]>>4;
                 channel[i].old_gate = sid_frm.gate[i];
             }
+            next_frame = sid_frm.next_frame;
         }else{
             for (uint8_t i = 0;i<SID_CHANNELS;++i) {
                 channel[i].volume = 0;
                 channel[i].adsr_state = ADSR_IDLE;
             }
         }
-    }else{
-        cnt++;
     }
     
     uint8_t random = rand();
 
     PULSE pulse;
 	uint8_t flag[SID_CHANNELS];
-	uint32 r = SG_Timer_ReadCounter();
+	
 	for (uint8_t ch = 0; ch < SID_CHANNELS; ch++) {
         switch (channel[ch].adsr_state){
             case ADSR_ATTACK:
@@ -380,7 +378,7 @@ CY_ISR(isr_sid) {
             if(!(sid_frm.wave[ch] && (random & 0x01))){
                 pulse.volume = channel[ch].volume;
                 pulse.pw = sid_frm.master_pw;
-                //pulse.pw = channel[ch].volume;   //For DEBUG with speaker
+                pulse.pw = channel[ch].volume;   //For DEBUG with speaker
                 xQueueSendFromISR(qPulse,&pulse,0);
             }
 		}   

@@ -83,6 +83,10 @@ void process_midi(uint8_t* ptr, uint16_t len) {
 #define SID_FCHI        22
 #define SID_Res_Filt    23
 #define SID_Mode_Vol    24
+#define SID_UD_TIME0    25
+#define SID_UD_TIME1    26
+#define SID_UD_TIME2    27
+#define SID_UD_TIME3    28
 
 
 void process_sid(uint8_t* ptr, uint16_t len) {
@@ -172,9 +176,24 @@ void process_sid(uint8_t* ptr, uint16_t len) {
                     SID_frame.sustain[2] = ((*ptr & 0xF0) >> 1);
                     SID_frame.release[2] = (*ptr) & 0x0F;
                     break;
+                case SID_UD_TIME0:
+                    SID_frame.next_frame = *ptr;
+                    break;
+                case SID_UD_TIME1:
+                    SID_frame.next_frame |= *ptr<<8;
+                    break;
+                case SID_UD_TIME2:
+                    SID_frame.next_frame |= *ptr<<16;
+                    break;
+                case SID_UD_TIME3:
+                    SID_frame.next_frame |= *ptr<<24;
+                    SID_frame.next_frame = 4294967295-SID_frame.next_frame;
+                    
+                    break;
+                    
             }
             SID_register++;
-            if(SID_register==25){
+            if(SID_register==29){
                 uint16_t dutycycle=0;
                 for(uint8_t i=0;i<3;i++){
                     if (SID_frame.gate[i]){

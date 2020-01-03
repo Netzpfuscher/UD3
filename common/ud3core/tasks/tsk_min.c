@@ -165,7 +165,13 @@ void process_synth(uint8_t *min_payload, uint8_t len_payload){
     switch(*min_payload++){
         case SYNTH_CMD_FLUSH:
             if(qSID!=NULL){
+                SG_Timer_Stop();
+                isr_midi_Disable();
                 xQueueReset(qSID);
+                next_frame=4294967295;
+                SG_Timer_WriteCounter(0);
+                SG_Timer_Start();
+                isr_midi_Enable();
             }
             break;
         case SYNTH_CMD_SID:

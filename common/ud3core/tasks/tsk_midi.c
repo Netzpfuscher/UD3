@@ -310,16 +310,21 @@ CY_ISR(isr_sid) {
                 if(sid_frm.gate[i] > channel[i].old_gate) channel[i].adsr_state=ADSR_ATTACK;  //Rising edge
                 if(sid_frm.gate[i] < channel[i].old_gate) channel[i].adsr_state=ADSR_RELEASE;  //Falling edge
                 sid_frm.pw[i]=sid_frm.pw[i]>>4;
+                channel[i].freq = sid_frm.freq[i];
                 channel[i].old_gate = sid_frm.gate[i];
             }
             next_frame = sid_frm.next_frame;
         }else{
-            for (uint8_t i = 0;i<SID_CHANNELS;++i) {
-                channel[i].volume = 0;
-                channel[i].adsr_state = ADSR_IDLE;
-            }
+           
         }
     }
+    if((r-next_frame)>64000){  //Stop output if ~200ms no new Frame
+        for (uint8_t i = 0;i<SID_CHANNELS;++i) {
+            channel[i].volume = 0;
+            channel[i].adsr_state = ADSR_IDLE;
+        }   
+    }
+    
     
     uint8_t random = rand();
 
@@ -681,6 +686,8 @@ uint8_t command_SynthMon(char *commandline, port_str *ptr){
     char buf[80];
     uint8_t ret;
     uint32_t freq=0;
+    uint8_t channels=8;
+    if(param.synth== SYNTH_SID) channels=3;
     Term_Disable_Cursor(ptr);
     Term_Erase_Screen(ptr);
     SEND_CONST_STRING("Synthesizer monitor    (press q for quit)\r\n",ptr);
@@ -688,7 +695,7 @@ uint8_t command_SynthMon(char *commandline, port_str *ptr){
     while(getch(ptr,100 /portTICK_RATE_MS) != 'q'){
         Term_Move_Cursor(3,1,ptr);
         
-        for(uint8_t i=0;i<N_CHANNEL;i++){
+        for(uint8_t i=0;i<channels;i++){
             ret=sprintf(buf,"Ch:   Freq:      \r");
             send_buffer((uint8_t*)buf,ret,ptr);   
             if(channel[i].volume>0){
@@ -706,7 +713,7 @@ uint8_t command_SynthMon(char *commandline, port_str *ptr){
                 if(w<cnt){
                     send_char('o',ptr);
                 }else{
-                    send_char('_',ptr);
+                    send_char(' ',ptr);
                 }
             }
             SEND_CONST_STRING("\r\n",ptr);

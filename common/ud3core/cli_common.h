@@ -114,8 +114,6 @@ struct parameter_struct{
     uint8_t     synth;
     uint16_t    temp_duty;
     uint8_t     mch;
-    uint8_t     sid_freq;
-    uint8_t     sid_divider;
 };
 typedef struct parameter_struct cli_parameter;
 

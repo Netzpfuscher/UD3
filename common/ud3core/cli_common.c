@@ -102,7 +102,6 @@ uint8_t callback_VisibleFunction(parameter_entry * params, uint8_t index, port_s
 uint8_t callback_MchFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_MchCopyFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_ivoUART(parameter_entry * params, uint8_t index, port_str *ptr);
-uint8_t callback_SIDfreq(parameter_entry * params, uint8_t index, port_str *ptr);
 
 void update_ivo_uart();
 void init_tt(uint8_t with_chart, port_str *ptr);
@@ -179,8 +178,6 @@ void init_config(){
     param.transpose = 0;
     param.mch = 0;
     param.synth = SYNTH_MIDI;
-    param.sid_freq = 50;
-    param.sid_divider = 212; //divider valid for 50Hz
     
     i2t_set_limit(configuration.max_const_i,configuration.max_fault_i,10000);
     update_ivo_uart();
@@ -211,7 +208,6 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"attack"          , midich[0].attack              , 0      ,127    ,0      ,callback_MchCopyFunction    ,"MIDI attack time of mch") //WARNING: Must be mch index +1
     ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"decay"           , midich[0].decay               , 0      ,127    ,0      ,callback_MchCopyFunction    ,"MIDI decay time of mch")  //WARNING: Must be mch index +2
     ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"release"         , midich[0].release             , 0      ,127    ,0      ,callback_MchCopyFunction    ,"MIDI release time of mch")//WARNING: Must be mch index +3
-    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"sid_freq"        , param.sid_freq                , 45     ,100    ,0      ,callback_SIDfreq           ,"SID frame interrupt frequency")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"watchdog"        , configuration.watchdog        , 0      ,1      ,0      ,callback_ConfigFunction     ,"Watchdog Enable")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_tr_pw"       , configuration.max_tr_pw       , 0      ,3000   ,0      ,callback_ConfigFunction     ,"Maximum TR PW [uSec]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_tr_prf"      , configuration.max_tr_prf      , 0      ,3000   ,0      ,callback_ConfigFunction     ,"Maximum TR frequency [Hz]")
@@ -347,14 +343,6 @@ void update_visibilty(void){
 
 // clang-format on
 
-/*****************************************************************************
-* Callback for SID frequency change
-******************************************************************************/
-
-uint8_t callback_SIDfreq(parameter_entry * params, uint8_t index, port_str *ptr){
-    param.sid_divider = floor((32000.0/3.0)/(float)param.sid_freq);
-    return 1;
-}
 
 /*****************************************************************************
 * Callback for invert option UART

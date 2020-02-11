@@ -377,7 +377,7 @@ CY_ISR(isr_sid) {
 			}
 		}
 		if (flag[ch] > old_flag[ch]) {
-            if(!(sid_frm.wave[ch] && (random & 0x01))){
+            if(!(sid_frm.wave[ch] && (random & 0x03))){
                 pulse.volume = channel[ch].volume;
                 pulse.pw = sid_frm.master_pw;
                 //pulse.pw = channel[ch].volume;   //For DEBUG with speaker

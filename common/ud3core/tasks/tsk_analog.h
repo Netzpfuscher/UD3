@@ -40,9 +40,10 @@
 #define I2T_WARNING			1
 #define I2T_LIMIT			2
     
-#define DATA_VBATT 1
 #define DATA_VBUS 0
-#define DATA_IBUS 3
+#define DATA_VBATT 1
+#define DATA_VDRIVER 3
+#define DATA_IBUS 2
     
 #define LOW_BATTERY_TIMEOUT 20000 //8khz ticks, 40000 = 5sec
 #define CHARGE_TEST_TIMEOUT 80000 //10 sec

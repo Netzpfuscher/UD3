@@ -124,6 +124,7 @@ typedef struct
 {
 	uint16 bus_v;		//in volts
 	uint16 batt_v;		//in volts
+    uint16 driver_v;	//in mV
 	uint8 temp1;		//in *C
 	uint8 temp2;		//in *C
 	uint8 bus_status;   //0 = charging, 1 = ready

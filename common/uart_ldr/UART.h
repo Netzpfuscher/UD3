@@ -169,6 +169,12 @@ void UART_Wakeup(void) ;
              ;
     cystatus UART_CyBtldrCommRead(uint8 pData[], uint16 size, uint16 * count, uint8 timeOut) CYSMALL
              ;
+    
+        /* USB Physical layer functions */
+    cystatus USB_CyBtldrCommWrite(const uint8 pData[], uint16 size, uint16 * count, uint8 timeOut) CYSMALL
+             ;
+    cystatus USB_CyBtldrCommRead(uint8 pData[], uint16 size, uint16 * count, uint8 timeOut) CYSMALL
+             ;
 
     #if (CYDEV_BOOTLOADER_IO_COMP == CyBtldr_UART)
         #define CyBtldrCommStart    UART_CyBtldrCommStart

@@ -90,18 +90,7 @@ uint8_t skip_flag = 0; // Skipping system exclusive messages
 
 
 
-typedef struct __channel__ {
-	uint8 midich;	// Channel of midi (0 - 15)
-	uint8 miditone;  // Midi's tone number (0-127)
-	uint8 volume;	// Volume (0 - 127) Not immediately reflected in port
-	uint8 updated;   // Was it updated?
-    uint16 halfcount;
-    uint32 freq;
-    uint8 adsr_state;
-    uint8 adsr_count;
-    uint8 sustain;
-    uint8 old_gate;
-} CHANNEL;
+
 
 
 	// Tone generator channel status (updated according to MIDI messages)
@@ -312,6 +301,7 @@ CY_ISR(isr_sid) {
                 if(sid_frm.gate[i] < channel[i].old_gate) channel[i].adsr_state=ADSR_RELEASE;  //Falling edge
                 sid_frm.pw[i]=sid_frm.pw[i]>>4;
                 channel[i].old_gate = sid_frm.gate[i];
+                channel[i].freq = sid_frm.freq[i];
             }
         }else{
             for (uint8_t i = 0;i<SID_CHANNELS;++i) {
@@ -704,6 +694,7 @@ uint8_t command_SynthMon(char *commandline, port_str *ptr){
             ret=sprintf(buf,"Vol: ",i+1);
             send_buffer((uint8_t*)buf,ret,ptr);
             uint8_t cnt = channel[i].volume/12;
+
             for(uint8_t w=0;w<10;w++){
                 if(w<cnt){
                     send_char('o',ptr);

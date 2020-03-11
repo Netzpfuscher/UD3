@@ -152,7 +152,6 @@ void tsk_thermistor_TaskProc(void *pvParameters) {
     
 	initialize_thermistor();
     
-    
 
 	/* `#END` */
     alarm_push(ALM_PRIO_INFO,warn_task_thermistor, ALM_NO_VALUE);
@@ -178,7 +177,6 @@ void tsk_thermistor_TaskProc(void *pvParameters) {
 		} else {
 			temp_fault_counter = 0;
 		}
-        
 
 		/* `#END` */
 

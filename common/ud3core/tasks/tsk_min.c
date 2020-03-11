@@ -389,7 +389,7 @@ void tsk_min_Start(void) {
 
 	/* `#END` */
     UART_2_Start();
-
+    
 	if (tsk_min_initVar != 1) {
 		/*
 	 	* Create the task and then leave. When FreeRTOS starts up the scheduler

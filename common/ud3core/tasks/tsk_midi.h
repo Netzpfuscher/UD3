@@ -51,6 +51,19 @@ typedef struct __midich__ {
     uint8 release;
 	uint8 updated;	// Was it updated (whether BentRange or PitchBent was rewritten)
 } MIDICH;
+
+typedef struct __channel__ {
+	uint8 midich;	// Channel of midi (0 - 15)
+	uint8 miditone;  // Midi's tone number (0-127)
+	uint8 volume;	// Volume (0 - 127) Not immediately reflected in port
+	uint8 updated;   // Was it updated?
+    uint16 halfcount;
+    uint32 freq;
+    uint8 adsr_state;
+    uint8 adsr_count;
+    uint8 sustain;
+    uint8 old_gate;
+} CHANNEL;
     
 #define N_CHANNEL 8
 
@@ -73,6 +86,8 @@ void kill_accu();
 extern xQueueHandle qSID;
 
 extern MIDICH midich[N_MIDICHANNEL];
+
+extern CHANNEL channel[N_CHANNEL];
 
 extern const uint8_t kill_msg[3];
 

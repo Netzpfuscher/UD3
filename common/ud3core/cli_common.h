@@ -95,6 +95,8 @@ struct config_struct{
     uint32_t r_top;
     uint16_t chargedelay;
     uint8_t ivo_uart;
+    uint8_t enable_display;
+    uint8_t line_code;
 };
 typedef struct config_struct cli_config;
 
@@ -116,6 +118,7 @@ struct parameter_struct{
     uint8_t     mch;
     uint8_t     sid_freq;
     uint8_t     sid_divider;
+    uint8_t     display;
 };
 typedef struct parameter_struct cli_parameter;
 

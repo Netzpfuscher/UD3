@@ -1547,6 +1547,8 @@
       <Data key="2b269b96-47a4-4e9a-937e-76d4080bb211/8b77a6c4-10a0-4390-971c-672353e2a49c" value="USBMIDI_1_Dm" />
       <Data key="2b269b96-47a4-4e9a-937e-76d4080bb211/618a72fc-5ddd-4df5-958f-a3d55102db42" value="USBMIDI_1_Dp" />
       <Data key="2c2044d6-1de3-4e07-95b6-62bd018a9263" value="TP5" />
+      <Data key="3a960253-138e-4757-af7c-c31e478282fd" value="Rx" />
+      <Data key="4ae2603f-6bff-43e6-915a-eafa3248ff68" value="ws2812" />
       <Data key="4af5aad7-f42e-46eb-a353-83d53c26ab07" value="LED4" />
       <Data key="4c15b41e-e284-4978-99e7-5aaee19bd0ce" value="RX_422" />
       <Data key="4de8b778-eb40-4f1c-bc3f-98f57730fff7" value="TX_422_EN" />
@@ -1572,6 +1574,7 @@
       <Data key="1425177d-0d0e-4468-8bcc-e638e5509a9b" value="MISO" />
       <Data key="77715107-f8d5-47e5-a629-0fb83101ac6b" value="Track" />
       <Data key="a1af635c-2735-4a6b-8435-ff30029b58ef" value="Vbus" />
+      <Data key="a4c246a0-55f8-4012-a160-95210e380870" value="Tx" />
       <Data key="a33d362e-32d3-4bd2-a4e3-6ca8b8e69c1f" value="LED3" />
       <Data key="a2257d0d-8c7b-45f0-af4f-8a67896d6b11" value="ZCDB" />
       <Data key="b1db877c-9dfd-4400-a351-2f7b40c83b5f" value="TP2" />
@@ -4720,6 +4723,16 @@
         <Data key="Port Format" value="12,5" />
       </Group>
     </Group>
+    <Group key="3a960253-138e-4757-af7c-c31e478282fd">
+      <Group key="0">
+        <Data key="Port Format" value="3,4" />
+      </Group>
+    </Group>
+    <Group key="4ae2603f-6bff-43e6-915a-eafa3248ff68">
+      <Group key="0">
+        <Data key="Port Format" value="12,1" />
+      </Group>
+    </Group>
     <Group key="4af5aad7-f42e-46eb-a353-83d53c26ab07">
       <Group key="0">
         <Data key="Port Format" value="2,1" />
@@ -4843,6 +4856,11 @@
     <Group key="a1af635c-2735-4a6b-8435-ff30029b58ef">
       <Group key="0">
         <Data key="Port Format" value="0,0" />
+      </Group>
+    </Group>
+    <Group key="a4c246a0-55f8-4012-a160-95210e380870">
+      <Group key="0">
+        <Data key="Port Format" value="3,0" />
       </Group>
     </Group>
     <Group key="a33d362e-32d3-4bd2-a4e3-6ca8b8e69c1f">

@@ -84,17 +84,13 @@
 #include <project.h>
 #include "Bootloader.h"
 #include "UART.h"
-#include "ETH.h"
 #include "cli_basic.h"
 #include <math.h>
 
 struct config_struct{
-    char ip_addr[16];
-    char ip_gw[16];
-    char ip_mac[18];
-    char ip_subnet[16];
     uint32_t baudrate;
     uint8_t ivo_uart;
+    uint8_t line_code;
 };
 typedef struct config_struct cli_config;
 cli_config configuration;
@@ -103,28 +99,32 @@ cli_config configuration;
 * Parameter struct
 ******************************************************************************/
 parameter_entry confparam[] = {
-    ADD_PARAM(PARAM_CONFIG  ,"ip_addr"         , configuration.ip_addr)
-    ADD_PARAM(PARAM_CONFIG  ,"ip_gateway"      , configuration.ip_gw)
-    ADD_PARAM(PARAM_CONFIG  ,"ip_subnet"       , configuration.ip_subnet)
-    ADD_PARAM(PARAM_CONFIG  ,"ip_mac"          , configuration.ip_mac)
     ADD_PARAM(PARAM_CONFIG  ,"baudrate"        , configuration.baudrate)
     ADD_PARAM(PARAM_CONFIG  ,"ivo_uart"        , configuration.ivo_uart)
+    ADD_PARAM(PARAM_CONFIG  ,"linecode"        , configuration.line_code)
 };
 
 void update_ivo_uart(){
+    IVO_UART_Control=0;
     switch(configuration.ivo_uart){
     case 0:
-        IVO_UART_Control = 0b00;
         break;
     case 1:
-        IVO_UART_Control = 0b10;
+        set_bit(IVO_UART_Control,1);
         break;
     case 10:
-        IVO_UART_Control = 0b01;
+        set_bit(IVO_UART_Control,0);
         break;
     case 11:
-        IVO_UART_Control = 0b11;
+        set_bit(IVO_UART_Control,0);
+        set_bit(IVO_UART_Control,1);
         break;
+    }
+    
+    if(configuration.line_code==1){
+        set_bit(IVO_UART_Control,2);
+        set_bit(IVO_UART_Control,3);
+        toggle_bit(IVO_UART_Control,0);
     }
 }
 
@@ -133,6 +133,7 @@ void update_ivo_uart(){
 ******************************************************************************/
 void uart_baudrate(uint32_t baudrate){
     float divider = (float)(BCLK__BUS_CLK__HZ/8)/(float)baudrate;
+    uint16_t divider_selected=1;
    
     uint32_t down_rate = (BCLK__BUS_CLK__HZ/8)/floor(divider);
     uint32_t up_rate = (BCLK__BUS_CLK__HZ/8)/ceil(divider);
@@ -143,31 +144,48 @@ void uart_baudrate(uint32_t baudrate){
     UART_Stop();
     if(fabs(down_rate_error) < fabs(up_rate_error)){
         //selected round down divider
-        UART_CLK_SetDividerValue(floor(divider));
+        divider_selected = floor(divider);
     }else{
         //selected round up divider
-        UART_CLK_SetDividerValue(ceil(divider));
+        divider_selected = ceil(divider);
     }
-    UART_Start();    
+    uint32_t uart_frequency = BCLK__BUS_CLK__HZ / divider_selected;
+    uint32_t delay_tmr = ((BCLK__BUS_CLK__HZ / uart_frequency)*3)/4;
+
+    Mantmr_WritePeriod(delay_tmr-3);
+
+    UART_CLK_SetDividerValue(divider_selected);
     
+    UART_Start();    
+  
 }
+
+#define USBFS_DEVICE    (0u)
+
+/* The buffer size is equal to the maximum packet size of the IN and OUT bulk
+* endpoints.
+*/
 
 int main()
 {
     
 	/* Initialize PWM */
-    PWM_Start();  
-    SPIM0_Start();
-    configuration.baudrate=2000000;
+    
+    configuration.baudrate=115200;
+    configuration.ivo_uart=0;
+    configuration.line_code=0;
+    Mantmr_Start();
+    
     EEPROM_1_Start();
-    EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,NONE); 
-    if(ETH_StartEx(configuration.ip_gw, configuration.ip_subnet, configuration.ip_mac, configuration.ip_addr)==CYRET_SUCCESS){
-        com_type=ETH;   
+    if(safe_reg_Read()){
+        EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,NONE); 
+        safe_state_Write(0);
     }else{
-        uart_baudrate(configuration.baudrate);
-        update_ivo_uart();
-        com_type=SERIAL;
+        safe_state_Write(1);
     }
+
+    uart_baudrate(configuration.baudrate);
+    update_ivo_uart();
 	
 	/* This API does the entire bootload operation. After a succesful bootload operation, this API transfers
 	   program control to the new application via a software reset */

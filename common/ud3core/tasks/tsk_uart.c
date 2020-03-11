@@ -158,7 +158,7 @@ void tsk_uart_Start(void) {
 
 	/* `#END` */
     UART_2_Start();
-
+    
 	if (tsk_uart_initVar != 1) {
 
 		/*

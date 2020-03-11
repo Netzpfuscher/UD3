@@ -253,7 +253,7 @@ void calculate_rms(void) {
 	}
     
     // read the driver voltage
-	telemetry.driver_v = ADC_CountsTo_mVolts(ADC_sample[DATA_VDRIVER]) *12; //11 Takes the input impedance of 180k from the SAR into account
+	telemetry.driver_v = ADC_CountsTo_mVolts(ADC_sample[DATA_VDRIVER]) *10; //11 Takes the input impedance of 180k from the SAR into account
     
     if(configuration.max_const_i){  //Only do i2t calculation if enabled
         if(count<100){

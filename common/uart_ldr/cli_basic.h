@@ -42,6 +42,18 @@
 #define USB 1
 #define ETH 2
 #define NONE 3
+    
+#define set_bit(var, bit) ((var) |= (1 << (bit)))
+
+/* Bit löschen */
+#define clear_bit(var, bit) ((var) &= (unsigned)~(1 << (bit)))
+
+/* Bit togglen */
+#define toggle_bit(var,bit) ((var) ^= (1 << (bit)))
+
+/* Bit abfragen */
+#define bit_is_set(var, bit) ((var) & (1 << (bit)))
+#define bit_is_clear(var, bit) !bit_is_set(var, bit)
 
    
 typedef struct parameter_entry_struct parameter_entry;

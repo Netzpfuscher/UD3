@@ -144,7 +144,7 @@ void init_config(){
     configuration.temp1_setpoint = 30;
     configuration.ps_scheme = 2;
     configuration.autotune_s = 1;
-    configuration.baudrate = 500000;
+    configuration.baudrate = 460800;
     configuration.spi_speed = 16;
     configuration.r_top = 500000;
     ntlibc_strcpy(configuration.ud_name,"UD3-Tesla");
@@ -154,7 +154,7 @@ void init_config(){
     ntlibc_strcpy(configuration.ip_gw,"192.168.50.1");
     ntlibc_strcpy(configuration.ssid,"NULL");
     ntlibc_strcpy(configuration.passwd,"NULL");
-    configuration.minprot = 1;
+    configuration.minprot = 0;
     configuration.max_const_i = 0;
     configuration.max_fault_i = 250;
     configuration.eth_hw = 0; //ESP32
@@ -163,7 +163,9 @@ void init_config(){
     configuration.ct2_offset = 0;
     configuration.ct2_current = 0;
     configuration.chargedelay = 1000;
-    configuration.ivo_uart = 0;
+    configuration.ivo_uart = 0;  //Nothing inverted
+    configuration.line_code = 0; //UART
+    configuration.enable_display = 0;
     
     param.pw = 0;
     param.pwd = 50000;
@@ -181,6 +183,7 @@ void init_config(){
     param.synth = SYNTH_MIDI;
     param.sid_freq = 50;
     param.sid_divider = 212; //divider valid for 50Hz
+    param.display = 0;
     
     i2t_set_limit(configuration.max_const_i,configuration.max_fault_i,10000);
     update_ivo_uart();
@@ -211,7 +214,8 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"attack"          , midich[0].attack              , 0      ,127    ,0      ,callback_MchCopyFunction    ,"MIDI attack time of mch") //WARNING: Must be mch index +1
     ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"decay"           , midich[0].decay               , 0      ,127    ,0      ,callback_MchCopyFunction    ,"MIDI decay time of mch")  //WARNING: Must be mch index +2
     ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"release"         , midich[0].release             , 0      ,127    ,0      ,callback_MchCopyFunction    ,"MIDI release time of mch")//WARNING: Must be mch index +3
-    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"sid_freq"        , param.sid_freq                , 45     ,100    ,0      ,callback_SIDfreq           ,"SID frame interrupt frequency")
+    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"sid_freq"        , param.sid_freq                , 45     ,100    ,0      ,callback_SIDfreq            ,"SID frame interrupt frequency")
+    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"display"         , param.display                 , 0      ,4      ,0      ,NULL                        ,"Actual display frame")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"watchdog"        , configuration.watchdog        , 0      ,1      ,0      ,callback_ConfigFunction     ,"Watchdog Enable")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_tr_pw"       , configuration.max_tr_pw       , 0      ,3000   ,0      ,callback_ConfigFunction     ,"Maximum TR PW [uSec]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_tr_prf"      , configuration.max_tr_prf      , 0      ,3000   ,0      ,callback_ConfigFunction     ,"Maximum TR frequency [Hz]")
@@ -253,8 +257,10 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"passwd"          , configuration.passwd          , 0      ,0      ,0      ,NULL                        ,"WLAN password")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"baudrate"        , configuration.baudrate        , 1200   ,4000000,0      ,callback_baudrateFunction   ,"Serial baudrate")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ivo_uart"        , configuration.ivo_uart        , 0      ,11     ,0      ,callback_ivoUART            ,"[RX][TX] 0=not inverted 1=inverted")
+    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"linecode"        , configuration.line_code       , 0      ,1      ,0      ,callback_ivoUART            ,"0=UART 1=Manchester")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"spi_speed"       , configuration.spi_speed       , 10     ,160    ,10     ,callback_SPIspeedFunction   ,"SPI speed [MHz]")
     ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"r_bus"           , configuration.r_top           , 100    ,1000000,1000   ,callback_TTupdateFunction   ,"Series resistor of voltage input [kOhm]")
+    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ena_display"     , configuration.enable_display  , 0      ,6      ,0      ,NULL                        ,"Enables the WS2812 display")
 };
 
 /*****************************************************************************
@@ -292,6 +298,7 @@ void eeprom_load(port_str *ptr){
     i2t_set_limit(configuration.max_const_i,configuration.max_fault_i,10000);
     update_ivo_uart();
     update_visibilty();
+    
     uart_baudrate(configuration.baudrate);
     spi_speed(configuration.spi_speed);
 }
@@ -361,19 +368,26 @@ uint8_t callback_SIDfreq(parameter_entry * params, uint8_t index, port_str *ptr)
 ******************************************************************************/
 
 void update_ivo_uart(){
+    IVO_UART_Control=0;
     switch(configuration.ivo_uart){
     case 0:
-        IVO_UART_Control = 0b00;
         break;
     case 1:
-        IVO_UART_Control = 0b10;
+        set_bit(IVO_UART_Control,1);
         break;
     case 10:
-        IVO_UART_Control = 0b01;
+        set_bit(IVO_UART_Control,0);
         break;
     case 11:
-        IVO_UART_Control = 0b11;
+        set_bit(IVO_UART_Control,0);
+        set_bit(IVO_UART_Control,1);
         break;
+    }
+    
+    if(configuration.line_code==1){
+        set_bit(IVO_UART_Control,2);
+        set_bit(IVO_UART_Control,3);
+        toggle_bit(IVO_UART_Control,0);
     }
 }
 
@@ -527,7 +541,8 @@ uint8_t callback_SPIspeedFunction(parameter_entry * params, uint8_t index, port_
 ******************************************************************************/
 void uart_baudrate(uint32_t baudrate){
     float divider = (float)(BCLK__BUS_CLK__HZ/8)/(float)baudrate;
-   
+    uint16_t divider_selected=1;
+    
     uint32_t down_rate = (BCLK__BUS_CLK__HZ/8)/floor(divider);
     uint32_t up_rate = (BCLK__BUS_CLK__HZ/8)/ceil(divider);
    
@@ -537,12 +552,18 @@ void uart_baudrate(uint32_t baudrate){
     UART_2_Stop();
     if(fabs(down_rate_error) < fabs(up_rate_error)){
         //selected round down divider
-        UART_CLK_SetDividerValue(floor(divider));
+        divider_selected = floor(divider);
     }else{
         //selected round up divider
-        UART_CLK_SetDividerValue(ceil(divider));
+        divider_selected = ceil(divider);
     }
-    UART_2_Start();    
+    uint32_t uart_frequency = BCLK__BUS_CLK__HZ / divider_selected;
+    uint32_t delay_tmr = ((BCLK__BUS_CLK__HZ / uart_frequency)*3)/4;
+
+    Mantmr_WritePeriod(delay_tmr-3);
+    UART_CLK_SetDividerValue(divider_selected);
+    
+    UART_2_Start();  
     
 }
 
@@ -1389,6 +1410,11 @@ uint8_t command_cls(char *commandline, port_str *ptr) {
     SEND_CONST_STRING(" | | | | |   \\  |__ /   |_   _|  ___   ___ | |  __ _\r\n",ptr);
     SEND_CONST_STRING(" | |_| | | |) |  |_ \\     | |   / -_) (_-< | | / _` |\r\n",ptr);
     SEND_CONST_STRING("  \\___/  |___/  |___/     |_|   \\___| /__/ |_| \\__,_|\r\n\r\n",ptr);
+    SEND_CONST_STRING("\tBuild: ",ptr);
+    SEND_CONST_STRING(__DATE__,ptr);
+    SEND_CONST_STRING(" - ",ptr);
+    SEND_CONST_STRING(__TIME__,ptr);
+    SEND_CONST_STRING("\r\n",ptr);
     SEND_CONST_STRING("\tCoil: ",ptr);
     send_string(configuration.ud_name,ptr);
     SEND_CONST_STRING("\r\n\r\n",ptr);

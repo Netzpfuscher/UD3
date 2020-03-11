@@ -45,6 +45,7 @@
 #include "tasks/tsk_usb.h"
 #include "tasks/tsk_eth.h"
 #include "tasks/tsk_min.h"
+#include "tasks/tsk_display.h"
 
 /*
  * Installs the RTOS interrupt handlers and starts the peripherals.
@@ -59,6 +60,7 @@ int main() {
 	system_fault_Control = 0; //this should suppress any start-up sparking until the system is ready
 	init_config();
     EEPROM_1_Start();
+    Mantmr_Start();
     
     null_port.type = PORT_TYPE_NULL;
     null_port.tx = NULL;
@@ -80,6 +82,7 @@ int main() {
 
 	rx_blink_Control = 1;
 
+
 	//Starting Tasks
     if(configuration.minprot || configuration.eth_hw==ETH_HW_ESP32){
         tsk_min_Start();        //Handles UART-Hardware and queues with MIN-Protocol
@@ -99,6 +102,12 @@ int main() {
 	tsk_analog_Start();		//Reads bus voltage and currents
 	tsk_thermistor_Start(); //Reads thermistors
 	tsk_fault_Start();		//Handles fault conditions
+    
+    if(configuration.enable_display){
+        tsk_display_Start();
+    }
+    
+    
     alarm_push(ALM_PRIO_INFO, warn_general_startup, ALM_NO_VALUE);
 	vTaskStartScheduler();
     

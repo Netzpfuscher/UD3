@@ -82,7 +82,6 @@ uint8_t command_reset(char *commandline, port_str *ptr);
 uint8_t command_minstat(char *commandline, port_str *ptr);
 uint8_t command_config_get(char *commandline, port_str *ptr);
 uint8_t command_exit(char *commandline, port_str *ptr);
-uint8_t command_ethcon(char *commandline, port_str *ptr);
 uint8_t command_fuse(char *commandline, port_str *ptr);
 uint8_t command_signals(char *commandline, port_str *ptr);
 uint8_t command_alarms(char *commandline, port_str *ptr);
@@ -148,16 +147,9 @@ void init_config(){
     configuration.spi_speed = 16;
     configuration.r_top = 500000;
     ntlibc_strcpy(configuration.ud_name,"UD3-Tesla");
-    ntlibc_strcpy(configuration.ip_addr,"192.168.50.250");
-    ntlibc_strcpy(configuration.ip_subnet,"255.255.255.0");
-    ntlibc_strcpy(configuration.ip_mac,"21:24:5D:AA:68:57");
-    ntlibc_strcpy(configuration.ip_gw,"192.168.50.1");
-    ntlibc_strcpy(configuration.ssid,"NULL");
-    ntlibc_strcpy(configuration.passwd,"NULL");
-    configuration.minprot = 0;
+    configuration.minprot = pdFALSE;
     configuration.max_const_i = 0;
     configuration.max_fault_i = 250;
-    configuration.eth_hw = 0; //ESP32
     configuration.ct2_type = CT2_TYPE_CURRENT;
     configuration.ct2_voltage = 4000;
     configuration.ct2_offset = 0;
@@ -196,71 +188,64 @@ void init_config(){
 ******************************************************************************/
 
 parameter_entry confparam[] = {
-    //       Parameter Type ,Visible      ,"Text   "         , Value ptr                     ,Min     ,Max    ,Div    ,Callback Function           ,Help text
-    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"pw"              , param.pw                      , 0      ,800    ,0      ,callback_TRFunction         ,"Pulsewidth")
-    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"pwd"             , param.pwd                     , 0      ,60000  ,0      ,callback_TRFunction         ,"Pulsewidthdelay")
-    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"bon"             , param.burst_on                , 0      ,1000   ,0      ,callback_BurstFunction      ,"Burst mode ontime [ms] 0=off")
-    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"boff"            , param.burst_off               , 0      ,1000   ,0      ,callback_BurstFunction      ,"Burst mode offtime [ms]")
-    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"tune_start"      , param.tune_start              , 5      ,5000   ,10     ,callback_TuneFunction       ,"Start frequency [kHz]")
-    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"tune_end"        , param.tune_end                , 5      ,5000   ,10     ,callback_TuneFunction       ,"End frequency [kHz]")
-    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"tune_pw"         , param.tune_pw                 , 0      ,800    ,0      ,NULL                        ,"Tune pulsewidth")
-    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"tune_delay"      , param.tune_delay              , 1      ,200    ,0      ,NULL                        ,"Tune delay")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"offtime"         , param.offtime                 , 2      ,250    ,0      ,callback_OfftimeFunction    ,"Offtime for MIDI")
-    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"qcw_ramp"        , param.qcw_ramp                , 1      ,10     ,0      ,NULL                        ,"QCW Ramp Inc/93us")
-    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"qcw_repeat"      , param.qcw_repeat              , 0      ,1000   ,0      ,NULL                        ,"QCW pulse repeat time [ms] <100=single shot")
-    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"transpose"       , param.transpose               , -48    ,48     ,0      ,NULL                        ,"Transpose MIDI")
-    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"synth"           , param.synth                   , 0      ,2      ,0      ,callback_SynthFunction      ,"0=off 1=MIDI 2=SID")
-    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"mch"             , param.mch                     , 0      ,16     ,0      ,callback_MchFunction        ,"MIDI channel 16=write to all channels")
-    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"attack"          , midich[0].attack              , 0      ,127    ,0      ,callback_MchCopyFunction    ,"MIDI attack time of mch") //WARNING: Must be mch index +1
-    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"decay"           , midich[0].decay               , 0      ,127    ,0      ,callback_MchCopyFunction    ,"MIDI decay time of mch")  //WARNING: Must be mch index +2
-    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"release"         , midich[0].release             , 0      ,127    ,0      ,callback_MchCopyFunction    ,"MIDI release time of mch")//WARNING: Must be mch index +3
-    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"sid_freq"        , param.sid_freq                , 45     ,100    ,0      ,callback_SIDfreq            ,"SID frame interrupt frequency")
-    ADD_PARAM(PARAM_DEFAULT ,VISIBLE_TRUE ,"display"         , param.display                 , 0      ,4      ,0      ,NULL                        ,"Actual display frame")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"watchdog"        , configuration.watchdog        , 0      ,1      ,0      ,callback_ConfigFunction     ,"Watchdog Enable")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_tr_pw"       , configuration.max_tr_pw       , 0      ,3000   ,0      ,callback_ConfigFunction     ,"Maximum TR PW [uSec]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_tr_prf"      , configuration.max_tr_prf      , 0      ,3000   ,0      ,callback_ConfigFunction     ,"Maximum TR frequency [Hz]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_qcw_pw"      , configuration.max_qcw_pw      , 0      ,30000  ,1000   ,callback_ConfigFunction     ,"Maximum QCW PW [ms]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_tr_current"  , configuration.max_tr_current  , 0      ,8000   ,0      ,callback_TTupdateFunction   ,"Maximum TR current [A]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"min_tr_current"  , configuration.min_tr_current  , 0      ,8000   ,0      ,callback_ConfigFunction     ,"Minimum TR current [A]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_qcw_current" , configuration.max_qcw_current , 0      ,8000   ,0      ,callback_TTupdateFunction   ,"Maximum QCW current [A]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"temp1_max"       , configuration.temp1_max       , 0      ,100    ,0      ,callback_TTupdateFunction   ,"Max temperature 1 [*C]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"temp2_max"       , configuration.temp2_max       , 0      ,100    ,0      ,NULL                        ,"Max temperature 2 [*C]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ct1_ratio"       , configuration.ct1_ratio       , 1      ,5000   ,0      ,callback_TTupdateFunction   ,"CT1 [N Turns]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ct2_ratio"       , configuration.ct2_ratio       , 1      ,5000   ,0      ,callback_ConfigFunction     ,"CT2 [N Turns]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ct3_ratio"       , configuration.ct3_ratio       , 1      ,5000   ,0      ,callback_ConfigFunction     ,"CT3 [N Turns]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ct1_burden"      , configuration.ct1_burden      , 1      ,1000   ,10     ,callback_TTupdateFunction   ,"CT1 burden [Ohm]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ct2_burden"      , configuration.ct2_burden      , 1      ,1000   ,10     ,callback_ConfigFunction     ,"CT2 burden [Ohm]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ct3_burden"      , configuration.ct3_burden      , 1      ,1000   ,10     ,callback_ConfigFunction     ,"CT3 burden [Ohm]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ct2_type"        , configuration.ct2_type        , 0      ,1      ,0      ,callback_ConfigFunction     ,"CT2 type 0=current 1=voltage")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ct2_current"     , configuration.ct2_current     , 0      ,20000  ,10     ,callback_ConfigFunction     ,"CT2 current @ ct_voltage")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ct2_voltage"     , configuration.ct2_voltage     , 0      ,5000   ,1000   ,callback_ConfigFunction     ,"CT2 voltage @ ct_current")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ct2_offset"      , configuration.ct2_offset      , 0      ,5000   ,1000   ,callback_ConfigFunction     ,"CT2 offset voltage")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"lead_time"       , configuration.lead_time       , 0      ,2000   ,0      ,callback_ConfigFunction     ,"Lead time [nSec]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"start_freq"      , configuration.start_freq      , 0      ,5000   ,10     ,callback_ConfigFunction     ,"Resonant freq [kHz]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"start_cycles"    , configuration.start_cycles    , 0      ,20     ,0      ,callback_ConfigFunction     ,"Start Cyles [N]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_tr_duty"     , configuration.max_tr_duty     , 1      ,500    ,10     ,callback_ConfigFunction     ,"Max TR duty cycle [%]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_qcw_duty"    , configuration.max_qcw_duty    , 1      ,500    ,10     ,callback_ConfigFunction     ,"Max QCW duty cycle [%]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"temp1_setpoint"  , configuration.temp1_setpoint  , 0      ,100    ,0      ,NULL                        ,"Setpoint for fan [*C]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ps_scheme"       , configuration.ps_scheme       , 0      ,5      ,0      ,callback_ConfigFunction     ,"Power supply sheme")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"charge_delay"    , configuration.chargedelay     , 1      ,60000  ,0      ,callback_ConfigFunction     ,"Delay for the charge relay [ms]")  
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"autotune_s"      , configuration.autotune_s      , 1      ,32     ,0      ,NULL                        ,"Number of samples for Autotune")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ud_name"         , configuration.ud_name         , 0      ,0      ,0      ,NULL                        ,"Name of the Coil [15 chars]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ip_addr"         , configuration.ip_addr         , 0      ,0      ,0      ,NULL                        ,"IP-Adress of the UD3")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ip_gateway"      , configuration.ip_gw           , 0      ,0      ,0      ,NULL                        ,"Gateway adress")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ip_subnet"       , configuration.ip_subnet       , 0      ,0      ,0      ,NULL                        ,"Subnet")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ip_mac"          , configuration.ip_mac          , 0      ,0      ,0      ,NULL                        ,"MAC adress")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"min_enable"      , configuration.minprot         , 0      ,1      ,0      ,NULL                        ,"Use MIN-Protocol")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_const_i"     , configuration.max_const_i     , 0      ,2000   ,10     ,callback_i2tFunction        ,"Maximum constant current [A] 0=off")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"max_fault_i"     , configuration.max_fault_i     , 0      ,2000   ,10     ,callback_i2tFunction        ,"Maximum fault current for 10s [A]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"eth_hw"          , configuration.eth_hw          , 0      ,2      ,0      ,callback_VisibleFunction    ,"0=Disabled 1=W5500 2=ESP32")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ssid"            , configuration.ssid            , 0      ,0      ,0      ,NULL                        ,"WLAN SSID")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"passwd"          , configuration.passwd          , 0      ,0      ,0      ,NULL                        ,"WLAN password")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"baudrate"        , configuration.baudrate        , 1200   ,4000000,0      ,callback_baudrateFunction   ,"Serial baudrate")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ivo_uart"        , configuration.ivo_uart        , 0      ,11     ,0      ,callback_ivoUART            ,"[RX][TX] 0=not inverted 1=inverted")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"linecode"        , configuration.line_code       , 0      ,1      ,0      ,callback_ivoUART            ,"0=UART 1=Manchester")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"spi_speed"       , configuration.spi_speed       , 10     ,160    ,10     ,callback_SPIspeedFunction   ,"SPI speed [MHz]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"r_bus"           , configuration.r_top           , 100    ,1000000,1000   ,callback_TTupdateFunction   ,"Series resistor of voltage input [kOhm]")
-    ADD_PARAM(PARAM_CONFIG  ,VISIBLE_TRUE ,"ena_display"     , configuration.enable_display  , 0      ,6      ,0      ,NULL                        ,"Enables the WS2812 display")
+    //       Parameter Type ,Visible,"Text   "         , Value ptr                     ,Min     ,Max    ,Div    ,Callback Function           ,Help text
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"pw"              , param.pw                      , 0      ,800    ,0      ,callback_TRFunction         ,"Pulsewidth")
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"pwd"             , param.pwd                     , 0      ,60000  ,0      ,callback_TRFunction         ,"Pulsewidthdelay")
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"bon"             , param.burst_on                , 0      ,1000   ,0      ,callback_BurstFunction      ,"Burst mode ontime [ms] 0=off")
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"boff"            , param.burst_off               , 0      ,1000   ,0      ,callback_BurstFunction      ,"Burst mode offtime [ms]")
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"tune_start"      , param.tune_start              , 5      ,5000   ,10     ,callback_TuneFunction       ,"Start frequency [kHz]")
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"tune_end"        , param.tune_end                , 5      ,5000   ,10     ,callback_TuneFunction       ,"End frequency [kHz]")
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"tune_pw"         , param.tune_pw                 , 0      ,800    ,0      ,NULL                        ,"Tune pulsewidth")
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"tune_delay"      , param.tune_delay              , 1      ,200    ,0      ,NULL                        ,"Tune delay")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"offtime"         , param.offtime                 , 2      ,250    ,0      ,callback_OfftimeFunction    ,"Offtime for MIDI")
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_ramp"        , param.qcw_ramp                , 1      ,10     ,0      ,NULL                        ,"QCW Ramp Inc/93us")
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_repeat"      , param.qcw_repeat              , 0      ,1000   ,0      ,NULL                        ,"QCW pulse repeat time [ms] <100=single shot")
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"transpose"       , param.transpose               , -48    ,48     ,0      ,NULL                        ,"Transpose MIDI")
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"synth"           , param.synth                   , 0      ,2      ,0      ,callback_SynthFunction      ,"0=off 1=MIDI 2=SID")
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"mch"             , param.mch                     , 0      ,16     ,0      ,callback_MchFunction        ,"MIDI channel 16=write to all channels")
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"attack"          , midich[0].attack              , 0      ,127    ,0      ,callback_MchCopyFunction    ,"MIDI attack time of mch") //WARNING: Must be mch index +1
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"decay"           , midich[0].decay               , 0      ,127    ,0      ,callback_MchCopyFunction    ,"MIDI decay time of mch")  //WARNING: Must be mch index +2
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"release"         , midich[0].release             , 0      ,127    ,0      ,callback_MchCopyFunction    ,"MIDI release time of mch")//WARNING: Must be mch index +3
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"sid_freq"        , param.sid_freq                , 45     ,100    ,0      ,callback_SIDfreq            ,"SID frame interrupt frequency")
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"display"         , param.display                 , 0      ,4      ,0      ,NULL                        ,"Actual display frame")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"watchdog"        , configuration.watchdog        , 0      ,1      ,0      ,callback_ConfigFunction     ,"Watchdog Enable")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_tr_pw"       , configuration.max_tr_pw       , 0      ,3000   ,0      ,callback_ConfigFunction     ,"Maximum TR PW [uSec]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_tr_prf"      , configuration.max_tr_prf      , 0      ,3000   ,0      ,callback_ConfigFunction     ,"Maximum TR frequency [Hz]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_qcw_pw"      , configuration.max_qcw_pw      , 0      ,30000  ,1000   ,callback_ConfigFunction     ,"Maximum QCW PW [ms]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_tr_current"  , configuration.max_tr_current  , 0      ,8000   ,0      ,callback_TTupdateFunction   ,"Maximum TR current [A]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"min_tr_current"  , configuration.min_tr_current  , 0      ,8000   ,0      ,callback_ConfigFunction     ,"Minimum TR current [A]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_qcw_current" , configuration.max_qcw_current , 0      ,8000   ,0      ,callback_TTupdateFunction   ,"Maximum QCW current [A]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"temp1_max"       , configuration.temp1_max       , 0      ,100    ,0      ,callback_TTupdateFunction   ,"Max temperature 1 [*C]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"temp2_max"       , configuration.temp2_max       , 0      ,100    ,0      ,NULL                        ,"Max temperature 2 [*C]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ct1_ratio"       , configuration.ct1_ratio       , 1      ,5000   ,0      ,callback_TTupdateFunction   ,"CT1 [N Turns]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ct2_ratio"       , configuration.ct2_ratio       , 1      ,5000   ,0      ,callback_ConfigFunction     ,"CT2 [N Turns]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ct3_ratio"       , configuration.ct3_ratio       , 1      ,5000   ,0      ,callback_ConfigFunction     ,"CT3 [N Turns]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ct1_burden"      , configuration.ct1_burden      , 1      ,1000   ,10     ,callback_TTupdateFunction   ,"CT1 burden [Ohm]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ct2_burden"      , configuration.ct2_burden      , 1      ,1000   ,10     ,callback_ConfigFunction     ,"CT2 burden [Ohm]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ct3_burden"      , configuration.ct3_burden      , 1      ,1000   ,10     ,callback_ConfigFunction     ,"CT3 burden [Ohm]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ct2_type"        , configuration.ct2_type        , 0      ,1      ,0      ,callback_ConfigFunction     ,"CT2 type 0=current 1=voltage")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ct2_current"     , configuration.ct2_current     , 0      ,20000  ,10     ,callback_ConfigFunction     ,"CT2 current @ ct_voltage")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ct2_voltage"     , configuration.ct2_voltage     , 0      ,5000   ,1000   ,callback_ConfigFunction     ,"CT2 voltage @ ct_current")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ct2_offset"      , configuration.ct2_offset      , 0      ,5000   ,1000   ,callback_ConfigFunction     ,"CT2 offset voltage")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"lead_time"       , configuration.lead_time       , 0      ,2000   ,0      ,callback_ConfigFunction     ,"Lead time [nSec]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"start_freq"      , configuration.start_freq      , 0      ,5000   ,10     ,callback_ConfigFunction     ,"Resonant freq [kHz]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"start_cycles"    , configuration.start_cycles    , 0      ,20     ,0      ,callback_ConfigFunction     ,"Start Cyles [N]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_tr_duty"     , configuration.max_tr_duty     , 1      ,500    ,10     ,callback_ConfigFunction     ,"Max TR duty cycle [%]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_qcw_duty"    , configuration.max_qcw_duty    , 1      ,500    ,10     ,callback_ConfigFunction     ,"Max QCW duty cycle [%]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"temp1_setpoint"  , configuration.temp1_setpoint  , 0      ,100    ,0      ,NULL                        ,"Setpoint for fan [*C]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ps_scheme"       , configuration.ps_scheme       , 0      ,5      ,0      ,callback_ConfigFunction     ,"Power supply sheme")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"charge_delay"    , configuration.chargedelay     , 1      ,60000  ,0      ,callback_ConfigFunction     ,"Delay for the charge relay [ms]")  
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"autotune_s"      , configuration.autotune_s      , 1      ,32     ,0      ,NULL                        ,"Number of samples for Autotune")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ud_name"         , configuration.ud_name         , 0      ,0      ,0      ,NULL                        ,"Name of the Coil [15 chars]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"min_enable"      , configuration.minprot         , 0      ,1      ,0      ,NULL                        ,"Use MIN-Protocol")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_const_i"     , configuration.max_const_i     , 0      ,2000   ,10     ,callback_i2tFunction        ,"Maximum constant current [A] 0=off")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_fault_i"     , configuration.max_fault_i     , 0      ,2000   ,10     ,callback_i2tFunction        ,"Maximum fault current for 10s [A]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"baudrate"        , configuration.baudrate        , 1200   ,4000000,0      ,callback_baudrateFunction   ,"Serial baudrate")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ivo_uart"        , configuration.ivo_uart        , 0      ,11     ,0      ,callback_ivoUART            ,"[RX][TX] 0=not inverted 1=inverted")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"linecode"        , configuration.line_code       , 0      ,1      ,0      ,callback_ivoUART            ,"0=UART 1=Manchester")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"spi_speed"       , configuration.spi_speed       , 10     ,160    ,10     ,callback_SPIspeedFunction   ,"SPI speed [MHz]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"r_bus"           , configuration.r_top           , 100    ,1000000,1000   ,callback_TTupdateFunction   ,"Series resistor of voltage input [kOhm]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ena_display"     , configuration.enable_display  , 0      ,6      ,0      ,NULL                        ,"Enables the WS2812 display")
 };
 
 /*****************************************************************************
@@ -284,7 +269,6 @@ command_entry commands[] = {
     ADD_COMMAND("tune"	        ,command_tune           ,"Autotune [prim/sec]")
     ADD_COMMAND("tterm"	        ,command_tterm          ,"Changes terminal mode")
     ADD_COMMAND("minstat"	    ,command_minstat        ,"Prints the min statistics")
-    ADD_COMMAND("ethcon"	    ,command_ethcon         ,"Prints the eth connections")
     ADD_COMMAND("config_get"    ,command_config_get     ,"Internal use")
     ADD_COMMAND("fuse_reset"    ,command_fuse           ,"Reset the internal fuse")
     ADD_COMMAND("signals"       ,command_signals        ,"For debugging")
@@ -307,46 +291,20 @@ void eeprom_load(port_str *ptr){
 
 void update_visibilty(void){
 
-    switch(configuration.eth_hw){
-        case ETH_HW_DISABLED:
-            set_visibility(confparam,CONF_SIZE, "ip_addr",VISIBLE_FALSE);
-            set_visibility(confparam,CONF_SIZE, "ip_gateway",VISIBLE_FALSE);
-            set_visibility(confparam,CONF_SIZE, "ip_subnet",VISIBLE_FALSE);
-            set_visibility(confparam,CONF_SIZE, "ip_mac",VISIBLE_FALSE);
-            set_visibility(confparam,CONF_SIZE, "ssid",VISIBLE_FALSE);
-            set_visibility(confparam,CONF_SIZE, "passwd",VISIBLE_FALSE);
-        break;
-        case ETH_HW_W5500:
-            set_visibility(confparam,CONF_SIZE, "ip_addr",VISIBLE_TRUE);
-            set_visibility(confparam,CONF_SIZE, "ip_gateway",VISIBLE_TRUE);
-            set_visibility(confparam,CONF_SIZE, "ip_subnet",VISIBLE_TRUE);
-            set_visibility(confparam,CONF_SIZE, "ip_mac",VISIBLE_TRUE);
-            set_visibility(confparam,CONF_SIZE, "ssid",VISIBLE_FALSE);
-            set_visibility(confparam,CONF_SIZE, "passwd",VISIBLE_FALSE);
-        break;
-        case ETH_HW_ESP32:
-            set_visibility(confparam,CONF_SIZE, "ip_addr",VISIBLE_FALSE);
-            set_visibility(confparam,CONF_SIZE, "ip_gateway",VISIBLE_FALSE);
-            set_visibility(confparam,CONF_SIZE, "ip_subnet",VISIBLE_FALSE);
-            set_visibility(confparam,CONF_SIZE, "ip_mac",VISIBLE_FALSE);
-            set_visibility(confparam,CONF_SIZE, "ssid",VISIBLE_TRUE);
-            set_visibility(confparam,CONF_SIZE, "passwd",VISIBLE_TRUE);
-        break;
-    }
     switch(configuration.ct2_type){
         case CT2_TYPE_CURRENT:
-            set_visibility(confparam,CONF_SIZE, "ct2_current",VISIBLE_FALSE);
-            set_visibility(confparam,CONF_SIZE, "ct2_voltage",VISIBLE_FALSE);
-            set_visibility(confparam,CONF_SIZE, "ct2_offset",VISIBLE_FALSE);
-            set_visibility(confparam,CONF_SIZE, "ct2_ratio",VISIBLE_TRUE);
-            set_visibility(confparam,CONF_SIZE, "ct2_burden",VISIBLE_TRUE);
+            set_visibility(confparam,CONF_SIZE, "ct2_current",pdFALSE);
+            set_visibility(confparam,CONF_SIZE, "ct2_voltage",pdFALSE);
+            set_visibility(confparam,CONF_SIZE, "ct2_offset",pdFALSE);
+            set_visibility(confparam,CONF_SIZE, "ct2_ratio",pdTRUE);
+            set_visibility(confparam,CONF_SIZE, "ct2_burden",pdTRUE);
         break;
         case CT2_TYPE_VOLTAGE:
-            set_visibility(confparam,CONF_SIZE, "ct2_ratio",VISIBLE_FALSE);
-            set_visibility(confparam,CONF_SIZE, "ct2_burden",VISIBLE_FALSE);
-            set_visibility(confparam,CONF_SIZE, "ct2_current",VISIBLE_TRUE);
-            set_visibility(confparam,CONF_SIZE, "ct2_voltage",VISIBLE_TRUE);
-            set_visibility(confparam,CONF_SIZE, "ct2_offset",VISIBLE_TRUE);
+            set_visibility(confparam,CONF_SIZE, "ct2_ratio",pdFALSE);
+            set_visibility(confparam,CONF_SIZE, "ct2_burden",pdFALSE);
+            set_visibility(confparam,CONF_SIZE, "ct2_current",pdTRUE);
+            set_visibility(confparam,CONF_SIZE, "ct2_voltage",pdTRUE);
+            set_visibility(confparam,CONF_SIZE, "ct2_offset",pdTRUE);
         break;
     }
 
@@ -549,7 +507,7 @@ void uart_baudrate(uint32_t baudrate){
     float down_rate_error = (down_rate/(float)baudrate)-1;
     float up_rate_error = (up_rate/(float)baudrate)-1;
     
-    UART_2_Stop();
+    UART_Stop();
     if(fabs(down_rate_error) < fabs(up_rate_error)){
         //selected round down divider
         divider_selected = floor(divider);
@@ -563,7 +521,7 @@ void uart_baudrate(uint32_t baudrate){
     Mantmr_WritePeriod(delay_tmr-3);
     UART_CLK_SetDividerValue(divider_selected);
     
-    UART_2_Start();  
+    UART_Start();  
     
 }
 
@@ -813,18 +771,34 @@ uint8_t command_minstat(char *commandline, port_str *ptr){
 
     char buffer[60];
     int ret=0;
-    ret = snprintf(buffer, sizeof(buffer),"Dropped frames        : %lu\r\n",min_ctx.transport_fifo.dropped_frames);
-    send_buffer((uint8_t*)buffer,ret,ptr);
-    ret = snprintf(buffer, sizeof(buffer),"Spurious acks         : %lu\r\n",min_ctx.transport_fifo.spurious_acks);
-    send_buffer((uint8_t*)buffer,ret,ptr);
-    ret = snprintf(buffer, sizeof(buffer),"Resets received       : %lu\r\n",min_ctx.transport_fifo.resets_received);
-    send_buffer((uint8_t*)buffer,ret,ptr);
-    ret = snprintf(buffer, sizeof(buffer),"Sequence mismatch drop: %lu\r\n",min_ctx.transport_fifo.sequence_mismatch_drop);
-    send_buffer((uint8_t*)buffer,ret,ptr);
-    ret = snprintf(buffer, sizeof(buffer),"Max frames in buffer  : %u\r\n",min_ctx.transport_fifo.n_frames_max);
-    send_buffer((uint8_t*)buffer,ret,ptr);
-    ret = snprintf(buffer, sizeof(buffer),"CRC errors            : %u\r\n",min_ctx.transport_fifo.crc_fails);
-    send_buffer((uint8_t*)buffer,ret,ptr);
+    Term_Disable_Cursor(ptr);
+    Term_Erase_Screen(ptr);
+    SEND_CONST_STRING("MIN monitor    (press q for quit)\r\n",ptr);
+    while(getch(ptr,200 /portTICK_RATE_MS) != 'q'){
+        Term_Erase_Screen(ptr);
+        ret = snprintf(buffer, sizeof(buffer),"Dropped frames        : %lu\r\n",min_ctx.transport_fifo.dropped_frames);
+        send_buffer((uint8_t*)buffer,ret,ptr);
+        ret = snprintf(buffer, sizeof(buffer),"Spurious acks         : %lu\r\n",min_ctx.transport_fifo.spurious_acks);
+        send_buffer((uint8_t*)buffer,ret,ptr);
+        ret = snprintf(buffer, sizeof(buffer),"Resets received       : %lu\r\n",min_ctx.transport_fifo.resets_received);
+        send_buffer((uint8_t*)buffer,ret,ptr);
+        ret = snprintf(buffer, sizeof(buffer),"Sequence mismatch drop: %lu\r\n",min_ctx.transport_fifo.sequence_mismatch_drop);
+        send_buffer((uint8_t*)buffer,ret,ptr);
+        ret = snprintf(buffer, sizeof(buffer),"Max frames in buffer  : %u\r\n",min_ctx.transport_fifo.n_frames_max);
+        send_buffer((uint8_t*)buffer,ret,ptr);
+        ret = snprintf(buffer, sizeof(buffer),"CRC errors            : %u\r\n",min_ctx.transport_fifo.crc_fails);
+        send_buffer((uint8_t*)buffer,ret,ptr);
+        ret = snprintf(buffer, sizeof(buffer),"Remote Time           : %u\r\n",time.remote);
+        send_buffer((uint8_t*)buffer,ret,ptr);
+        ret = snprintf(buffer, sizeof(buffer),"Local Time            : %u\r\n",SG_Timer_ReadCounter());
+        send_buffer((uint8_t*)buffer,ret,ptr);
+        ret = snprintf(buffer, sizeof(buffer),"Diff Time             : %i\r\n",time.diff);
+        send_buffer((uint8_t*)buffer,ret,ptr);
+        ret = snprintf(buffer, sizeof(buffer),"Resync count          : %u\r\n",time.resync);
+        send_buffer((uint8_t*)buffer,ret,ptr);
+    }
+    SEND_CONST_STRING("\r\n",ptr);
+    Term_Enable_Cursor(ptr);
     return 1; 
 }
 
@@ -1315,8 +1289,8 @@ void start_overlay_task(port_str *ptr){
         case PORT_TYPE_USB:
     		xTaskCreate(tsk_overlay_TaskProc, "Overl_U", STACK_OVERLAY, ptr, PRIO_OVERLAY, &ptr->telemetry_handle);
         break;
-        case PORT_TYPE_ETH:
-        	xTaskCreate(tsk_overlay_TaskProc, "Overl_E", STACK_OVERLAY, ptr, PRIO_OVERLAY, &ptr->telemetry_handle);
+        case PORT_TYPE_MIN:
+        	xTaskCreate(tsk_overlay_TaskProc, "Overl_M", STACK_OVERLAY, ptr, PRIO_OVERLAY, &ptr->telemetry_handle);
         break;
         }    
     }
@@ -1460,8 +1434,10 @@ uint8_t command_signals(char *commandline, port_str *ptr) {
         SEND_CONST_STRING("Signal state (q for quit):\r\n", ptr);
         SEND_CONST_STRING("**************************\r\n", ptr);
         SEND_CONST_STRING("UVLO pin: ", ptr);
-        send_signal_state(UVLO_status_Status,pdTRUE,ptr);
-        
+        send_signal_state_wo(UVLO_status_Status,pdTRUE,ptr);
+        SEND_CONST_STRING(" Crystal clock: ", ptr);
+        send_signal_state(UVLO_status_Status,!(CY_GET_XTND_REG8((void CYFAR *)CYREG_FASTCLK_XMHZ_CSR) & 0x80u),ptr);
+
         SEND_CONST_STRING("Sysfault driver undervoltage: ", ptr);
         send_signal_state(sysfault.uvlo,pdFALSE,ptr);
         SEND_CONST_STRING("Sysfault Temp 1: ", ptr);
@@ -1527,48 +1503,6 @@ uint8_t command_signals(char *commandline, port_str *ptr) {
 	return 1;
 }
 
-/*****************************************************************************
-* Prints the ethernet connections
-******************************************************************************/
-uint8_t command_ethcon(char *commandline, port_str *ptr) {
-    SKIP_SPACE(commandline);
-    #define COL_A 9
-    #define COL_B 15
-    char buffer[40];
-    uint8_t ret;
-    SEND_CONST_STRING("Ethernet\r\nIP: ",ptr);
-    send_string(pEth_info[ETH_INFO_ETH]->ip,ptr);
-    SEND_CONST_STRING("\r\nGateway: ",ptr);
-    send_string(pEth_info[ETH_INFO_ETH]->gw,ptr);
-    SEND_CONST_STRING("\r\nDevice info: ",ptr);
-    send_string(pEth_info[ETH_INFO_ETH]->info,ptr);
-    SEND_CONST_STRING("\r\n\nWIFI\r\nIP: ",ptr);
-    send_string(pEth_info[ETH_INFO_WIFI]->ip,ptr);
-    SEND_CONST_STRING("\r\nGateway: ",ptr);
-    send_string(pEth_info[ETH_INFO_WIFI]->gw,ptr);
-    SEND_CONST_STRING("\r\nDevice info: ",ptr);
-    send_string(pEth_info[ETH_INFO_WIFI]->info,ptr);
-    
-    
-    SEND_CONST_STRING("\r\n\nConnected clients:\r\n",ptr);
-    Term_Move_cursor_right(COL_A,ptr);
-    SEND_CONST_STRING("Num", ptr);
-    Term_Move_cursor_right(COL_B,ptr);
-    SEND_CONST_STRING("| Remote IP\r\n", ptr);
-    
-    for(uint8_t i=0;i<NUM_ETH_CON;i++){
-        if(socket_info[i].socket==SOCKET_CONNECTED){
-            Term_Move_cursor_right(COL_A,ptr);
-            ret = snprintf(buffer,sizeof(buffer), "\033[36m%d", i);
-            send_buffer((uint8_t*)buffer,ret,ptr);
-            Term_Move_cursor_right(COL_B,ptr);
-            ret = snprintf(buffer,sizeof(buffer), "\033[32m%s\r\n", socket_info[i].info);
-            send_buffer((uint8_t*)buffer,ret,ptr);
-        }
-    }
-    Term_Color_White(ptr);
-	return 1;
-}
 
 /*****************************************************************************
 * Interprets the Input String

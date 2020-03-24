@@ -54,11 +54,8 @@ uint8 tsk_min_initVar = 0u;
 #include "stream_buffer.h" 
 #include "ntlibc.h" 
 
-
 struct min_context min_ctx;
-
-eth_info *pEth_info[2];
-void send_config_to_esp();
+struct _time time;
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */
@@ -74,15 +71,15 @@ void send_config_to_esp();
 
 
 uint16_t min_tx_space(uint8_t port){
-    return (UART_2_TX_BUFFER_SIZE - UART_2_GetTxBufferSize());
+    return (UART_TX_BUFFER_SIZE - UART_GetTxBufferSize());
 }
 
 uint32_t min_rx_space(uint8_t port){
-    return (UART_2_RX_BUFFER_SIZE - UART_2_GetRxBufferSize());
+    return (UART_RX_BUFFER_SIZE - UART_GetRxBufferSize());
 }
 
 void min_tx_byte(uint8_t port, uint8_t byte){
-    UART_2_PutChar(byte);
+    UART_PutChar(byte);
 }
 
 uint32_t min_time_ms(void){
@@ -105,60 +102,7 @@ static const uint8_t min_stop = 'x';
 static const uint8_t min_start = 'o';
 
 
-struct _socket_info socket_info[NUM_ETH_CON];
-
-void process_command(uint8_t *min_payload, uint8_t len_payload){
-    len_payload--;
-    uint8_t interface=0;
-    switch(*min_payload++){
-        case COMMAND_IP:
-            interface=*min_payload;
-            if(interface>ETH_INFO_WIFI) break;
-            min_payload++;
-            len_payload--;
-            if(len_payload>=sizeof(pEth_info[interface]->ip)-1 || pEth_info[interface]==NULL){
-                ntlibc_strcpy(pEth_info[interface]->ip,"overflow");
-                break;
-            }
-            memcpy(pEth_info[interface]->ip,min_payload,len_payload);
-            min_payload[len_payload]='\0';
-            break;
-        case COMMAND_GW:
-            interface=*min_payload;
-            if(interface>ETH_INFO_WIFI) break;
-            min_payload++;
-            len_payload--;
-            if(len_payload>=sizeof(pEth_info[interface]->gw)-1|| pEth_info[interface]==NULL){
-                ntlibc_strcpy(pEth_info[interface]->gw,"overflow");
-                break;
-            }
-            memcpy(pEth_info[interface]->gw,min_payload,len_payload);
-            min_payload[len_payload]='\0';
-            break;
-        case COMMAND_INFO:
-            interface=*min_payload;
-            if(interface>ETH_INFO_WIFI) break;
-            min_payload++;
-            len_payload--;
-            if(len_payload>=sizeof(pEth_info[interface]->info)-1|| pEth_info[interface]==NULL){
-                ntlibc_strcpy(pEth_info[interface]->info,"overflow");
-                break;
-            }
-            memcpy(pEth_info[interface]->info,min_payload,len_payload);
-            min_payload[len_payload]='\0';
-            break;
-        case COMMAND_ETH_STATE:
-            interface=*min_payload;
-            if(interface>ETH_INFO_WIFI) break;
-            min_payload++;
-            len_payload--;
-            pEth_info[interface]->eth_state = *min_payload;
-            break;
-        case COMMAND_GET_CONFIG:
-            send_config_to_esp();
-            break;
-  }
-}
+struct _socket_info socket_info[NUM_MIN_CON];
 
 void process_synth(uint8_t *min_payload, uint8_t len_payload){
     len_payload--;
@@ -183,12 +127,39 @@ void process_synth(uint8_t *min_payload, uint8_t len_payload){
   }
 }
 
+#define ITEMS			32								//Stärke des Lowpass-Filters
+
+typedef struct {
+	uint8_t i;
+	int32_t total;
+	int32_t last;
+	int32_t samples[ITEMS];
+} average_buff;
+
+average_buff sample;
+
+/*******************************************************************************************
+Makes avaraging of given values
+In	= buffer (avarage_buff) for storing samples
+IN	= new_sample (int)
+OUT = avaraged value (int) 
+********************************************************************************************/
+int average (average_buff *buffer, int new_sample){
+	buffer->total -= buffer->samples[buffer->i];
+	buffer->total += new_sample;
+	buffer->samples[buffer->i] = new_sample;
+	buffer->i = (buffer->i+1) % ITEMS;
+	buffer->last = buffer->total / ITEMS;
+	return buffer->last;
+}
+
+
 void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_payload, uint8_t port)
 {
     if(min_id<10){
-        if(min_id>NUM_ETH_CON) return;
+        if(min_id>NUM_MIN_CON) return;
         if(socket_info[min_id].socket==SOCKET_DISCONNECTED) return;
-        xStreamBufferSend(eth_port[min_id].rx,min_payload, len_payload,1);
+        xStreamBufferSend(min_port[min_id].rx,min_payload, len_payload,1);
         return;
     }else if(min_id>=20 && min_id <30){
         switch(param.synth){
@@ -206,42 +177,55 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
     }
     switch(min_id){
         case MIN_ID_WD:
-            if(*min_payload>NUM_ETH_CON) return;
+                if(len_payload==4){
+                	time.remote  = ((uint32_t)min_payload[0]<<24);
+			        time.remote |= ((uint32_t)min_payload[1]<<16);
+			        time.remote |= ((uint32_t)min_payload[2]<<8);
+			        time.remote |= (uint32_t)min_payload[3];
+                    time.diff_raw = time.remote-SG_Timer_ReadCounter();
+                    time.diff = average(&sample,time.diff_raw);
+                    if(time.diff>5000 ||time.diff<-5000){
+                        SG_Timer_WriteCounter(time.remote);
+                        time.resync++;   
+                        SG_Trim_WritePeriod(199);
+                    }else if(time.diff>100){
+                        SG_Trim_WritePeriod(200);
+                    }else if(time.diff<-100){
+                        SG_Trim_WritePeriod(198);
+                    }else{
+                        SG_Trim_WritePeriod(199); 
+                    }
+                }
                 WD_reset();
             break;
         case MIN_ID_SOCKET:
-            if(*min_payload>NUM_ETH_CON) return;
+            if(*min_payload>NUM_MIN_CON) return;
             socket_info[*min_payload].socket = *(min_payload+1);
             strncpy(socket_info[*min_payload].info,(char*)min_payload+2,sizeof(socket_info[0].info));
             if(socket_info[*min_payload].socket==SOCKET_CONNECTED){
-                command_cls("",&eth_port[*min_payload]);
-                send_string(":>", &eth_port[*min_payload]);
+                command_cls("",&min_port[*min_payload]);
+                send_string(":>", &min_port[*min_payload]);
             }else{
-                eth_port[*min_payload].term_mode = PORT_TERM_VT100;    
-                stop_overlay_task(&eth_port[*min_payload]);   
+                min_port[*min_payload].term_mode = PORT_TERM_VT100;    
+                stop_overlay_task(&min_port[*min_payload]);   
             }
-            break;
-        case MIN_ID_COMMAND:
-            process_command(min_payload,len_payload);
             break;
         case MIN_ID_SYNTH:
             process_synth(min_payload,len_payload);
             break;
-            
-
     }
 }
 
 
 void poll_UART(uint8_t* ptr){
         
-    uint16_t bytes = UART_2_GetRxBufferSize();
+    uint16_t bytes = UART_GetRxBufferSize();
     uint16_t bytes_cnt=0;
     if(bytes){
         rx_blink_Write(1);
         if (bytes > LOCAL_UART_BUFFER_SIZE) bytes = LOCAL_UART_BUFFER_SIZE;
             while(bytes_cnt < bytes){
-                ptr[bytes_cnt] = UART_2_GetByte();
+                ptr[bytes_cnt] = UART_GetByte();
                 bytes_cnt++;
             }
     }
@@ -260,21 +244,6 @@ uint8_t assemble_command(uint8_t cmd, char *str, uint8_t *buf){
 
 void min_reset_flow(void){
     flow_ctl=0;
-}
-
-void send_config_to_esp(){
-    uint8_t len;
-    uint8_t buf[40];
-    len = assemble_command(COMMAND_IP,configuration.ip_addr,buf);
-    min_send_frame(&min_ctx,MIN_ID_COMMAND,buf,len);
-    len = assemble_command(COMMAND_GW,configuration.ip_gw,buf);
-    min_send_frame(&min_ctx,MIN_ID_COMMAND,buf,len);
-    len = assemble_command(COMMAND_MAC,configuration.ip_mac,buf);
-    min_send_frame(&min_ctx,MIN_ID_COMMAND,buf,len);
-    len = assemble_command(COMMAND_SSID,configuration.ssid,buf);
-    min_send_frame(&min_ctx,MIN_ID_COMMAND,buf,len);
-    len = assemble_command(COMMAND_PASSWD,configuration.passwd,buf);
-    min_send_frame(&min_ctx,MIN_ID_COMMAND,buf,len);
 }
 
 
@@ -296,10 +265,7 @@ void tsk_min_TaskProc(void *pvParameters) {
     uint8_t buffer_u[LOCAL_UART_BUFFER_SIZE];
 
     uint8_t bytes_cnt=0;
-    
-    
-    pEth_info[ETH_INFO_ETH] = pvPortMalloc(sizeof(eth_info));
-    pEth_info[ETH_INFO_WIFI] = pvPortMalloc(sizeof(eth_info));
+   
 
 	/* `#END` */
 
@@ -313,15 +279,12 @@ void tsk_min_TaskProc(void *pvParameters) {
     //Init MIN Protocol
     min_init_context(&min_ctx, 0);
     
-    for(uint8_t i=0;i<NUM_ETH_CON;i++){
+    for(uint8_t i=0;i<NUM_MIN_CON;i++){
         socket_info[i].socket=SOCKET_DISCONNECTED;   
         socket_info[i].old_state=SOCKET_DISCONNECTED;
         socket_info[i].info[0] = '\0';
     }
     
-    if(configuration.eth_hw==ETH_HW_ESP32){
-        send_config_to_esp();
-    }
         
 	/* `#END` */
     uint8_t i=0;
@@ -331,9 +294,9 @@ void tsk_min_TaskProc(void *pvParameters) {
     alarm_push(ALM_PRIO_INFO,warn_task_min, ALM_NO_VALUE);
 	for (;;) {
 
-        bytes_waiting=UART_2_GetRxBufferSize();
+        bytes_waiting=UART_GetRxBufferSize();
         
-        for(i=0;i<NUM_ETH_CON;i++){
+        for(i=0;i<NUM_MIN_CON;i++){
         
     		/* `#START TASK_LOOP_CODE` */
              
@@ -356,10 +319,10 @@ void tsk_min_TaskProc(void *pvParameters) {
                     }
                 }
             }
-            uint16_t eth_bytes=xStreamBufferBytesAvailable(eth_port[i].tx);
+            uint16_t eth_bytes=xStreamBufferBytesAvailable(min_port[i].tx);
             if(eth_bytes){
                 bytes_waiting+=eth_bytes;
-                bytes_cnt = xStreamBufferReceive(eth_port[i].tx, buffer, LOCAL_UART_BUFFER_SIZE, 0);
+                bytes_cnt = xStreamBufferReceive(min_port[i].tx, buffer, LOCAL_UART_BUFFER_SIZE, 0);
                 if(bytes_cnt){
                     uint8_t res=0;
                     res = min_queue_frame(&min_ctx,i,buffer,bytes_cnt);
@@ -388,7 +351,8 @@ void tsk_min_Start(void) {
 	/* `#START TASK_GLOBAL_INIT` */
 
 	/* `#END` */
-    UART_2_Start();
+    UART_Start();
+    
     
 	if (tsk_min_initVar != 1) {
 		/*

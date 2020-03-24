@@ -57,9 +57,8 @@ static const char warn_task_analog[]= "TASK: Analog started";
 
 static const char warn_task_serial_cli[]= "TASK: Serial-CLI started";
 static const char warn_task_usb_cli[]= "TASK: USB-CLI started";
-static const char warn_task_eth_cli[]= "TASK: Ethernet/MIN-CLI started";
+static const char warn_task_min_cli[]= "TASK: MIN-CLI started";
 
-static const char warn_task_eth[]= "TASK: ETH started";
 static const char warn_task_fault[]= "TASK: Fault started";
 static const char warn_task_midi[]= "TASK: MIDI started";
 static const char warn_task_min[]= "TASK: MIN started";
@@ -92,7 +91,6 @@ static const char warn_eeprom_unknown_param[]= "EEPROM: Found unknown parameter"
 static const char warn_eeprom_loaded[]= "EEPROM: Dataset loaded";
 static const char warn_eeprom_written[]= "EEPROM: Dataset written changes";
 
-static const char warn_W5500_failed[]= "W5550: Timeout, check connection";
 
 static const char warn_watchdog[]= "WD: Watchdog triggerd";
 

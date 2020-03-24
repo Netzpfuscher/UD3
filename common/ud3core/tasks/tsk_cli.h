@@ -24,7 +24,6 @@
 
 #include "FreeRTOS.h"
 #include "task.h"
-#include "tsk_eth.h"
 #include "cli_basic.h"
 #include "tsk_eth_common.h"
 
@@ -42,9 +41,9 @@
 
 void tsk_cli_Start(void);
 void tsk_cli_TaskProc(void *pvParameters);
-extern xTaskHandle ETH_Terminal_TaskHandle[NUM_ETH_CON];
+extern xTaskHandle MIN_Terminal_TaskHandle[NUM_MIN_CON];
 
-extern port_str eth_port[NUM_ETH_CON];
+extern port_str min_port[NUM_MIN_CON];
 extern port_str serial_port;
 extern port_str usb_port;
 extern port_str null_port;

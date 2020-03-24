@@ -43,7 +43,6 @@
 #include "tasks/tsk_thermistor.h"
 #include "tasks/tsk_uart.h"
 #include "tasks/tsk_usb.h"
-#include "tasks/tsk_eth.h"
 #include "tasks/tsk_min.h"
 #include "tasks/tsk_display.h"
 
@@ -61,6 +60,8 @@ int main() {
 	init_config();
     EEPROM_1_Start();
     Mantmr_Start();
+    SG_Trim_Start();
+	SG_Timer_Start();
     
     null_port.type = PORT_TYPE_NULL;
     null_port.tx = NULL;
@@ -84,16 +85,13 @@ int main() {
 
 
 	//Starting Tasks
-    if(configuration.minprot || configuration.eth_hw==ETH_HW_ESP32){
+    if(configuration.minprot){
         tsk_min_Start();        //Handles UART-Hardware and queues with MIN-Protocol
     }else{
 	    tsk_uart_Start();       //Handles UART-Hardware and queues
     }
     
 	tsk_usb_Start();        //Handles USB-Hardware and queues
-    if(configuration.eth_hw==ETH_HW_W5500){
-        tsk_eth_Start();        //Handles Ethernet-Hardware and queues
-    }
     
     tsk_cli_Start();		//Commandline interface
     

@@ -37,7 +37,6 @@
 #include "task.h"
 #include "queue.h"
 #include "semphr.h"
-#include "tsk_eth.h"
 #include "tsk_eth_common.h"
 #include "min.h"
 
@@ -47,22 +46,20 @@ struct _socket_info{
     uint8_t old_state;
     char info[16];
 };
-#define ETH_INFO_ETH  0
-#define ETH_INFO_WIFI 1
 
-typedef struct {
-    char info[16];
-    char ip[16];
-    char gw[16];
-    uint8_t eth_state;
-}eth_info;
+struct _time{
+    uint32_t remote;
+    int32_t diff;
+    int32_t diff_raw;
+    uint32_t resync;
+};
 
-extern eth_info *pEth_info[2];
 extern struct min_context min_ctx;    
     
 void tsk_min_Start(void);
 void min_reset_flow(void);
-extern struct _socket_info socket_info[NUM_ETH_CON];
+extern struct _socket_info socket_info[NUM_MIN_CON];
+extern struct _time time;
 
 /*
  * Add user function prototypes in the below merge region to add user

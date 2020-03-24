@@ -34,7 +34,6 @@
 #include "queue.h"
 #include "semphr.h"
 #include "timers.h"
-#include "tasks/tsk_eth.h"
 
 
 void nt_interpret(char *text, port_str *ptr);
@@ -76,16 +75,9 @@ struct config_struct{
     uint8_t ps_scheme;
     uint8_t autotune_s;
     char ud_name[16];
-    char ip_addr[16];
-    char ip_gw[16];
-    char ip_mac[18];
-    char ip_subnet[16];
     uint8_t minprot;
     uint16_t max_const_i;
     uint16_t max_fault_i;
-    uint8_t eth_hw;
-    char ssid[16];
-    char passwd[20];
     uint32_t baudrate;
     uint8_t spi_speed;
     uint8_t ct2_type;

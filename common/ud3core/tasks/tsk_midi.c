@@ -51,8 +51,6 @@ uint8 tsk_midi_initVar = 0u;
 #define PITCHBEND_ZEROBIAS (0x2000)
 #define PITCHBEND_DIVIDER ((uint32_t)0x1fff)
 
-
-
 #define COMMAND_NOTEONOFF 1
 #define COMMAND_NOTEOFF 4
 #define COMMAND_CONTROLCHANGE 2
@@ -89,15 +87,11 @@ typedef struct __pulse__ {
 uint8_t skip_flag = 0; // Skipping system exclusive messages
 
 
+// Tone generator channel status (updated according to MIDI messages)
+CHANNEL channel[N_CHANNEL];
 
-
-
-
-	// Tone generator channel status (updated according to MIDI messages)
-	CHANNEL channel[N_CHANNEL];
-
-	// MIDI channel status
-	MIDICH midich[N_MIDICHANNEL];
+// MIDI channel status
+MIDICH midich[N_MIDICHANNEL];
 
 // Note on & off
 
@@ -606,11 +600,10 @@ void reflect() {
 			if (channel[ch].adsr_state) {
                 pb = ((((uint32_t)midich[mch].pitchbend*midich[mch].bendrange)<<10) / PITCHBEND_DIVIDER)<<6;
                 channel[ch].freq=Q16n16_mtof((channel[ch].miditone<<16)+pb);
-                channel[ch].halfcount= (150000<<14) / (channel[ch].freq>>2);
+                channel[ch].halfcount= (160000<<14) / (channel[ch].freq>>2);
                 channel[ch].freq = channel[ch].freq >>16;
 
 			}
-			//port[ch].volume = (int32)channel[ch].volume * midich[mch].expression / 127; // Reflect Expression here
 			channel[ch].updated = 0;													// Mission channel update work done
 		}
         
@@ -746,7 +739,7 @@ void tsk_midi_TaskProc(void *pvParameters) {
 	// MIDI Channel initialization
 	MidichInit(midich);
 	// Sound source relation module initialization
-	SG_Timer_Start();
+
 
 	isr_midi_StartEx(isr_midi);
     //isr_midi_StartEx(isr_sid);

@@ -22,11 +22,8 @@
     #include "cli_basic.h"
     #include "stream_buffer.h" 
     
-    #define NUM_ETH_CON 3
+    #define NUM_MIN_CON 3
 
-    #define ETH_HW_DISABLED 0
-    #define ETH_HW_W5500    1
-    #define ETH_HW_ESP32    2
     
     #define STREAMBUFFER_RX_SIZE    256     //bytes
     #define STREAMBUFFER_TX_SIZE    1024    //bytes

@@ -29,7 +29,6 @@
 #ifndef BOOT
 #include "tasks/tsk_uart.h"
 #include "tasks/tsk_usb.h"
-#include "tasks/tsk_eth.h"
 #include "tasks/tsk_eth_common.h"
 #include "alarmevent.h"
 #endif
@@ -670,11 +669,9 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
                 }
             }
             if(!found_param){
-                //#ifndef BOOT
                 alarm_push(ALM_PRIO_WARN,warn_eeprom_unknown_param, current_parameter);
                 ret = snprintf(buffer, sizeof(buffer), "WARNING: Param [%s] not found in EEPROM\r\n",params[current_parameter].name);
                 send_buffer((uint8_t*)buffer, ret, ptr);
-                //#endif
             }
         }
     }

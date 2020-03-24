@@ -27,6 +27,7 @@
 
 #include <device.h>
 #include "interrupter.h"
+#include "tasks/tsk_min.h"
     
 #define BUS_OFF 0
 #define BUS_CHARGING 1
@@ -71,20 +72,20 @@
 #define GAUGE4_MAX ((5000ul * configuration.ct1_ratio) / configuration.ct1_burden)/100
 #define GAUGE4_VAR telemetry.primary_i
 #define GAUGE4_SLOW 0
-
+/*
 #define GAUGE5_NAME "Voices"
 #define GAUGE5_MIN 0
 #define GAUGE5_MAX 4        
 #define GAUGE5_VAR telemetry.midi_voices
 #define GAUGE5_SLOW 0
- 
-/*    
-#define GAUGE5_NAME "Fres"
-#define GAUGE5_MIN 0
-#define GAUGE5_MAX 1000        
-#define GAUGE5_VAR telemetry.fres
+*/
+    
+#define GAUGE5_NAME "Timediff"
+#define GAUGE5_MIN -5000
+#define GAUGE5_MAX 5000        
+#define GAUGE5_VAR time.diff
 #define GAUGE5_SLOW 0
-*/    
+    
 #define GAUGE6_NAME "Fuse"
 #define GAUGE6_MIN 0
 #define GAUGE6_MAX 100

@@ -44,9 +44,6 @@
 #define ADD_COMMAND(command, command_func, help_text) {command, command_func, help_text},
 
     
-#define VISIBLE_TRUE    1
-#define VISIBLE_FALSE   0
-
 #define PARAM_DEFAULT   0
 #define PARAM_CONFIG    1
 
@@ -62,20 +59,15 @@
 #define SEND_CONST_STRING(string,port) send_buffer((uint8_t*)string,strlen(string),port);
 
 
-#define NUM_CON (NUM_ETH_CON+3)
-
 #define PORT_TYPE_NULL      0    
 #define PORT_TYPE_SERIAL    1
 #define PORT_TYPE_USB       2
-#define PORT_TYPE_ETH       3
+#define PORT_TYPE_MIN       3
     
 #define PORT_TERM_VT100  0
 #define PORT_TERM_TT     1
 #define PORT_TERM_MQTT   2
     
-#define ETH_HW_DISABLED  0
-#define ETH_HW_W5500     1
-#define ETH_HW_ESP32     2
     
 #define CT2_TYPE_CURRENT      0
 #define CT2_TYPE_VOLTAGE      1

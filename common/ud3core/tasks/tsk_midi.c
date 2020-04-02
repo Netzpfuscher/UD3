@@ -57,6 +57,8 @@ uint8 tsk_midi_initVar = 0u;
 #define COMMAND_PITCHBEND 3
 
 
+struct _filter filter;
+
 void reflect();
 
 const uint8_t kill_msg[3] = {0xb0, 0x77, 0x00};
@@ -272,7 +274,7 @@ CY_ISR(isr_midi) {
 
 }
 
-
+volatile uint32_t next_frame=4294967295;
 
 
 CY_ISR(isr_sid) {
@@ -281,12 +283,11 @@ CY_ISR(isr_sid) {
         handle_qcw();
         return;
     }
+    uint32 r = SG_Timer_ReadCounter();
     
     telemetry.midi_voices=0;
-    static uint8_t cnt=0;
     
-    if (cnt > param.sid_divider){
-        cnt=0;
+    if (r < next_frame){
         if(xQueueReceiveFromISR(qSID,&sid_frm,0)){
             
             for(uint8_t i=0;i<SID_CHANNELS;i++){
@@ -294,24 +295,29 @@ CY_ISR(isr_sid) {
                 if(sid_frm.gate[i] > channel[i].old_gate) channel[i].adsr_state=ADSR_ATTACK;  //Rising edge
                 if(sid_frm.gate[i] < channel[i].old_gate) channel[i].adsr_state=ADSR_RELEASE;  //Falling edge
                 sid_frm.pw[i]=sid_frm.pw[i]>>4;
+                channel[i].freq = sid_frm.freq[i];
                 channel[i].old_gate = sid_frm.gate[i];
                 channel[i].freq = sid_frm.freq[i];
             }
+            next_frame = sid_frm.next_frame;
         }else{
-            for (uint8_t i = 0;i<SID_CHANNELS;++i) {
-                channel[i].volume = 0;
-                channel[i].adsr_state = ADSR_IDLE;
-            }
+           
         }
-    }else{
-        cnt++;
     }
+    if((r-next_frame)>64000){  //Stop output if ~200ms no new Frame
+        next_frame = r;
+        for (uint8_t i = 0;i<SID_CHANNELS;++i) {
+            channel[i].volume = 0;
+            channel[i].adsr_state = ADSR_IDLE;
+        }   
+    }
+    
     
     uint8_t random = rand();
 
     PULSE pulse;
 	uint8_t flag[SID_CHANNELS];
-	uint32 r = SG_Timer_ReadCounter();
+	
 	for (uint8_t ch = 0; ch < SID_CHANNELS; ch++) {
         switch (channel[ch].adsr_state){
             case ADSR_ATTACK:
@@ -602,6 +608,11 @@ void reflect() {
                 channel[ch].freq=Q16n16_mtof((channel[ch].miditone<<16)+pb);
                 channel[ch].halfcount= (160000<<14) / (channel[ch].freq>>2);
                 channel[ch].freq = channel[ch].freq >>16;
+                if(filter.channel[ch]==0 || channel[ch].freq < filter.min || channel[ch].freq > filter.max){
+                    channel[ch].adsr_state = ADSR_IDLE;   
+                    channel[ch].volume = 0;
+                    channel[ch].sustain = 0;
+                }
 
 			}
 			channel[ch].updated = 0;													// Mission channel update work done
@@ -666,6 +677,8 @@ uint8_t command_SynthMon(char *commandline, port_str *ptr){
     char buf[80];
     uint8_t ret;
     uint32_t freq=0;
+    uint8_t channels=8;
+    if(param.synth== SYNTH_SID) channels=3;
     Term_Disable_Cursor(ptr);
     Term_Erase_Screen(ptr);
     SEND_CONST_STRING("Synthesizer monitor    (press q for quit)\r\n",ptr);
@@ -673,7 +686,7 @@ uint8_t command_SynthMon(char *commandline, port_str *ptr){
     while(getch(ptr,100 /portTICK_RATE_MS) != 'q'){
         Term_Move_Cursor(3,1,ptr);
         
-        for(uint8_t i=0;i<N_CHANNEL;i++){
+        for(uint8_t i=0;i<channels;i++){
             ret=sprintf(buf,"Ch:   Freq:      \r");
             send_buffer((uint8_t*)buf,ret,ptr);   
             if(channel[i].volume>0){
@@ -692,7 +705,7 @@ uint8_t command_SynthMon(char *commandline, port_str *ptr){
                 if(w<cnt){
                     send_char('o',ptr);
                 }else{
-                    send_char('_',ptr);
+                    send_char(' ',ptr);
                 }
             }
             SEND_CONST_STRING("\r\n",ptr);

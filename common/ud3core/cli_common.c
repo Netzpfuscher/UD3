@@ -101,7 +101,7 @@ uint8_t callback_VisibleFunction(parameter_entry * params, uint8_t index, port_s
 uint8_t callback_MchFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_MchCopyFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_ivoUART(parameter_entry * params, uint8_t index, port_str *ptr);
-uint8_t callback_SIDfreq(parameter_entry * params, uint8_t index, port_str *ptr);
+uint8_t callback_synthFilter(parameter_entry * params, uint8_t index, port_str *ptr);
 
 void update_ivo_uart();
 void init_tt(uint8_t with_chart, port_str *ptr);
@@ -147,6 +147,7 @@ void init_config(){
     configuration.spi_speed = 16;
     configuration.r_top = 500000;
     ntlibc_strcpy(configuration.ud_name,"UD3-Tesla");
+    ntlibc_strcpy(configuration.synth_filter,"f<0f>20000");  //No filter
     configuration.minprot = pdFALSE;
     configuration.max_const_i = 0;
     configuration.max_fault_i = 250;
@@ -173,9 +174,6 @@ void init_config(){
     param.transpose = 0;
     param.mch = 0;
     param.synth = SYNTH_MIDI;
-    param.sid_freq = 50;
-    param.sid_divider = 212; //divider valid for 50Hz
-    param.display = 0;
     
     i2t_set_limit(configuration.max_const_i,configuration.max_fault_i,10000);
     update_ivo_uart();
@@ -206,7 +204,6 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"attack"          , midich[0].attack              , 0      ,127    ,0      ,callback_MchCopyFunction    ,"MIDI attack time of mch") //WARNING: Must be mch index +1
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"decay"           , midich[0].decay               , 0      ,127    ,0      ,callback_MchCopyFunction    ,"MIDI decay time of mch")  //WARNING: Must be mch index +2
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"release"         , midich[0].release             , 0      ,127    ,0      ,callback_MchCopyFunction    ,"MIDI release time of mch")//WARNING: Must be mch index +3
-    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"sid_freq"        , param.sid_freq                , 45     ,100    ,0      ,callback_SIDfreq            ,"SID frame interrupt frequency")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"display"         , param.display                 , 0      ,4      ,0      ,NULL                        ,"Actual display frame")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"watchdog"        , configuration.watchdog        , 0      ,1      ,0      ,callback_ConfigFunction     ,"Watchdog Enable")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_tr_pw"       , configuration.max_tr_pw       , 0      ,3000   ,0      ,callback_ConfigFunction     ,"Maximum TR PW [uSec]")
@@ -246,6 +243,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"spi_speed"       , configuration.spi_speed       , 10     ,160    ,10     ,callback_SPIspeedFunction   ,"SPI speed [MHz]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"r_bus"           , configuration.r_top           , 100    ,1000000,1000   ,callback_TTupdateFunction   ,"Series resistor of voltage input [kOhm]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ena_display"     , configuration.enable_display  , 0      ,6      ,0      ,NULL                        ,"Enables the WS2812 display")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"synth_filter"    , configuration.synth_filter    , 0      ,0      ,0      ,callback_synthFilter        ,"Synthesizer filter string")
 };
 
 /*****************************************************************************
@@ -285,6 +283,7 @@ void eeprom_load(port_str *ptr){
     
     uart_baudrate(configuration.baudrate);
     spi_speed(configuration.spi_speed);
+    callback_synthFilter(NULL,0, ptr);
 }
 
 
@@ -312,14 +311,92 @@ void update_visibilty(void){
 
 // clang-format on
 
-/*****************************************************************************
-* Callback for SID frequency change
-******************************************************************************/
-
-uint8_t callback_SIDfreq(parameter_entry * params, uint8_t index, port_str *ptr){
-    param.sid_divider = floor((32000.0/3.0)/(float)param.sid_freq);
+uint8_t callback_synthFilter(parameter_entry * params, uint8_t index, port_str *ptr){
+    uint8_t cnt=0;
+    uint16_t number=0;
+    char substring[20];
+    uint8_t str_size = ntlibc_strlen(configuration.synth_filter);
+    uint8_t flag=0;
+    
+    filter.min=0;
+    filter.max=20000;
+    if(configuration.synth_filter[0]=='\0'){  //No filter
+        for(uint8_t i=0;i<16;i++){
+            filter.channel[i]=pdTRUE;
+        }
+        return 1;
+    }else{
+        for(uint8_t i=0;i<16;i++){
+            filter.channel[i]=pdFALSE;
+        }
+    }
+    
+    for(uint8_t i=0;i<str_size;i++){
+        if(configuration.synth_filter[i]=='\0') break;
+        
+        if(configuration.synth_filter[i]=='c'){
+            cnt=0;
+            substring[0]='\0';
+            for(uint8_t w=i+1;w<str_size;w++){
+                if(ntlibc_isdigit(configuration.synth_filter[w])){
+                    substring[cnt]=configuration.synth_filter[w];
+                    cnt++;
+                }else{
+                    substring[cnt]='\0';
+                    break;
+                }
+            }
+            if(substring[0]){
+                number = ntlibc_atoi(substring);
+                if(number<16){
+                    filter.channel[number]=pdTRUE;
+                    flag=1;
+                }
+            }  
+        }else if(configuration.synth_filter[i]=='f'){
+            if(configuration.synth_filter[i+1]=='>' || configuration.synth_filter[i+1]=='<'){
+                cnt=0;
+                for(uint8_t w=i+2;w<str_size;w++){
+                    if(ntlibc_isdigit(configuration.synth_filter[w])){
+                        substring[cnt]=configuration.synth_filter[w];
+                        cnt++;
+                    }else{
+                        substring[cnt]='\0';
+                        break;
+                    }
+                }
+                if(cnt){
+                    number = ntlibc_atoi(substring);
+                    if(number<20000){
+                        if(configuration.synth_filter[i+1]=='>') filter.max = number;
+                        if(configuration.synth_filter[i+1]=='<') filter.min = number;
+                    }
+                } 
+            }
+        }     
+    }
+    if(filter.min > filter.max){
+        SEND_CONST_STRING("Error: Min frequency ist greater than max\r\n",ptr);
+    }
+    if(!flag){
+        for(uint8_t i=0;i<16;i++){
+            filter.channel[i]=pdTRUE;
+        }   
+    }
+    uint8_t ret;
+    char buf[50];
+    for(uint8_t i=0;i<sizeof(filter.channel);i++){
+        ret= snprintf(buf,sizeof(buf),"Channel %u: %u\r\n",i,filter.channel[i]);
+        send_buffer((uint8_t*)buf,ret,ptr);
+    }
+    ret= snprintf(buf,sizeof(buf),"Min frequency: %u\r\n",filter.min);
+    send_buffer((uint8_t*)buf,ret,ptr);
+    ret= snprintf(buf,sizeof(buf),"Max frequency: %u\r\n",filter.max);
+    send_buffer((uint8_t*)buf,ret,ptr);
+    
     return 1;
 }
+
 
 /*****************************************************************************
 * Callback for invert option UART

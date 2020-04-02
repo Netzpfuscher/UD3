@@ -89,6 +89,7 @@ struct config_struct{
     uint8_t ivo_uart;
     uint8_t enable_display;
     uint8_t line_code;
+    char synth_filter[32];
 };
 typedef struct config_struct cli_config;
 
@@ -108,8 +109,6 @@ struct parameter_struct{
     uint8_t     synth;
     uint16_t    temp_duty;
     uint8_t     mch;
-    uint8_t     sid_freq;
-    uint8_t     sid_divider;
     uint8_t     display;
 };
 typedef struct parameter_struct cli_parameter;

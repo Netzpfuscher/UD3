@@ -91,6 +91,8 @@ extern CHANNEL channel[N_CHANNEL];
 
 extern const uint8_t kill_msg[3];
 
+extern volatile uint32_t next_frame;
+
 struct sid_f{
     uint16_t freq[SID_CHANNELS];
     uint16_t half[SID_CHANNELS];
@@ -102,11 +104,20 @@ struct sid_f{
     uint8_t sustain[SID_CHANNELS];
     uint8_t release[SID_CHANNELS];
     uint16_t master_pw;
+    uint32_t next_frame;
 };
 
 #define SYNTH_OFF  0
 #define SYNTH_MIDI 1
 #define SYNTH_SID  2
+
+struct _filter{
+    uint16_t min;
+    uint16_t max;
+    uint8_t channel[N_MIDICHANNEL];
+};
+
+extern struct _filter filter;
 
 uint8_t command_SynthMon(char *commandline, port_str *ptr);
 

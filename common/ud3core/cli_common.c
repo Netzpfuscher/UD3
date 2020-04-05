@@ -85,6 +85,7 @@ uint8_t command_exit(char *commandline, port_str *ptr);
 uint8_t command_fuse(char *commandline, port_str *ptr);
 uint8_t command_signals(char *commandline, port_str *ptr);
 uint8_t command_alarms(char *commandline, port_str *ptr);
+uint8_t command_relay(char *commandline, port_str *ptr);
 
 uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, port_str *ptr);
@@ -272,6 +273,7 @@ command_entry commands[] = {
     ADD_COMMAND("signals"       ,command_signals        ,"For debugging")
     ADD_COMMAND("alarms"        ,command_alarms         ,"Alarms [get/roll/reset]")
     ADD_COMMAND("synthmon"      ,command_SynthMon       ,"Synthesizer status")
+    ADD_COMMAND("relay"         ,command_relay          ,"Switch user relay 3/4")
 };
 
 
@@ -1355,6 +1357,37 @@ uint8_t command_reset(char *commandline, port_str *ptr){
 }
 
 /*****************************************************************************
+* Switches the user relay 3 or 4
+******************************************************************************/
+uint8_t command_relay(char *commandline, port_str *ptr){
+    SKIP_SPACE(commandline);
+    CHECK_NULL(commandline);
+    
+    if (ntlibc_stricmp(commandline, "3 on") == 0) {
+		Relay3_Write(1);
+		SEND_CONST_STRING("Relay 3 ON\r\n", ptr);
+        return 1;
+	}
+    if (ntlibc_stricmp(commandline, "3 off") == 0) {
+		Relay3_Write(0);
+		SEND_CONST_STRING("Relay 3 OFF\r\n", ptr);
+        return 1;
+	}
+    if (ntlibc_stricmp(commandline, "4 on") == 0) {
+		Relay4_Write(1);
+		SEND_CONST_STRING("Relay 4 ON\r\n", ptr);
+        return 1;
+	}
+    if (ntlibc_stricmp(commandline, "4 off") == 0) {
+		Relay4_Write(0);
+		SEND_CONST_STRING("Relay 4 OFF\r\n", ptr);
+        return 1;
+	}
+    
+    HELP_TEXT("Usage: relay 3 [on|off]\r\n");
+}
+
+/*****************************************************************************
 * Helper function for spawning the overlay task
 ******************************************************************************/
 void start_overlay_task(port_str *ptr){
@@ -1513,8 +1546,8 @@ uint8_t command_signals(char *commandline, port_str *ptr) {
         SEND_CONST_STRING("UVLO pin: ", ptr);
         send_signal_state_wo(UVLO_status_Status,pdTRUE,ptr);
         SEND_CONST_STRING(" Crystal clock: ", ptr);
-        send_signal_state(UVLO_status_Status,!(CY_GET_XTND_REG8((void CYFAR *)CYREG_FASTCLK_XMHZ_CSR) & 0x80u),ptr);
-
+        send_signal_state((CY_GET_XTND_REG8((void CYFAR *)CYREG_FASTCLK_XMHZ_CSR) & 0x80u),pdTRUE,ptr);
+        
         SEND_CONST_STRING("Sysfault driver undervoltage: ", ptr);
         send_signal_state(sysfault.uvlo,pdFALSE,ptr);
         SEND_CONST_STRING("Sysfault Temp 1: ", ptr);
@@ -1539,7 +1572,7 @@ uint8_t command_signals(char *commandline, port_str *ptr) {
         SEND_CONST_STRING(" Relay 2: ", ptr);
         send_signal_state_wo((relay_Read()&0b10),pdFALSE,ptr);
         SEND_CONST_STRING(" Fan: ", ptr);
-        send_signal_state(fan_ctrl_Read(),pdFALSE,ptr);
+        send_signal_state(Fan_Read(),pdFALSE,ptr);
         SEND_CONST_STRING("                                    \r", ptr);
         SEND_CONST_STRING("Bus status: ", ptr);
         Term_Color_Cyan(ptr);

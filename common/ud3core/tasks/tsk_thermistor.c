@@ -120,9 +120,9 @@ uint16 run_temp_check(void) {
 	}
 
 	if (telemetry.temp1 > configuration.temp1_setpoint) {
-		fan_ctrl_Control = 1;
+		Fan_Write(1);
 	} else if (telemetry.temp1 < configuration.temp1_setpoint) {
-		fan_ctrl_Control = 0;
+		Fan_Write(0);
 	}
 	return fault;
 }

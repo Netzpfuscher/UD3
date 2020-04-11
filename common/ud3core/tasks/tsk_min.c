@@ -156,26 +156,25 @@ int average (average_buff *buffer, int new_sample){
 
 void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_payload, uint8_t port)
 {
-    if(min_id<10){
-        if(min_id>NUM_MIN_CON) return;
-        if(socket_info[min_id].socket==SOCKET_DISCONNECTED) return;
-        xStreamBufferSend(min_port[min_id].rx,min_payload, len_payload,1);
-        return;
-    }else if(min_id>=20 && min_id <30){
-        switch(param.synth){
-            case SYNTH_OFF:
-       
-                break;
-            case SYNTH_MIDI:
-                process_midi(min_payload,len_payload);     
-                break;
-            case SYNTH_SID:
-                process_sid(min_payload, len_payload);
-                break;
-        }
-        return;
-    }
     switch(min_id){
+        case 0 ... 9:
+            if(min_id>NUM_MIN_CON) return;
+            if(socket_info[min_id].socket==SOCKET_DISCONNECTED) return;
+            xStreamBufferSend(min_port[min_id].rx,min_payload, len_payload,1);
+            break;
+        case MIN_ID_MIDI:
+            switch(param.synth){
+                case SYNTH_OFF:
+       
+                    break;
+                case SYNTH_MIDI:
+                    process_midi(min_payload,len_payload);     
+                    break;
+                case SYNTH_SID:
+                    process_sid(min_payload, len_payload);
+                    break;
+            }
+            break;
         case MIN_ID_WD:
                 if(len_payload==4){
                 	time.remote  = ((uint32_t)min_payload[0]<<24);

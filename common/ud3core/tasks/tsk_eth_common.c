@@ -87,6 +87,8 @@ void process_midi(uint8_t* ptr, uint16_t len) {
 #define SID_UD_TIME1    26
 #define SID_UD_TIME2    27
 #define SID_UD_TIME3    28
+#define SID_END         29
+
 
 
 void process_sid(uint8_t* ptr, uint16_t len) {
@@ -99,12 +101,12 @@ void process_sid(uint8_t* ptr, uint16_t len) {
         if(start_frame){
             switch(SID_register){
                 case SID_FREQLO1:
-                    SID_frame.freq[0]=(SID_frame.freq[0] & 0xff00) + *ptr;
+                    SID_frame.freq[0] = *ptr;
                     break;
                 case SID_FREQHI1:
-                    SID_frame.freq[0] = (SID_frame.freq[0] & 0xff) + ((uint16_t)*ptr << 8);
+                    SID_frame.freq[0] |= ((uint16_t)*ptr << 8);
                     SID_frame.freq[0] = ((uint32_t)SID_frame.freq[0]<<7)/2179;
-                    SID_frame.half[0]= 160000 / SID_frame.freq[0];
+                    SID_frame.half[0] = 160000 / SID_frame.freq[0];
                     break;
                 case SID_PWLO1:
 		            SID_frame.pw[0] = (SID_frame.pw[0] & 0xff00) + *ptr;
@@ -129,12 +131,12 @@ void process_sid(uint8_t* ptr, uint16_t len) {
                     SID_frame.release[0] = (*ptr) & 0x0F;
                     break;
                 case SID_FREQLO2:
-                    SID_frame.freq[1]=(SID_frame.freq[1] & 0xff00) + *ptr;
+                    SID_frame.freq[1] = *ptr;
                     break;
                 case SID_FREQHI2:
-                    SID_frame.freq[1] = (SID_frame.freq[1] & 0xff) + ((uint16_t)*ptr << 8);
+                    SID_frame.freq[1] |= ((uint16_t)*ptr << 8);
                     SID_frame.freq[1] = ((uint32_t)SID_frame.freq[1]<<7)/2179;
-                    SID_frame.half[1]= 160000 / SID_frame.freq[1];
+                    SID_frame.half[1] = 160000 / SID_frame.freq[1];
                     break;
                 case SID_PWLO2:
 		            SID_frame.pw[1] = (SID_frame.pw[1] & 0xff00) + *ptr;
@@ -159,12 +161,12 @@ void process_sid(uint8_t* ptr, uint16_t len) {
                     SID_frame.release[1] = (*ptr) & 0x0F;
                     break;
                 case SID_FREQLO3:
-                    SID_frame.freq[2]=(SID_frame.freq[2] & 0xff00) + *ptr;
+                    SID_frame.freq[2] = *ptr;
                     break;
                 case SID_FREQHI3:
-                    SID_frame.freq[2] = (SID_frame.freq[2] & 0xff) + ((uint16_t)*ptr << 8);
+                    SID_frame.freq[2] |= ((uint16_t)*ptr << 8);
                     SID_frame.freq[2] = ((uint32_t)SID_frame.freq[2]<<7)/2179;
-                    SID_frame.half[2]= 160000 / SID_frame.freq[2];
+                    SID_frame.half[2] = 160000 / SID_frame.freq[2];
                     break;
                 case SID_PWLO3:
 		            SID_frame.pw[2] = (SID_frame.pw[2] & 0xff00) + *ptr;
@@ -189,22 +191,21 @@ void process_sid(uint8_t* ptr, uint16_t len) {
                     SID_frame.release[2] = (*ptr) & 0x0F;
                     break;
                 case SID_UD_TIME0:
-                    SID_frame.next_frame = *ptr;
+                    SID_frame.next_frame = *ptr<<24;
                     break;
                 case SID_UD_TIME1:
-                    SID_frame.next_frame |= *ptr<<8;
-                    break;
-                case SID_UD_TIME2:
                     SID_frame.next_frame |= *ptr<<16;
                     break;
+                case SID_UD_TIME2:
+                    SID_frame.next_frame |= *ptr<<8;
+                    break;
                 case SID_UD_TIME3:
-                    SID_frame.next_frame |= *ptr<<24;
-                    
+                    SID_frame.next_frame |= *ptr;
                     break;
                     
             }
             SID_register++;
-            if(SID_register==29){
+            if(SID_register==SID_END+1){
                 uint16_t dutycycle=0;
                 for(uint8_t i=0;i<3;i++){
                     if (SID_frame.gate[i]){
@@ -240,5 +241,4 @@ void process_sid(uint8_t* ptr, uint16_t len) {
         ptr++;   
     }  
 }
-
 

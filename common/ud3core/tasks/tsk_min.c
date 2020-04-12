@@ -69,6 +69,32 @@ struct _time time;
 #define LOCAL_UART_BUFFER_SIZE  127     //bytes
 #define FLOW_RETRANSMIT_TICKS 50
 
+#define ITEMS			32								//Stärke des Lowpass-Filters
+
+typedef struct {
+	uint8_t i;
+	int32_t total;
+	int32_t last;
+	int32_t samples[ITEMS];
+} average_buff;
+
+average_buff sample;
+
+/*******************************************************************************************
+Makes avaraging of given values
+In	= buffer (avarage_buff) for storing samples
+IN	= new_sample (int)
+OUT = avaraged value (int) 
+********************************************************************************************/
+int average (average_buff *buffer, int new_sample){
+	buffer->total -= buffer->samples[buffer->i];
+	buffer->total += new_sample;
+	buffer->samples[buffer->i] = new_sample;
+	buffer->i = (buffer->i+1) % ITEMS;
+	buffer->last = buffer->total / ITEMS;
+	return buffer->last;
+}
+
 
 uint16_t min_tx_space(uint8_t port){
     return (UART_TX_BUFFER_SIZE - UART_GetTxBufferSize());
@@ -95,6 +121,22 @@ void min_reset(uint8_t port){
 void min_tx_start(uint8_t port){
 }
 void min_tx_finished(uint8_t port){
+}
+void time_cb(uint32_t remote_time){
+    time.remote = remote_time;
+    time.diff_raw = time.remote-SG_Timer_ReadCounter();
+    time.diff = average(&sample,time.diff_raw);
+    if(time.diff>5000 ||time.diff<-5000){
+        SG_Timer_WriteCounter(time.remote);
+        time.resync++;   
+        SG_Trim_WritePeriod(199);
+    }else if(time.diff>100){
+        SG_Trim_WritePeriod(200);
+    }else if(time.diff<-100){
+        SG_Trim_WritePeriod(198);
+    }else{
+        SG_Trim_WritePeriod(199); 
+    }    
 }
 
 uint8_t flow_ctl=1;
@@ -127,31 +169,7 @@ void process_synth(uint8_t *min_payload, uint8_t len_payload){
   }
 }
 
-#define ITEMS			32								//Stärke des Lowpass-Filters
 
-typedef struct {
-	uint8_t i;
-	int32_t total;
-	int32_t last;
-	int32_t samples[ITEMS];
-} average_buff;
-
-average_buff sample;
-
-/*******************************************************************************************
-Makes avaraging of given values
-In	= buffer (avarage_buff) for storing samples
-IN	= new_sample (int)
-OUT = avaraged value (int) 
-********************************************************************************************/
-int average (average_buff *buffer, int new_sample){
-	buffer->total -= buffer->samples[buffer->i];
-	buffer->total += new_sample;
-	buffer->samples[buffer->i] = new_sample;
-	buffer->i = (buffer->i+1) % ITEMS;
-	buffer->last = buffer->total / ITEMS;
-	return buffer->last;
-}
 
 
 void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_payload, uint8_t port)

@@ -382,6 +382,15 @@ static void valid_frame_received(struct min_context *self)
 			self->remote_rx_space |= ((uint32_t)payload[5]<<16);
 			self->remote_rx_space |= ((uint32_t)payload[6]<<8);
 			self->remote_rx_space |= ((uint32_t)payload[7]);
+            
+            if(payload_len>8){
+                uint32_t time;
+                time  = ((uint32_t)payload[8]<<24);
+			    time |= ((uint32_t)payload[9]<<16);
+			    time |= ((uint32_t)payload[10]<<8);
+			    time |= ((uint32_t)payload[11]);
+                time_cb(time);
+            }
 
 
             if(num_acked <= num_in_window) {

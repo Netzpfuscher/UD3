@@ -197,6 +197,8 @@ void min_tx_byte(uint8_t port, uint8_t byte);
 void min_tx_start(uint8_t port);
 void min_tx_finished(uint8_t port);
 
+void time_cb(uint32_t remote_time);
+
 // CALLBACK. Min reset.
 void min_reset(uint8_t port);
 

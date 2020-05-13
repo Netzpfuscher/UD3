@@ -86,6 +86,7 @@ uint8_t command_fuse(char *commandline, port_str *ptr);
 uint8_t command_signals(char *commandline, port_str *ptr);
 uint8_t command_alarms(char *commandline, port_str *ptr);
 uint8_t command_relay(char *commandline, port_str *ptr);
+uint8_t command_con(char *commandline, port_str *ptr);
 
 uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, port_str *ptr);
@@ -274,6 +275,7 @@ command_entry commands[] = {
     ADD_COMMAND("alarms"        ,command_alarms         ,"Alarms [get/roll/reset]")
     ADD_COMMAND("synthmon"      ,command_SynthMon       ,"Synthesizer status")
     ADD_COMMAND("relay"         ,command_relay          ,"Switch user relay 3/4")
+    ADD_COMMAND("con"	        ,command_con            ,"Prints the connections")
 };
 
 
@@ -844,6 +846,37 @@ uint8_t command_alarms(char *commandline, port_str *ptr) {
 }
 
 /*****************************************************************************
+* Prints the ethernet connections
+******************************************************************************/
+uint8_t command_con(char *commandline, port_str *ptr) {
+    SKIP_SPACE(commandline);
+    #define COL_A 9
+    #define COL_B 15
+    char buffer[40];
+    uint8_t ret;
+ 
+    
+    SEND_CONST_STRING("\r\n\nConnected clients:\r\n",ptr);
+    Term_Move_cursor_right(COL_A,ptr);
+    SEND_CONST_STRING("Num", ptr);
+    Term_Move_cursor_right(COL_B,ptr);
+    SEND_CONST_STRING("| Remote IP\r\n", ptr);
+    
+    for(uint8_t i=0;i<NUM_MIN_CON;i++){
+        if(socket_info[i].socket==SOCKET_CONNECTED){
+            Term_Move_cursor_right(COL_A,ptr);
+            ret = snprintf(buffer,sizeof(buffer), "\033[36m%d", i);
+            send_buffer((uint8_t*)buffer,ret,ptr);
+            Term_Move_cursor_right(COL_B,ptr);
+            ret = snprintf(buffer,sizeof(buffer), "\033[32m%s\r\n", socket_info[i].info);
+            send_buffer((uint8_t*)buffer,ret,ptr);
+        }
+    }
+    Term_Color_White(ptr);
+	return 1;
+}
+
+/*****************************************************************************
 * Displays the statistics of the min protocol
 ******************************************************************************/
 uint8_t command_minstat(char *commandline, port_str *ptr){
@@ -1115,8 +1148,11 @@ uint8_t command_tasks(char *commandline, port_str *ptr) {
         return 0;
     #endif
     
-    #if !configUSE_STATS_FORMATTING_FUNCTIONS && !configUSE_TRACE_FACILITY
+        #if !configUSE_STATS_FORMATTING_FUNCTIONS && !configUSE_TRACE_FACILITY
 	    SEND_CONST_STRING("Taskinfo not active, activate it in FreeRTOSConfig.h\n\r", ptr);
+	    char buff[30];
+        sprintf(buff, "Free heap: %d\r\n",xPortGetFreeHeapSize());
+        send_string(buff,ptr);
         return 0;
 	#endif
     

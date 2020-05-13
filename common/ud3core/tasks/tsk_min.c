@@ -176,7 +176,7 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
 {
     switch(min_id){
         case 0 ... 9:
-            if(min_id>NUM_MIN_CON) return;
+            if(min_id>(NUM_MIN_CON-1)) return;
             if(socket_info[min_id].socket==SOCKET_DISCONNECTED) return;
             xStreamBufferSend(min_port[min_id].rx,min_payload, len_payload,1);
             break;
@@ -216,7 +216,7 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
                 WD_reset();
             break;
         case MIN_ID_SOCKET:
-            if(*min_payload>NUM_MIN_CON) return;
+            if(*min_payload>(NUM_MIN_CON-1)) return;
             socket_info[*min_payload].socket = *(min_payload+1);
             strncpy(socket_info[*min_payload].info,(char*)min_payload+2,sizeof(socket_info[0].info));
             if(socket_info[*min_payload].socket==SOCKET_CONNECTED){

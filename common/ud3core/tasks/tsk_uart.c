@@ -75,7 +75,7 @@ CY_ISR(isr_uart_rx) {
 
 			goto end;
 		} else if (!midi_count) {
-            if(xStreamBufferSendFromISR(serial_port.rx, &c, 1, 0)==0){
+            if(xStreamBufferSendFromISR(min_port[0].rx, &c, 1, 0)==0){
                 alarm_push(ALM_PRIO_WARN,warn_serial_overrun,ALM_NO_VALUE);   
             }
 			goto end;
@@ -136,7 +136,7 @@ void tsk_uart_TaskProc(void *pvParameters) {
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
 
-		if (xStreamBufferReceive(serial_port.tx, &c, 1, portMAX_DELAY)) {
+		if (xStreamBufferReceive(min_port[0].tx, &c, 1, portMAX_DELAY)) {
             rx_blink_Write(1);
 			UART_PutChar(c);
 			if (UART_GetTxBufferSize() == 4) {

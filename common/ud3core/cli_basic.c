@@ -26,6 +26,7 @@
 #include "helper/printf.h"
 #include <stdlib.h>
 #include <device.h>
+#include "ntlibc.h"
 #ifndef BOOT
 #include "tasks/tsk_uart.h"
 #include "tasks/tsk_usb.h"
@@ -803,21 +804,32 @@ void send_char(uint8 c, port_str *ptr) {
 * Sends string to transmit queue
 *********************************************/
 void send_string(char *data, port_str *ptr) {
-#ifndef BOOT
-    uint16_t len = strlen(data);
+    uint16_t len = ntlibc_strlen(data);
     if (ptr->tx != NULL) {
-        xStreamBufferSend(ptr->tx,data, len, portMAX_DELAY);
+    	while(len){
+			uint16_t space = xStreamBufferSpacesAvailable(ptr->tx);
+			uint16_t len_t = len;
+			if(len>space) len_t = space;
+			uint16_t count = xStreamBufferSend(ptr->tx,data, len_t,0);
+			data+=count;
+			len-=count;
+			if(!count) vTaskDelay(5);
+    	}
     }
-
-#endif
 }
 /********************************************
 * Sends buffer to transmit queue
 *********************************************/
 void send_buffer(uint8_t *data, uint16_t len, port_str *ptr) {
-#ifndef BOOT
     if (ptr->tx != NULL) {
-        xStreamBufferSend(ptr->tx,data, len,portMAX_DELAY);
+    	while(len){
+			uint16_t space = xStreamBufferSpacesAvailable(ptr->tx);
+			uint16_t len_t = len;
+			if(len>space) len_t = space;
+			uint16_t count = xStreamBufferSend(ptr->tx,data, len_t,0);
+			data+=count;
+			len-=count;
+			if(!count) vTaskDelay(5);
+    	}
 	}
-#endif
 }

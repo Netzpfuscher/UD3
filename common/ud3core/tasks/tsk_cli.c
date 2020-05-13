@@ -42,7 +42,7 @@ xTaskHandle USB_Terminal_TaskHandle;
 xTaskHandle MIN_Terminal_TaskHandle[NUM_MIN_CON];
 uint8 tsk_cli_initVar = 0u;
 
-port_str serial_port;
+//port_str serial_port;
 port_str usb_port;
 port_str min_port[NUM_MIN_CON];
 port_str null_port;
@@ -179,14 +179,7 @@ void tsk_cli_Start(void) {
 /* `#END` */
 
 	if (tsk_cli_initVar != 1) {
-
-        serial_port.type = PORT_TYPE_SERIAL;
-        serial_port.term_mode = PORT_TERM_VT100;
-        serial_port.term_block = xSemaphoreCreateBinary();
-        serial_port.rx = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
-        serial_port.tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,1);
-        xSemaphoreGive(serial_port.term_block);
-        
+       
         usb_port.type = PORT_TYPE_USB;
         usb_port.term_mode = PORT_TERM_VT100;
         usb_port.term_block = xSemaphoreCreateBinary();
@@ -194,24 +187,33 @@ void tsk_cli_Start(void) {
         usb_port.tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,64);
         xSemaphoreGive(usb_port.term_block);
         
-        for(uint8_t i=0;i<NUM_MIN_CON;i++){
-            min_port[i].type = PORT_TYPE_MIN;
-            min_port[i].num = i;
-            min_port[i].term_mode = PORT_TERM_VT100;
-            min_port[i].term_block = xSemaphoreCreateBinary();
-            min_port[i].rx = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
-            min_port[i].tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,256);
-            xSemaphoreGive(min_port[i].term_block);
-            xTaskCreate(tsk_cli_TaskProc, "MIN-CLI", STACK_TERMINAL, &min_port[i], PRIO_TERMINAL, &MIN_Terminal_TaskHandle[i]);
+        if(configuration.minprot==pdTRUE){
+            for(uint8_t i=0;i<NUM_MIN_CON;i++){
+                min_port[i].type = PORT_TYPE_MIN;
+                min_port[i].num = i;
+                min_port[i].term_mode = PORT_TERM_VT100;
+                min_port[i].term_block = xSemaphoreCreateBinary();
+                min_port[i].rx = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
+                min_port[i].tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,256);
+                xSemaphoreGive(min_port[i].term_block);
+                xTaskCreate(tsk_cli_TaskProc, "MIN-CLI", STACK_TERMINAL, &min_port[i], PRIO_TERMINAL, &MIN_Terminal_TaskHandle[i]);
+            }
+        }else{
+            min_port[0].type = PORT_TYPE_SERIAL;
+            min_port[0].num = 0;
+            min_port[0].term_mode = PORT_TERM_VT100;
+            min_port[0].term_block = xSemaphoreCreateBinary();
+            min_port[0].rx = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
+            min_port[0].tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,256);
+            xSemaphoreGive(min_port[0].term_block);
+            xTaskCreate(tsk_cli_TaskProc, "UART-CLI", STACK_TERMINAL, &min_port[0], PRIO_TERMINAL, &UART_Terminal_TaskHandle);
         }
 
 		/*
 	 	* Create the task and then leave. When FreeRTOS starts up the scheduler
 	 	* will call the task procedure and start execution of the task.
 	 	*/
-        if(configuration.minprot==pdFALSE){
-		    xTaskCreate(tsk_cli_TaskProc, "UART-CLI", STACK_TERMINAL, &serial_port, PRIO_TERMINAL, &UART_Terminal_TaskHandle);
-        }
+
 		xTaskCreate(tsk_cli_TaskProc, "USB-CLI", STACK_TERMINAL,  &usb_port, PRIO_TERMINAL, &USB_Terminal_TaskHandle);
 		tsk_cli_initVar = 1;
 	}

@@ -259,9 +259,30 @@ uint8_t assemble_command(uint8_t cmd, char *str, uint8_t *buf){
     return len+1;
 }
 
+void send_command(struct min_context *ctx, uint8_t cmd, char *str){
+    uint8_t len=0;
+    uint8_t buf[20];
+    buf[0] = cmd;
+    len=strlen(str);
+    if(len>sizeof(buf)-1)len = sizeof(buf)-1;
+    memcpy(&buf[1],str,len);
+    min_queue_frame(ctx,MIN_ID_COMMAND,buf,len+1);
+}
+
+void send_command_wq(struct min_context *ctx, uint8_t cmd, char *str){
+    uint8_t len=0;
+    uint8_t buf[20];
+    buf[0] = cmd;
+    len=strlen(str);
+    if(len>sizeof(buf)-1)len = sizeof(buf)-1;
+    memcpy(&buf[1],str,len);
+    min_send_frame(ctx,MIN_ID_COMMAND,buf,len+1);
+}
+
 void min_reset_flow(void){
     flow_ctl=0;
 }
+
 
 
 /* `#END` */
@@ -309,6 +330,9 @@ void tsk_min_TaskProc(void *pvParameters) {
     
     uint32_t next_sid_flow = 0;
     alarm_push(ALM_PRIO_INFO,warn_task_min, ALM_NO_VALUE);
+    
+    send_command_wq(&min_ctx,CMD_HELLO_WORLD, configuration.ud_name);
+    
 	for (;;) {
 
         bytes_waiting=UART_GetRxBufferSize();

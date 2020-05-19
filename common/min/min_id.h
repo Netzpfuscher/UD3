@@ -18,7 +18,7 @@
 #define SOCKET_DISCONNECTED  0
 #define SOCKET_CONNECTED     1
     
-    
+#define CMD_HELLO_WORLD     0x01    
     
     
 #endif

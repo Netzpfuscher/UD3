@@ -43,41 +43,53 @@
 *Teslaterm Configuration
 */
     
-#define GAUGE0_NAME "Bus Voltage"
+#define GAUGE0_NAME "Bus V"
 #define GAUGE0_MIN 0
 #define GAUGE0_MAX configuration.r_top / 1000
 #define GAUGE0_VAR telemetry.bus_v
 #define GAUGE0_SLOW 0
+#define GAUGE0_HIGH_RES 0
+#define GAUGE0_DIV 0
         
-#define GAUGE1_NAME "Temperature"
+#define GAUGE1_NAME "Temp."
 #define GAUGE1_MIN 0
 #define GAUGE1_MAX configuration.temp1_max
 #define GAUGE1_VAR telemetry.temp1
 #define GAUGE1_SLOW 1
+#define GAUGE1_HIGH_RES 0
+#define GAUGE1_DIV 0
 
 #define GAUGE2_NAME "Power"
 #define GAUGE2_MIN 0
-#define GAUGE2_MAX 10000
+#define GAUGE2_MAX (configuration.r_top / 1000) * ((configuration.ct2_ratio * 50) / configuration.ct2_burden)
 #define GAUGE2_VAR telemetry.avg_power
 #define GAUGE2_SLOW 0
+#define GAUGE2_HIGH_RES 1
+#define GAUGE2_DIV 0
         
 #define GAUGE3_NAME "Current"
 #define GAUGE3_MIN 0
-#define GAUGE3_MAX 50
+#define GAUGE3_MAX ((configuration.ct2_ratio * 50) / configuration.ct2_burden)
 #define GAUGE3_VAR telemetry.batt_i /10
 #define GAUGE3_SLOW 0
+#define GAUGE3_HIGH_RES 1
+#define GAUGE3_DIV 10
     
-#define GAUGE4_NAME "Primary Curr."
+#define GAUGE4_NAME "P.Curr."
 #define GAUGE4_MIN 0
 #define GAUGE4_MAX ((5000ul * configuration.ct1_ratio) / configuration.ct1_burden)/100
 #define GAUGE4_VAR telemetry.primary_i
 #define GAUGE4_SLOW 0
+#define GAUGE4_HIGH_RES 0
+#define GAUGE4_DIV 0
 
 #define GAUGE5_NAME "Voices"
 #define GAUGE5_MIN 0
 #define GAUGE5_MAX 4        
 #define GAUGE5_VAR telemetry.midi_voices
 #define GAUGE5_SLOW 0
+#define GAUGE5_HIGH_RES 0
+#define GAUGE5_DIV 0
 
 /*    
 #define GAUGE5_NAME "Timediff"
@@ -85,12 +97,16 @@
 #define GAUGE5_MAX 5000        
 #define GAUGE5_VAR time.diff
 #define GAUGE5_SLOW 0
+#define GAUGE5_HIGH_RES 0
+#define GAUGE5_DIV 0
 */    
 #define GAUGE6_NAME "Fuse"
 #define GAUGE6_MIN 0
 #define GAUGE6_MAX 100
 #define GAUGE6_VAR telemetry.i2t_i
 #define GAUGE6_SLOW 0
+#define GAUGE6_HIGH_RES 0
+#define GAUGE6_DIV 0
     
 #define CHART0_NAME "Bus Voltage"
 #define CHART0_MIN 0

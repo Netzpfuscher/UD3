@@ -1478,13 +1478,47 @@ uint8_t command_status(char *commandline, port_str *ptr) {
 * Spawns the overlay task for telemetry stream generation
 ******************************************************************************/
 void init_tt(uint8_t with_chart, port_str *ptr){
-    send_gauge_config(0, GAUGE0_MIN, GAUGE0_MAX, GAUGE0_NAME, ptr);
-    send_gauge_config(1, GAUGE1_MIN, GAUGE1_MAX, GAUGE1_NAME, ptr);
-    send_gauge_config(2, GAUGE2_MIN, GAUGE2_MAX, GAUGE2_NAME, ptr);
-    send_gauge_config(3, GAUGE3_MIN, GAUGE3_MAX, GAUGE3_NAME, ptr);
-    send_gauge_config(4, GAUGE4_MIN, GAUGE4_MAX, GAUGE4_NAME, ptr);
-    send_gauge_config(5, GAUGE5_MIN, GAUGE5_MAX, GAUGE5_NAME, ptr);
-    send_gauge_config(6, GAUGE6_MIN, GAUGE6_MAX, GAUGE6_NAME, ptr);
+    #if GAUGE0_HIGH_RES==0
+        send_gauge_config(0, GAUGE0_MIN, GAUGE0_MAX, GAUGE0_NAME, ptr);
+    #else
+        send_gauge_config32(0, GAUGE0_MIN, GAUGE0_MAX, GAUGE0_DIV, GAUGE0_NAME, ptr);    
+    #endif
+    
+    #if GAUGE1_HIGH_RES==0
+        send_gauge_config(1, GAUGE1_MIN, GAUGE1_MAX, GAUGE1_NAME, ptr);
+    #else
+        send_gauge_config32(1, GAUGE1_MIN, GAUGE1_MAX, GAUGE1_DIV, GAUGE1_NAME, ptr);    
+    #endif
+    
+    #if GAUGE2_HIGH_RES==0
+        send_gauge_config(2, GAUGE2_MIN, GAUGE2_MAX, GAUGE2_NAME, ptr);
+    #else
+        send_gauge_config32(2, GAUGE2_MIN, GAUGE2_MAX, GAUGE2_DIV, GAUGE2_NAME, ptr);    
+    #endif
+    
+    #if GAUGE3_HIGH_RES==0
+        send_gauge_config(3, GAUGE3_MIN, GAUGE3_MAX, GAUGE3_NAME, ptr);
+    #else
+        send_gauge_config32(3, GAUGE3_MIN, GAUGE3_MAX, GAUGE3_DIV, GAUGE3_NAME, ptr);    
+    #endif
+    
+    #if GAUGE4_HIGH_RES==0
+        send_gauge_config(4, GAUGE4_MIN, GAUGE4_MAX, GAUGE4_NAME, ptr);
+    #else
+        send_gauge_config32(4, GAUGE4_MIN, GAUGE4_MAX, GAUGE4_DIV, GAUGE4_NAME, ptr);    
+    #endif
+    
+    #if GAUGE5_HIGH_RES==0
+        send_gauge_config(5, GAUGE5_MIN, GAUGE5_MAX, GAUGE5_NAME, ptr);
+    #else
+        send_gauge_config32(5, GAUGE5_MIN, GAUGE5_MAX, GAUGE5_DIV, GAUGE5_NAME, ptr);    
+    #endif
+    
+    #if GAUGE6_HIGH_RES==0
+        send_gauge_config(6, GAUGE6_MIN, GAUGE6_MAX, GAUGE6_NAME, ptr);
+    #else
+        send_gauge_config32(6, GAUGE6_MIN, GAUGE6_MAX, GAUGE6_DIV, GAUGE6_NAME, ptr);    
+    #endif
     
     if(with_chart==pdTRUE){
         send_chart_config(0, CHART0_MIN, CHART0_MAX, CHART0_OFFSET, CHART0_UNIT, CHART0_NAME, ptr);

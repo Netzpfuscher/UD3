@@ -149,25 +149,53 @@ void show_overlay_100ms(port_str *ptr){
     
     }else{
         #if GAUGE0_SLOW==0
-        send_gauge(0, GAUGE0_VAR, ptr);
+            #if GAUGE0_HIGH_RES==0
+                send_gauge(0, GAUGE0_VAR, ptr);
+            #else
+                send_gauge32(0, GAUGE0_VAR, ptr);    
+            #endif
         #endif
         #if GAUGE1_SLOW==0
-        send_gauge(1, GAUGE1_VAR, ptr);
+            #if GAUGE1_HIGH_RES==0
+                send_gauge(1, GAUGE1_VAR, ptr);
+            #else
+                send_gauge32(1, GAUGE1_VAR, ptr);    
+            #endif
         #endif
         #if GAUGE2_SLOW==0
-        send_gauge(2, GAUGE2_VAR, ptr);
+            #if GAUGE2_HIGH_RES==0
+                send_gauge(2, GAUGE2_VAR, ptr);
+            #else
+                send_gauge32(2, GAUGE2_VAR, ptr);    
+            #endif
         #endif
         #if GAUGE3_SLOW==0
-        send_gauge(3, GAUGE3_VAR, ptr);
+            #if GAUGE3_HIGH_RES==0
+                send_gauge(3, GAUGE3_VAR, ptr);
+            #else
+                send_gauge32(3, GAUGE3_VAR, ptr);    
+            #endif
         #endif
         #if GAUGE4_SLOW==0
-        send_gauge(4, GAUGE4_VAR, ptr);
+            #if GAUGE4_HIGH_RES==0
+                send_gauge(4, GAUGE4_VAR, ptr);
+            #else
+                send_gauge32(4, GAUGE4_VAR, ptr);    
+            #endif
         #endif
         #if GAUGE5_SLOW==0
-        send_gauge(5, GAUGE5_VAR, ptr);
+            #if GAUGE5_HIGH_RES==0
+                send_gauge(5, GAUGE5_VAR, ptr);
+            #else
+                send_gauge32(5, GAUGE5_VAR, ptr);    
+            #endif
         #endif
         #if GAUGE6_SLOW==0
-        send_gauge(6, GAUGE6_VAR, ptr);
+            #if GAUGE6_HIGH_RES==0
+                send_gauge(6, GAUGE6_VAR, ptr);
+            #else
+                send_gauge32(6, GAUGE6_VAR, ptr);    
+            #endif
         #endif
 
         if(ptr->term_mode==PORT_TERM_MQTT){
@@ -192,25 +220,53 @@ void show_overlay_100ms(port_str *ptr){
 void show_overlay_400ms(port_str *ptr) {
     if(ptr->term_mode == PORT_TERM_TT){
         #if GAUGE0_SLOW==1
-        send_gauge(0, GAUGE0_VAR, ptr);
+            #if GAUGE0_HIGH_RES==0
+                send_gauge(0, GAUGE0_VAR, ptr);
+            #else
+                send_gauge32(0, GAUGE0_VAR, ptr);    
+            #endif
         #endif
         #if GAUGE1_SLOW==1
-        send_gauge(1, GAUGE1_VAR, ptr);
+            #if GAUGE1_HIGH_RES==0
+                send_gauge(1, GAUGE1_VAR, ptr);
+            #else
+                send_gauge32(1, GAUGE1_VAR, ptr);    
+            #endif
         #endif
         #if GAUGE2_SLOW==1
-        send_gauge(2, GAUGE2_VAR, ptr);
+            #if GAUGE2_HIGH_RES==0
+                send_gauge(2, GAUGE2_VAR, ptr);
+            #else
+                send_gauge32(2, GAUGE2_VAR, ptr);    
+            #endif
         #endif
         #if GAUGE3_SLOW==1
-        send_gauge(3, GAUGE3_VAR, ptr);
+            #if GAUGE3_HIGH_RES==0
+                send_gauge(3, GAUGE3_VAR, ptr);
+            #else
+                send_gauge32(3, GAUGE3_VAR, ptr);    
+            #endif
         #endif
         #if GAUGE4_SLOW==1
-        send_gauge(4, GAUGE4_VAR, ptr);
+            #if GAUGE4_HIGH_RES==0
+                send_gauge(4, GAUGE4_VAR, ptr);
+            #else
+                send_gauge32(4, GAUGE4_VAR, ptr);    
+            #endif
         #endif
         #if GAUGE5_SLOW==1
-        send_gauge(5, GAUGE5_VAR, ptr);
+            #if GAUGE5_HIGH_RES==0
+                send_gauge(5, GAUGE5_VAR, ptr);
+            #else
+                send_gauge32(5, GAUGE5_VAR, ptr);    
+            #endif
         #endif
         #if GAUGE6_SLOW==1
-        send_gauge(6, GAUGE6_VAR, ptr);
+            #if GAUGE6_HIGH_RES==0
+                send_gauge(6, GAUGE6_VAR, ptr);
+            #else
+                send_gauge32(6, GAUGE6_VAR, ptr);    
+            #endif
         #endif
         
         if(ptr->term_mode!=PORT_TERM_MQTT){

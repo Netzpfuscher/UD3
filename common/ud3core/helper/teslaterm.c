@@ -10,6 +10,7 @@
 #include "semphr.h"
 
 uint8_t gaugebuf[] = {0xFF,0x04, TT_GAUGE,0x00,0x00,0x00};
+uint8_t gaugebuf32[] = {0xFF,0x06, TT_GAUGE32,0x00,0x00,0x00,0x00,0x00};
 uint8_t chartbuf[] = {0xFF,0x04, TT_CHART,0x00,0x00,0x00};
 uint8_t statusbuf[] = {0xFF,0x02, TT_STATUS,0x00};
 const uint8_t chartdraw[] = {0xFF,0x02, TT_CHART_DRAW,0x00};
@@ -20,6 +21,15 @@ void send_gauge(uint8_t gauge, int16_t val, port_str *ptr){
     gaugebuf[4]=(uint8_t)val;
     gaugebuf[5]=(uint8_t)(val>>8);
     send_buffer(gaugebuf,sizeof(gaugebuf),ptr);
+}
+
+void send_gauge32(uint8_t gauge, int32_t val, port_str *ptr){
+    gaugebuf32[3]=gauge;
+    gaugebuf32[4]=(uint8_t)val;
+    gaugebuf32[5]=(uint8_t)(val>>8);
+    gaugebuf32[6]=(uint8_t)(val>>16);
+    gaugebuf32[7]=(uint8_t)(val>>24);
+    send_buffer(gaugebuf32,sizeof(gaugebuf32),ptr);
 }
 
 void send_chart(uint8_t chart, int16_t val, port_str *ptr){
@@ -47,14 +57,14 @@ void send_chart_config(uint8_t chart, int16_t min, int16_t max, int16_t offset,u
     buf[9] = (offset>>8);
     buf[10] = unit;
     send_buffer(buf,sizeof(buf),ptr);
-    send_string(text, ptr);
+    send_buffer((uint8_t*)text,bytes, ptr);
 }
 
 void send_gauge_config(uint8_t gauge, int16_t min, int16_t max, char * text, port_str *ptr){
     uint8_t bytes = strlen(text);
     uint8_t buf[8];
     buf[0] = 0xFF;
-    buf[1] = bytes+6;
+    buf[1] = bytes+sizeof(buf)-2;
     buf[2] = TT_GAUGE_CONF;
     buf[3] = gauge;
     buf[4] = min;
@@ -62,7 +72,30 @@ void send_gauge_config(uint8_t gauge, int16_t min, int16_t max, char * text, por
     buf[6] = max;
     buf[7] = (max>>8);
     send_buffer(buf,sizeof(buf),ptr);
-    send_string(text, ptr);
+    send_buffer((uint8_t*)text,bytes, ptr);
+}
+
+void send_gauge_config32(uint8_t gauge, int32_t min, int32_t max, int32 div ,char * text, port_str *ptr){
+    uint8_t bytes = strlen(text);
+    uint8_t buf[16];
+    buf[0] = 0xFF;
+    buf[1] = bytes+sizeof(buf)-2;
+    buf[2] = TT_GAUGE_CONF32;
+    buf[3] = gauge;
+    buf[4] = min;
+    buf[5] = (min>>8);
+    buf[6] = (min>>16);
+    buf[7] = (min>>24);
+    buf[8] = max;
+    buf[9] = (max>>8);
+    buf[10] = (max>>16);
+    buf[11] = (max>>24);
+    buf[12] = div;
+    buf[13] = (div>>8);
+    buf[14] = (div>>16);
+    buf[15] = (div>>24);
+    send_buffer(buf,sizeof(buf),ptr);
+    send_buffer((uint8_t*)text,bytes, ptr);
 }
 
 void send_chart_clear(port_str *ptr){

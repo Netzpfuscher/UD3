@@ -50,7 +50,11 @@ xQueueHandle adc_data;
 
 TimerHandle_t xCharge_Timer;
 
-#define NEW_DATA_RATE_MS 3.125  //ms
+
+#define ADC_BUFFER_CNT  25
+
+
+#define NEW_DATA_RATE_MS (0.125 * ADC_BUFFER_CNT)  //ms
 
 
 /* ------------------------------------------------------------------------ */
@@ -82,7 +86,6 @@ TimerHandle_t xCharge_Timer;
 
 #define SAMPLES_COUNT 2048
 
-//#define BUSV_R_TOP 500000UL
 #define BUSV_R_BOT 5000UL
 
 #define INITIAL 0 /* Initial value of the filter memory. */
@@ -93,59 +96,75 @@ typedef struct
 	uint64_t sum_squares;
 } rms_t;
 
-int16 ADC_sample[4];
-uint16 ADC_sample_buf[4];
+//int16 ADC_sample[4];
+
+uint16 ADC_sample_buf_0[4*ADC_BUFFER_CNT];
+uint16 ADC_sample_buf_1[4*ADC_BUFFER_CNT];
+uint16 *ADC_active_sample_buf = ADC_sample_buf_0;
+
 rms_t current_idc;
 uint8_t ADC_mux_ctl[4] = {0x05, 0x02, 0x03, 0x00};
 
-uint32_t i2t_limit=0;
-uint32_t i2t_warning=0;
-uint32_t i2t_leak=0;
-uint8_t i2t_warning_level=60;
-uint32_t i2t_integral;
+typedef struct
+{
+    uint32_t limit;
+    uint32_t warning;
+    uint8_t warning_level;
+    uint32_t leak;
+    uint32_t integral;
+} _i2t;
+
+_i2t i2t;
 
 void i2t_set_limit(uint32_t const_current, uint32_t ovr_current, uint32_t limit_ms){
-    i2t_leak = const_current * const_current;
-    i2t_limit= floor((float)((float)limit_ms/NEW_DATA_RATE_MS)*(float)((ovr_current*ovr_current)-i2t_leak));
-    i2t_set_warning(i2t_warning_level);
+    i2t.leak = const_current * const_current;
+    i2t.limit= floor((float)((float)limit_ms/NEW_DATA_RATE_MS)*(float)((ovr_current*ovr_current)-i2t.leak));
+    i2t_set_warning(i2t.warning_level);
 }
 
 void i2t_set_warning(uint8_t percent){
-    i2t_warning_level = percent;
-    i2t_warning = floor((float)i2t_limit*((float)percent/100.0));
+    i2t.warning_level = percent;
+    i2t.warning = floor((float)i2t.limit*((float)percent/100.0));
 }
 
 void i2t_reset(){
-    i2t_integral=0;
+    i2t.integral=0;
+}
+
+void i2t_init(){
+    i2t.integral=0;
+    i2t.warning=0;
+    i2t.leak=0;
+    i2t.warning_level=60;
 }
 
 uint8_t i2t_calculate(){
     uint32_t squaredCurrent = (uint32_t)telemetry.batt_i * (uint32_t)telemetry.batt_i;
-    i2t_integral = i2t_integral + squaredCurrent;
-	if(i2t_integral > i2t_leak)
+    i2t.integral = i2t.integral + squaredCurrent;
+	if(i2t.integral > i2t.leak)
 	{
-		i2t_integral -= i2t_leak;
+		i2t.integral -= i2t.leak;
 	}
 	else
 	{
-		i2t_integral = 0;
+		i2t.integral = 0;
 	}
     
-    telemetry.i2t_i=(100*(i2t_integral>>8))/(i2t_limit>>8);
+    telemetry.i2t_i=(100*(i2t.integral>>8))/(i2t.limit>>8);
     
-    if(i2t_integral < i2t_warning)
+    if(i2t.integral < i2t.warning)
 	{
 		return I2T_NORMAL;
 	}
 	else
 	{
-		if(i2t_integral < i2t_limit)
+		if(i2t.integral < i2t.limit)
 		{
 			return I2T_WARNING;
 		}
 		else
 		{
-            i2t_integral=i2t_limit;
+            i2t.integral=i2t.limit;
 			return I2T_LIMIT;
 		}
 	}
@@ -162,19 +181,22 @@ uint8_t i2t_calculate(){
 /* `#START USER_TASK_LOCAL_CODE` */
 
 CY_ISR(ADC_data_ready_ISR) {
-	
-    xQueueSendFromISR(adc_data, ADC_sample_buf, NULL);
-
-    if (uxQueueMessagesWaitingFromISR(adc_data) > 25) {
-		xSemaphoreGiveFromISR(adc_ready_Semaphore, NULL);
-	}
+    static uint8_t active_buffer = 1;
+    if(active_buffer==0){
+        active_buffer=1;
+        ADC_active_sample_buf = ADC_sample_buf_1;
+    } else {
+        active_buffer=0;
+        ADC_active_sample_buf = ADC_sample_buf_0;
+    }
+	xSemaphoreGiveFromISR(adc_ready_Semaphore, NULL);
 }
+
+
+
 
 CY_ISR(isr_primary) {
     telemetry.primary_i = CT1_Get_Current(CT_PRIMARY);
-    /*if(telemetry.primary_i > configuration.max_tr_current){
-        ct1_dac_val[0]--;
-    }*/
 }
 
 
@@ -232,28 +254,27 @@ uint16_t average_filter(uint32_t *ptr, uint16_t sample) {
 
 void calculate_rms(void) {
     static uint16_t count=0;
-	while (uxQueueMessagesWaiting(adc_data)) {
-
-		xQueueReceive(adc_data, ADC_sample, portMAX_DELAY);
+	//while (uxQueueMessagesWaiting(adc_data)) {
+    for(uint8_t i=0;i<ADC_BUFFER_CNT;i+=4){
 
 		// read the battery voltage
-		telemetry.batt_v = read_bus_mv(ADC_sample[DATA_VBATT]) / 1000;
+		telemetry.batt_v = read_bus_mv(ADC_active_sample_buf[i+DATA_VBATT]) / 1000;
 
 		// read the bus voltage
-		telemetry.bus_v = read_bus_mv(ADC_sample[DATA_VBUS]) / 1000;
+		telemetry.bus_v = read_bus_mv(ADC_active_sample_buf[i+DATA_VBUS]) / 1000;
 
 		// read the battery current
         if(configuration.ct2_type==CT2_TYPE_CURRENT){
-		    telemetry.batt_i = (((uint32_t)rms_filter(&current_idc, ADC_sample[DATA_IBUS]) * params.idc_ma_count) / 100);
+		    telemetry.batt_i = (((uint32_t)rms_filter(&current_idc, ADC_active_sample_buf[i+DATA_IBUS]) * params.idc_ma_count) / 100);
         }else{
-            telemetry.batt_i = ((((int32_t)rms_filter(&current_idc, ADC_sample[DATA_IBUS])-params.ct2_offset_cnt) * params.idc_ma_count) / 100);
+            telemetry.batt_i = ((((int32_t)rms_filter(&current_idc, ADC_active_sample_buf[i+DATA_IBUS])-params.ct2_offset_cnt) * params.idc_ma_count) / 100);
         }
 
 		telemetry.avg_power = telemetry.batt_i * telemetry.bus_v / 10;
 	}
     
     // read the driver voltage
-	telemetry.driver_v = ADC_CountsTo_mVolts(ADC_sample[DATA_VDRIVER]) *10; //11 Takes the input impedance of 180k from the SAR into account
+	telemetry.driver_v = ADC_CountsTo_mVolts(ADC_active_sample_buf[DATA_VDRIVER]) *10; //11 Takes the input impedance of 180k from the SAR into account
     
     if(configuration.max_const_i){  //Only do i2t calculation if enabled
         if(count<100){
@@ -309,12 +330,15 @@ void initialize_analogs(void) {
 	/* Variable declarations for ADC_DMA */
 	/* Move these variable declarations to the top of the function */
 	uint8 ADC_DMA_Chan;
-	uint8 ADC_DMA_TD[1];
+	uint8 ADC_DMA_TD[2];
 
 	ADC_DMA_Chan = ADC_DMA_DmaInitialize(ADC_DMA_BYTES_PER_BURST, ADC_DMA_REQUEST_PER_BURST, HI16(ADC_DMA_SRC_BASE), HI16(ADC_DMA_DST_BASE));
 	ADC_DMA_TD[0] = CyDmaTdAllocate();
-	CyDmaTdSetConfiguration(ADC_DMA_TD[0], 8, ADC_DMA_TD[0], ADC_DMA__TD_TERMOUT_EN | TD_INC_DST_ADR);
-	CyDmaTdSetAddress(ADC_DMA_TD[0], LO16((uint32)ADC_SAR_WRK0_PTR), LO16((uint32)ADC_sample_buf));
+    ADC_DMA_TD[1] = CyDmaTdAllocate();
+	CyDmaTdSetConfiguration(ADC_DMA_TD[0], 8*ADC_BUFFER_CNT, ADC_DMA_TD[1], ADC_DMA__TD_TERMOUT_EN | TD_INC_DST_ADR);
+    CyDmaTdSetConfiguration(ADC_DMA_TD[1], 8*ADC_BUFFER_CNT, ADC_DMA_TD[0], ADC_DMA__TD_TERMOUT_EN | TD_INC_DST_ADR);
+	CyDmaTdSetAddress(ADC_DMA_TD[0], LO16((uint32)ADC_SAR_WRK0_PTR), LO16((uint32)ADC_sample_buf_0));
+    CyDmaTdSetAddress(ADC_DMA_TD[1], LO16((uint32)ADC_SAR_WRK0_PTR), LO16((uint32)ADC_sample_buf_1));
 	CyDmaChSetInitialTd(ADC_DMA_Chan, ADC_DMA_TD[0]);
 	CyDmaChEnable(ADC_DMA_Chan, 1);
 
@@ -469,7 +493,7 @@ void tsk_analog_TaskProc(void *pvParameters) {
 	 */
 	/* `#START TASK_VARIABLES` */
 
-	adc_data = xQueueCreate(128, sizeof(ADC_sample));
+	//adc_data = xQueueCreate(128, sizeof(ADC_sample));
     
     xCharge_Timer = xTimerCreate("Chrg-Tmr", configuration.chargedelay / portTICK_PERIOD_MS, pdFALSE,(void * ) 0, vCharge_Timer_Callback);
 
@@ -498,8 +522,6 @@ void tsk_analog_TaskProc(void *pvParameters) {
 		calculate_rms();
 
 		/* `#END` */
-
-		//vTaskDelay( 10/ portTICK_PERIOD_MS);
 	}
 }
 /* ------------------------------------------------------------------------ */

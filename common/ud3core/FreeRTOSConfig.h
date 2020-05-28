@@ -89,7 +89,7 @@
 #define configCPU_CLOCK_HZ			( ( unsigned long ) BCLK__BUS_CLK__HZ )
 #define configTICK_RATE_HZ			( ( TickType_t ) 500 )
 #define configMINIMAL_STACK_SIZE	( ( unsigned short ) 100 )
-#define configTOTAL_HEAP_SIZE		( ( size_t ) ( 53 * 1024 ) ) //53k
+#define configTOTAL_HEAP_SIZE		( ( size_t ) ( 52 * 1024 ) ) //52k
 #define configMAX_TASK_NAME_LEN		( 12 )
 #define configUSE_16_BIT_TICKS		0
 #define configIDLE_SHOULD_YIELD		0
@@ -117,7 +117,7 @@
 #define configQUEUE_REGISTRY_SIZE		10
 #define configUSE_MALLOC_FAILED_HOOK	1
     
-#define ACTIVATE_TASK_INFO 0
+#define ACTIVATE_TASK_INFO 1
 
 #if ACTIVATE_TASK_INFO   
     #define configGENERATE_RUN_TIME_STATS	1  

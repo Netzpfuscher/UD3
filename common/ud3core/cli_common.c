@@ -1672,10 +1672,10 @@ uint8_t command_signals(char *commandline, port_str *ptr) {
         snprintf(buffer,sizeof(buffer),"Temp 1: %i*C Temp 2: %i*C\r\n", telemetry.temp1, telemetry.temp2);
         send_string(buffer, ptr);
         SEND_CONST_STRING("                                    \r", ptr);
-        snprintf(buffer,sizeof(buffer),"Vbus: %u mV Vbatt: %u mV\r\n", ADC_CountsTo_mVolts(ADC_sample_buf[DATA_VBUS]),ADC_CountsTo_mVolts(ADC_sample_buf[DATA_VBATT]));
+        snprintf(buffer,sizeof(buffer),"Vbus: %u mV Vbatt: %u mV\r\n", ADC_CountsTo_mVolts(ADC_active_sample_buf[DATA_VBUS]),ADC_CountsTo_mVolts(ADC_active_sample_buf[DATA_VBATT]));
         send_string(buffer, ptr);
         SEND_CONST_STRING("                                    \r", ptr);
-        snprintf(buffer,sizeof(buffer),"Ibus: %u mV Vdriver: %u mV\r\n\r\n", ADC_CountsTo_mVolts(ADC_sample_buf[DATA_IBUS]),telemetry.driver_v);
+        snprintf(buffer,sizeof(buffer),"Ibus: %u mV Vdriver: %u mV\r\n\r\n", ADC_CountsTo_mVolts(ADC_active_sample_buf[DATA_IBUS]),telemetry.driver_v);
         send_string(buffer, ptr);
 
     }

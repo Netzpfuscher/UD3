@@ -70,7 +70,7 @@
 #define GAUGE3_NAME "Current"
 #define GAUGE3_MIN 0
 #define GAUGE3_MAX ((configuration.ct2_ratio * 50) / configuration.ct2_burden)
-#define GAUGE3_VAR telemetry.batt_i /10
+#define GAUGE3_VAR telemetry.batt_i
 #define GAUGE3_SLOW 0
 #define GAUGE3_HIGH_RES 1
 #define GAUGE3_DIV 10

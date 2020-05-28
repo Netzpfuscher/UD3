@@ -42,7 +42,7 @@ pix_str *pix_buffer[PIX_WIDTH / 8];
 char out_buffer[3] = {0x00, 0x00, 0x00};
 
 void raise_mermory_error(port_str *ptr){
-    SEND_CONST_STRING("WARNING: NULL pointer malloc failed\r\n", ptr);
+    SEND_CONST_STRING("WARNING: NULL pointer; malloc failed\r\n", ptr);
 }
 
 static void set_bytes(char *pbuffer, const unsigned char c) {

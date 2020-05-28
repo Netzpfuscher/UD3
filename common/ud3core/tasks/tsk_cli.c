@@ -204,7 +204,7 @@ void tsk_cli_Start(void) {
             min_port[0].term_mode = PORT_TERM_VT100;
             min_port[0].term_block = xSemaphoreCreateBinary();
             min_port[0].rx = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
-            min_port[0].tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,256);
+            min_port[0].tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,1);
             xSemaphoreGive(min_port[0].term_block);
             xTaskCreate(tsk_cli_TaskProc, "UART-CLI", STACK_TERMINAL, &min_port[0], PRIO_TERMINAL, &UART_Terminal_TaskHandle);
         }

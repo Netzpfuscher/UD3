@@ -679,7 +679,7 @@ uint8_t command_SynthMon(char *commandline, port_str *ptr){
     char buf[80];
     uint8_t ret;
     uint32_t freq=0;
-    uint8_t channels=8;
+    uint8_t channels=N_CHANNEL;
     if(param.synth== SYNTH_SID) channels=3;
     Term_Disable_Cursor(ptr);
     Term_Erase_Screen(ptr);
@@ -698,7 +698,7 @@ uint8_t command_SynthMon(char *commandline, port_str *ptr){
             }
             ret=sprintf(buf,"Ch: %u Freq: %u",i+1,freq);
             send_buffer((uint8_t*)buf,ret,ptr);                 
-            Term_Move_cursor_right(20,ptr);
+            Term_Move_Cursor_right(20,ptr);
             ret=sprintf(buf,"Vol: ",i+1);
             send_buffer((uint8_t*)buf,ret,ptr);
             uint8_t cnt = channel[i].volume/12;

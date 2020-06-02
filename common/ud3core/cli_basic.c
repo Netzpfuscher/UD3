@@ -177,15 +177,15 @@ void print_param_helperfunc(parameter_entry * params, uint8_t param_size, port_s
     uint8_t current_parameter;
     uint32_t u_temp_buffer=0;
     int32_t i_temp_buffer=0;
-    Term_Move_cursor_right(COL_A,ptr);
+    Term_Move_Cursor_right(COL_A,ptr);
     SEND_CONST_STRING("Parameter", ptr);
-    Term_Move_cursor_right(COL_B,ptr);
+    Term_Move_Cursor_right(COL_B,ptr);
     SEND_CONST_STRING("| Value", ptr);
-    Term_Move_cursor_right(COL_C,ptr);
+    Term_Move_Cursor_right(COL_C,ptr);
     SEND_CONST_STRING("| Text\r\n", ptr);
     for (current_parameter = 0; current_parameter < param_size; current_parameter++) {
         if(params[current_parameter].parameter_type==param_type && params[current_parameter].visible){
-            Term_Move_cursor_right(COL_A,ptr);
+            Term_Move_Cursor_right(COL_A,ptr);
             ret = snprintf(buffer,sizeof(buffer), "\033[36m%s", params[current_parameter].name);
             send_buffer((uint8_t*)buffer,ret,ptr);
 
@@ -203,7 +203,7 @@ void print_param_helperfunc(parameter_entry * params, uint8_t param_size, port_s
                     break;
                 }
 
-                Term_Move_cursor_right(COL_B,ptr);
+                Term_Move_Cursor_right(COL_B,ptr);
                 if(params[current_parameter].div){
                     ret = snprintf(buffer, sizeof(buffer), "\033[37m| \033[32m%u.%0*u", 
                         (u_temp_buffer/params[current_parameter].div),
@@ -228,7 +228,7 @@ void print_param_helperfunc(parameter_entry * params, uint8_t param_size, port_s
                     break;
                 }
 
-                Term_Move_cursor_right(COL_B,ptr);
+                Term_Move_Cursor_right(COL_B,ptr);
                 if(params[current_parameter].div){
                     uint32_t mod;
                     if(i_temp_buffer<0){
@@ -249,28 +249,28 @@ void print_param_helperfunc(parameter_entry * params, uint8_t param_size, port_s
                 break;
             case TYPE_FLOAT:
 
-                Term_Move_cursor_right(COL_B,ptr);
+                Term_Move_Cursor_right(COL_B,ptr);
                 ret = snprintf(buffer, sizeof(buffer), "\033[37m| \033[32m%f", *(float*)params[current_parameter].value);
                 send_buffer((uint8_t*)buffer,ret,ptr);
 
                 break;
             case TYPE_CHAR:
 
-                Term_Move_cursor_right(COL_B,ptr);
+                Term_Move_Cursor_right(COL_B,ptr);
                 ret = snprintf(buffer, sizeof(buffer), "\033[37m| \033[32m%c", *(char*)params[current_parameter].value);
                 send_buffer((uint8_t*)buffer,ret,ptr);
 
                 break;
             case TYPE_STRING:
 
-                Term_Move_cursor_right(COL_B,ptr);
+                Term_Move_Cursor_right(COL_B,ptr);
                 ret = snprintf(buffer, sizeof(buffer), "\033[37m| \033[32m%s", (char*)params[current_parameter].value);
                 send_buffer((uint8_t*)buffer,ret,ptr);
 
                 break;
 
             }
-            Term_Move_cursor_right(COL_C,ptr);
+            Term_Move_Cursor_right(COL_C,ptr);
             ret = snprintf(buffer, sizeof(buffer), "\033[37m| %s\r\n", params[current_parameter].help);
             send_buffer((uint8_t*)buffer,ret,ptr);
         }
@@ -703,10 +703,16 @@ void Term_BGColor_Blue(port_str *ptr) {
 	SEND_CONST_STRING("\033[44m", ptr);
 }
 
-void Term_Move_cursor_right(uint8_t column, port_str *ptr) {
+void Term_Move_Cursor_right(uint8_t column, port_str *ptr) {
 	char buffer[10];
     int ret=0;
-	ret = snprintf(buffer, sizeof(buffer), "\033[%i`", column);
+	ret = snprintf(buffer, sizeof(buffer), "\033[%iC", column);
+	send_buffer((uint8_t*)buffer, ret, ptr);
+}
+void Term_Move_Cursor_left(uint8_t column, port_str *ptr) {
+	char buffer[10];
+    int ret=0;
+	ret = snprintf(buffer, sizeof(buffer), "\033[%iD", column);
 	send_buffer((uint8_t*)buffer, ret, ptr);
 }
 

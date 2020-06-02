@@ -27,6 +27,7 @@
 #define TYPE_FLOAT      2
 #define TYPE_CHAR       3
 #define TYPE_STRING     4
+#define TYPE_BUFFER     5
     
 #define typename(x) _Generic((x), \
     uint8_t:    TYPE_UNSIGNED, \
@@ -36,6 +37,7 @@
     int16_t:    TYPE_SIGNED, \
     int32_t:    TYPE_SIGNED, \
     float:      TYPE_FLOAT, \
+    uint16_t*:  TYPE_STRING, \
     char:       TYPE_CHAR, \
     char*:      TYPE_STRING)
 
@@ -118,7 +120,8 @@ void print_param_buffer(char * buffer, parameter_entry * params, uint8_t index);
 
 void input_interpret(port_str *ptr);
 void input_restart(void);
-void Term_Move_cursor_right(uint8_t column, port_str *ptr);
+void Term_Move_Cursor_right(uint8_t column, port_str *ptr);
+void Term_Move_Cursor_left(uint8_t column, port_str *ptr);
 void Term_Move_Cursor(uint8_t row, uint8_t column, port_str *ptr);
 void Term_Erase_Screen(port_str *ptr);
 void Term_Color_Green(port_str *ptr);

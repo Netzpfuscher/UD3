@@ -141,8 +141,6 @@ void ramp_control(void) {
 			QCW_duty_limiter_WriteCompare(65535 - ramp.qcw_limiter_pw / 10); //put in limiting compare match value
 			//now enable the QCW interrupter
 			QCW_enable_Control = 1;
-			//------------------>watchdog_reset_Control = 1;
-			//------------------>watchdog_reset_Control = 0;
 			params.pwmb_psb_val = params.pwm_top - params.pwmb_start_psb_val;
 			CyGlobalIntEnable;
 		} else {

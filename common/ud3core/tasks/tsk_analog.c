@@ -82,6 +82,11 @@ TimerHandle_t xCharge_Timer;
 #define ADC_DMA_SRC_BASE (CYDEV_PERIPH_BASE)
 #define ADC_DMA_DST_BASE (CYDEV_SRAM_BASE)
 
+/* Defines for DMA_peak */
+#define DMA_peak_BYTES_PER_BURST 2
+#define DMA_peak_REQUEST_PER_BURST 1
+#define DMA_peak_SRC_BASE (CYDEV_PERIPH_BASE)
+#define DMA_peak_DST_BASE (CYDEV_SRAM_BASE)
 
 
 #define SAMPLES_COUNT 2048
@@ -102,8 +107,12 @@ uint16 ADC_sample_buf_0[4*ADC_BUFFER_CNT];
 uint16 ADC_sample_buf_1[4*ADC_BUFFER_CNT];
 uint16 *ADC_active_sample_buf = ADC_sample_buf_0;
 
+uint16 ADC_peak;
+
 rms_t current_idc;
 uint8_t ADC_mux_ctl[4] = {0x05, 0x02, 0x03, 0x00};
+
+uint16_t vdriver_lut[9] = {0,3500,7000,10430,13840,17310,20740,24200,27657};
 
 typedef struct
 {
@@ -193,37 +202,36 @@ CY_ISR(ADC_data_ready_ISR) {
 }
 
 
-
-
-CY_ISR(isr_primary) {
-    telemetry.primary_i = CT1_Get_Current(CT_PRIMARY);
-}
-
-
-
 uint32_t read_bus_mv(uint16_t raw_adc) {
 	uint32_t bus_voltage;
 	bus_voltage = ((configuration.r_top + BUSV_R_BOT) * raw_adc) / (BUSV_R_BOT * 819 / 1000);
 	return bus_voltage;
 }
 
+uint16_t read_driver_mv(uint16_t raw_adc){
+    uint32_t driver_voltage;
+    uint8_t lut = raw_adc / 256;
+    uint16_t span = vdriver_lut[lut+1]-vdriver_lut[lut];
+    
+    driver_voltage = vdriver_lut[lut]+(span * (raw_adc%256) / 256);
+    
+    return driver_voltage;
+}
+
 uint16_t CT1_Get_Current(uint8_t channel) {
-	uint32_t result = ADC_DelSig_1_GetResult32();
 
 	if (channel == CT_PRIMARY) {
-		return ((ADC_DelSig_1_CountsTo_mVolts(result) * configuration.ct1_ratio) / configuration.ct1_burden) / 100;
+		return ((ADC_DelSig_1_CountsTo_mVolts(ADC_peak) * configuration.ct1_ratio) / configuration.ct1_burden) / 100;
 	} else {
-		return ((ADC_DelSig_1_CountsTo_mVolts(result) * configuration.ct3_ratio) / configuration.ct3_burden) / 100;
+		return ((ADC_DelSig_1_CountsTo_mVolts(ADC_peak) * configuration.ct3_ratio) / configuration.ct3_burden) / 100;
 	}
 }
 
 float CT1_Get_Current_f(uint8_t channel) {
-	uint32_t result = ADC_DelSig_1_GetResult32();
-
 	if (channel == CT_PRIMARY) {
-		return ((float)(ADC_DelSig_1_CountsTo_Volts(result) * 10) / (float)(configuration.ct1_burden) * configuration.ct1_ratio);
+		return ((float)(ADC_DelSig_1_CountsTo_Volts(ADC_peak) * 10) / (float)(configuration.ct1_burden) * configuration.ct1_ratio);
 	} else {
-		return ((float)(ADC_DelSig_1_CountsTo_Volts(result) * 10) / (float)(configuration.ct3_burden) * configuration.ct3_ratio);
+		return ((float)(ADC_DelSig_1_CountsTo_Volts(ADC_peak) * 10) / (float)(configuration.ct3_burden) * configuration.ct3_ratio);
 	}
 }
 
@@ -274,7 +282,9 @@ void calculate_rms(void) {
 	}
     
     // read the driver voltage
-	telemetry.driver_v = ADC_CountsTo_mVolts(ADC_active_sample_buf[DATA_VDRIVER]) *10; //11 Takes the input impedance of 180k from the SAR into account
+	//telemetry.driver_v = ADC_CountsTo_mVolts(ADC_active_sample_buf[DATA_VDRIVER]) *10; //11 Takes the input impedance of 180k from the SAR into account
+    telemetry.driver_v = read_driver_mv(ADC_active_sample_buf[DATA_VDRIVER]);
+    telemetry.primary_i = CT1_Get_Current(CT_PRIMARY);
     
     if(configuration.max_const_i){  //Only do i2t calculation if enabled
         if(count<100){
@@ -354,6 +364,20 @@ void initialize_analogs(void) {
 	CyDmaTdSetAddress(MUX_DMA_TD[0], LO16((uint32)ADC_mux_ctl), LO16((uint32)Amux_Ctrl_Control_PTR));
 	CyDmaChSetInitialTd(MUX_DMA_Chan, MUX_DMA_TD[0]);
 	CyDmaChEnable(MUX_DMA_Chan, 1);
+    
+    /* Variable declarations for DMA_peak */
+    /* Move these variable declarations to the top of the function */
+    uint8 DMA_peak_Chan;
+    uint8 DMA_peak_TD[1];
+
+    /* DMA Configuration for DMA_peak */
+    DMA_peak_Chan = DMA_peak_DmaInitialize(DMA_peak_BYTES_PER_BURST, DMA_peak_REQUEST_PER_BURST, 
+        HI16(DMA_peak_SRC_BASE), HI16(DMA_peak_DST_BASE));
+    DMA_peak_TD[0] = CyDmaTdAllocate();
+    CyDmaTdSetConfiguration(DMA_peak_TD[0], 2, DMA_peak_TD[0], CY_DMA_TD_INC_DST_ADR);
+    CyDmaTdSetAddress(DMA_peak_TD[0], LO16((uint32)ADC_DelSig_1_DEC_SAMP_PTR), LO16((uint32)ADC_peak));
+    CyDmaChSetInitialTd(DMA_peak_Chan, DMA_peak_TD[0]);
+    CyDmaChEnable(DMA_peak_Chan, 1);
 
 	ADC_data_ready_StartEx(ADC_data_ready_ISR);
 
@@ -508,8 +532,6 @@ void tsk_analog_TaskProc(void *pvParameters) {
 	adc_ready_Semaphore = xSemaphoreCreateBinary();
 
 	initialize_analogs();
-    
-    isr_primary_current_StartEx(isr_primary);
     
     alarm_push(ALM_PRIO_INFO,warn_task_analog, ALM_NO_VALUE);
 

@@ -69,6 +69,7 @@ volatile uint8 bus_command;
 
 void initialize_charging(void);
 void control_precharge(void);
+extern uint16_t vdriver_lut[9];
 
 /* `#END` */
 

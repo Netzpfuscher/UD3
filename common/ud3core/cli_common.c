@@ -55,8 +55,6 @@
 		(void)(N);         \
 	} while (0)
         
-
-
 	
 typedef struct {
 	const char *text;
@@ -79,7 +77,6 @@ uint8_t command_bus(char *commandline, port_str *ptr);
 uint8_t command_load_default(char *commandline, port_str *ptr);
 uint8_t command_tterm(char *commandline, port_str *ptr);
 uint8_t command_reset(char *commandline, port_str *ptr);
-uint8_t command_minstat(char *commandline, port_str *ptr);
 uint8_t command_config_get(char *commandline, port_str *ptr);
 uint8_t command_exit(char *commandline, port_str *ptr);
 uint8_t command_fuse(char *commandline, port_str *ptr);
@@ -87,6 +84,7 @@ uint8_t command_signals(char *commandline, port_str *ptr);
 uint8_t command_alarms(char *commandline, port_str *ptr);
 uint8_t command_relay(char *commandline, port_str *ptr);
 uint8_t command_con(char *commandline, port_str *ptr);
+uint8_t command_calib(char *commandline, port_str *ptr);
 
 uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, port_str *ptr);
@@ -246,29 +244,29 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"r_bus"           , configuration.r_top           , 100    ,1000000,1000   ,callback_TTupdateFunction   ,"Series resistor of voltage input [kOhm]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ena_display"     , configuration.enable_display  , 0      ,6      ,0      ,NULL                        ,"Enables the WS2812 display")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"synth_filter"    , configuration.synth_filter    , 0      ,0      ,0      ,callback_synthFilter        ,"Synthesizer filter string")
+    ADD_PARAM(PARAM_CONFIG  ,pdFALSE,"d_calib"         , vdriver_lut                   , 0      ,0      ,0      ,NULL                        ,"For voltage measurement")
 };
 
 /*****************************************************************************
 * Command struct
 ******************************************************************************/
 command_entry commands[] = {
+    ADD_COMMAND("set"		    ,command_set            ,"Usage set [param] [value]")
+    ADD_COMMAND("get"		    ,command_get            ,"Usage get [param]")
     ADD_COMMAND("bootloader"    ,command_bootloader     ,"Start bootloader")
     ADD_COMMAND("bus"           ,command_bus            ,"Bus [on/off]")
     ADD_COMMAND("cls"		    ,command_cls            ,"Clear screen")
     ADD_COMMAND("eeprom"	    ,command_eprom          ,"Save/Load config [load/save]")
-	ADD_COMMAND("get"		    ,command_get            ,"Usage get [param]")
     ADD_COMMAND("help"          ,command_help           ,"This text")
     ADD_COMMAND("kill"		    ,command_udkill         ,"Kills all UD Coils")
     ADD_COMMAND("load_default"  ,command_load_default   ,"Loads the default parameters")
     ADD_COMMAND("qcw"           ,command_qcw            ,"QCW [start/stop]")
     ADD_COMMAND("reset"         ,command_reset          ,"Resets UD3")
-	ADD_COMMAND("set"		    ,command_set            ,"Usage set [param] [value]")
     ADD_COMMAND("status"	    ,command_status         ,"Displays coil status")
     ADD_COMMAND("tasks"	        ,command_tasks          ,"Show running Tasks")
     ADD_COMMAND("tr"		    ,command_tr             ,"Transient [start/stop]")
     ADD_COMMAND("tune"	        ,command_tune           ,"Autotune [prim/sec]")
     ADD_COMMAND("tterm"	        ,command_tterm          ,"Changes terminal mode")
-    ADD_COMMAND("minstat"	    ,command_minstat        ,"Prints the min statistics")
     ADD_COMMAND("config_get"    ,command_config_get     ,"Internal use")
     ADD_COMMAND("fuse_reset"    ,command_fuse           ,"Reset the internal fuse")
     ADD_COMMAND("signals"       ,command_signals        ,"For debugging")
@@ -276,6 +274,7 @@ command_entry commands[] = {
     ADD_COMMAND("synthmon"      ,command_SynthMon       ,"Synthesizer status")
     ADD_COMMAND("relay"         ,command_relay          ,"Switch user relay 3/4")
     ADD_COMMAND("con"	        ,command_con            ,"Prints the connections")
+    ADD_COMMAND("calib"	        ,command_calib          ,"Calibrate Vdriver")
 };
 
 
@@ -757,15 +756,15 @@ static const uint8_t c_C = 35;
 void print_alarm(ALARMS *temp,port_str *ptr){
     uint16_t ret;
     char buffer[80];
-    Term_Move_cursor_right(c_A,ptr);
+    Term_Move_Cursor_right(c_A,ptr);
     ret = snprintf(buffer, sizeof(buffer),"%u",temp->num);
     send_buffer((uint8_t*)buffer,ret,ptr); 
     
-    Term_Move_cursor_right(c_B,ptr);
+    Term_Move_Cursor_right(c_B,ptr);
     ret = snprintf(buffer, sizeof(buffer),"| %u ms",temp->timestamp);
     send_buffer((uint8_t*)buffer,ret,ptr); 
     
-    Term_Move_cursor_right(c_C,ptr);
+    Term_Move_Cursor_right(c_C,ptr);
     send_char('|',ptr);
     switch(temp->alarm_level){
         case ALM_PRIO_INFO:
@@ -798,11 +797,11 @@ uint8_t command_alarms(char *commandline, port_str *ptr) {
     
     if (ntlibc_stricmp(commandline, "get") == 0) {
 
-        Term_Move_cursor_right(c_A,ptr);
+        Term_Move_Cursor_right(c_A,ptr);
         SEND_CONST_STRING("Number", ptr);
-        Term_Move_cursor_right(c_B,ptr);
+        Term_Move_Cursor_right(c_B,ptr);
         SEND_CONST_STRING("| Timestamp", ptr);
-        Term_Move_cursor_right(c_C,ptr);
+        Term_Move_Cursor_right(c_C,ptr);
         SEND_CONST_STRING("| Message\r\n", ptr);
         
         for(uint16_t i=0;i<alarm_get_num();i++){
@@ -813,11 +812,11 @@ uint8_t command_alarms(char *commandline, port_str *ptr) {
     	return 1;
     }
     if (ntlibc_stricmp(commandline, "roll") == 0) {
-        Term_Move_cursor_right(c_A,ptr);
+        Term_Move_Cursor_right(c_A,ptr);
         SEND_CONST_STRING("Number", ptr);
-        Term_Move_cursor_right(c_B,ptr);
+        Term_Move_Cursor_right(c_B,ptr);
         SEND_CONST_STRING("| Timestamp", ptr);
-        Term_Move_cursor_right(c_C,ptr);
+        Term_Move_Cursor_right(c_C,ptr);
         SEND_CONST_STRING("| Message\r\n", ptr);
         uint32_t old_num=0;
         for(uint16_t i=0;i<alarm_get_num();i++){
@@ -845,49 +844,56 @@ uint8_t command_alarms(char *commandline, port_str *ptr) {
     HELP_TEXT("Usage: alarms [get|roll|reset]\r\n");
 }
 
-/*****************************************************************************
-* Prints the ethernet connections
-******************************************************************************/
-uint8_t command_con(char *commandline, port_str *ptr) {
-    SKIP_SPACE(commandline);
-    #define COL_A 9
-    #define COL_B 15
+
+void con_info(port_str *ptr){
     char buffer[40];
     uint8_t ret;
- 
-    
-    SEND_CONST_STRING("\r\n\nConnected clients:\r\n",ptr);
-    Term_Move_cursor_right(COL_A,ptr);
+    #define COL_A 9
+    #define COL_B 15
+    SEND_CONST_STRING("\r\nConnected clients:\r\n",ptr);
+    Term_Move_Cursor_right(COL_A,ptr);
     SEND_CONST_STRING("Num", ptr);
-    Term_Move_cursor_right(COL_B,ptr);
+    Term_Move_Cursor_right(COL_B,ptr);
     SEND_CONST_STRING("| Remote IP\r\n", ptr);
     
     for(uint8_t i=0;i<NUM_MIN_CON;i++){
         if(socket_info[i].socket==SOCKET_CONNECTED){
-            Term_Move_cursor_right(COL_A,ptr);
+            Term_Move_Cursor_right(COL_A,ptr);
             ret = snprintf(buffer,sizeof(buffer), "\033[36m%d", i);
             send_buffer((uint8_t*)buffer,ret,ptr);
-            Term_Move_cursor_right(COL_B,ptr);
+            Term_Move_Cursor_right(COL_B,ptr);
             ret = snprintf(buffer,sizeof(buffer), "\033[32m%s\r\n", socket_info[i].info);
             send_buffer((uint8_t*)buffer,ret,ptr);
         }
     }
-    Term_Color_White(ptr);
-	return 1;
+    Term_Color_White(ptr); 
+}
+
+void con_numcon(port_str *ptr){
+    char buffer[40];
+    uint8_t ret;
+    uint8_t cnt=0;
+    for(uint8_t i=0;i<NUM_MIN_CON;i++){
+        if(socket_info[i].socket==SOCKET_CONNECTED){
+            cnt++;
+        }
+    }
+    ret = snprintf(buffer,sizeof(buffer), "CLI-Sessions: %u/%u\r\n",cnt ,NUM_MIN_CON);
+    send_buffer((uint8_t*)buffer,ret,ptr);
 }
 
 /*****************************************************************************
 * Displays the statistics of the min protocol
 ******************************************************************************/
-uint8_t command_minstat(char *commandline, port_str *ptr){
+uint8_t con_minstat(port_str *ptr){
 
     char buffer[60];
     int ret=0;
     Term_Disable_Cursor(ptr);
-    Term_Erase_Screen(ptr);
-    SEND_CONST_STRING("MIN monitor    (press q for quit)\r\n",ptr);
+  
     while(getch(ptr,200 /portTICK_RATE_MS) != 'q'){
         Term_Erase_Screen(ptr);
+        SEND_CONST_STRING("MIN monitor    (press q for quit)\r\n",ptr);
         ret = snprintf(buffer, sizeof(buffer),"Dropped frames        : %lu\r\n",min_ctx.transport_fifo.dropped_frames);
         send_buffer((uint8_t*)buffer,ret,ptr);
         ret = snprintf(buffer, sizeof(buffer),"Spurious acks         : %lu\r\n",min_ctx.transport_fifo.spurious_acks);
@@ -910,6 +916,68 @@ uint8_t command_minstat(char *commandline, port_str *ptr){
         send_buffer((uint8_t*)buffer,ret,ptr);
     }
     SEND_CONST_STRING("\r\n",ptr);
+    Term_Enable_Cursor(ptr);
+    return 1; 
+}
+
+/*****************************************************************************
+* Prints the ethernet connections
+******************************************************************************/
+uint8_t command_con(char *commandline, port_str *ptr) {
+    SKIP_SPACE(commandline); 
+    CHECK_NULL(commandline);
+    if (ntlibc_stricmp(commandline, "info") == 0) {
+        con_info(ptr);
+        return 0;
+	}
+    if (ntlibc_stricmp(commandline, "numcon") == 0) {
+        con_numcon(ptr);
+        return 0;
+	} 
+    if (ntlibc_stricmp(commandline, "min") == 0) {
+        con_minstat(ptr);
+        return 0;
+	}
+    HELP_TEXT("Usage: con [info|numcon|min]\r\n");
+}
+
+/*****************************************************************************
+* Calibrate Vdriver
+******************************************************************************/
+uint8_t command_calib(char *commandline, port_str *ptr){
+   // uint16_t vdriver_lut[9] = {0,3500,7000,10430,13840,17310,20740,24200,27657};
+    uint32_t temp;
+    Term_Disable_Cursor(ptr);
+    Term_Erase_Screen(ptr);
+    SEND_CONST_STRING("Driver voltage measurement calibration [y] for next [a] for abort\r\n",ptr);
+    SEND_CONST_STRING("Set Vdriver to 7V\r\n",ptr);
+    if(getch(ptr, portMAX_DELAY) != 'y') return 1;
+    temp = 7000*512/ADC_active_sample_buf[DATA_VDRIVER];
+    vdriver_lut[2]= temp;
+    vdriver_lut[1]= temp/2;
+    SEND_CONST_STRING("Set Vdriver to 10V\r\n",ptr);
+    if(getch(ptr, portMAX_DELAY) != 'y') return 1;
+    temp = 10000*768/ADC_active_sample_buf[DATA_VDRIVER];
+    vdriver_lut[3]= temp;
+    SEND_CONST_STRING("Set Vdriver to 14V\r\n",ptr);
+    if(getche(ptr, portMAX_DELAY) != 'y') return 1;
+    temp = 14000*1024/ADC_active_sample_buf[DATA_VDRIVER];
+    vdriver_lut[4]= temp;
+    SEND_CONST_STRING("Set Vdriver to 17V\r\n",ptr);
+    if(getch(ptr, portMAX_DELAY) != 'y') return 1;
+    temp = 17000*1280/ADC_active_sample_buf[DATA_VDRIVER];
+    vdriver_lut[5]= temp;
+    SEND_CONST_STRING("Set Vdriver to 20V\r\n",ptr);
+    if(getch(ptr, portMAX_DELAY) != 'y') return 1;
+    temp = 20000*1536/ADC_active_sample_buf[DATA_VDRIVER];
+    vdriver_lut[6]= temp;
+    SEND_CONST_STRING("Set Vdriver to 24V\r\n",ptr);
+    if(getch(ptr, portMAX_DELAY) != 'y') return 1;
+    temp = 24000*1792/ADC_active_sample_buf[DATA_VDRIVER];
+    vdriver_lut[7]= temp;
+    temp = temp*2048/1792;
+    vdriver_lut[8]= temp;
+    SEND_CONST_STRING("Calibration finished\r\n",ptr);
     Term_Enable_Cursor(ptr);
     return 1; 
 }
@@ -1641,26 +1709,29 @@ uint8_t command_signals(char *commandline, port_str *ptr) {
         send_signal_state_wo((relay_Read()&0b1),pdFALSE,ptr);
         SEND_CONST_STRING(" Relay 2: ", ptr);
         send_signal_state_wo((relay_Read()&0b10),pdFALSE,ptr);
-        SEND_CONST_STRING(" Fan: ", ptr);
-        send_signal_state(Fan_Read(),pdFALSE,ptr);
-        SEND_CONST_STRING("                                    \r", ptr);
-        SEND_CONST_STRING("Bus status: ", ptr);
+        SEND_CONST_STRING(" Relay 3: ", ptr);
+        send_signal_state_wo(Relay3_Read(),pdFALSE,ptr);
+        SEND_CONST_STRING(" Relay 4: ", ptr);
+        send_signal_state(Relay4_Read(),pdFALSE,ptr);
+        SEND_CONST_STRING("Fan: ", ptr);
+        send_signal_state_wo(Fan_Read(),pdFALSE,ptr);
+        SEND_CONST_STRING(" Bus status: ", ptr);
         Term_Color_Cyan(ptr);
         switch(telemetry.bus_status){
             case BUS_BATT_OV_FLT:
-                SEND_CONST_STRING("Overvoltage", ptr);
+                SEND_CONST_STRING("Overvoltage      ", ptr);
             break;
             case BUS_BATT_UV_FLT:
-                SEND_CONST_STRING("Undervoltage", ptr);
+                SEND_CONST_STRING("Undervoltage     ", ptr);
             break;
             case BUS_CHARGING:
-                SEND_CONST_STRING("Charging", ptr);
+                SEND_CONST_STRING("Charging         ", ptr);
             break;
             case BUS_OFF:
-                SEND_CONST_STRING("Off", ptr);
+                SEND_CONST_STRING("Off              ", ptr);
             break;
             case BUS_READY:
-                SEND_CONST_STRING("Ready", ptr);
+                SEND_CONST_STRING("Ready            ", ptr);
             break;
             case BUS_TEMP1_FAULT:
                 SEND_CONST_STRING("Temperature fault", ptr);

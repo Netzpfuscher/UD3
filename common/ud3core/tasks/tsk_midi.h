@@ -107,9 +107,11 @@ struct sid_f{
     uint32_t next_frame;
 };
 
-#define SYNTH_OFF  0
-#define SYNTH_MIDI 1
-#define SYNTH_SID  2
+#define SYNTH_OFF       0
+#define SYNTH_MIDI      1
+#define SYNTH_SID       2
+#define SYNTH_MIDI_QCW  3
+#define SYNTH_SID_QCW   4
 
 struct _filter{
     uint16_t min;

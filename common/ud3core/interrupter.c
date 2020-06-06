@@ -39,16 +39,15 @@ uint8_t blocked=0;
 
 
 CY_ISR(qcw_end_ISR) {
-	if (qcw_reg && ramp.modulation_value > 0) {
+	if (qcw_reg) {
 		qcw_reg = 0;
 		ramp.modulation_value = 0;
-		ramp_control();
 	}
 	QCW_enable_Control = 0;
 }
 
 CY_ISR(qcw_dl_ovf_ISR) {
-	qcw_dl_ovf_counter = 1;
+	qcw_dl_ovf_counter++;
 }
 
 //CY_ISR(OCD_ISR)
@@ -83,17 +82,14 @@ void initialize_interrupter(void) {
 	interrupter1_WriteCompare1(64999);
 
 	QCW_duty_limiter_WritePeriod(65535);
-	QCW_duty_limiter_WriteCompare(65535 - configuration.max_qcw_pw / 10); //this register sets the max PW output
+	QCW_duty_limiter_WriteCompare(65535 - configuration.max_qcw_pw); //this register sets the max PW output
 
 	int1_prd = 65000;
 	int1_cmp = 64999;
 	ramp.modulation_value = 0;
-	ramp.modulation_value_previous = 0;
 
 	//Start up timers
 	interrupter1_Start();
-	QCW_duty_limiter_Start();
-
 
 	qcw_dl_ovf_StartEx(qcw_dl_ovf_ISR);
 	qcw_end_StartEx(qcw_end_ISR);
@@ -121,44 +117,44 @@ void initialize_interrupter(void) {
 	CyDmaChEnable(int1_dma_Chan, 1);
 }
 
-void ramp_control(void) {
-	if (ramp.modulation_value != 0  && !blocked) {
-		if (ramp.modulation_value_previous == 0) //indicates a new QCW pulse starting
-		{
-			//before starting the QCW pulse, capture the previous QCW period from the QCW_duty_limiter PWM, then calculate the permissible PW for that PWM
-			if (qcw_dl_ovf_counter)
-				ramp.qcw_recorded_prd = 65535; //if there was an overflow of this PWM, then the period is > 655mS, so clamp it there
-			else
-				ramp.qcw_recorded_prd = 65535 - QCW_duty_limiter_ReadCounter(); //else, look at the counter to see where we are at since last pulse
-			qcw_dl_ovf_counter = 0;
-			ramp.qcw_limiter_pw = (ramp.qcw_recorded_prd * configuration.max_qcw_duty) / 1000;
-			if ((ramp.qcw_limiter_pw > configuration.max_qcw_pw) || (ramp.qcw_limiter_pw == 0)) {
-				ramp.qcw_limiter_pw = configuration.max_qcw_pw;
-			}
-			//the next stuff is time sensitive, so disable interrupts to avoid glitches
-			CyGlobalIntDisable;
-			QCW_duty_limiter_WriteCounter(65535);						//restart counter at top value
-			QCW_duty_limiter_WriteCompare(65535 - ramp.qcw_limiter_pw / 10); //put in limiting compare match value
-			//now enable the QCW interrupter
-			QCW_enable_Control = 1;
-			params.pwmb_psb_val = params.pwm_top - params.pwmb_start_psb_val;
-			CyGlobalIntEnable;
-		} else {
-			//linearize modulation value based on fb_filter_out period
-			ramp.shift_period = (ramp.modulation_value * (params.pwm_top - fb_filter_out)) >> 8;
-			//assign new modulation value to the params.pwmb_psb_val ram
-			if ((ramp.shift_period + params.pwmb_start_psb_val) > (params.pwmb_start_prd - 4)) {
-				params.pwmb_psb_val = 4;
-			} else {
-				params.pwmb_psb_val = params.pwm_top - (ramp.shift_period + params.pwmb_start_psb_val);
-			}
-		}
-	} else //(ramp.modulation_value == 0) //indicates the switching should stop
-	{
-		QCW_enable_Control = 0;
+void qcw_start(){
+    //before starting the QCW pulse, capture the previous QCW period from the QCW_duty_limiter PWM, then calculate the permissible PW for that PWM
+	if (qcw_dl_ovf_counter)
+		ramp.qcw_recorded_prd = 65535; //if there was an overflow of this PWM, then the period is > 655mS, so clamp it there
+	else
+		ramp.qcw_recorded_prd = 65535 - QCW_duty_limiter_ReadCounter(); //else, look at the counter to see where we are at since last pulse
+	qcw_dl_ovf_counter = 0;
+	ramp.qcw_limiter_pw = (ramp.qcw_recorded_prd * configuration.max_qcw_duty) / 500;
+	if ((ramp.qcw_limiter_pw > configuration.max_qcw_pw) || (ramp.qcw_limiter_pw == 0)) {
+		ramp.qcw_limiter_pw = configuration.max_qcw_pw;
 	}
-	//grab the old modulation value so it can be used to detect start of ramp
-	ramp.modulation_value_previous = ramp.modulation_value;
+	//the next stuff is time sensitive, so disable interrupts to avoid glitches
+	CyGlobalIntDisable;
+	QCW_duty_limiter_WriteCounter(65535);						//restart counter at top value
+	QCW_duty_limiter_WriteCompare(65535 - ramp.qcw_limiter_pw); //put in limiting compare match value
+	//now enable the QCW interrupter
+	QCW_enable_Control = 1;
+	params.pwmb_psb_val = params.pwm_top - params.pwmb_start_psb_val;
+	CyGlobalIntEnable;
+}
+
+void qcw_modulate(uint16_t val){
+    if(QCW_enable_Control) DEBUG_DAC_SetValue(val);
+    //linearize modulation value based on fb_filter_out period
+	uint16_t shift_period = (val * (params.pwm_top - fb_filter_out)) >> 8;
+	//assign new modulation value to the params.pwmb_psb_val ram
+	if ((shift_period + params.pwmb_start_psb_val) > (params.pwmb_start_prd - 4)) {
+		params.pwmb_psb_val = 4;
+	} else {
+		params.pwmb_psb_val = params.pwm_top - (shift_period + params.pwmb_start_psb_val);
+	}  
+}
+
+void qcw_stop(){
+    qcw_reg = 0;
+    QCW_duty_limiter_Stop();
+    DEBUG_DAC_SetValue(0);
+    QCW_enable_Control = 0;
 }
 
 void interrupter_oneshot(uint16_t pw, uint8_t vol) {

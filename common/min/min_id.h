@@ -19,6 +19,7 @@
 #define SOCKET_CONNECTED     1
     
 #define CMD_HELLO_WORLD     0x01    
+#define CMD_FEATURE_FRAME   0x02 
     
     
 #endif

@@ -51,7 +51,6 @@ interrupter_params interrupter;
 typedef struct
 {
 	uint16 modulation_value;
-	uint16 modulation_value_previous;
 	uint32 qcw_recorded_prd;
 	uint32 qcw_limiter_pw;
 	uint16 shift_period;
@@ -68,6 +67,9 @@ void update_interrupter();
 void ramp_control(void);
 void interrupter_oneshot(uint16_t pw, uint8_t vol);
 uint8_t interrupter_get_kill(void);
+void qcw_start();
+void qcw_modulate(uint16_t val);
+void qcw_stop();
 
 void interrupter_kill(void);
 

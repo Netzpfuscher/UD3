@@ -148,7 +148,6 @@ void configure_ZCD_to_PWM(void) {
 	//i think that initializing these might fix a bug that QCW mode always seems to miss the first pulse when the UD3
 	//is first started.
 	ramp.modulation_value = 0;
-	ramp.modulation_value_previous = 0;
 
 	//prime the feedback filter with fake values so that the first time we use it, its not absolutely garbage
 	for (uint8_t z = 0; z < 5; z++) {

@@ -706,7 +706,7 @@ void Term_BGColor_Blue(port_str *ptr) {
 void Term_Move_Cursor_right(uint8_t column, port_str *ptr) {
 	char buffer[10];
     int ret=0;
-	ret = snprintf(buffer, sizeof(buffer), "\033[%iC", column);
+	ret = snprintf(buffer, sizeof(buffer), "\033[%i`", column);
 	send_buffer((uint8_t*)buffer, ret, ptr);
 }
 void Term_Move_Cursor_left(uint8_t column, port_str *ptr) {

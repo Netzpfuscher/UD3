@@ -126,6 +126,7 @@ void time_cb(uint32_t remote_time){
     time.remote = remote_time;
     time.diff_raw = time.remote-SG_Timer_ReadCounter();
     time.diff = average(&sample,time.diff_raw);
+    if(param.synth == SYNTH_MIDI || param.synth == SYNTH_MIDI_QCW) return;
     if(time.diff>5000 ||time.diff<-5000){
         SG_Timer_WriteCounter(time.remote);
         time.resync++;   
@@ -169,7 +170,15 @@ void process_synth(uint8_t *min_payload, uint8_t len_payload){
   }
 }
 
-
+void send_command(struct min_context *ctx, uint8_t cmd, char *str){
+    uint8_t len=0;
+    uint8_t buf[40];
+    buf[0] = cmd;
+    len=strlen(str);
+    if(len>sizeof(buf)-1)len = sizeof(buf)-1;
+    memcpy(&buf[1],str,len);
+    min_queue_frame(ctx,MIN_ID_COMMAND,buf,len+1);
+}
 
 
 void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_payload, uint8_t port)
@@ -191,6 +200,12 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
                 case SYNTH_SID:
                     process_sid(min_payload, len_payload);
                     break;
+                case SYNTH_MIDI_QCW:
+                    process_midi(min_payload,len_payload);     
+                    break;
+                case SYNTH_SID_QCW:
+                    process_sid(min_payload, len_payload);
+                    break;
             }
             break;
         case MIN_ID_WD:
@@ -201,6 +216,7 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
 			        time.remote |= (uint32_t)min_payload[3];
                     time.diff_raw = time.remote-SG_Timer_ReadCounter();
                     time.diff = average(&sample,time.diff_raw);
+                    if(param.synth == SYNTH_MIDI || param.synth == SYNTH_MIDI_QCW) return;
                     if(time.diff>5000 ||time.diff<-5000){
                         SG_Timer_WriteCounter(time.remote);
                         time.resync++;   
@@ -259,19 +275,11 @@ uint8_t assemble_command(uint8_t cmd, char *str, uint8_t *buf){
     return len+1;
 }
 
-void send_command(struct min_context *ctx, uint8_t cmd, char *str){
-    uint8_t len=0;
-    uint8_t buf[20];
-    buf[0] = cmd;
-    len=strlen(str);
-    if(len>sizeof(buf)-1)len = sizeof(buf)-1;
-    memcpy(&buf[1],str,len);
-    min_queue_frame(ctx,MIN_ID_COMMAND,buf,len+1);
-}
+
 
 void send_command_wq(struct min_context *ctx, uint8_t cmd, char *str){
     uint8_t len=0;
-    uint8_t buf[20];
+    uint8_t buf[40];
     buf[0] = cmd;
     len=strlen(str);
     if(len>sizeof(buf)-1)len = sizeof(buf)-1;
@@ -345,7 +353,7 @@ void tsk_min_TaskProc(void *pvParameters) {
             if(socket_info[i].socket==SOCKET_DISCONNECTED) goto end;   
             
             
-            if(param.synth==SYNTH_SID){
+            if(param.synth==SYNTH_SID || param.synth==SYNTH_SID_QCW){
                 if(uxQueueSpacesAvailable(qSID) < 30 && flow_ctl){
                     min_queue_frame(&min_ctx, MIN_ID_MIDI, (uint8_t*)&min_stop,1);
                     flow_ctl=0;

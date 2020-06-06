@@ -178,11 +178,11 @@ xQueueHandle qPulse;
 struct sid_f sid_frm;
 
 void handle_qcw(){
-	if ((ramp.modulation_value < 255) && (ramp.modulation_value > 0)) {
+	if (ramp.modulation_value < 255) {
 		ramp.modulation_value += param.qcw_ramp;
 		if (ramp.modulation_value > 255)
 			ramp.modulation_value = 255;
-		ramp_control();
+        qcw_modulate(ramp.modulation_value);
 	}
 }
 
@@ -274,8 +274,35 @@ CY_ISR(isr_midi) {
 
 }
 
+CY_ISR(isr_midi_qcw) {
+    if(qcw_reg){
+        handle_qcw();
+        return;
+    }
+	uint32 r = SG_Timer_ReadCounter();
+    int16_t vol=0;
+    telemetry.midi_voices=0;
+	for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
+
+        compute_adsr(ch);
+
+		if (channel[ch].volume > 0) {
+            telemetry.midi_voices++;
+			if ((r / channel[ch].halfcount) % 2 > 0) {
+                vol +=channel[ch].volume;
+			}else{
+                vol -=channel[ch].volume;
+            }
+		}
+	}
+    if(vol>127)vol=127;
+    if(vol<-128)vol=-128;
+    qcw_modulate(vol+0x80);
+}
+
 uint32_t volatile next_frame=4294967295;
 uint32_t last_frame=4294967295;
+
 
 CY_ISR(isr_sid) {
     
@@ -388,6 +415,115 @@ CY_ISR(isr_sid) {
    
 }
 
+
+
+CY_ISR(isr_sid_qcw) {
+    if(qcw_reg){
+        handle_qcw();
+        return;
+    }
+    uint32 r = SG_Timer_ReadCounter();
+    
+    telemetry.midi_voices=0;
+    
+    if (r < next_frame){
+        if(xQueueReceiveFromISR(qSID,&sid_frm,0)){
+            last_frame=r;
+            for(uint8_t i=0;i<SID_CHANNELS;i++){
+                channel[i].halfcount = sid_frm.half[i];
+                if(sid_frm.gate[i] > channel[i].old_gate){
+                    channel[i].adsr_state=ADSR_ATTACK;  //Rising edge
+                    if(!QCW_enable_Control) qcw_start();
+                }
+                if(sid_frm.gate[i] < channel[i].old_gate) channel[i].adsr_state=ADSR_RELEASE;  //Falling edge
+                sid_frm.pw[i]=sid_frm.pw[i]>>4;
+                channel[i].freq = sid_frm.freq[i];
+                channel[i].old_gate = sid_frm.gate[i];
+                channel[i].freq = sid_frm.freq[i];
+            }
+            next_frame = sid_frm.next_frame;
+        }else{
+           
+        }
+    }
+    if((last_frame-r)>64000){
+     next_frame = r;
+     last_frame = r;
+        for (uint8_t i = 0;i<SID_CHANNELS;++i) {
+            channel[i].volume = 0;
+            channel[i].adsr_state = ADSR_IDLE;
+            channel[i].old_gate=0;
+        }   
+    }
+        
+    
+    int8_t random = ((uint8_t)rand())-127;
+    
+    int16_t vol=0;
+	
+	for (uint8_t ch = 0; ch < SID_CHANNELS; ch++) {
+        switch (channel[ch].adsr_state){
+            case ADSR_ATTACK:
+                if(channel[ch].adsr_count>=envelope[sid_frm.attack[ch]]){
+                    channel[ch].volume++;
+                    if(channel[ch].volume>=127){
+                        channel[ch].volume=127;
+                        channel[ch].adsr_state=ADSR_DECAY;
+                    }
+                    channel[ch].adsr_count=0;
+                }else{
+                    channel[ch].adsr_count++;
+                }
+            break;
+            case ADSR_DECAY:
+                if(channel[ch].adsr_count>=envelope[sid_frm.decay[ch]]){
+                    channel[ch].volume--;
+                    if(channel[ch].volume<=sid_frm.sustain[ch]) channel[ch].adsr_state=ADSR_SUSTAIN;
+                    channel[ch].adsr_count=0;
+                }else{
+                    channel[ch].adsr_count++;
+                }
+            break;
+            case ADSR_SUSTAIN:
+                channel[ch].volume = sid_frm.sustain[ch];
+            break;
+            case ADSR_RELEASE:
+                if(channel[ch].adsr_count>=envelope[sid_frm.release[ch]]){
+                    channel[ch].volume--;
+                    if(channel[ch].volume==0 || channel[ch].volume>127) {
+                        channel[ch].volume=0;
+                        channel[ch].adsr_state=ADSR_IDLE;
+                    }
+                    channel[ch].adsr_count=0;
+                }else{
+                    channel[ch].adsr_count++;
+                }
+            break;
+        }
+        
+
+		if (channel[ch].volume > 0) {
+            telemetry.midi_voices++;
+			if ((r / channel[ch].halfcount) % 2 > 0) {
+                if(sid_frm.wave[ch]){
+                    vol +=(((int)channel[ch].volume*random)/127);
+                }else{
+                    vol +=channel[ch].volume;
+                }
+			}else{
+                if(!sid_frm.wave[ch]){
+                    vol -=channel[ch].volume;
+                }
+            }
+		}   
+	}
+    vol/=3;
+    if(vol>127)vol=127;
+    if(vol<-128)vol=-128;
+    //DEBUG_DAC_SetValue(vol+0x80);
+    qcw_modulate(vol+0x80);
+}
+
 CY_ISR(isr_interrupter) {
     PULSE pulse;
     if(xQueueReceiveFromISR(qPulse,&pulse,0)){
@@ -493,6 +629,7 @@ void process(NOTE *v) {
                 channel[ch].sustain = v->data.noteonoff.vol;
   
                 if(v->data.noteonoff.vol>0){
+                    if(param.synth == SYNTH_MIDI_QCW && !QCW_enable_Control) qcw_start();
                     channel[ch].adsr_state = ADSR_ATTACK;
                 }else{
                     channel[ch].adsr_state = ADSR_RELEASE;
@@ -650,26 +787,29 @@ void kill_accu(){
 void switch_synth(uint8_t synth){
     skip_flag=0;
     telemetry.midi_voices=0;
+    isr_midi_Stop();
+    xQueueReset(qMIDI_rx);
+    xQueueReset(qSID);
+    kill_accu();
     switch(synth){
         case SYNTH_OFF:
-            isr_midi_Stop();
-            xQueueReset(qMIDI_rx);
-            xQueueReset(qSID);
-            kill_accu();
+            //Nothing to do
         break;
         case SYNTH_MIDI:
-            isr_midi_Stop();
-            xQueueReset(qMIDI_rx);
-            xQueueReset(qSID);
-            kill_accu();
+            QCW_duty_limiter_Stop();
             isr_midi_StartEx(isr_midi);
         break;
         case SYNTH_SID:
-            isr_midi_Stop();
-            xQueueReset(qMIDI_rx);
-            xQueueReset(qSID);
-            kill_accu();
+            QCW_duty_limiter_Stop();
             isr_midi_StartEx(isr_sid);
+        break;
+        case SYNTH_MIDI_QCW:
+            QCW_duty_limiter_Start();
+            isr_midi_StartEx(isr_midi_qcw);
+        break;
+        case SYNTH_SID_QCW:
+            QCW_duty_limiter_Start();
+            isr_midi_StartEx(isr_sid_qcw);
         break;
     }
     
@@ -737,7 +877,8 @@ void tsk_midi_TaskProc(void *pvParameters) {
 
 	NOTE note_struct;
 
-
+    DEBUG_DAC_Start();
+    Opamp_1_Start();
 
 	/* `#END` */
 
@@ -766,7 +907,7 @@ void tsk_midi_TaskProc(void *pvParameters) {
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
 
-        if(param.synth==SYNTH_MIDI){
+        if(param.synth==SYNTH_MIDI ||param.synth==SYNTH_MIDI_QCW){
     		if (xQueueReceive(qMIDI_rx, &note_struct, portMAX_DELAY)) {
     			process(&note_struct);
     			while (xQueueReceive(qMIDI_rx, &note_struct, 0)) {

@@ -123,7 +123,7 @@ void init_config(){
     configuration.watchdog = 1;
     configuration.max_tr_pw = 1000;
     configuration.max_tr_prf = 800;
-    configuration.max_qcw_pw = 10000;
+    configuration.max_qcw_pw = 1000;
     configuration.max_tr_current = 400;
     configuration.min_tr_current = 100;
     configuration.max_qcw_current = 300;
@@ -199,7 +199,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_ramp"        , param.qcw_ramp                , 1      ,10     ,0      ,NULL                        ,"QCW Ramp Inc/93us")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_repeat"      , param.qcw_repeat              , 0      ,1000   ,0      ,NULL                        ,"QCW pulse repeat time [ms] <100=single shot")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"transpose"       , param.transpose               , -48    ,48     ,0      ,NULL                        ,"Transpose MIDI")
-    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"synth"           , param.synth                   , 0      ,2      ,0      ,callback_SynthFunction      ,"0=off 1=MIDI 2=SID")
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"synth"           , param.synth                   , 0      ,4      ,0      ,callback_SynthFunction      ,"0=off 1=MIDI 2=SID")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"mch"             , param.mch                     , 0      ,16     ,0      ,callback_MchFunction        ,"MIDI channel 16=write to all channels")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"attack"          , midich[0].attack              , 0      ,127    ,0      ,callback_MchCopyFunction    ,"MIDI attack time of mch") //WARNING: Must be mch index +1
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"decay"           , midich[0].decay               , 0      ,127    ,0      ,callback_MchCopyFunction    ,"MIDI decay time of mch")  //WARNING: Must be mch index +2
@@ -208,7 +208,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"watchdog"        , configuration.watchdog        , 0      ,1      ,0      ,callback_ConfigFunction     ,"Watchdog Enable")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_tr_pw"       , configuration.max_tr_pw       , 0      ,3000   ,0      ,callback_ConfigFunction     ,"Maximum TR PW [uSec]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_tr_prf"      , configuration.max_tr_prf      , 0      ,3000   ,0      ,callback_ConfigFunction     ,"Maximum TR frequency [Hz]")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_qcw_pw"      , configuration.max_qcw_pw      , 0      ,30000  ,1000   ,callback_ConfigFunction     ,"Maximum QCW PW [ms]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_qcw_pw"      , configuration.max_qcw_pw      , 0      ,5000   ,100    ,callback_ConfigFunction     ,"Maximum QCW PW [ms]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_tr_current"  , configuration.max_tr_current  , 0      ,8000   ,0      ,callback_TTupdateFunction   ,"Maximum TR current [A]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"min_tr_current"  , configuration.min_tr_current  , 0      ,8000   ,0      ,callback_ConfigFunction     ,"Minimum TR current [A]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_qcw_current" , configuration.max_qcw_current , 0      ,8000   ,0      ,callback_TTupdateFunction   ,"Maximum QCW current [A]")
@@ -1050,11 +1050,8 @@ uint8_t command_tr(char *commandline, port_str *ptr) {
 * Timer callback for the QCW autofire
 ******************************************************************************/
 void vQCW_Timer_Callback(TimerHandle_t xTimer){
-    if(!qcw_reg){
-         	ramp.modulation_value = 20;
-            qcw_reg = 1;
-		    ramp_control(); 
-    }
+    qcw_start();
+    qcw_reg = 1;
     if(param.qcw_repeat<100) param.qcw_repeat = 100;
     xTimerChangePeriod( xTimer, param.qcw_repeat / portTICK_PERIOD_MS, 0 );
 }
@@ -1067,11 +1064,13 @@ uint8_t command_qcw(char *commandline, port_str *ptr) {
     CHECK_NULL(commandline);
         
 	if (ntlibc_stricmp(commandline, "start") == 0) {
+        
         switch_synth(SYNTH_MIDI);
         if(param.qcw_repeat>99){
             if(xQCW_Timer==NULL){
                 xQCW_Timer = xTimerCreate("QCW-Tmr", param.qcw_repeat / portTICK_PERIOD_MS, pdFALSE,(void * ) 0, vQCW_Timer_Callback);
                 if(xQCW_Timer != NULL){
+                    QCW_duty_limiter_Start();
                     xTimerStart(xQCW_Timer, 0);
                     SEND_CONST_STRING("QCW Enabled\r\n", ptr);
                 }else{
@@ -1079,9 +1078,8 @@ uint8_t command_qcw(char *commandline, port_str *ptr) {
                 }
             }
         }else{
-		    ramp.modulation_value = 20;
-            qcw_reg = 1;
-		    ramp_control();
+            QCW_duty_limiter_Start();
+		    qcw_start();
             SEND_CONST_STRING("QCW single shot\r\n", ptr);
         }
 		
@@ -1095,8 +1093,7 @@ uint8_t command_qcw(char *commandline, port_str *ptr) {
                     SEND_CONST_STRING("Cannot delete QCW Timer\r\n", ptr);
                 }
 		}
-        QCW_enable_Control = 0;
-        qcw_reg = 0;
+        qcw_stop();
 		SEND_CONST_STRING("QCW Disabled\r\n", ptr);
         switch_synth(param.synth);
 		return 0;

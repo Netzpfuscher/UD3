@@ -23,6 +23,7 @@
 */
 
 #include "interrupter.h"
+#include "hardware.h"
 #include "ZCDtoPWM.h"
 #include "autotune.h"
 #include "cli_common.h"
@@ -139,7 +140,9 @@ void qcw_start(){
 }
 
 void qcw_modulate(uint16_t val){
-    if(QCW_enable_Control) DEBUG_DAC_SetValue(val);
+#if USE_DEBUG_DAC  
+    if(QCW_enable_Control) DEBUG_DAC_SetValue(val); 
+#endif
     //linearize modulation value based on fb_filter_out period
 	uint16_t shift_period = (val * (params.pwm_top - fb_filter_out)) >> 8;
 	//assign new modulation value to the params.pwmb_psb_val ram
@@ -153,7 +156,9 @@ void qcw_modulate(uint16_t val){
 void qcw_stop(){
     qcw_reg = 0;
     QCW_duty_limiter_Stop();
+#if USE_DEBUG_DAC 
     DEBUG_DAC_SetValue(0);
+#endif
     QCW_enable_Control = 0;
 }
 

@@ -40,6 +40,7 @@ uint8 tsk_midi_initVar = 0u;
 /* `#START USER_INCLUDE SECTION` */
 #include "cli_common.h"
 #include "interrupter.h"
+#include "hardware.h"
 #include "tsk_midi.h"
 #include "tsk_priority.h"
 #include "telemetry.h"
@@ -261,7 +262,9 @@ CY_ISR(isr_midi) {
 		if (flag[ch] > old_flag[ch]) {
             pulse.volume = channel[ch].volume;
             pulse.pw = interrupter.pw;
-            //pulse.pw = channel[ch].volume;
+#if USE_DEBUG_PW           
+            pulse.pw = channel[ch].volume;
+#endif
             xQueueSendFromISR(qPulse,&pulse,0);
 		}
 		old_flag[ch] = flag[ch];
@@ -399,7 +402,9 @@ CY_ISR(isr_sid) {
             if(!(sid_frm.wave[ch] && (random & 0x03))){
                 pulse.volume = channel[ch].volume;
                 pulse.pw = sid_frm.master_pw;
-                //pulse.pw = channel[ch].volume;   //For DEBUG with speaker
+#if USE_DEBUG_PW
+                pulse.pw = channel[ch].volume;   //For DEBUG with speaker
+#endif
                 xQueueSendFromISR(qPulse,&pulse,0);
             }
 		}   
@@ -876,9 +881,11 @@ void tsk_midi_TaskProc(void *pvParameters) {
     qPulse = xQueueCreate(16, sizeof(PULSE));
 
 	NOTE note_struct;
-
+    
+#if USE_DEBUG_DAC
     DEBUG_DAC_Start();
     Opamp_1_Start();
+#endif
 
 	/* `#END` */
 

@@ -117,7 +117,7 @@
 #define configQUEUE_REGISTRY_SIZE		10
 #define configUSE_MALLOC_FAILED_HOOK	1
     
-#define ACTIVATE_TASK_INFO 1
+#define ACTIVATE_TASK_INFO 0
 
 #if ACTIVATE_TASK_INFO   
     #define configGENERATE_RUN_TIME_STATS	1  

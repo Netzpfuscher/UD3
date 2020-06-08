@@ -3,6 +3,8 @@ UD3 PSOC
 
 This is the firmware for the UD3 Teslacoil driver. It is originally developed by Steve Ward.
 
+![UD3](https://github.com/Netzpfuscher/UD3/blob/master/ud3.jpg)
+
 It controls everything on a DRSSTC or a QCW. The interrupter is embedded in the UD3 (Classic Mode / MIDI / SID(C64) / QCW Ramp / QCW MIDI / QCW SID)
 
 Features

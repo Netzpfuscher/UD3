@@ -115,9 +115,9 @@ void configure_ZCD_to_PWM(void) {
 		ZCD_counter_WriteCompare(4);
 	}
     
-    uint16_t lead_time_temp;
+    uint32_t lead_time_temp;
 	//calculate lead time in cycles
-	lead_time_temp = round((float)configuration.lead_time / CPU_CLK_PERIOD);
+	lead_time_temp = (configuration.lead_time*1000) / (1000000/BCLK__BUS_CLK__MHZ);
 
 	//calculate starting period
 	pwm_start_prd_temp = BCLK__BUS_CLK__HZ / (configuration.start_freq * 200); //why 200? well 2 because its half-periods, and 100 because frequency is in hz*100

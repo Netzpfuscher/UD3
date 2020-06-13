@@ -82,13 +82,6 @@ TimerHandle_t xCharge_Timer;
 #define ADC_DMA_SRC_BASE (CYDEV_PERIPH_BASE)
 #define ADC_DMA_DST_BASE (CYDEV_SRAM_BASE)
 
-/* Defines for DMA_peak */
-#define DMA_peak_BYTES_PER_BURST 2
-#define DMA_peak_REQUEST_PER_BURST 1
-#define DMA_peak_SRC_BASE (CYDEV_PERIPH_BASE)
-#define DMA_peak_DST_BASE (CYDEV_SRAM_BASE)
-
-
 #define SAMPLES_COUNT 2048
 
 #define BUSV_R_BOT 5000UL
@@ -106,8 +99,6 @@ typedef struct
 uint16 ADC_sample_buf_0[4*ADC_BUFFER_CNT];
 uint16 ADC_sample_buf_1[4*ADC_BUFFER_CNT];
 uint16 *ADC_active_sample_buf = ADC_sample_buf_0;
-
-uint16 ADC_peak;
 
 rms_t current_idc;
 uint8_t ADC_mux_ctl[4] = {0x05, 0x02, 0x03, 0x00};
@@ -219,19 +210,20 @@ uint16_t read_driver_mv(uint16_t raw_adc){
 }
 
 uint16_t CT1_Get_Current(uint8_t channel) {
-
+    uint32_t counts = ADC_DelSig_1_GetResult16();
 	if (channel == CT_PRIMARY) {
-		return ((ADC_DelSig_1_CountsTo_mVolts(ADC_peak) * configuration.ct1_ratio) / configuration.ct1_burden) / 100;
+		return ((ADC_DelSig_1_CountsTo_mVolts(counts) * configuration.ct1_ratio) / configuration.ct1_burden) / 100;
 	} else {
-		return ((ADC_DelSig_1_CountsTo_mVolts(ADC_peak) * configuration.ct3_ratio) / configuration.ct3_burden) / 100;
+		return ((ADC_DelSig_1_CountsTo_mVolts(counts) * configuration.ct3_ratio) / configuration.ct3_burden) / 100;
 	}
 }
 
 float CT1_Get_Current_f(uint8_t channel) {
+    uint32_t counts = ADC_DelSig_1_GetResult16();
 	if (channel == CT_PRIMARY) {
-		return ((float)(ADC_DelSig_1_CountsTo_Volts(ADC_peak) * 10) / (float)(configuration.ct1_burden) * configuration.ct1_ratio);
+		return ((float)(ADC_DelSig_1_CountsTo_Volts(counts) * 10) / (float)(configuration.ct1_burden) * configuration.ct1_ratio);
 	} else {
-		return ((float)(ADC_DelSig_1_CountsTo_Volts(ADC_peak) * 10) / (float)(configuration.ct3_burden) * configuration.ct3_ratio);
+		return ((float)(ADC_DelSig_1_CountsTo_Volts(counts) * 10) / (float)(configuration.ct3_burden) * configuration.ct3_ratio);
 	}
 }
 
@@ -365,19 +357,6 @@ void initialize_analogs(void) {
 	CyDmaChSetInitialTd(MUX_DMA_Chan, MUX_DMA_TD[0]);
 	CyDmaChEnable(MUX_DMA_Chan, 1);
     
-    /* Variable declarations for DMA_peak */
-    /* Move these variable declarations to the top of the function */
-    uint8 DMA_peak_Chan;
-    uint8 DMA_peak_TD[1];
-
-    /* DMA Configuration for DMA_peak */
-    DMA_peak_Chan = DMA_peak_DmaInitialize(DMA_peak_BYTES_PER_BURST, DMA_peak_REQUEST_PER_BURST, 
-        HI16(DMA_peak_SRC_BASE), HI16(DMA_peak_DST_BASE));
-    DMA_peak_TD[0] = CyDmaTdAllocate();
-    CyDmaTdSetConfiguration(DMA_peak_TD[0], 2, DMA_peak_TD[0], CY_DMA_TD_INC_DST_ADR);
-    CyDmaTdSetAddress(DMA_peak_TD[0], LO16((uint32)ADC_DelSig_1_DEC_SAMP_PTR), LO16((uint32)ADC_peak));
-    CyDmaChSetInitialTd(DMA_peak_Chan, DMA_peak_TD[0]);
-    CyDmaChEnable(DMA_peak_Chan, 1);
 
 	ADC_data_ready_StartEx(ADC_data_ready_ISR);
 

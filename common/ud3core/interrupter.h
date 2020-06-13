@@ -48,6 +48,9 @@ typedef struct
 
 interrupter_params interrupter;
 
+void handle_qcw();
+void handle_qcw_synth();
+
 typedef struct
 {
 	uint16 modulation_value;
@@ -56,7 +59,15 @@ typedef struct
 	uint16 shift_period;
 } ramp_params;
 
+typedef struct
+{
+    uint32 time_start;
+    uint32 time_stop;
+    uint32 last_time;
+} timer_params;
+
 ramp_params volatile ramp; //added volatile
+timer_params timer;
 
 extern volatile uint8 qcw_dl_ovf_counter;
 extern uint8_t tr_running;

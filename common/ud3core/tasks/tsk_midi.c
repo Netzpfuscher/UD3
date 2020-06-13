@@ -178,14 +178,6 @@ xQueueHandle qSID;
 xQueueHandle qPulse;
 struct sid_f sid_frm;
 
-void handle_qcw(){
-	if (ramp.modulation_value < 255) {
-		ramp.modulation_value += param.qcw_ramp;
-		if (ramp.modulation_value > 255)
-			ramp.modulation_value = 255;
-        qcw_modulate(ramp.modulation_value);
-	}
-}
 
 uint8_t old_flag[N_CHANNEL];
 
@@ -282,6 +274,7 @@ CY_ISR(isr_midi_qcw) {
         handle_qcw();
         return;
     }
+    handle_qcw_synth();
 	uint32 r = SG_Timer_ReadCounter();
     int16_t vol=0;
     telemetry.midi_voices=0;
@@ -427,6 +420,7 @@ CY_ISR(isr_sid_qcw) {
         handle_qcw();
         return;
     }
+    handle_qcw_synth();
     uint32 r = SG_Timer_ReadCounter();
     
     telemetry.midi_voices=0;
@@ -801,19 +795,15 @@ void switch_synth(uint8_t synth){
             //Nothing to do
         break;
         case SYNTH_MIDI:
-            QCW_duty_limiter_Stop();
             isr_midi_StartEx(isr_midi);
         break;
         case SYNTH_SID:
-            QCW_duty_limiter_Stop();
             isr_midi_StartEx(isr_sid);
         break;
         case SYNTH_MIDI_QCW:
-            QCW_duty_limiter_Start();
             isr_midi_StartEx(isr_midi_qcw);
         break;
         case SYNTH_SID_QCW:
-            QCW_duty_limiter_Start();
             isr_midi_StartEx(isr_sid_qcw);
         break;
     }

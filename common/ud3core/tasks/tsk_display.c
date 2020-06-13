@@ -174,6 +174,7 @@ uint8_t display_syntstate(int32_t *memory){
                     return display_text("SID",3,memory);
                     break;
             }
+    return 0;
 }
 
 void tsk_display_TaskProc(void *pvParameters) {

@@ -1070,7 +1070,6 @@ uint8_t command_qcw(char *commandline, port_str *ptr) {
             if(xQCW_Timer==NULL){
                 xQCW_Timer = xTimerCreate("QCW-Tmr", param.qcw_repeat / portTICK_PERIOD_MS, pdFALSE,(void * ) 0, vQCW_Timer_Callback);
                 if(xQCW_Timer != NULL){
-                    QCW_duty_limiter_Start();
                     xTimerStart(xQCW_Timer, 0);
                     SEND_CONST_STRING("QCW Enabled\r\n", ptr);
                 }else{
@@ -1078,7 +1077,6 @@ uint8_t command_qcw(char *commandline, port_str *ptr) {
                 }
             }
         }else{
-            QCW_duty_limiter_Start();
 		    qcw_start();
             SEND_CONST_STRING("QCW single shot\r\n", ptr);
         }

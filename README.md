@@ -40,6 +40,8 @@ Connect with a serial VT100 Terminal like Putty over USB or serial and configure
 
 Default baudrate: 460800
 
+![Pinout](https://github.com/Netzpfuscher/UD3/blob/master/wiki/connections.png)
+
 See the Wiki for more informations.
 
 

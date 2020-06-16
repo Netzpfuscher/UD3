@@ -34,6 +34,7 @@
 #include "tsk_eth_common.h"
 #include "alarmevent.h"
 #include "clock.h"
+#include "version.h"
 
 #include "helper/printf.h"
 
@@ -175,7 +176,7 @@ void send_command(struct min_context *ctx, uint8_t cmd, char *str){
     memcpy(&buf[1],str,len);
     min_queue_frame(ctx,MIN_ID_COMMAND,buf,len+1);
 }
-
+uint8_t transmit_features=0;
 
 void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_payload, uint8_t port)
 {
@@ -221,6 +222,9 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
             if(socket_info[*min_payload].socket==SOCKET_CONNECTED){
                 command_cls("",&min_port[*min_payload]);
                 send_string(":>", &min_port[*min_payload]);
+                if(!transmit_features){
+                    transmit_features=sizeof(version)/sizeof(char*);
+                }
             }else{
                 min_port[*min_payload].term_mode = PORT_TERM_VT100;    
                 stop_overlay_task(&min_port[*min_payload]);   
@@ -327,6 +331,12 @@ void tsk_min_TaskProc(void *pvParameters) {
 	for (;;) {
 
         bytes_waiting=UART_GetRxBufferSize();
+        
+        if(transmit_features){
+            uint8_t temp=(sizeof(version)/sizeof(char*))-transmit_features;
+            min_queue_frame(&min_ctx, MIN_ID_FEATURE, (uint8_t*)version[temp],strlen(version[temp]));  
+            transmit_features--;
+        }
         
         for(i=0;i<NUM_MIN_CON;i++){
         

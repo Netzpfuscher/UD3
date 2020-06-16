@@ -522,7 +522,6 @@ CY_ISR(isr_sid_qcw) {
     vol/=3;
     if(vol>127)vol=127;
     if(vol<-128)vol=-128;
-    //DEBUG_DAC_SetValue(vol+0x80);
     qcw_modulate(vol+0x80);
 }
 

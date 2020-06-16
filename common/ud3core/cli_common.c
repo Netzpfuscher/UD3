@@ -29,6 +29,7 @@
 #include "ntshell.h"
 #include "ntlibc.h"
 #include "clock.h"
+#include "hardware.h"
 #include "telemetry.h"
 #include <project.h>
 #include <stdint.h>
@@ -50,6 +51,7 @@
 #include "helper/teslaterm.h"
 #include "math.h"
 #include "alarmevent.h"
+#include "version.h"
 
 #define UNUSED_VARIABLE(N) \
 	do {                   \
@@ -86,6 +88,7 @@ uint8_t command_alarms(char *commandline, port_str *ptr);
 uint8_t command_relay(char *commandline, port_str *ptr);
 uint8_t command_con(char *commandline, port_str *ptr);
 uint8_t command_calib(char *commandline, port_str *ptr);
+uint8_t command_features(char *commandline, port_str *ptr);
 
 uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, port_str *ptr);
@@ -276,6 +279,7 @@ command_entry commands[] = {
     ADD_COMMAND("relay"         ,command_relay          ,"Switch user relay 3/4")
     ADD_COMMAND("con"	        ,command_con            ,"Prints the connections")
     ADD_COMMAND("calib"	        ,command_calib          ,"Calibrate Vdriver")
+    ADD_COMMAND("features"	    ,command_features       ,"Get supported features")
 };
 
 
@@ -984,6 +988,16 @@ uint8_t command_calib(char *commandline, port_str *ptr){
 }
 
 /*****************************************************************************
+* Sends the features to teslaterm
+******************************************************************************/
+uint8_t command_features(char *commandline, port_str *ptr){
+	for (uint8_t i = 0; i < sizeof(version)/sizeof(char*); i++) {
+       send_features(version[i],ptr); 
+    }
+    return 1; 
+}
+
+/*****************************************************************************
 * Sends the configuration to teslaterm
 ******************************************************************************/
 uint8_t command_config_get(char *commandline, port_str *ptr){
@@ -1002,7 +1016,9 @@ uint8_t command_config_get(char *commandline, port_str *ptr){
 * Kicks the controller into the bootloader
 ******************************************************************************/
 uint8_t command_bootloader(char *commandline, port_str *ptr) {
-	Bootloadable_Load();
+#if USE_BOOTLOADER
+    Bootloadable_Load();
+#endif
 	return 1;
 }
 

@@ -149,6 +149,16 @@ void send_config(char* param,const char* help_text, port_str *ptr){
     send_string((char*)help_text, ptr);
 }
 
+void send_features(const char* text, port_str *ptr){
+    uint8_t len = strlen(text);
+    uint8_t buf[3];
+    buf[0] = 0xFF;
+    buf[1] = len+sizeof(buf)-2;
+    buf[2] = TT_FEATURE_GET;
+    send_buffer(buf,sizeof(buf),ptr);
+    send_string(text, ptr);
+}
+
 void send_event(ALARMS *alm, port_str *ptr){
     uint8_t buf[100];
     buf[0] = 0xFF;

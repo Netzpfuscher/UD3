@@ -124,7 +124,7 @@ void initialize_interrupter(void) {
 
 void qcw_start(){
     timer.time_start = SG_Timer_ReadCounter();
-    uint32_t sg_period = ((1000UL*SG_Trim_ReadPeriod())/BCLK__BUS_CLK__MHZ); //ns
+    uint32_t sg_period = 3125; //ns
     uint32_t cycles_to_stop = (configuration.max_qcw_pw*10000)/sg_period;
     uint32_t cycles_since_last_pulse = timer.time_stop-timer.time_start;
     

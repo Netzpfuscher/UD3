@@ -27,6 +27,7 @@
 
 #include "tsk_midi.h"
 #include "tsk_fault.h"
+#include "clock.h"
 
 xTaskHandle tsk_midi_TaskHandle;
 uint8 tsk_midi_initVar = 0u;
@@ -232,6 +233,7 @@ void compute_adsr(uint8_t ch){
 }
 
 CY_ISR(isr_midi) {
+    clock_tick();
     if(qcw_reg){
         handle_qcw();
         return;
@@ -270,6 +272,7 @@ CY_ISR(isr_midi) {
 }
 
 CY_ISR(isr_midi_qcw) {
+    clock_tick();
     if(qcw_reg){
         handle_qcw();
         return;
@@ -301,7 +304,7 @@ uint32_t last_frame=4294967295;
 
 
 CY_ISR(isr_sid) {
-    
+    clock_tick();
     if(qcw_reg){
         handle_qcw();
         return;
@@ -310,9 +313,9 @@ CY_ISR(isr_sid) {
     
     telemetry.midi_voices=0;
     
-    if (r < next_frame){
+    if (l_time > next_frame){
         if(xQueueReceiveFromISR(qSID,&sid_frm,0)){
-            last_frame=r;
+            last_frame=l_time;
             for(uint8_t i=0;i<SID_CHANNELS;i++){
                 channel[i].halfcount = sid_frm.half[i];
                 if(sid_frm.gate[i] > channel[i].old_gate) channel[i].adsr_state=ADSR_ATTACK;  //Rising edge
@@ -327,9 +330,9 @@ CY_ISR(isr_sid) {
            
         }
     }
-    if((last_frame-r)>64000){
-     next_frame = r;
-     last_frame = r;
+    if((l_time - last_frame)>200){
+     next_frame = l_time;
+     last_frame = l_time;
         for (uint8_t i = 0;i<SID_CHANNELS;++i) {
             channel[i].volume = 0;
             channel[i].adsr_state = ADSR_IDLE;
@@ -414,8 +417,8 @@ CY_ISR(isr_sid) {
 }
 
 
-
 CY_ISR(isr_sid_qcw) {
+    clock_tick();
     if(qcw_reg){
         handle_qcw();
         return;
@@ -425,9 +428,9 @@ CY_ISR(isr_sid_qcw) {
     
     telemetry.midi_voices=0;
     
-    if (r < next_frame){
+    if (l_time > next_frame){
         if(xQueueReceiveFromISR(qSID,&sid_frm,0)){
-            last_frame=r;
+            last_frame=l_time;
             for(uint8_t i=0;i<SID_CHANNELS;i++){
                 channel[i].halfcount = sid_frm.half[i];
                 if(sid_frm.gate[i] > channel[i].old_gate){
@@ -445,9 +448,9 @@ CY_ISR(isr_sid_qcw) {
            
         }
     }
-    if((last_frame-r)>64000){
-     next_frame = r;
-     last_frame = r;
+    if((l_time - last_frame)>200){
+     next_frame = l_time;
+     last_frame = l_time;
         for (uint8_t i = 0;i<SID_CHANNELS;++i) {
             channel[i].volume = 0;
             channel[i].adsr_state = ADSR_IDLE;

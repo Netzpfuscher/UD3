@@ -28,6 +28,7 @@
 #include "interrupter.h"
 #include "ntshell.h"
 #include "ntlibc.h"
+#include "clock.h"
 #include "telemetry.h"
 #include <project.h>
 #include <stdint.h>
@@ -908,7 +909,7 @@ uint8_t con_minstat(port_str *ptr){
         send_buffer((uint8_t*)buffer,ret,ptr);
         ret = snprintf(buffer, sizeof(buffer),"Remote Time           : %u\r\n",time.remote);
         send_buffer((uint8_t*)buffer,ret,ptr);
-        ret = snprintf(buffer, sizeof(buffer),"Local Time            : %u\r\n",SG_Timer_ReadCounter());
+        ret = snprintf(buffer, sizeof(buffer),"Local Time            : %u\r\n",l_time);
         send_buffer((uint8_t*)buffer,ret,ptr);
         ret = snprintf(buffer, sizeof(buffer),"Diff Time             : %i\r\n",time.diff);
         send_buffer((uint8_t*)buffer,ret,ptr);

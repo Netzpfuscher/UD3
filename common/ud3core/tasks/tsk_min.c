@@ -33,6 +33,7 @@
 #include "tsk_fault.h"
 #include "tsk_eth_common.h"
 #include "alarmevent.h"
+#include "clock.h"
 
 #include "helper/printf.h"
 
@@ -124,20 +125,19 @@ void min_tx_finished(uint8_t port){
 }
 void time_cb(uint32_t remote_time){
     time.remote = remote_time;
-    time.diff_raw = time.remote-SG_Timer_ReadCounter();
+    time.diff_raw = time.remote-l_time;
     time.diff = average(&sample,time.diff_raw);
-    if(param.synth == SYNTH_MIDI || param.synth == SYNTH_MIDI_QCW) return;
-    if(time.diff>5000 ||time.diff<-5000){
-        SG_Timer_WriteCounter(time.remote);
+    if(time.diff>1000 ||time.diff<-1000){
+        clock_set(time.remote);
         time.resync++;   
-        SG_Trim_WritePeriod(199);
-    }else if(time.diff>100){
-        SG_Trim_WritePeriod(200);
-    }else if(time.diff<-100){
-        SG_Trim_WritePeriod(198);
+        clock_reset_inc();
+    }else if(time.diff>10){
+        clock_trim(-512);
+    }else if(time.diff<-10){
+        clock_trim(512);
     }else{
-        SG_Trim_WritePeriod(199); 
-    }    
+        clock_reset_inc(); 
+    }   
 }
 
 uint8_t flow_ctl=1;
@@ -214,20 +214,7 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
 			        time.remote |= ((uint32_t)min_payload[1]<<16);
 			        time.remote |= ((uint32_t)min_payload[2]<<8);
 			        time.remote |= (uint32_t)min_payload[3];
-                    time.diff_raw = time.remote-SG_Timer_ReadCounter();
-                    time.diff = average(&sample,time.diff_raw);
-                    if(param.synth == SYNTH_MIDI || param.synth == SYNTH_MIDI_QCW) return;
-                    if(time.diff>5000 ||time.diff<-5000){
-                        SG_Timer_WriteCounter(time.remote);
-                        time.resync++;   
-                        SG_Trim_WritePeriod(199);
-                    }else if(time.diff>100){
-                        SG_Trim_WritePeriod(200);
-                    }else if(time.diff<-100){
-                        SG_Trim_WritePeriod(198);
-                    }else{
-                        SG_Trim_WritePeriod(199); 
-                    }
+                    time_cb(time.remote);
                 }
                 WD_reset();
             break;

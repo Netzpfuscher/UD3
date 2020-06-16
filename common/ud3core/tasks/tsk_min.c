@@ -130,13 +130,9 @@ void time_cb(uint32_t remote_time){
     if(time.diff>1000 ||time.diff<-1000){
         clock_set(time.remote);
         time.resync++;   
-        clock_reset_inc();
-    }else if(time.diff>10){
-        clock_trim(-512);
-    }else if(time.diff<-10){
-        clock_trim(512);
+        //clock_reset_inc();
     }else{
-        clock_reset_inc(); 
+        clock_trim(time.diff);
     }   
 }
 

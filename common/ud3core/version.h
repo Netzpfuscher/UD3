@@ -27,12 +27,9 @@
 
 static const char* version[]= {
     "protocol=2.0",
-    "sid_support=1",
-    "qcw_midi=1",
-    "qcw_sid=1",
     "build_time="__DATE__";"__TIME__,
-    "time_format=1ms;++",
-    "NULL"
+    "timebase=1000",
+    "time_count=up"
 };
     
    

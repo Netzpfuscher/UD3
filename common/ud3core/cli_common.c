@@ -1617,13 +1617,16 @@ uint8_t command_tterm(char *commandline, port_str *ptr){
         ptr->term_mode = PORT_TERM_TT;
         init_tt(pdTRUE,ptr);
         return 1;
-
     }
     if (ntlibc_stricmp(commandline, "mqtt") == 0) {
         ptr->term_mode = PORT_TERM_MQTT;
         init_tt(pdFALSE,ptr);
         return 1;
-
+    }
+	if (ntlibc_stricmp(commandline, "notelemetry") == 0) {
+        ptr->term_mode = PORT_TERM_TT;
+        stop_overlay_task(ptr);
+        return 1;
     }
 	if (ntlibc_stricmp(commandline, "stop") == 0) {
         ptr->term_mode = PORT_TERM_VT100;
@@ -1631,7 +1634,7 @@ uint8_t command_tterm(char *commandline, port_str *ptr){
         return 1;
 	} 
     
-    HELP_TEXT("Usage: tterm [start|stop|mqtt]\r\n");
+    HELP_TEXT("Usage: tterm [start|stop|mqtt|notelemetry]\r\n");
 }
 
 /*****************************************************************************

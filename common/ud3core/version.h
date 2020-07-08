@@ -29,7 +29,8 @@ static const char* version[]= {
     "protocol=2.0",
     "build_time="__DATE__";"__TIME__,
     "timebase=1000",
-    "time_count=up"
+    "time_count=up",
+    "notelemetry_supported=1"
 };
     
    

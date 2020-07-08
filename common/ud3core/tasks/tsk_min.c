@@ -33,6 +33,8 @@
 #include "tsk_fault.h"
 #include "tsk_eth_common.h"
 #include "alarmevent.h"
+#include "clock.h"
+#include "version.h"
 
 #include "helper/printf.h"
 
@@ -124,20 +126,15 @@ void min_tx_finished(uint8_t port){
 }
 void time_cb(uint32_t remote_time){
     time.remote = remote_time;
-    time.diff_raw = time.remote-SG_Timer_ReadCounter();
+    time.diff_raw = time.remote-l_time;
     time.diff = average(&sample,time.diff_raw);
-    if(param.synth == SYNTH_MIDI || param.synth == SYNTH_MIDI_QCW) return;
-    if(time.diff>5000 ||time.diff<-5000){
-        SG_Timer_WriteCounter(time.remote);
+    if(time.diff>1000 ||time.diff<-1000){
+        clock_set(time.remote);
         time.resync++;   
-        SG_Trim_WritePeriod(199);
-    }else if(time.diff>100){
-        SG_Trim_WritePeriod(200);
-    }else if(time.diff<-100){
-        SG_Trim_WritePeriod(198);
+        //clock_reset_inc();
     }else{
-        SG_Trim_WritePeriod(199); 
-    }    
+        clock_trim(time.diff);
+    }   
 }
 
 uint8_t flow_ctl=1;
@@ -179,7 +176,7 @@ void send_command(struct min_context *ctx, uint8_t cmd, char *str){
     memcpy(&buf[1],str,len);
     min_queue_frame(ctx,MIN_ID_COMMAND,buf,len+1);
 }
-
+uint8_t transmit_features=0;
 
 void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_payload, uint8_t port)
 {
@@ -214,20 +211,7 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
 			        time.remote |= ((uint32_t)min_payload[1]<<16);
 			        time.remote |= ((uint32_t)min_payload[2]<<8);
 			        time.remote |= (uint32_t)min_payload[3];
-                    time.diff_raw = time.remote-SG_Timer_ReadCounter();
-                    time.diff = average(&sample,time.diff_raw);
-                    if(param.synth == SYNTH_MIDI || param.synth == SYNTH_MIDI_QCW) return;
-                    if(time.diff>5000 ||time.diff<-5000){
-                        SG_Timer_WriteCounter(time.remote);
-                        time.resync++;   
-                        SG_Trim_WritePeriod(199);
-                    }else if(time.diff>100){
-                        SG_Trim_WritePeriod(200);
-                    }else if(time.diff<-100){
-                        SG_Trim_WritePeriod(198);
-                    }else{
-                        SG_Trim_WritePeriod(199); 
-                    }
+                    time_cb(time.remote);
                 }
                 WD_reset();
             break;
@@ -238,6 +222,9 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
             if(socket_info[*min_payload].socket==SOCKET_CONNECTED){
                 command_cls("",&min_port[*min_payload]);
                 send_string(":>", &min_port[*min_payload]);
+                if(!transmit_features){
+                    transmit_features=sizeof(version)/sizeof(char*);
+                }
             }else{
                 min_port[*min_payload].term_mode = PORT_TERM_VT100;    
                 stop_overlay_task(&min_port[*min_payload]);   
@@ -344,6 +331,12 @@ void tsk_min_TaskProc(void *pvParameters) {
 	for (;;) {
 
         bytes_waiting=UART_GetRxBufferSize();
+        
+        if(transmit_features){
+            uint8_t temp=(sizeof(version)/sizeof(char*))-transmit_features;
+            min_queue_frame(&min_ctx, MIN_ID_FEATURE, (uint8_t*)version[temp],strlen(version[temp]));  
+            transmit_features--;
+        }
         
         for(i=0;i<NUM_MIN_CON;i++){
         

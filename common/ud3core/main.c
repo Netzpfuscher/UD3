@@ -60,7 +60,6 @@ int main() {
 	init_config();
     EEPROM_1_Start();
     Mantmr_Start();
-    SG_Trim_Start();
 	SG_Timer_Start();
     
     null_port.type = PORT_TYPE_NULL;

@@ -8,6 +8,7 @@
 #define MIN_ID_COMMAND  12
 #define MIN_ID_SOCKET   13
 #define MIN_ID_SYNTH    14
+#define MIN_ID_FEATURE  15
       
 #define SYNTH_CMD_FLUSH     1
 #define SYNTH_CMD_SID       2

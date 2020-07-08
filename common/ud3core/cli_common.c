@@ -28,6 +28,8 @@
 #include "interrupter.h"
 #include "ntshell.h"
 #include "ntlibc.h"
+#include "clock.h"
+#include "hardware.h"
 #include "telemetry.h"
 #include <project.h>
 #include <stdint.h>
@@ -49,6 +51,7 @@
 #include "helper/teslaterm.h"
 #include "math.h"
 #include "alarmevent.h"
+#include "version.h"
 
 #define UNUSED_VARIABLE(N) \
 	do {                   \
@@ -85,6 +88,7 @@ uint8_t command_alarms(char *commandline, port_str *ptr);
 uint8_t command_relay(char *commandline, port_str *ptr);
 uint8_t command_con(char *commandline, port_str *ptr);
 uint8_t command_calib(char *commandline, port_str *ptr);
+uint8_t command_features(char *commandline, port_str *ptr);
 
 uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, port_str *ptr);
@@ -275,6 +279,7 @@ command_entry commands[] = {
     ADD_COMMAND("relay"         ,command_relay          ,"Switch user relay 3/4")
     ADD_COMMAND("con"	        ,command_con            ,"Prints the connections")
     ADD_COMMAND("calib"	        ,command_calib          ,"Calibrate Vdriver")
+    ADD_COMMAND("features"	    ,command_features       ,"Get supported features")
 };
 
 
@@ -908,7 +913,7 @@ uint8_t con_minstat(port_str *ptr){
         send_buffer((uint8_t*)buffer,ret,ptr);
         ret = snprintf(buffer, sizeof(buffer),"Remote Time           : %u\r\n",time.remote);
         send_buffer((uint8_t*)buffer,ret,ptr);
-        ret = snprintf(buffer, sizeof(buffer),"Local Time            : %u\r\n",SG_Timer_ReadCounter());
+        ret = snprintf(buffer, sizeof(buffer),"Local Time            : %u\r\n",l_time);
         send_buffer((uint8_t*)buffer,ret,ptr);
         ret = snprintf(buffer, sizeof(buffer),"Diff Time             : %i\r\n",time.diff);
         send_buffer((uint8_t*)buffer,ret,ptr);
@@ -983,6 +988,16 @@ uint8_t command_calib(char *commandline, port_str *ptr){
 }
 
 /*****************************************************************************
+* Sends the features to teslaterm
+******************************************************************************/
+uint8_t command_features(char *commandline, port_str *ptr){
+	for (uint8_t i = 0; i < sizeof(version)/sizeof(char*); i++) {
+       send_features(version[i],ptr); 
+    }
+    return 1; 
+}
+
+/*****************************************************************************
 * Sends the configuration to teslaterm
 ******************************************************************************/
 uint8_t command_config_get(char *commandline, port_str *ptr){
@@ -1001,7 +1016,9 @@ uint8_t command_config_get(char *commandline, port_str *ptr){
 * Kicks the controller into the bootloader
 ******************************************************************************/
 uint8_t command_bootloader(char *commandline, port_str *ptr) {
-	Bootloadable_Load();
+#if USE_BOOTLOADER
+    Bootloadable_Load();
+#endif
 	return 1;
 }
 
@@ -1070,7 +1087,6 @@ uint8_t command_qcw(char *commandline, port_str *ptr) {
             if(xQCW_Timer==NULL){
                 xQCW_Timer = xTimerCreate("QCW-Tmr", param.qcw_repeat / portTICK_PERIOD_MS, pdFALSE,(void * ) 0, vQCW_Timer_Callback);
                 if(xQCW_Timer != NULL){
-                    QCW_duty_limiter_Start();
                     xTimerStart(xQCW_Timer, 0);
                     SEND_CONST_STRING("QCW Enabled\r\n", ptr);
                 }else{
@@ -1078,7 +1094,6 @@ uint8_t command_qcw(char *commandline, port_str *ptr) {
                 }
             }
         }else{
-            QCW_duty_limiter_Start();
 		    qcw_start();
             SEND_CONST_STRING("QCW single shot\r\n", ptr);
         }

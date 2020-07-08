@@ -27,6 +27,7 @@
 
 #include "tsk_midi.h"
 #include "tsk_fault.h"
+#include "clock.h"
 
 xTaskHandle tsk_midi_TaskHandle;
 uint8 tsk_midi_initVar = 0u;
@@ -178,14 +179,6 @@ xQueueHandle qSID;
 xQueueHandle qPulse;
 struct sid_f sid_frm;
 
-void handle_qcw(){
-	if (ramp.modulation_value < 255) {
-		ramp.modulation_value += param.qcw_ramp;
-		if (ramp.modulation_value > 255)
-			ramp.modulation_value = 255;
-        qcw_modulate(ramp.modulation_value);
-	}
-}
 
 uint8_t old_flag[N_CHANNEL];
 
@@ -198,7 +191,7 @@ uint8_t old_flag[N_CHANNEL];
 
 static const uint8_t envelope[16] = {0,0,1,2,3,4,5,6,8,20,41,67,83,251,255,255};
 
-void compute_adsr(uint8_t ch){
+static inline void compute_adsr_midi(uint8_t ch){
 	switch (channel[ch].adsr_state){
         case ADSR_ATTACK:
             if(channel[ch].adsr_count>=midich[channel[ch].midich].attack){
@@ -239,18 +232,54 @@ void compute_adsr(uint8_t ch){
     }
 }
 
-CY_ISR(isr_midi) {
-    if(qcw_reg){
-        handle_qcw();
-        return;
-    }
+static inline void compute_adsr_sid(uint8_t ch){
+    switch (channel[ch].adsr_state){
+            case ADSR_ATTACK:
+                if(channel[ch].adsr_count>=envelope[sid_frm.attack[ch]]){
+                    channel[ch].volume++;
+                    if(channel[ch].volume>=127){
+                        channel[ch].volume=127;
+                        channel[ch].adsr_state=ADSR_DECAY;
+                    }
+                    channel[ch].adsr_count=0;
+                }else{
+                    channel[ch].adsr_count++;
+                }
+            break;
+            case ADSR_DECAY:
+                if(channel[ch].adsr_count>=envelope[sid_frm.decay[ch]]){
+                    channel[ch].volume--;
+                    if(channel[ch].volume<=sid_frm.sustain[ch]) channel[ch].adsr_state=ADSR_SUSTAIN;
+                    channel[ch].adsr_count=0;
+                }else{
+                    channel[ch].adsr_count++;
+                }
+            break;
+            case ADSR_SUSTAIN:
+                channel[ch].volume = sid_frm.sustain[ch];
+            break;
+            case ADSR_RELEASE:
+                if(channel[ch].adsr_count>=envelope[sid_frm.release[ch]]){
+                    channel[ch].volume--;
+                    if(channel[ch].volume==0 || channel[ch].volume>127) {
+                        channel[ch].volume=0;
+                        channel[ch].adsr_state=ADSR_IDLE;
+                    }
+                    channel[ch].adsr_count=0;
+                }else{
+                    channel[ch].adsr_count++;
+                }
+            break;
+        }
+}
+
+static inline void synthcode_MIDI(uint32_t r){
     PULSE pulse;
 	uint8_t flag[N_CHANNEL];
-	uint32 r = SG_Timer_ReadCounter();
     telemetry.midi_voices=0;
 	for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
 
-        compute_adsr(ch);
+        compute_adsr_midi(ch);
         
         flag[ch] = 0;
 		if (channel[ch].volume > 0) {
@@ -273,53 +302,19 @@ CY_ISR(isr_midi) {
 
     if(xQueueReceiveFromISR(qPulse,&pulse,0)){
         interrupter_oneshot(pulse.pw, pulse.volume);
-    }
-
-}
-
-CY_ISR(isr_midi_qcw) {
-    if(qcw_reg){
-        handle_qcw();
-        return;
-    }
-	uint32 r = SG_Timer_ReadCounter();
-    int16_t vol=0;
-    telemetry.midi_voices=0;
-	for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
-
-        compute_adsr(ch);
-
-		if (channel[ch].volume > 0) {
-            telemetry.midi_voices++;
-			if ((r / channel[ch].halfcount) % 2 > 0) {
-                vol +=channel[ch].volume;
-			}else{
-                vol -=channel[ch].volume;
-            }
-		}
-	}
-    if(vol>127)vol=127;
-    if(vol<-128)vol=-128;
-    qcw_modulate(vol+0x80);
+    }  
 }
 
 uint32_t volatile next_frame=4294967295;
 uint32_t last_frame=4294967295;
 
-
-CY_ISR(isr_sid) {
-    
-    if(qcw_reg){
-        handle_qcw();
-        return;
-    }
-    uint32 r = SG_Timer_ReadCounter();
-    
+static inline void synthcode_SID(uint32_t r){
+  
     telemetry.midi_voices=0;
     
-    if (r < next_frame){
+    if (l_time > next_frame){
         if(xQueueReceiveFromISR(qSID,&sid_frm,0)){
-            last_frame=r;
+            last_frame=l_time;
             for(uint8_t i=0;i<SID_CHANNELS;i++){
                 channel[i].halfcount = sid_frm.half[i];
                 if(sid_frm.gate[i] > channel[i].old_gate) channel[i].adsr_state=ADSR_ATTACK;  //Rising edge
@@ -330,13 +325,11 @@ CY_ISR(isr_sid) {
                 channel[i].freq = sid_frm.freq[i];
             }
             next_frame = sid_frm.next_frame;
-        }else{
-           
         }
     }
-    if((last_frame-r)>64000){
-     next_frame = r;
-     last_frame = r;
+    if((l_time - last_frame)>200){
+     next_frame = l_time;
+     last_frame = l_time;
         for (uint8_t i = 0;i<SID_CHANNELS;++i) {
             channel[i].volume = 0;
             channel[i].adsr_state = ADSR_IDLE;
@@ -344,52 +337,13 @@ CY_ISR(isr_sid) {
         }   
     }
         
-    
     uint8_t random = rand();
 
     PULSE pulse;
 	uint8_t flag[SID_CHANNELS];
-	
+
 	for (uint8_t ch = 0; ch < SID_CHANNELS; ch++) {
-        switch (channel[ch].adsr_state){
-            case ADSR_ATTACK:
-                if(channel[ch].adsr_count>=envelope[sid_frm.attack[ch]]){
-                    channel[ch].volume++;
-                    if(channel[ch].volume>=127){
-                        channel[ch].volume=127;
-                        channel[ch].adsr_state=ADSR_DECAY;
-                    }
-                    channel[ch].adsr_count=0;
-                }else{
-                    channel[ch].adsr_count++;
-                }
-            break;
-            case ADSR_DECAY:
-                if(channel[ch].adsr_count>=envelope[sid_frm.decay[ch]]){
-                    channel[ch].volume--;
-                    if(channel[ch].volume<=sid_frm.sustain[ch]) channel[ch].adsr_state=ADSR_SUSTAIN;
-                    channel[ch].adsr_count=0;
-                }else{
-                    channel[ch].adsr_count++;
-                }
-            break;
-            case ADSR_SUSTAIN:
-                channel[ch].volume = sid_frm.sustain[ch];
-            break;
-            case ADSR_RELEASE:
-                if(channel[ch].adsr_count>=envelope[sid_frm.release[ch]]){
-                    channel[ch].volume--;
-                    if(channel[ch].volume==0 || channel[ch].volume>127) {
-                        channel[ch].volume=0;
-                        channel[ch].adsr_state=ADSR_IDLE;
-                    }
-                    channel[ch].adsr_count=0;
-                }else{
-                    channel[ch].adsr_count++;
-                }
-            break;
-        }
-        
+        compute_adsr_sid(ch);
 
 		flag[ch] = 0;
 		if (channel[ch].volume > 0) {
@@ -408,32 +362,44 @@ CY_ISR(isr_sid) {
                 xQueueSendFromISR(qPulse,&pulse,0);
             }
 		}   
-		old_flag[ch] = flag[ch];
-   
-        
+		old_flag[ch] = flag[ch];   
 	}
 
     if(xQueueReceiveFromISR(qPulse,&pulse,0)){
         interrupter_oneshot(pulse.pw, pulse.volume);
-    }
- 
-   
+    } 
 }
 
+static inline void synthcode_QMIDI(uint32_t r){
+    handle_qcw_synth();
+    int16_t vol=0;
+    telemetry.midi_voices=0;
+	for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
 
+        compute_adsr_midi(ch);
 
-CY_ISR(isr_sid_qcw) {
-    if(qcw_reg){
-        handle_qcw();
-        return;
-    }
-    uint32 r = SG_Timer_ReadCounter();
+		if (channel[ch].volume > 0) {
+            telemetry.midi_voices++;
+			if ((r / channel[ch].halfcount) % 2 > 0) {
+                vol +=channel[ch].volume;
+			}else{
+                vol -=channel[ch].volume;
+            }
+		}
+	}
+    if(vol>127)vol=127;
+    if(vol<-128)vol=-128;
+    qcw_modulate(vol+0x80);  
+}
+
+static inline void synthcode_QSID(uint32_t r){
+    handle_qcw_synth();
     
     telemetry.midi_voices=0;
     
-    if (r < next_frame){
+    if (l_time > next_frame){
         if(xQueueReceiveFromISR(qSID,&sid_frm,0)){
-            last_frame=r;
+            last_frame=l_time;
             for(uint8_t i=0;i<SID_CHANNELS;i++){
                 channel[i].halfcount = sid_frm.half[i];
                 if(sid_frm.gate[i] > channel[i].old_gate){
@@ -447,13 +413,11 @@ CY_ISR(isr_sid_qcw) {
                 channel[i].freq = sid_frm.freq[i];
             }
             next_frame = sid_frm.next_frame;
-        }else{
-           
         }
     }
-    if((last_frame-r)>64000){
-     next_frame = r;
-     last_frame = r;
+    if((l_time - last_frame)>200){
+     next_frame = l_time;
+     last_frame = l_time;
         for (uint8_t i = 0;i<SID_CHANNELS;++i) {
             channel[i].volume = 0;
             channel[i].adsr_state = ADSR_IDLE;
@@ -467,45 +431,7 @@ CY_ISR(isr_sid_qcw) {
     int16_t vol=0;
 	
 	for (uint8_t ch = 0; ch < SID_CHANNELS; ch++) {
-        switch (channel[ch].adsr_state){
-            case ADSR_ATTACK:
-                if(channel[ch].adsr_count>=envelope[sid_frm.attack[ch]]){
-                    channel[ch].volume++;
-                    if(channel[ch].volume>=127){
-                        channel[ch].volume=127;
-                        channel[ch].adsr_state=ADSR_DECAY;
-                    }
-                    channel[ch].adsr_count=0;
-                }else{
-                    channel[ch].adsr_count++;
-                }
-            break;
-            case ADSR_DECAY:
-                if(channel[ch].adsr_count>=envelope[sid_frm.decay[ch]]){
-                    channel[ch].volume--;
-                    if(channel[ch].volume<=sid_frm.sustain[ch]) channel[ch].adsr_state=ADSR_SUSTAIN;
-                    channel[ch].adsr_count=0;
-                }else{
-                    channel[ch].adsr_count++;
-                }
-            break;
-            case ADSR_SUSTAIN:
-                channel[ch].volume = sid_frm.sustain[ch];
-            break;
-            case ADSR_RELEASE:
-                if(channel[ch].adsr_count>=envelope[sid_frm.release[ch]]){
-                    channel[ch].volume--;
-                    if(channel[ch].volume==0 || channel[ch].volume>127) {
-                        channel[ch].volume=0;
-                        channel[ch].adsr_state=ADSR_IDLE;
-                    }
-                    channel[ch].adsr_count=0;
-                }else{
-                    channel[ch].adsr_count++;
-                }
-            break;
-        }
-        
+        compute_adsr_sid(ch);
 
 		if (channel[ch].volume > 0) {
             telemetry.midi_voices++;
@@ -525,9 +451,36 @@ CY_ISR(isr_sid_qcw) {
     vol/=3;
     if(vol>127)vol=127;
     if(vol<-128)vol=-128;
-    //DEBUG_DAC_SetValue(vol+0x80);
-    qcw_modulate(vol+0x80);
+    qcw_modulate(vol+0x80);    
 }
+
+
+
+CY_ISR(isr_synth) {
+    uint32 r = SG_Timer_ReadCounter();
+    clock_tick();
+    if(qcw_reg){
+        handle_qcw();
+        return;
+    }
+    switch(param.synth){
+        case SYNTH_MIDI:
+            synthcode_MIDI(r);
+            break;
+        case SYNTH_SID:
+            synthcode_SID(r);
+            break;
+        case SYNTH_MIDI_QCW:
+            synthcode_QMIDI(r);
+            break;
+        case SYNTH_SID_QCW:
+            synthcode_QSID(r);
+            break;
+        default:
+            break;
+    }
+}
+
 
 CY_ISR(isr_interrupter) {
     PULSE pulse;
@@ -792,32 +745,9 @@ void kill_accu(){
 void switch_synth(uint8_t synth){
     skip_flag=0;
     telemetry.midi_voices=0;
-    isr_midi_Stop();
     xQueueReset(qMIDI_rx);
     xQueueReset(qSID);
-    kill_accu();
-    switch(synth){
-        case SYNTH_OFF:
-            //Nothing to do
-        break;
-        case SYNTH_MIDI:
-            QCW_duty_limiter_Stop();
-            isr_midi_StartEx(isr_midi);
-        break;
-        case SYNTH_SID:
-            QCW_duty_limiter_Stop();
-            isr_midi_StartEx(isr_sid);
-        break;
-        case SYNTH_MIDI_QCW:
-            QCW_duty_limiter_Start();
-            isr_midi_StartEx(isr_midi_qcw);
-        break;
-        case SYNTH_SID_QCW:
-            QCW_duty_limiter_Start();
-            isr_midi_StartEx(isr_sid_qcw);
-        break;
-    }
-    
+    kill_accu();   
 }
 
 uint8_t command_SynthMon(char *commandline, port_str *ptr){
@@ -904,7 +834,7 @@ void tsk_midi_TaskProc(void *pvParameters) {
 	// Sound source relation module initialization
 
 
-	isr_midi_StartEx(isr_midi);
+	isr_midi_StartEx(isr_synth);
     //isr_midi_StartEx(isr_sid);
     
 	isr_interrupter_StartEx(isr_interrupter);

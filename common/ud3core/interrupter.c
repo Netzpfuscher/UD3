@@ -34,22 +34,32 @@ uint16 int1_prd, int1_cmp;
 
 uint8_t tr_running = 0;
 
-volatile uint8 qcw_dl_ovf_counter;
-
 uint8_t blocked=0; 
 
 
-CY_ISR(qcw_end_ISR) {
-	if (qcw_reg) {
-		qcw_reg = 0;
+void handle_qcw(){
+    if(SG_Timer_ReadCounter() < timer.time_stop){
+        qcw_reg = 0;
 		ramp.modulation_value = 0;
+        QCW_enable_Control = 0;
+        return;
+    }
+    
+    if (ramp.modulation_value < 255) {
+		ramp.modulation_value += param.qcw_ramp;
+		if (ramp.modulation_value > 255)
+			ramp.modulation_value = 255;
+        qcw_modulate(ramp.modulation_value);
 	}
-	QCW_enable_Control = 0;
 }
 
-CY_ISR(qcw_dl_ovf_ISR) {
-	qcw_dl_ovf_counter++;
+void handle_qcw_synth(){
+    if(SG_Timer_ReadCounter() < timer.time_stop){
+        QCW_enable_Control = 0;
+        return;
+    }
 }
+
 
 //CY_ISR(OCD_ISR)
 //{
@@ -82,18 +92,12 @@ void initialize_interrupter(void) {
 	interrupter1_WriteCompare2(65000);
 	interrupter1_WriteCompare1(64999);
 
-	QCW_duty_limiter_WritePeriod(65535);
-	QCW_duty_limiter_WriteCompare(65535 - configuration.max_qcw_pw); //this register sets the max PW output
-
 	int1_prd = 65000;
 	int1_cmp = 64999;
 	ramp.modulation_value = 0;
 
 	//Start up timers
 	interrupter1_Start();
-
-	qcw_dl_ovf_StartEx(qcw_dl_ovf_ISR);
-	qcw_end_StartEx(qcw_end_ISR);
 
 	params.min_tr_prd = INTERRUPTER_CLK_FREQ / configuration.max_tr_prf;
 
@@ -119,20 +123,20 @@ void initialize_interrupter(void) {
 }
 
 void qcw_start(){
-    //before starting the QCW pulse, capture the previous QCW period from the QCW_duty_limiter PWM, then calculate the permissible PW for that PWM
-	if (qcw_dl_ovf_counter)
-		ramp.qcw_recorded_prd = 65535; //if there was an overflow of this PWM, then the period is > 655mS, so clamp it there
-	else
-		ramp.qcw_recorded_prd = 65535 - QCW_duty_limiter_ReadCounter(); //else, look at the counter to see where we are at since last pulse
-	qcw_dl_ovf_counter = 0;
-	ramp.qcw_limiter_pw = (ramp.qcw_recorded_prd * configuration.max_qcw_duty) / 500;
-	if ((ramp.qcw_limiter_pw > configuration.max_qcw_pw) || (ramp.qcw_limiter_pw == 0)) {
-		ramp.qcw_limiter_pw = configuration.max_qcw_pw;
+    timer.time_start = SG_Timer_ReadCounter();
+    uint32_t sg_period = 3125; //ns
+    uint32_t cycles_to_stop = (configuration.max_qcw_pw*10000)/sg_period;
+    uint32_t cycles_since_last_pulse = timer.time_stop-timer.time_start;
+    
+    uint32_t cycles_to_stop_limited = (cycles_since_last_pulse * configuration.max_qcw_duty) / 500;
+	if ((cycles_to_stop_limited > cycles_to_stop) || (cycles_to_stop_limited == 0)) {
+		cycles_to_stop_limited = cycles_to_stop;
 	}
+
+    timer.time_stop = timer.time_start - cycles_to_stop_limited;
+    
 	//the next stuff is time sensitive, so disable interrupts to avoid glitches
 	CyGlobalIntDisable;
-	QCW_duty_limiter_WriteCounter(65535);						//restart counter at top value
-	QCW_duty_limiter_WriteCompare(65535 - ramp.qcw_limiter_pw); //put in limiting compare match value
 	//now enable the QCW interrupter
 	QCW_enable_Control = 1;
 	params.pwmb_psb_val = params.pwm_top - params.pwmb_start_psb_val;
@@ -155,7 +159,6 @@ void qcw_modulate(uint16_t val){
 
 void qcw_stop(){
     qcw_reg = 0;
-    QCW_duty_limiter_Stop();
 #if USE_DEBUG_DAC 
     DEBUG_DAC_SetValue(0);
 #endif

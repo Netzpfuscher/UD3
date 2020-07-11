@@ -177,7 +177,8 @@ void interrupter_oneshot(uint16_t pw, uint8_t vol) {
 	if (pw > configuration.max_tr_pw) {
 		pw = configuration.max_tr_pw;
 	}
-	prd = 60000;
+	//prd = 60000;
+    prd = param.offtime + pw;
 	/* Update Interrupter PWMs with new period/pw */
 	CyGlobalIntDisable;
 	int1_prd = prd - 3;

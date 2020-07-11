@@ -190,6 +190,7 @@ uint8_t old_flag[N_CHANNEL];
 
 
 static const uint8_t envelope[16] = {0,0,1,2,3,4,5,6,8,20,41,67,83,251,255,255};
+volatile uint8_t pulse_active=pdFALSE;
 
 static inline void compute_adsr_midi(uint8_t ch){
 	switch (channel[ch].adsr_state){
@@ -299,10 +300,11 @@ static inline void synthcode_MIDI(uint32_t r){
 		old_flag[ch] = flag[ch];
    
 	}
-
-    if(xQueueReceiveFromISR(qPulse,&pulse,0)){
-        interrupter_oneshot(pulse.pw, pulse.volume);
-    }  
+    if(itr_end_Read()==0){
+        if(xQueueReceiveFromISR(qPulse,&pulse,0)){
+            interrupter_oneshot(pulse.pw, pulse.volume);
+        }  
+    }
 }
 
 uint32_t volatile next_frame=4294967295;
@@ -364,10 +366,12 @@ static inline void synthcode_SID(uint32_t r){
 		}   
 		old_flag[ch] = flag[ch];   
 	}
-
-    if(xQueueReceiveFromISR(qPulse,&pulse,0)){
-        interrupter_oneshot(pulse.pw, pulse.volume);
-    } 
+    if(itr_end_Read()==0){
+        if(xQueueReceiveFromISR(qPulse,&pulse,0)){
+            pulse_active=pdTRUE;
+            interrupter_oneshot(pulse.pw, pulse.volume);
+        } 
+    }
 }
 
 static inline void synthcode_QMIDI(uint32_t r){
@@ -482,12 +486,11 @@ CY_ISR(isr_synth) {
 }
 
 
-CY_ISR(isr_interrupter) {
+CY_ISR(isr_interrupter) { 
     PULSE pulse;
     if(xQueueReceiveFromISR(qPulse,&pulse,0)){
         interrupter_oneshot(pulse.pw, pulse.volume);
     }
-	Offtime_ReadStatusRegister();
 }
 
 void USBMIDI_1_callbackLocalMidiEvent(uint8 cable, uint8 *midiMsg) {
@@ -838,6 +841,7 @@ void tsk_midi_TaskProc(void *pvParameters) {
     //isr_midi_StartEx(isr_sid);
     
 	isr_interrupter_StartEx(isr_interrupter);
+    isr_interrupter_Enable();
 
 	/* `#END` */
     alarm_push(ALM_PRIO_INFO,warn_task_midi, ALM_NO_VALUE);

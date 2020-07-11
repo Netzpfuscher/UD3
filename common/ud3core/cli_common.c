@@ -199,7 +199,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"tune_end"        , param.tune_end                , 5      ,5000   ,10     ,callback_TuneFunction       ,"End frequency [kHz]")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"tune_pw"         , param.tune_pw                 , 0      ,800    ,0      ,NULL                        ,"Tune pulsewidth")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"tune_delay"      , param.tune_delay              , 1      ,200    ,0      ,NULL                        ,"Tune delay")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"offtime"         , param.offtime                 , 2      ,250    ,0      ,callback_OfftimeFunction    ,"Offtime for MIDI")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"offtime"         , param.offtime                 , 2      ,250    ,0      ,NULL                        ,"Offtime for MIDI")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_ramp"        , param.qcw_ramp                , 1      ,10     ,0      ,NULL                        ,"QCW Ramp Inc/93us")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_repeat"      , param.qcw_repeat              , 0      ,1000   ,0      ,NULL                        ,"QCW pulse repeat time [ms] <100=single shot")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"transpose"       , param.transpose               , -48    ,48     ,0      ,NULL                        ,"Transpose MIDI")
@@ -288,7 +288,6 @@ void eeprom_load(port_str *ptr){
     i2t_set_limit(configuration.max_const_i,configuration.max_fault_i,10000);
     update_ivo_uart();
     update_visibilty();
-    
     uart_baudrate(configuration.baudrate);
     spi_speed(configuration.spi_speed);
     callback_synthFilter(NULL,0, ptr);
@@ -487,13 +486,6 @@ uint8_t callback_VisibleFunction(parameter_entry * params, uint8_t index, port_s
     return 1;
 }
 
-/*****************************************************************************
-* Callback if the offtime parameter is changed
-******************************************************************************/
-uint8_t callback_OfftimeFunction(parameter_entry * params, uint8_t index, port_str *ptr){
-    Offtime_WritePeriod(param.offtime);
-    return 1;
-}
 
 /*****************************************************************************
 * Callback if the maximum current is changed
@@ -1031,6 +1023,7 @@ uint8_t command_tr(char *commandline, port_str *ptr) {
     CHECK_NULL(commandline);
     
 	if (ntlibc_stricmp(commandline, "start") == 0) {
+        isr_interrupter_Disable();
         interrupter.pw = param.pw;
 		interrupter.prd = param.pwd;
         update_interrupter();
@@ -1044,7 +1037,7 @@ uint8_t command_tr(char *commandline, port_str *ptr) {
         return 0;
 	}
 	if (ntlibc_stricmp(commandline, "stop") == 0) {
-        
+        isr_interrupter_Enable();
         if (xBurst_Timer != NULL) {
 			if(xTimerDelete(xBurst_Timer, 100 / portTICK_PERIOD_MS) != pdFALSE){
 			    xBurst_Timer = NULL;

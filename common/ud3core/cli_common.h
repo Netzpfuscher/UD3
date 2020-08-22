@@ -101,7 +101,10 @@ struct parameter_struct{
     uint16_t    tune_pw;
     uint16_t    tune_delay;
     uint16_t    offtime;
-    uint8_t     qcw_ramp;
+    uint16_t    qcw_ramp;
+    uint8_t     qcw_holdoff;
+    uint8_t     qcw_offset;
+    uint8_t     qcw_max;
     uint16_t    qcw_repeat;
     uint16_t    burst_on;
     uint16_t    burst_off;

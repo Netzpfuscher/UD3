@@ -145,9 +145,6 @@ void configure_ZCD_to_PWM(void) {
 	PWMB_WriteCompare(params.pwmb_start_cmp);
 	//initialize FB Capture period to account for 10 count offset in timing due to reset delay.
 	FB_capture_WritePeriod(params.pwm_top - 10);
-	//i think that initializing these might fix a bug that QCW mode always seems to miss the first pulse when the UD3
-	//is first started.
-	ramp.modulation_value = 0;
 
 	//prime the feedback filter with fake values so that the first time we use it, its not absolutely garbage
 	for (uint8_t z = 0; z < 5; z++) {

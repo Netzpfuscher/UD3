@@ -46,6 +46,7 @@ uint8 tsk_midi_initVar = 0u;
 #include "tsk_priority.h"
 #include "telemetry.h"
 #include "alarmevent.h"
+#include "qcw.h"
 #include "helper/printf.h"
 #include <device.h>
 #include <stdlib.h>
@@ -64,6 +65,7 @@ struct _filter filter;
 void reflect();
 
 const uint8_t kill_msg[3] = {0xb0, 0x77, 0x00};
+
 
 typedef struct __note__ {
 	uint8 command;
@@ -85,7 +87,6 @@ typedef struct __pulse__ {
 	uint8_t  volume;
 	uint16_t pw;
 } PULSE;
-
 
 
 uint8_t skip_flag = 0; // Skipping system exclusive messages
@@ -277,14 +278,14 @@ static inline void compute_adsr_sid(uint8_t ch){
 static inline void synthcode_MIDI(uint32_t r){
     PULSE pulse;
 	uint8_t flag[N_CHANNEL];
-    telemetry.midi_voices=0;
+    metering.midi_voices->value=0;
 	for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
 
         compute_adsr_midi(ch);
         
         flag[ch] = 0;
 		if (channel[ch].volume > 0) {
-            telemetry.midi_voices++;
+            metering.midi_voices->value++;
 			if ((r / channel[ch].halfcount) % 2 > 0) {
 				flag[ch] = 1;
 			}
@@ -312,7 +313,7 @@ uint32_t last_frame=4294967295;
 
 static inline void synthcode_SID(uint32_t r){
   
-    telemetry.midi_voices=0;
+    metering.midi_voices->value=0;
     
     if (l_time > next_frame){
         if(xQueueReceiveFromISR(qSID,&sid_frm,0)){
@@ -349,7 +350,7 @@ static inline void synthcode_SID(uint32_t r){
 
 		flag[ch] = 0;
 		if (channel[ch].volume > 0) {
-            telemetry.midi_voices++;
+            metering.midi_voices->value++;
 			if ((r / channel[ch].halfcount) % 2 > 0) {
 				flag[ch] = 1; 
 			}
@@ -375,15 +376,15 @@ static inline void synthcode_SID(uint32_t r){
 }
 
 static inline void synthcode_QMIDI(uint32_t r){
-    handle_qcw_synth();
+    qcw_handle_synth();
     int16_t vol=0;
-    telemetry.midi_voices=0;
+    metering.midi_voices->value=0;
 	for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
 
         compute_adsr_midi(ch);
 
 		if (channel[ch].volume > 0) {
-            telemetry.midi_voices++;
+            metering.midi_voices->value++;
 			if ((r / channel[ch].halfcount) % 2 > 0) {
                 vol +=channel[ch].volume;
 			}else{
@@ -397,9 +398,9 @@ static inline void synthcode_QMIDI(uint32_t r){
 }
 
 static inline void synthcode_QSID(uint32_t r){
-    handle_qcw_synth();
+    qcw_handle_synth();
     
-    telemetry.midi_voices=0;
+    metering.midi_voices->value=0;
     
     if (l_time > next_frame){
         if(xQueueReceiveFromISR(qSID,&sid_frm,0)){
@@ -438,7 +439,7 @@ static inline void synthcode_QSID(uint32_t r){
         compute_adsr_sid(ch);
 
 		if (channel[ch].volume > 0) {
-            telemetry.midi_voices++;
+            metering.midi_voices->value++;
 			if ((r / channel[ch].halfcount) % 2 > 0) {
                 if(sid_frm.wave[ch]){
                     vol +=(((int)channel[ch].volume*random)/127);
@@ -464,7 +465,7 @@ CY_ISR(isr_synth) {
     uint32 r = SG_Timer_ReadCounter();
     clock_tick();
     if(qcw_reg){
-        handle_qcw();
+        qcw_handle();
         return;
     }
     switch(param.synth){
@@ -677,7 +678,7 @@ void process(NOTE *v) {
 }
 
 void update_midi_duty(){
-    if(!telemetry.midi_voices) return;
+    if(!metering.midi_voices->value) return;
     uint32_t dutycycle=0;
 
     for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {    
@@ -686,7 +687,7 @@ void update_midi_duty(){
         }
 	}
   
-    telemetry.duty = dutycycle;
+    metering.duty->value = dutycycle;
     if(dutycycle>(configuration.max_tr_duty-param.temp_duty)){
         interrupter.pw = (param.pw * (configuration.max_tr_duty-param.temp_duty)) / dutycycle;
     }else{
@@ -727,7 +728,7 @@ void reflect() {
 	}
     
     
-    telemetry.duty = dutycycle;
+    metering.duty->value = dutycycle;
     if(dutycycle>(configuration.max_tr_duty-param.temp_duty)){
         interrupter.pw = (param.pw * (configuration.max_tr_duty-param.temp_duty)) / dutycycle;
     }else{
@@ -747,7 +748,7 @@ void kill_accu(){
 
 void switch_synth(uint8_t synth){
     skip_flag=0;
-    telemetry.midi_voices=0;
+    metering.midi_voices->value=0;
     xQueueReset(qMIDI_rx);
     xQueueReset(qSID);
     kill_accu();   

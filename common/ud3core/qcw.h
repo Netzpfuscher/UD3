@@ -22,34 +22,46 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#if !defined(overlay_TASK_H)
-#define overlay_TASK_H
+
+#if !defined(qcw_H)
+#define qcw_H
     
 #include <device.h>
-#include "cli_basic.h"
+#include "cli_common.h"
     
-/*
- * Add user task definitions, types, includes and other things in the below
- * merge region to customize the task.
- */
-/* `#START USER_TYPES_AND_DEFINES` */
+typedef struct
+{
+    uint8 changed;
+    uint16 index;
+    uint8 data[400];
+} ramp_params;
 
-/* `#END` */
+ramp_params volatile ramp; //added volatile
 
-void tsk_overlay_TaskProc(void *pvParameters);
+typedef struct
+{
+    uint32 time_start;
+    uint32 time_stop;
+    uint32 last_time;
+} timer_params;
 
-void tsk_overlay_chart_stop();
-void tsk_overlay_chart_start();
-uint8_t telemetry_command_setup(char *commandline, port_str *ptr);
-void init_telemetry();
-/*
- * Add user function prototypes in the below merge region to add user
- * functionality to the task definition.
- */
-/* `#START USER_TASK_PROTOS` */
 
-/* `#END` */
+timer_params timer;
 
-/* ------------------------------------------------------------------------ */
+void qcw_start();
+void qcw_modulate(uint16_t val);
+void qcw_stop();
+void qcw_regenerate_ramp();
+void qcw_handle();   
+void qcw_handle_synth();
+
+void qcw_ramp_visualize(port_str *ptr);
+void qcw_ramp_line(uint16_t x0,uint8_t y0,uint16_t x1, uint8_t y1);
+void qcw_ramp_point(uint16_t x,uint8_t y);
+    
+uint8_t qcw_command_ramp(char *commandline, port_str *ptr);
+    
+    
+    
+    
 #endif
-/* [] END OF FILE */

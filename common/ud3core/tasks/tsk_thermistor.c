@@ -109,19 +109,19 @@ uint16 run_temp_check(void) {
 	//this function looks at all the thermistor temperatures, compares them against limits and returns any faults
 	uint16 fault = 0;
     
-	telemetry.temp1 = get_temp_128(get_temp_counts(0)) / 128;
-	telemetry.temp2 = get_temp_128(get_temp_counts(1)) / 128;
+	metering.temp1->value = get_temp_128(get_temp_counts(0)) / 128;
+	metering.temp2->value = get_temp_128(get_temp_counts(1)) / 128;
 
-	if (telemetry.temp1 > configuration.temp1_max && configuration.temp1_max) {
+	if (metering.temp1->value > configuration.temp1_max && configuration.temp1_max) {
 		fault |= TEMP1_FAULT;
 	}
-	if (telemetry.temp2 > configuration.temp2_max && configuration.temp2_max) {
+	if (metering.temp2->value > configuration.temp2_max && configuration.temp2_max) {
 		fault |= TEMP2_FAULT;
 	}
 
-	if (telemetry.temp1 > configuration.temp1_setpoint) {
+	if (metering.temp1->value > configuration.temp1_setpoint) {
 		Fan_Write(1);
-	} else if (telemetry.temp1 < configuration.temp1_setpoint) {
+	} else if (metering.temp1->value < configuration.temp1_setpoint) {
 		Fan_Write(0);
 	}
 	return fault;
@@ -163,13 +163,13 @@ void tsk_thermistor_TaskProc(void *pvParameters) {
 			if (temp_fault_counter > TEMP_FAULT_COUNTER_MAX) {
                 if(ret&0x00FF){
                     if(sysfault.temp1==0){
-                        alarm_push(ALM_PRIO_CRITICAL, warn_temp1_fault, telemetry.temp1);
+                        alarm_push(ALM_PRIO_CRITICAL, warn_temp1_fault, metering.temp1->value);
                     }
                     sysfault.temp1 = 1;
                 }
                 if(ret&0xFF00){
                     if(sysfault.temp2==0){
-                        alarm_push(ALM_PRIO_CRITICAL, warn_temp2_fault, telemetry.temp2);
+                        alarm_push(ALM_PRIO_CRITICAL, warn_temp2_fault, metering.temp2->value);
                     }
                     sysfault.temp2 = 1;
                 }

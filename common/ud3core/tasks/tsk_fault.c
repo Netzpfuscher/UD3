@@ -120,7 +120,7 @@ void handle_FAULT(void) {
 
 void handle_no_fb(void){
     uint32_t time = ((uint32_t)fb_filter_out * 15625ul)/1000; //ns
-    telemetry.fres = (5000000ul / time);
+    metering.fres->value = (5000000ul / time);
 }
 
 void vWD_Timer_Callback(TimerHandle_t xTimer){
@@ -130,7 +130,6 @@ void vWD_Timer_Callback(TimerHandle_t xTimer){
     sysfault.watchdog = 1;
     interrupter1_control_Control = 0;
 	QCW_enable_Control = 0;
-	ramp.modulation_value = 0;
     interrupter_kill();
     USBMIDI_1_callbackLocalMidiEvent(0, (uint8_t*)kill_msg);
     xTimerReset(xTimer,0);

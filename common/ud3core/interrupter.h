@@ -48,28 +48,8 @@ typedef struct
 
 interrupter_params interrupter;
 
-void handle_qcw();
-void handle_qcw_synth();
 
-typedef struct
-{
-	uint16 modulation_value;
-	uint32 qcw_recorded_prd;
-	uint32 qcw_limiter_pw;
-	uint16 shift_period;
-} ramp_params;
-
-typedef struct
-{
-    uint32 time_start;
-    uint32 time_stop;
-    uint32 last_time;
-} timer_params;
-
-ramp_params volatile ramp; //added volatile
-timer_params timer;
-
-extern volatile uint8 qcw_dl_ovf_counter;
+//extern volatile uint8 qcw_dl_ovf_counter;
 extern uint8_t tr_running;
 extern uint8_t blocked; 
 
@@ -78,9 +58,6 @@ void update_interrupter();
 void ramp_control(void);
 void interrupter_oneshot(uint16_t pw, uint8_t vol);
 uint8_t interrupter_get_kill(void);
-void qcw_start();
-void qcw_modulate(uint16_t val);
-void qcw_stop();
 
 void interrupter_kill(void);
 

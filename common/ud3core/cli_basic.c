@@ -796,6 +796,30 @@ uint8_t kbhit(port_str *ptr){
     }
 }
 
+uint8_t split(char *ptr, char *ret[], uint8_t size_ret, char split_char){
+    uint8_t n = 0;
+    if(*ptr != '\0'){
+        ret[n] = ptr;
+        n++;
+    }
+    
+    while(*ptr != '\0'){
+        if(*ptr == split_char){
+            *ptr = '\0';
+            if(*(ptr+1) != split_char){
+                if(n < size_ret){
+                    ret[n] = ptr+1;
+                    n++;
+                }
+                
+            }
+        }
+        ptr++;
+    }
+    
+    return n;
+}
+
 /********************************************
 * Sends char to transmit queue
 *********************************************/

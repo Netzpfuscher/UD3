@@ -16,6 +16,20 @@ uint8_t statusbuf[] = {0xFF,0x02, TT_STATUS,0x00};
 const uint8_t chartdraw[] = {0xFF,0x02, TT_CHART_DRAW,0x00};
 const uint8_t chartclear[] = {0xFF,0x02, TT_CHART_CLEAR,0x00};
 
+const char *units[]={
+    "",
+    "V",
+    "A",
+    "W",
+    "Hz",
+    "C",
+    "kW",
+    "RPM",
+    "%",
+    "mV"
+    
+};
+
 void send_gauge(uint8_t gauge, int16_t val, port_str *ptr){
     gaugebuf[3]=gauge;
     gaugebuf[4]=(uint8_t)val;

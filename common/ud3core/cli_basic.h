@@ -140,6 +140,8 @@ uint8_t kbhit(port_str *ptr);
 void send_char(uint8_t c, port_str *ptr);
 void send_string(char *data, port_str *ptr);
 void send_buffer(uint8_t *data, uint16_t len, port_str *ptr);
+uint8_t split(char *ptr, char *ret[], uint8_t size_ret, char split_char);
+
 uint8_t term_config_changed(void);
 uint32_t djb_hash(const char* cp);
 uint8_t set_visibility(parameter_entry * params, uint8_t param_size, char* text, uint8_t visible);

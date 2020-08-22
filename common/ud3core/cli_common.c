@@ -52,6 +52,7 @@
 #include "math.h"
 #include "alarmevent.h"
 #include "version.h"
+#include "qcw.h"
 
 #define UNUSED_VARIABLE(N) \
 	do {                   \
@@ -91,6 +92,7 @@ uint8_t command_calib(char *commandline, port_str *ptr);
 uint8_t command_features(char *commandline, port_str *ptr);
 
 uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, port_str *ptr);
+uint8_t callback_QCWFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_TTupdateFunction(parameter_entry * params, uint8_t index, port_str *ptr);
@@ -106,9 +108,11 @@ uint8_t callback_MchFunction(parameter_entry * params, uint8_t index, port_str *
 uint8_t callback_MchCopyFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_ivoUART(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_synthFilter(parameter_entry * params, uint8_t index, port_str *ptr);
+uint8_t callback_rampFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 
 void update_ivo_uart();
 void init_tt(uint8_t with_chart, port_str *ptr);
+
 
 
 uint8_t burst_state = 0;
@@ -173,14 +177,22 @@ void init_config(){
     param.tune_pw = 50;
     param.tune_delay = 50;
     param.offtime = 2;
-    param.qcw_ramp = 2;
+    
     param.qcw_repeat = 500;
     param.transpose = 0;
     param.mch = 0;
     param.synth = SYNTH_MIDI;
     
+    param.qcw_holdoff = 0;
+    param.qcw_max = 255;
+    param.qcw_offset = 0;
+    param.qcw_ramp = 200;
+    
     i2t_set_limit(configuration.max_const_i,configuration.max_fault_i,10000);
     update_ivo_uart();
+    
+    ramp.changed = pdTRUE;
+    qcw_regenerate_ramp();
 }
 
 // clang-format off
@@ -200,7 +212,10 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"tune_pw"         , param.tune_pw                 , 0      ,800    ,0      ,NULL                        ,"Tune pulsewidth")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"tune_delay"      , param.tune_delay              , 1      ,200    ,0      ,NULL                        ,"Tune delay")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"offtime"         , param.offtime                 , 2      ,250    ,0      ,NULL                        ,"Offtime for MIDI")
-    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_ramp"        , param.qcw_ramp                , 1      ,10     ,0      ,NULL                        ,"QCW Ramp Inc/93us")
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_ramp"        , param.qcw_ramp                , 1      ,10000  ,100    ,callback_rampFunction       ,"QCW Ramp inc/125us")
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_offset"      , param.qcw_offset              , 0      ,255    ,0      ,callback_rampFunction       ,"QCW Ramp start value")
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_hold"        , param.qcw_holdoff             , 0      ,255    ,0      ,callback_rampFunction       ,"QCW Ramp time to start ramp [125 us]")
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_max"         , param.qcw_max                 , 0      ,255    ,0      ,callback_rampFunction       ,"QCW Ramp end value")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_repeat"      , param.qcw_repeat              , 0      ,1000   ,0      ,NULL                        ,"QCW pulse repeat time [ms] <100=single shot")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"transpose"       , param.transpose               , -48    ,48     ,0      ,NULL                        ,"Transpose MIDI")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"synth"           , param.synth                   , 0      ,4      ,0      ,callback_SynthFunction      ,"0=off 1=MIDI 2=SID")
@@ -280,6 +295,8 @@ command_entry commands[] = {
     ADD_COMMAND("con"	        ,command_con            ,"Prints the connections")
     ADD_COMMAND("calib"	        ,command_calib          ,"Calibrate Vdriver")
     ADD_COMMAND("features"	    ,command_features       ,"Get supported features")
+    ADD_COMMAND("ramp"	        ,qcw_command_ramp       ,"Write QCW ramp")
+    ADD_COMMAND("telemetry"	    ,telemetry_command_setup,"Telemetry options")
 };
 
 
@@ -291,6 +308,10 @@ void eeprom_load(port_str *ptr){
     uart_baudrate(configuration.baudrate);
     spi_speed(configuration.spi_speed);
     callback_synthFilter(NULL,0, ptr);
+    
+    ramp.changed = pdTRUE;
+    qcw_regenerate_ramp();
+    init_telemetry();
 }
 
 
@@ -317,6 +338,13 @@ void update_visibilty(void){
 }
 
 // clang-format on
+
+uint8_t callback_rampFunction(parameter_entry * params, uint8_t index, port_str *ptr){
+    ramp.changed = pdTRUE;
+    
+    return pdPASS;
+}
+
 
 uint8_t callback_synthFilter(parameter_entry * params, uint8_t index, port_str *ptr){
     uint8_t cnt=0;
@@ -723,6 +751,7 @@ uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, port_st
 	configure_ZCD_to_PWM();
     update_visibilty();
     reconfig_charge_timer();
+    
 	system_fault_Control = sfflag;
     return 1;
 }
@@ -1022,6 +1051,7 @@ uint8_t command_tr(char *commandline, port_str *ptr) {
     SKIP_SPACE(commandline);
     CHECK_NULL(commandline);
     
+    
 	if (ntlibc_stricmp(commandline, "start") == 0) {
         isr_interrupter_Disable();
         interrupter.pw = param.pw;
@@ -1060,6 +1090,7 @@ uint8_t command_tr(char *commandline, port_str *ptr) {
 * Timer callback for the QCW autofire
 ******************************************************************************/
 void vQCW_Timer_Callback(TimerHandle_t xTimer){
+    qcw_regenerate_ramp();
     qcw_start();
     qcw_reg = 1;
     if(param.qcw_repeat<100) param.qcw_repeat = 100;
@@ -1087,6 +1118,7 @@ uint8_t command_qcw(char *commandline, port_str *ptr) {
                 }
             }
         }else{
+            qcw_regenerate_ramp();
 		    qcw_start();
             SEND_CONST_STRING("QCW single shot\r\n", ptr);
         }
@@ -1108,6 +1140,7 @@ uint8_t command_qcw(char *commandline, port_str *ptr) {
 	}
 	HELP_TEXT("Usage: qcw [start|stop]\r\n");
 }
+
 
 /*****************************************************************************
 * sets the kill bit, stops the interrupter and switches the bus off
@@ -1725,7 +1758,7 @@ uint8_t command_signals(char *commandline, port_str *ptr) {
         send_signal_state_wo(Fan_Read(),pdFALSE,ptr);
         SEND_CONST_STRING(" Bus status: ", ptr);
         Term_Color_Cyan(ptr);
-        switch(telemetry.bus_status){
+        switch(metering.bus_status->value){
             case BUS_BATT_OV_FLT:
                 SEND_CONST_STRING("Overvoltage      ", ptr);
             break;
@@ -1748,13 +1781,13 @@ uint8_t command_signals(char *commandline, port_str *ptr) {
         SEND_CONST_STRING("\r\n", ptr);
         Term_Color_White(ptr); 
         SEND_CONST_STRING("                                    \r", ptr);
-        snprintf(buffer,sizeof(buffer),"Temp 1: %i*C Temp 2: %i*C\r\n", telemetry.temp1, telemetry.temp2);
+        snprintf(buffer,sizeof(buffer),"Temp 1: %i*C Temp 2: %i*C\r\n", metering.temp1->value, metering.temp2->value);
         send_string(buffer, ptr);
         SEND_CONST_STRING("                                    \r", ptr);
         snprintf(buffer,sizeof(buffer),"Vbus: %u mV Vbatt: %u mV\r\n", ADC_CountsTo_mVolts(ADC_active_sample_buf[DATA_VBUS]),ADC_CountsTo_mVolts(ADC_active_sample_buf[DATA_VBATT]));
         send_string(buffer, ptr);
         SEND_CONST_STRING("                                    \r", ptr);
-        snprintf(buffer,sizeof(buffer),"Ibus: %u mV Vdriver: %u mV\r\n\r\n", ADC_CountsTo_mVolts(ADC_active_sample_buf[DATA_IBUS]),telemetry.driver_v);
+        snprintf(buffer,sizeof(buffer),"Ibus: %u mV Vdriver: %u mV\r\n\r\n", ADC_CountsTo_mVolts(ADC_active_sample_buf[DATA_IBUS]),metering.driver_v->value);
         send_string(buffer, ptr);
 
     }

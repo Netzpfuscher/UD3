@@ -27,6 +27,8 @@
 #include "ZCDtoPWM.h"
 #include "autotune.h"
 #include "cli_common.h"
+#include "qcw.h"
+
 #include <device.h>
 #include <math.h>
 
@@ -37,28 +39,6 @@ uint8_t tr_running = 0;
 uint8_t blocked=0; 
 
 
-void handle_qcw(){
-    if(SG_Timer_ReadCounter() < timer.time_stop){
-        qcw_reg = 0;
-		ramp.modulation_value = 0;
-        QCW_enable_Control = 0;
-        return;
-    }
-    
-    if (ramp.modulation_value < 255) {
-		ramp.modulation_value += param.qcw_ramp;
-		if (ramp.modulation_value > 255)
-			ramp.modulation_value = 255;
-        qcw_modulate(ramp.modulation_value);
-	}
-}
-
-void handle_qcw_synth(){
-    if(SG_Timer_ReadCounter() < timer.time_stop){
-        QCW_enable_Control = 0;
-        return;
-    }
-}
 
 
 //CY_ISR(OCD_ISR)
@@ -94,7 +74,6 @@ void initialize_interrupter(void) {
 
 	int1_prd = 65000;
 	int1_cmp = 64999;
-	ramp.modulation_value = 0;
 
 	//Start up timers
 	interrupter1_Start();
@@ -122,48 +101,7 @@ void initialize_interrupter(void) {
 	CyDmaChEnable(int1_dma_Chan, 1);
 }
 
-void qcw_start(){
-    timer.time_start = SG_Timer_ReadCounter();
-    uint32_t sg_period = 3125; //ns
-    uint32_t cycles_to_stop = (configuration.max_qcw_pw*10000)/sg_period;
-    uint32_t cycles_since_last_pulse = timer.time_stop-timer.time_start;
-    
-    uint32_t cycles_to_stop_limited = (cycles_since_last_pulse * configuration.max_qcw_duty) / 500;
-	if ((cycles_to_stop_limited > cycles_to_stop) || (cycles_to_stop_limited == 0)) {
-		cycles_to_stop_limited = cycles_to_stop;
-	}
 
-    timer.time_stop = timer.time_start - cycles_to_stop_limited;
-    
-	//the next stuff is time sensitive, so disable interrupts to avoid glitches
-	CyGlobalIntDisable;
-	//now enable the QCW interrupter
-	QCW_enable_Control = 1;
-	params.pwmb_psb_val = params.pwm_top - params.pwmb_start_psb_val;
-	CyGlobalIntEnable;
-}
-
-void qcw_modulate(uint16_t val){
-#if USE_DEBUG_DAC  
-    if(QCW_enable_Control) DEBUG_DAC_SetValue(val); 
-#endif
-    //linearize modulation value based on fb_filter_out period
-	uint16_t shift_period = (val * (params.pwm_top - fb_filter_out)) >> 8;
-	//assign new modulation value to the params.pwmb_psb_val ram
-	if ((shift_period + params.pwmb_start_psb_val) > (params.pwmb_start_prd - 4)) {
-		params.pwmb_psb_val = 4;
-	} else {
-		params.pwmb_psb_val = params.pwm_top - (shift_period + params.pwmb_start_psb_val);
-	}  
-}
-
-void qcw_stop(){
-    qcw_reg = 0;
-#if USE_DEBUG_DAC 
-    DEBUG_DAC_SetValue(0);
-#endif
-    QCW_enable_Control = 0;
-}
 
 void interrupter_oneshot(uint16_t pw, uint8_t vol) {
     if(blocked) return;
@@ -228,4 +166,3 @@ void update_interrupter() {
 	}
 	CyGlobalIntEnable;
 }
-

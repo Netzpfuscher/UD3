@@ -27,6 +27,10 @@
 #define TT_UNIT_C       5
 #define TT_UNIT_kW      6
 #define TT_UNIT_RPM     7
+#define TT_UNIT_PERCENT 8
+#define TT_UNIT_mV      9
+
+extern const char *units[];
 
 #define TT_COLOR_WHITE 0
 #define TT_COLOR_RED 1

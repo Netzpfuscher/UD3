@@ -72,5 +72,5 @@ void alarm_clear(){
     xQueueReset(qAlarms);    
 }
 void alarm_init(){
-    qAlarms = xQueueCreate(50, sizeof(ALARMS));
+    qAlarms = xQueueCreate(AE_QUEUE_SIZE, sizeof(ALARMS));
 }

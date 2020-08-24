@@ -28,7 +28,6 @@
 #include "tsk_midi.h"
 #include "tsk_fault.h"
 #include "clock.h"
-#include "version.h"
 
 xTaskHandle tsk_midi_TaskHandle;
 uint8 tsk_midi_initVar = 0u;

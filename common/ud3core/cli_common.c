@@ -247,7 +247,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_tr_duty"     , configuration.max_tr_duty     , 1      ,500    ,10     ,callback_ConfigFunction     ,"Max TR duty cycle [%]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_qcw_duty"    , configuration.max_qcw_duty    , 1      ,500    ,10     ,callback_ConfigFunction     ,"Max QCW duty cycle [%]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"temp1_setpoint"  , configuration.temp1_setpoint  , 0      ,100    ,0      ,NULL                        ,"Setpoint for fan [*C]")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ps_scheme"       , configuration.ps_scheme       , 0      ,5      ,0      ,callback_ConfigFunction     ,"Power supply sheme")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ps_scheme"       , configuration.ps_scheme       , 0      ,5      ,0      ,callback_ConfigFunction     ,"Power supply scheme")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"charge_delay"    , configuration.chargedelay     , 1      ,60000  ,0      ,callback_ConfigFunction     ,"Delay for the charge relay [ms]")  
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"autotune_s"      , configuration.autotune_s      , 1      ,32     ,0      ,NULL                        ,"Number of samples for Autotune")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ud_name"         , configuration.ud_name         , 0      ,0      ,0      ,NULL                        ,"Name of the Coil [15 chars]")
@@ -339,6 +339,9 @@ void update_visibilty(void){
 
 uint8_t callback_rampFunction(parameter_entry * params, uint8_t index, port_str *ptr){
     ramp.changed = pdTRUE;
+    if(!QCW_enable_Control){
+        qcw_regenerate_ramp();
+    }
     
     return pdPASS;
 }

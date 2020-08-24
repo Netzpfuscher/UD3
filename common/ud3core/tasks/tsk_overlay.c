@@ -473,19 +473,17 @@ void stop_overlay_task(port_str *ptr){
 void init_tt(uint8_t with_chart, port_str *ptr){
     
     for(uint32_t i = 0;i<N_TELE;i++){
-            if(tt.a[i].resend_time == TT_FAST){
-                if(tt.a[i].gauge!=TT_NO_TELEMETRY){
-                    if(tt.a[i].high_res){
-                        send_gauge_config32(0, tt.a[i].min, tt.a[i].max, tt.a[i].divider, tt.a[i].name, ptr);
-                    }else{
-                        send_gauge_config(0, tt.a[i].min, tt.a[i].max, tt.a[i].name, ptr);
-                    }
-                }
-                if(tt.a[i].chart!=TT_NO_TELEMETRY && with_chart){
-                    send_chart_config(0, tt.a[i].min, tt.a[i].max, tt.a[i].offset, tt.a[i].unit, tt.a[i].name, ptr);
-                }
+        if(tt.a[i].gauge!=TT_NO_TELEMETRY){
+            if(tt.a[i].high_res){
+                send_gauge_config32(tt.a[i].gauge, tt.a[i].min, tt.a[i].max, tt.a[i].divider, tt.a[i].name, ptr);
+            }else{
+                send_gauge_config(tt.a[i].gauge, tt.a[i].min, tt.a[i].max, tt.a[i].name, ptr);
             }
         }
+        if(tt.a[i].chart!=TT_NO_TELEMETRY && with_chart){
+            send_chart_config(tt.a[i].chart, tt.a[i].min, tt.a[i].max, tt.a[i].offset, tt.a[i].unit, tt.a[i].name, ptr);
+        }
+    }
 
     start_overlay_task(ptr);
 }

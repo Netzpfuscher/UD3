@@ -31,7 +31,6 @@
 #include "ZCDtoPWM.h"
 #include "helper/teslaterm.h"
 #include "tasks/tsk_overlay.h"
-#include "version.h"
 
 void qcw_handle(){
     if(SG_Timer_ReadCounter() < timer.time_stop){

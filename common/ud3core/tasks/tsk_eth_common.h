@@ -22,12 +22,7 @@
     #include "cli_basic.h"
     #include "stream_buffer.h" 
     
-    #define NUM_MIN_CON 4
-
-    
-    #define STREAMBUFFER_RX_SIZE    256     //bytes
-    #define STREAMBUFFER_TX_SIZE    1024    //bytes
-    
+  
    
     void process_midi(uint8_t* ptr, uint16_t len);
     void process_sid(uint8_t* ptr, uint16_t len);

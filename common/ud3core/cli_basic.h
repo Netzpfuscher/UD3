@@ -2,6 +2,7 @@
 #define CLI_BASIC_H
 
 #include <stdint.h>
+#include "config.h"
 #include "FreeRTOS.h"
 #include "semphr.h"
 #include "stream_buffer.h" 

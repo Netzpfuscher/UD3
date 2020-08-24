@@ -206,3 +206,32 @@ void send_status(uint8_t bus_active, uint8_t transient_active, uint8_t bus_contr
 	statusbuf[3] = bus_active|(transient_active<<1)|(bus_controlled<<2)|(killbit<<3);
     send_buffer(statusbuf, sizeof(statusbuf), ptr);
 }
+
+void tt_chart_init(CHART *chart, port_str *ptr){
+    
+    int16_t f;
+    char buffer[10];
+    send_chart_line(chart->offset_x, chart->height+chart->offset_y, chart->width+chart->offset_x, chart->height+chart->offset_y, TT_COLOR_WHITE, ptr);
+    send_chart_line(chart->offset_x, chart->offset_y, chart->offset_x, chart->height+chart->offset_y, TT_COLOR_WHITE, ptr);
+
+    //Y grid
+	for (f = chart->height; f >= 0; f -= chart->div_y) {
+		send_chart_line(chart->offset_x, f+chart->offset_y, chart->offset_x-10, f+chart->offset_y, TT_COLOR_WHITE, ptr);
+        send_chart_line(chart->offset_x, f+chart->offset_y, chart->width+chart->offset_x, f+chart->offset_y, TT_COLOR_GRAY, ptr);
+        
+        snprintf(buffer, sizeof(buffer), "%i", chart->height-f);
+    	send_chart_text_center(chart->offset_x-20,f+chart->offset_y+4,TT_COLOR_WHITE,8,buffer,ptr);
+	}
+    
+    //X grid
+	for (f = 0; f <= chart->width; f += chart->div_x) {
+		send_chart_line(f+chart->offset_x, chart->height+chart->offset_y, f+chart->offset_x, chart->height+chart->offset_y+10, TT_COLOR_WHITE, ptr);
+        send_chart_line(f+chart->offset_x, chart->offset_y, f+chart->offset_x, chart->offset_y+chart->height, TT_COLOR_GRAY, ptr);
+        
+        snprintf(buffer, sizeof(buffer), "%i", f);
+    	send_chart_text_center(f+chart->offset_x,chart->offset_y+chart->height+20,TT_COLOR_WHITE,8,buffer,ptr);
+	}
+   
+    
+
+}

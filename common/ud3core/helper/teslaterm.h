@@ -1,4 +1,6 @@
-
+#if !defined(tt_H)
+#define tt_H
+    
 #include <stdint.h>
 #include "cli_basic.h"
 #include "alarmevent.h"
@@ -38,6 +40,15 @@ extern const char *units[];
 #define TT_COLOR_GREEN 3
 #define TT_COLOR_GRAY 8
 
+typedef struct __chart__ {
+    uint16_t height;
+    uint16_t width;
+    uint16_t offset_x;
+    uint16_t offset_y;
+    uint16_t div_x;
+    uint16_t div_y;
+} CHART;
+
 
 
 void send_gauge(uint8_t gauge, int16_t val, port_str *ptr);
@@ -56,3 +67,7 @@ void send_status(uint8_t bus_active, uint8_t transient_active, uint8_t bus_contr
 void send_config(char* param, const char* help_text, port_str *ptr);
 void send_event(ALARMS *alm, port_str *ptr);
 void send_features(const char* text, port_str *ptr);
+
+void tt_chart_init(CHART *chart, port_str *ptr);
+
+#endif

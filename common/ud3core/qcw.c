@@ -97,28 +97,16 @@ void qcw_ramp_line(uint16_t x0,uint8_t y0,uint16_t x1, uint8_t y1){
 	}
 }
 
-#define TTERM_HEIGHT 255L
-#define TTERM_WIDTH 400L
 
-#define OFFSET_X 20
-#define OFFSET_Y 20
-
-void qcw_draw_d(port_str *ptr){
-    uint16_t f;
-    send_chart_line(OFFSET_X, TTERM_HEIGHT+OFFSET_Y, TTERM_WIDTH+OFFSET_X, TTERM_HEIGHT+OFFSET_Y, TT_COLOR_WHITE, ptr);
-    send_chart_line(OFFSET_X, OFFSET_Y, OFFSET_X, TTERM_HEIGHT+OFFSET_Y, TT_COLOR_WHITE, ptr);
-
-	for (f = 0; f <= TTERM_HEIGHT; f += 25) {
-		send_chart_line(OFFSET_X, f+OFFSET_Y, OFFSET_X-10, f+OFFSET_Y, TT_COLOR_WHITE, ptr);
-        send_chart_line(OFFSET_X, f+OFFSET_Y, TTERM_WIDTH+OFFSET_X, f+OFFSET_Y, TT_COLOR_GRAY, ptr);
-	}
-
-}
-
-void qcw_ramp_visualize(port_str *ptr){
+void qcw_ramp_visualize(CHART *chart, port_str *ptr){
     for(uint16_t i = 0; i<sizeof(ramp.data)-1;i++){
-        send_chart_line(OFFSET_X+i,TTERM_HEIGHT+OFFSET_Y-ramp.data[i],OFFSET_X+i+1,TTERM_HEIGHT+OFFSET_Y-ramp.data[i+1], TT_COLOR_GREEN ,ptr);
+        send_chart_line(chart->offset_x+i,chart->height+chart->offset_y-ramp.data[i],chart->offset_x+i+1,chart->height+chart->offset_y-ramp.data[i+1], TT_COLOR_GREEN ,ptr);
     }
+    uint16_t red_line;
+    red_line = configuration.max_qcw_pw*10/125;
+    
+    send_chart_line(chart->offset_x+red_line,chart->offset_y,chart->offset_x+red_line,chart->offset_y+chart->height, TT_COLOR_RED ,ptr);
+    
 }
 
 void qcw_start(){
@@ -194,8 +182,16 @@ uint8_t qcw_command_ramp(char *commandline, port_str *ptr){
     } else if (ntlibc_stricmp(buffer[0], "draw") == 0) {
         tsk_overlay_chart_stop();
         send_chart_clear(ptr);
-        qcw_draw_d(ptr);
-        qcw_ramp_visualize(ptr);
+        CHART temp;
+        temp.height = 255;
+        temp.width = 400;
+        temp.offset_x = 40;
+        temp.offset_y = 20;
+        temp.div_x = 25;
+        temp.div_y = 25;
+        
+        tt_chart_init(&temp,ptr);
+        qcw_ramp_visualize(&temp,ptr);
         return pdPASS;
     }
     

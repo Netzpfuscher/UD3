@@ -75,9 +75,9 @@ uint8 tsk_display_initVar = 0u;
  */
 void display_bus_state(){
     Disp_MemClear(0);
-    switch(metering.bus_status->value){
+    switch(tt.n.bus_status.value){
         case BUS_OFF:
-            if(metering.bus_v->value<40){
+            if(tt.n.bus_v.value<40){
                 Disp_DrawRect(3,0,4,4,1,Disp_GREEN);        
                 Disp_DrawRect(3,6,4,7,1,Disp_GREEN);
             }

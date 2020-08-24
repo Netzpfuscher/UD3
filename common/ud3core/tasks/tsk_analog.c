@@ -139,7 +139,7 @@ void i2t_init(){
 }
 
 uint8_t i2t_calculate(){
-    uint32_t squaredCurrent = (uint32_t)metering.batt_i->value * (uint32_t)metering.batt_i->value;
+    uint32_t squaredCurrent = (uint32_t)tt.n.batt_i.value * (uint32_t)tt.n.batt_i.value;
     i2t.integral = i2t.integral + squaredCurrent;
 	if(i2t.integral > i2t.leak)
 	{
@@ -150,7 +150,7 @@ uint8_t i2t_calculate(){
 		i2t.integral = 0;
 	}
     
-    metering.i2t_i->value=(100*(i2t.integral>>8))/(i2t.limit>>8);
+    tt.n.i2t_i.value=(100*(i2t.integral>>8))/(i2t.limit>>8);
     
     if(i2t.integral < i2t.warning)
 	{
@@ -258,29 +258,29 @@ void calculate_rms(void) {
     for(uint8_t i=0;i<ADC_BUFFER_CNT;i+=4){
 
 		// read the battery voltage
-		metering.batt_v->value = read_bus_mv(ADC_active_sample_buf[i+DATA_VBATT]) / 1000;
+		tt.n.batt_v.value = read_bus_mv(ADC_active_sample_buf[i+DATA_VBATT]) / 1000;
 
 		// read the bus voltage
-		metering.bus_v->value = read_bus_mv(ADC_active_sample_buf[i+DATA_VBUS]) / 1000;
+		tt.n.bus_v.value = read_bus_mv(ADC_active_sample_buf[i+DATA_VBUS]) / 1000;
 
 		// read the battery current
         if(configuration.ct2_type==CT2_TYPE_CURRENT){
-		    metering.batt_i->value = (((uint32_t)rms_filter(&current_idc, ADC_active_sample_buf[i+DATA_IBUS]) * params.idc_ma_count) / 100);
+		    tt.n.batt_i.value = (((uint32_t)rms_filter(&current_idc, ADC_active_sample_buf[i+DATA_IBUS]) * params.idc_ma_count) / 100);
         }else{
-            metering.batt_i->value = ((((int32_t)rms_filter(&current_idc, ADC_active_sample_buf[i+DATA_IBUS])-params.ct2_offset_cnt) * params.idc_ma_count) / 100);
+            tt.n.batt_i.value = ((((int32_t)rms_filter(&current_idc, ADC_active_sample_buf[i+DATA_IBUS])-params.ct2_offset_cnt) * params.idc_ma_count) / 100);
         }
 
-		metering.avg_power->value = metering.batt_i->value * metering.bus_v->value / 10;
+		tt.n.avg_power.value = tt.n.batt_i.value * tt.n.bus_v.value / 10;
 	}
     
     // read the driver voltage
-	//metering.driver_v->value = ADC_CountsTo_mVolts(ADC_active_sample_buf[DATA_VDRIVER]) *10; //11 Takes the input impedance of 180k from the SAR into account
-    metering.driver_v->value = read_driver_mv(ADC_active_sample_buf[DATA_VDRIVER]);
-    metering.primary_i->value = CT1_Get_Current(CT_PRIMARY);
+	//tt.n.driver_v.value = ADC_CountsTo_mVolts(ADC_active_sample_buf[DATA_VDRIVER]) *10; //11 Takes the input impedance of 180k from the SAR into account
+    tt.n.driver_v.value = read_driver_mv(ADC_active_sample_buf[DATA_VDRIVER]);
+    tt.n.primary_i.value = CT1_Get_Current(CT_PRIMARY);
     
     if(configuration.max_const_i){  //Only do i2t calculation if enabled
         if(count<100){
-            int16_t e= abs(metering.batt_i->value-configuration.max_const_i);
+            int16_t e= abs(tt.n.batt_i.value-configuration.max_const_i);
             count += e;
         }else{
             count = 0;   
@@ -292,7 +292,7 @@ void calculate_rms(void) {
                 break;
             case I2T_WARNING:
                 sysfault.fuse=1;
-                if(metering.batt_i->value>configuration.max_const_i && !count){
+                if(tt.n.batt_i.value>configuration.max_const_i && !count){
                     if(param.temp_duty<configuration.max_tr_duty) param.temp_duty++; 
                     if(tr_running==1){
                         update_interrupter();
@@ -303,7 +303,7 @@ void calculate_rms(void) {
                 break;
             case I2T_NORMAL:
                 sysfault.fuse=0;
-                if(metering.batt_i->value<configuration.max_const_i && !count){
+                if(tt.n.batt_i.value<configuration.max_const_i && !count){
                     if(param.temp_duty>0) param.temp_duty--; 
                     if(tr_running==1){
                         update_interrupter();
@@ -373,7 +373,7 @@ uint8_t timer_triggerd=0;
 
 
 void initialize_charging(void) {
-	metering.bus_status->value = BUS_OFF;
+	tt.n.bus_status.value = BUS_OFF;
 	initial_vbus = 0;
 	final_vbus = 0;
 	charging_counter = 0;
@@ -384,32 +384,32 @@ void initialize_charging(void) {
 void ac_precharge_bus_scheme(){
 	//we cant know the AC line voltage so we will watch the bus voltage climb and infer when its charged by it not increasing fast enough
 	//this logic is part of a charging counter
-    if(metering.bus_status->value == BUS_READY && metering.bus_v->value <20){
-        metering.bus_status->value=BUS_BATT_UV_FLT;
+    if(tt.n.bus_status.value == BUS_READY && tt.n.bus_v.value <20){
+        tt.n.bus_status.value=BUS_BATT_UV_FLT;
         if(sysfault.bus_uv==0){
-            alarm_push(ALM_PRIO_ALARM,warn_bus_undervoltage,metering.bus_v->value);
+            alarm_push(ALM_PRIO_ALARM,warn_bus_undervoltage,tt.n.bus_v.value);
         }
         sysfault.bus_uv=1;
         bus_command=BUS_COMMAND_FAULT;
     }
 	if (charging_counter == 0)
-		initial_vbus = metering.bus_v->value;
+		initial_vbus = tt.n.bus_v.value;
 	charging_counter++;
 	if (charging_counter > AC_PRECHARGE_TIMEOUT) {
-		final_vbus = metering.bus_v->value;
+		final_vbus = tt.n.bus_v.value;
 		delta_vbus = final_vbus - initial_vbus;
-		if ((delta_vbus < 4) && (metering.bus_v->value > 20) && metering.bus_status->value == BUS_CHARGING) {
+		if ((delta_vbus < 4) && (tt.n.bus_v.value > 20) && tt.n.bus_status.value == BUS_CHARGING) {
             if(!timer_triggerd){
                 timer_triggerd=1;
 			    xTimerStart(xCharge_Timer,0);
             }
-		} else if (metering.bus_status->value != BUS_READY) {
-            if(metering.bus_status->value != BUS_CHARGING){
+		} else if (tt.n.bus_status.value != BUS_READY) {
+            if(tt.n.bus_status.value != BUS_CHARGING){
                 alarm_push(ALM_PRIO_INFO,warn_bus_charging, ALM_NO_VALUE);
             }
             sysfault.charge=1;
 			relay_Write(RELAY_CHARGE);
-			metering.bus_status->value = BUS_CHARGING;
+			tt.n.bus_status.value = BUS_CHARGING;
 		}
 		charging_counter = 0;
 	}
@@ -424,7 +424,7 @@ void ac_precharge_fixed_delay(){
         sysfault.charge=1;
         xTimerStart(xCharge_Timer,0);
         relay_Write(RELAY_CHARGE);
-        metering.bus_status->value = BUS_CHARGING;
+        tt.n.bus_status.value = BUS_CHARGING;
     }    
 }
 
@@ -434,7 +434,7 @@ void vCharge_Timer_Callback(TimerHandle_t xTimer){
         if(relay_Read()==RELAY_CHARGE){
             alarm_push(ALM_PRIO_INFO,warn_bus_ready, ALM_NO_VALUE);
             relay_Write(RELAY_ON);
-            metering.bus_status->value = BUS_READY;
+            tt.n.bus_status.value = BUS_READY;
             sysfault.charge=0;
             sysfault.bus_uv=0;
         }
@@ -442,7 +442,7 @@ void vCharge_Timer_Callback(TimerHandle_t xTimer){
         relay_Write(RELAY_OFF);
         sysfault.charge=0;
         alarm_push(ALM_PRIO_INFO,warn_bus_off, ALM_NO_VALUE);
-        metering.bus_status->value = BUS_OFF;
+        tt.n.bus_status.value = BUS_OFF;
     }
 }
 

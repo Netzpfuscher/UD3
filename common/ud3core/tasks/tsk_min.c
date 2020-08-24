@@ -31,6 +31,7 @@
 #include "tsk_uart.h"
 #include "tsk_cli.h"
 #include "tsk_fault.h"
+#include "tsk_overlay.h"
 #include "tsk_eth_common.h"
 #include "alarmevent.h"
 #include "clock.h"

@@ -31,6 +31,7 @@
 #include "ZCDtoPWM.h"
 #include "helper/teslaterm.h"
 #include "tasks/tsk_overlay.h"
+#include "version.h"
 
 void qcw_handle(){
     if(SG_Timer_ReadCounter() < timer.time_stop){
@@ -56,7 +57,7 @@ void qcw_regenerate_ramp(){
     if(ramp.changed){
         float ramp_val=param.qcw_offset;
         
-        uint32_t max_index = (configuration.max_qcw_pw*10)/125;   
+        uint32_t max_index = (configuration.max_qcw_pw*10)/MIDI_ISR_US;   
         if (max_index > sizeof(ramp.data)) max_index = sizeof(ramp.data);
         
         float ramp_increment = param.qcw_ramp / 100.0;
@@ -103,7 +104,7 @@ void qcw_ramp_visualize(CHART *chart, port_str *ptr){
         send_chart_line(chart->offset_x+i,chart->height+chart->offset_y-ramp.data[i],chart->offset_x+i+1,chart->height+chart->offset_y-ramp.data[i+1], TT_COLOR_GREEN ,ptr);
     }
     uint16_t red_line;
-    red_line = configuration.max_qcw_pw*10/125;
+    red_line = configuration.max_qcw_pw*10 / MIDI_ISR_US;
     
     send_chart_line(chart->offset_x+red_line,chart->offset_y,chart->offset_x+red_line,chart->offset_y+chart->height, TT_COLOR_RED ,ptr);
     
@@ -111,7 +112,7 @@ void qcw_ramp_visualize(CHART *chart, port_str *ptr){
 
 void qcw_start(){
     timer.time_start = SG_Timer_ReadCounter();
-    uint32_t sg_period = 3125; //ns
+    uint32_t sg_period = SG_PERIOD_NS;
     uint32_t cycles_to_stop = (configuration.max_qcw_pw*10000)/sg_period;
     uint32_t cycles_since_last_pulse = timer.time_stop-timer.time_start;
     
@@ -183,12 +184,12 @@ uint8_t qcw_command_ramp(char *commandline, port_str *ptr){
         tsk_overlay_chart_stop();
         send_chart_clear(ptr);
         CHART temp;
-        temp.height = 255;
-        temp.width = 400;
-        temp.offset_x = 40;
-        temp.offset_y = 20;
-        temp.div_x = 25;
-        temp.div_y = 25;
+        temp.height = RAMP_CHART_HEIGHT;
+        temp.width = RAMP_CHART_WIDTH;
+        temp.offset_x = RAMP_CHART_OFFSET_X;
+        temp.offset_y = RAMP_CHART_OFFSET_Y;
+        temp.div_x = RAMP_CHART_DIV_X;
+        temp.div_y = RAMP_CHART_DIV_Y;
         
         tt_chart_init(&temp,ptr);
         qcw_ramp_visualize(&temp,ptr);

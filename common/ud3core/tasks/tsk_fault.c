@@ -120,7 +120,7 @@ void handle_FAULT(void) {
 
 void handle_no_fb(void){
     uint32_t time = ((uint32_t)fb_filter_out * 15625ul)/1000; //ns
-    metering.fres->value = (5000000ul / time);
+    tt.n.fres.value = (5000000ul / time);
 }
 
 void vWD_Timer_Callback(TimerHandle_t xTimer){

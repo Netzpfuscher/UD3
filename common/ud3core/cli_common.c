@@ -72,14 +72,12 @@ uint8_t command_set(char *commandline, port_str *ptr);
 uint8_t command_tr(char *commandline, port_str *ptr);
 uint8_t command_udkill(char *commandline, port_str *ptr);
 uint8_t command_eprom(char *commandline, port_str *ptr);
-uint8_t command_status(char *commandline, port_str *ptr);
 uint8_t command_tune(char *commandline, port_str *ptr);
 uint8_t command_tasks(char *commandline, port_str *ptr);
 uint8_t command_bootloader(char *commandline, port_str *ptr);
 uint8_t command_qcw(char *commandline, port_str *ptr);
 uint8_t command_bus(char *commandline, port_str *ptr);
 uint8_t command_load_default(char *commandline, port_str *ptr);
-uint8_t command_tterm(char *commandline, port_str *ptr);
 uint8_t command_reset(char *commandline, port_str *ptr);
 uint8_t command_config_get(char *commandline, port_str *ptr);
 uint8_t command_exit(char *commandline, port_str *ptr);
@@ -1529,139 +1527,9 @@ uint8_t command_relay(char *commandline, port_str *ptr){
     HELP_TEXT("Usage: relay 3 [on|off]\r\n");
 }
 
-/*****************************************************************************
-* Helper function for spawning the overlay task
-******************************************************************************/
-void start_overlay_task(port_str *ptr){
-    if (ptr->telemetry_handle == NULL) {
-        switch(ptr->type){
-        case PORT_TYPE_SERIAL:
-        	xTaskCreate(tsk_overlay_TaskProc, "Overl_S", STACK_OVERLAY, ptr, PRIO_OVERLAY, &ptr->telemetry_handle);
-        break;
-        case PORT_TYPE_USB:
-    		xTaskCreate(tsk_overlay_TaskProc, "Overl_U", STACK_OVERLAY, ptr, PRIO_OVERLAY, &ptr->telemetry_handle);
-        break;
-        case PORT_TYPE_MIN:
-        	xTaskCreate(tsk_overlay_TaskProc, "Overl_M", STACK_OVERLAY, ptr, PRIO_OVERLAY, &ptr->telemetry_handle);
-        break;
-        }    
-    }
-}
 
 
-/*****************************************************************************
-* Helper function for killing the overlay task
-******************************************************************************/
-void stop_overlay_task(port_str *ptr){
-    if (ptr->telemetry_handle != NULL) {
-        vTaskDelete(ptr->telemetry_handle);
-    	ptr->telemetry_handle = NULL;
-    }
-}
 
-/*****************************************************************************
-* 
-******************************************************************************/
-uint8_t command_status(char *commandline, port_str *ptr) {
-    SKIP_SPACE(commandline);
-    CHECK_NULL(commandline);
-	
-
-	if (ntlibc_stricmp(commandline, "start") == 0) {
-		start_overlay_task(ptr);
-        return 1;
-	}
-	if (ntlibc_stricmp(commandline, "stop") == 0) {
-		stop_overlay_task(ptr);
-        return 1;
-	}
-
-	HELP_TEXT("Usage: status [start|stop]\r\n");
-}
-
-/*****************************************************************************
-* Initializes the teslaterm telemetry
-* Spawns the overlay task for telemetry stream generation
-******************************************************************************/
-void init_tt(uint8_t with_chart, port_str *ptr){
-    #if GAUGE0_HIGH_RES==0
-        send_gauge_config(0, GAUGE0_MIN, GAUGE0_MAX, GAUGE0_NAME, ptr);
-    #else
-        send_gauge_config32(0, GAUGE0_MIN, GAUGE0_MAX, GAUGE0_DIV, GAUGE0_NAME, ptr);    
-    #endif
-    
-    #if GAUGE1_HIGH_RES==0
-        send_gauge_config(1, GAUGE1_MIN, GAUGE1_MAX, GAUGE1_NAME, ptr);
-    #else
-        send_gauge_config32(1, GAUGE1_MIN, GAUGE1_MAX, GAUGE1_DIV, GAUGE1_NAME, ptr);    
-    #endif
-    
-    #if GAUGE2_HIGH_RES==0
-        send_gauge_config(2, GAUGE2_MIN, GAUGE2_MAX, GAUGE2_NAME, ptr);
-    #else
-        send_gauge_config32(2, GAUGE2_MIN, GAUGE2_MAX, GAUGE2_DIV, GAUGE2_NAME, ptr);    
-    #endif
-    
-    #if GAUGE3_HIGH_RES==0
-        send_gauge_config(3, GAUGE3_MIN, GAUGE3_MAX, GAUGE3_NAME, ptr);
-    #else
-        send_gauge_config32(3, GAUGE3_MIN, GAUGE3_MAX, GAUGE3_DIV, GAUGE3_NAME, ptr);    
-    #endif
-    
-    #if GAUGE4_HIGH_RES==0
-        send_gauge_config(4, GAUGE4_MIN, GAUGE4_MAX, GAUGE4_NAME, ptr);
-    #else
-        send_gauge_config32(4, GAUGE4_MIN, GAUGE4_MAX, GAUGE4_DIV, GAUGE4_NAME, ptr);    
-    #endif
-    
-    #if GAUGE5_HIGH_RES==0
-        send_gauge_config(5, GAUGE5_MIN, GAUGE5_MAX, GAUGE5_NAME, ptr);
-    #else
-        send_gauge_config32(5, GAUGE5_MIN, GAUGE5_MAX, GAUGE5_DIV, GAUGE5_NAME, ptr);    
-    #endif
-    
-    #if GAUGE6_HIGH_RES==0
-        send_gauge_config(6, GAUGE6_MIN, GAUGE6_MAX, GAUGE6_NAME, ptr);
-    #else
-        send_gauge_config32(6, GAUGE6_MIN, GAUGE6_MAX, GAUGE6_DIV, GAUGE6_NAME, ptr);    
-    #endif
-    
-    if(with_chart==pdTRUE){
-        send_chart_config(0, CHART0_MIN, CHART0_MAX, CHART0_OFFSET, CHART0_UNIT, CHART0_NAME, ptr);
-        send_chart_config(1, CHART1_MIN, CHART1_MAX, CHART1_OFFSET, CHART1_UNIT, CHART1_NAME, ptr);
-        send_chart_config(2, CHART2_MIN, CHART2_MAX, CHART2_OFFSET, CHART2_UNIT, CHART2_NAME, ptr);
-        send_chart_config(3, CHART3_MIN, CHART3_MAX, CHART3_OFFSET, CHART3_UNIT, CHART3_NAME, ptr);
-    }
-    start_overlay_task(ptr);
-}
-
-uint8_t command_tterm(char *commandline, port_str *ptr){
-    SKIP_SPACE(commandline);
-    CHECK_NULL(commandline);
-    
-	if (ntlibc_stricmp(commandline, "start") == 0) {
-        ptr->term_mode = PORT_TERM_TT;
-        init_tt(pdTRUE,ptr);
-        return 1;
-    }
-    if (ntlibc_stricmp(commandline, "mqtt") == 0) {
-        ptr->term_mode = PORT_TERM_MQTT;
-        init_tt(pdFALSE,ptr);
-        return 1;
-    }
-	if (ntlibc_stricmp(commandline, "notelemetry") == 0) {
-        ptr->term_mode = PORT_TERM_TT;
-        stop_overlay_task(ptr);
-        return 1;
-    }
-	if (ntlibc_stricmp(commandline, "stop") == 0) {
-        ptr->term_mode = PORT_TERM_VT100;
-        stop_overlay_task(ptr);
-        return 1;
-	} 
-    
-    HELP_TEXT("Usage: tterm [start|stop|mqtt|notelemetry]\r\n");
-}
 
 /*****************************************************************************
 * Clears the terminal screen and displays the logo
@@ -1758,7 +1626,7 @@ uint8_t command_signals(char *commandline, port_str *ptr) {
         send_signal_state_wo(Fan_Read(),pdFALSE,ptr);
         SEND_CONST_STRING(" Bus status: ", ptr);
         Term_Color_Cyan(ptr);
-        switch(metering.bus_status->value){
+        switch(tt.n.bus_status.value){
             case BUS_BATT_OV_FLT:
                 SEND_CONST_STRING("Overvoltage      ", ptr);
             break;
@@ -1781,13 +1649,13 @@ uint8_t command_signals(char *commandline, port_str *ptr) {
         SEND_CONST_STRING("\r\n", ptr);
         Term_Color_White(ptr); 
         SEND_CONST_STRING("                                    \r", ptr);
-        snprintf(buffer,sizeof(buffer),"Temp 1: %i*C Temp 2: %i*C\r\n", metering.temp1->value, metering.temp2->value);
+        snprintf(buffer,sizeof(buffer),"Temp 1: %i*C Temp 2: %i*C\r\n", tt.n.temp1.value, tt.n.temp2.value);
         send_string(buffer, ptr);
         SEND_CONST_STRING("                                    \r", ptr);
         snprintf(buffer,sizeof(buffer),"Vbus: %u mV Vbatt: %u mV\r\n", ADC_CountsTo_mVolts(ADC_active_sample_buf[DATA_VBUS]),ADC_CountsTo_mVolts(ADC_active_sample_buf[DATA_VBATT]));
         send_string(buffer, ptr);
         SEND_CONST_STRING("                                    \r", ptr);
-        snprintf(buffer,sizeof(buffer),"Ibus: %u mV Vdriver: %u mV\r\n\r\n", ADC_CountsTo_mVolts(ADC_active_sample_buf[DATA_IBUS]),metering.driver_v->value);
+        snprintf(buffer,sizeof(buffer),"Ibus: %u mV Vdriver: %u mV\r\n\r\n", ADC_CountsTo_mVolts(ADC_active_sample_buf[DATA_IBUS]),tt.n.driver_v.value);
         send_string(buffer, ptr);
 
     }

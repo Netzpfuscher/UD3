@@ -38,9 +38,6 @@ uint8_t tr_running = 0;
 
 uint8_t blocked=0; 
 
-
-
-
 //CY_ISR(OCD_ISR)
 //{
 //    //QCW_enable_Control = 0;
@@ -115,7 +112,6 @@ void interrupter_oneshot(uint16_t pw, uint8_t vol) {
 	if (pw > configuration.max_tr_pw) {
 		pw = configuration.max_tr_pw;
 	}
-	//prd = 60000;
     prd = param.offtime + pw;
 	/* Update Interrupter PWMs with new period/pw */
 	CyGlobalIntDisable;

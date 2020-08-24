@@ -35,6 +35,7 @@
 #include "queue.h"
 #include "semphr.h"
 #include "helper/teslaterm.h"
+#include "tasks/tsk_priority.h"
 
 /* ------------------------------------------------------------------------ */
 /*
@@ -64,181 +65,165 @@
 /* `#START USER_TASK_LOCAL_CODE` */
 uint8_t chart;
 
-TELE meter[13];
-
-const TELE_HUMAN metering = {
-    &meter[0],
-    &meter[1],
-    &meter[2],
-    &meter[3],
-    &meter[4],
-    &meter[5],
-    &meter[6],
-    &meter[7],
-    &meter[8],
-    &meter[9],
-    &meter[10],
-    &meter[11],
-    &meter[12]
-};
+TELEMETRY tt;
 
 void init_telemetry(){
     
-    metering.i2t_i->name = "Fuse";
-    metering.i2t_i->value = 0;
-    metering.i2t_i->min = 0;
-    metering.i2t_i->max = 100;
-    metering.i2t_i->offset = 0;
-    metering.i2t_i->unit = TT_UNIT_PERCENT;
-    metering.i2t_i->divider = 1;
-    metering.i2t_i->high_res = pdFALSE;
-    metering.i2t_i->resend_time = TT_FAST;
-    metering.i2t_i->chart = TT_NO_TELEMETRY;
-    metering.i2t_i->gauge = 6;
+    tt.n.i2t_i.name = "Fuse";
+    tt.n.i2t_i.value = 0;
+    tt.n.i2t_i.min = 0;
+    tt.n.i2t_i.max = 100;
+    tt.n.i2t_i.offset = 0;
+    tt.n.i2t_i.unit = TT_UNIT_PERCENT;
+    tt.n.i2t_i.divider = 1;
+    tt.n.i2t_i.high_res = pdFALSE;
+    tt.n.i2t_i.resend_time = TT_FAST;
+    tt.n.i2t_i.chart = TT_NO_TELEMETRY;
+    tt.n.i2t_i.gauge = 6;
     
-    metering.fres->name = "Fres";
-    metering.fres->value = 0;
-    metering.fres->min = 0;
-    metering.fres->max = 500;
-    metering.fres->offset = 0;
-    metering.fres->unit = TT_UNIT_Hz;
-    metering.fres->divider = 1000;
-    metering.fres->high_res = pdTRUE;
-    metering.fres->resend_time = TT_SLOW;
-    metering.fres->chart = TT_NO_TELEMETRY;
-    metering.fres->gauge = TT_NO_TELEMETRY;
+    tt.n.fres.name = "Fres";
+    tt.n.fres.value = 0;
+    tt.n.fres.min = 0;
+    tt.n.fres.max = 500;
+    tt.n.fres.offset = 0;
+    tt.n.fres.unit = TT_UNIT_Hz;
+    tt.n.fres.divider = 1000;
+    tt.n.fres.high_res = pdTRUE;
+    tt.n.fres.resend_time = TT_SLOW;
+    tt.n.fres.chart = TT_NO_TELEMETRY;
+    tt.n.fres.gauge = TT_NO_TELEMETRY;
     
-    metering.duty->name = "Dutycycle";
-    metering.duty->value = 0;
-    metering.duty->min = 0;
-    metering.duty->max = 100;
-    metering.duty->offset = 0;
-    metering.duty->unit = TT_UNIT_PERCENT;
-    metering.duty->divider = 10;
-    metering.duty->high_res = pdTRUE;
-    metering.duty->resend_time = TT_FAST;
-    metering.duty->chart = TT_NO_TELEMETRY;
-    metering.duty->gauge = TT_NO_TELEMETRY;
+    tt.n.duty.name = "Dutycycle";
+    tt.n.duty.value = 0;
+    tt.n.duty.min = 0;
+    tt.n.duty.max = 100;
+    tt.n.duty.offset = 0;
+    tt.n.duty.unit = TT_UNIT_PERCENT;
+    tt.n.duty.divider = 10;
+    tt.n.duty.high_res = pdTRUE;
+    tt.n.duty.resend_time = TT_FAST;
+    tt.n.duty.chart = TT_NO_TELEMETRY;
+    tt.n.duty.gauge = TT_NO_TELEMETRY;
     
-    metering.driver_v->name = "Driver_Voltage";
-    metering.driver_v->value = 0;
-    metering.driver_v->min = 0;
-    metering.driver_v->max = 30;
-    metering.driver_v->offset = 0;
-    metering.driver_v->unit = TT_UNIT_V;
-    metering.driver_v->divider = 1000;
-    metering.driver_v->high_res = pdTRUE;
-    metering.driver_v->resend_time = TT_SLOW;
-    metering.driver_v->chart = TT_NO_TELEMETRY;
-    metering.driver_v->gauge = TT_NO_TELEMETRY;
+    tt.n.driver_v.name = "Driver_Voltage";
+    tt.n.driver_v.value = 0;
+    tt.n.driver_v.min = 0;
+    tt.n.driver_v.max = 30;
+    tt.n.driver_v.offset = 0;
+    tt.n.driver_v.unit = TT_UNIT_V;
+    tt.n.driver_v.divider = 1000;
+    tt.n.driver_v.high_res = pdTRUE;
+    tt.n.driver_v.resend_time = TT_SLOW;
+    tt.n.driver_v.chart = TT_NO_TELEMETRY;
+    tt.n.driver_v.gauge = TT_NO_TELEMETRY;
     
-    metering.bus_status->name = "Bus_State";
-    metering.bus_status->value = 0;
-    metering.bus_status->min = 0;
-    metering.bus_status->max = 7;
-    metering.bus_status->offset = 0;
-    metering.bus_status->unit = TT_UNIT_NONE;
-    metering.bus_status->divider = 1;
-    metering.bus_status->high_res = pdFALSE;
-    metering.bus_status->resend_time =TT_SLOW;
-    metering.bus_status->chart = TT_NO_TELEMETRY;
-    metering.bus_status->gauge = TT_NO_TELEMETRY;
+    tt.n.bus_status.name = "Bus_State";
+    tt.n.bus_status.value = 0;
+    tt.n.bus_status.min = 0;
+    tt.n.bus_status.max = 7;
+    tt.n.bus_status.offset = 0;
+    tt.n.bus_status.unit = TT_UNIT_NONE;
+    tt.n.bus_status.divider = 1;
+    tt.n.bus_status.high_res = pdFALSE;
+    tt.n.bus_status.resend_time =TT_SLOW;
+    tt.n.bus_status.chart = TT_NO_TELEMETRY;
+    tt.n.bus_status.gauge = TT_NO_TELEMETRY;
     
-    metering.batt_v->name = "Voltage2";
-    metering.batt_v->value = 0;
-    metering.batt_v->min = 0;
-    metering.batt_v->max = configuration.r_top / 1000;;
-    metering.batt_v->offset = 0;
-    metering.batt_v->unit = TT_UNIT_V;
-    metering.batt_v->divider = 1;
-    metering.batt_v->high_res = pdFALSE;
-    metering.batt_v->resend_time = TT_FAST;
-    metering.batt_v->chart = TT_NO_TELEMETRY;
-    metering.batt_v->gauge = TT_NO_TELEMETRY;
+    tt.n.batt_v.name = "Voltage2";
+    tt.n.batt_v.value = 0;
+    tt.n.batt_v.min = 0;
+    tt.n.batt_v.max = configuration.r_top / 1000;;
+    tt.n.batt_v.offset = 0;
+    tt.n.batt_v.unit = TT_UNIT_V;
+    tt.n.batt_v.divider = 1;
+    tt.n.batt_v.high_res = pdFALSE;
+    tt.n.batt_v.resend_time = TT_FAST;
+    tt.n.batt_v.chart = TT_NO_TELEMETRY;
+    tt.n.batt_v.gauge = TT_NO_TELEMETRY;
     
-    metering.primary_i->name = "Primary";
-    metering.primary_i->value = 0;
-    metering.primary_i->min = 0;
-    metering.primary_i->max = ((5000ul * configuration.ct1_ratio) / configuration.ct1_burden)/100;
-    metering.primary_i->offset = 0;
-    metering.primary_i->unit = TT_UNIT_A;
-    metering.primary_i->divider = 0;
-    metering.primary_i->high_res = pdFALSE;
-    metering.primary_i->resend_time = TT_FAST;
-    metering.primary_i->chart = 2;
-    metering.primary_i->gauge = 4;
+    tt.n.primary_i.name = "Primary";
+    tt.n.primary_i.value = 0;
+    tt.n.primary_i.min = 0;
+    tt.n.primary_i.max = ((5000ul * configuration.ct1_ratio) / configuration.ct1_burden)/100;
+    tt.n.primary_i.offset = 0;
+    tt.n.primary_i.unit = TT_UNIT_A;
+    tt.n.primary_i.divider = 0;
+    tt.n.primary_i.high_res = pdFALSE;
+    tt.n.primary_i.resend_time = TT_FAST;
+    tt.n.primary_i.chart = 2;
+    tt.n.primary_i.gauge = 4;
     
-    metering.midi_voices->name = "Voices";
-    metering.midi_voices->value = 0;
-    metering.midi_voices->min = 0;
-    metering.midi_voices->max = 4;
-    metering.midi_voices->offset = 0;
-    metering.midi_voices->unit = TT_UNIT_NONE;
-    metering.midi_voices->divider = 1;
-    metering.midi_voices->high_res = pdFALSE;
-    metering.midi_voices->resend_time = TT_FAST;
-    metering.midi_voices->chart = TT_NO_TELEMETRY;
-    metering.midi_voices->gauge = 5;
+    tt.n.midi_voices.name = "Voices";
+    tt.n.midi_voices.value = 0;
+    tt.n.midi_voices.min = 0;
+    tt.n.midi_voices.max = 4;
+    tt.n.midi_voices.offset = 0;
+    tt.n.midi_voices.unit = TT_UNIT_NONE;
+    tt.n.midi_voices.divider = 1;
+    tt.n.midi_voices.high_res = pdFALSE;
+    tt.n.midi_voices.resend_time = TT_FAST;
+    tt.n.midi_voices.chart = TT_NO_TELEMETRY;
+    tt.n.midi_voices.gauge = 5;
     
-    metering.bus_v->name = "Voltage";
-    metering.bus_v->value = 0;
-    metering.bus_v->min = 0;
-    metering.bus_v->max = configuration.r_top / 1000;
-    metering.bus_v->offset = 0;
-    metering.bus_v->unit = TT_UNIT_V;
-    metering.bus_v->divider = 1;
-    metering.bus_v->high_res = pdFALSE;
-    metering.bus_v->resend_time = TT_FAST;
-    metering.bus_v->chart = 0;
-    metering.bus_v->gauge = 0;
+    tt.n.bus_v.name = "Voltage";
+    tt.n.bus_v.value = 0;
+    tt.n.bus_v.min = 0;
+    tt.n.bus_v.max = configuration.r_top / 1000;
+    tt.n.bus_v.offset = 0;
+    tt.n.bus_v.unit = TT_UNIT_V;
+    tt.n.bus_v.divider = 1;
+    tt.n.bus_v.high_res = pdFALSE;
+    tt.n.bus_v.resend_time = TT_FAST;
+    tt.n.bus_v.chart = 0;
+    tt.n.bus_v.gauge = 0;
     
-    metering.temp1->name = "Temp1";
-    metering.temp1->value = 0;
-    metering.temp1->min = 0;
-    metering.temp1->max = configuration.temp1_max;
-    metering.temp1->offset = 0;
-    metering.temp1->unit = TT_UNIT_C;
-    metering.temp1->divider = 1;
-    metering.temp1->high_res = pdFALSE;
-    metering.temp1->resend_time = TT_SLOW;
-    metering.temp1->chart = 1;
-    metering.temp1->gauge = 1;
+    tt.n.temp1.name = "Temp1";
+    tt.n.temp1.value = 0;
+    tt.n.temp1.min = 0;
+    tt.n.temp1.max = configuration.temp1_max;
+    tt.n.temp1.offset = 0;
+    tt.n.temp1.unit = TT_UNIT_C;
+    tt.n.temp1.divider = 1;
+    tt.n.temp1.high_res = pdFALSE;
+    tt.n.temp1.resend_time = TT_SLOW;
+    tt.n.temp1.chart = 1;
+    tt.n.temp1.gauge = 1;
     
-    metering.temp2->name = "Temp2";
-    metering.temp2->value = 0;
-    metering.temp2->min = 0;
-    metering.temp2->max = configuration.temp2_max;
-    metering.temp2->offset = 0;
-    metering.temp2->unit = TT_UNIT_C;
-    metering.temp2->divider = 1;
-    metering.temp2->high_res = pdFALSE;
-    metering.temp2->resend_time = TT_SLOW;
-    metering.temp2->chart = TT_NO_TELEMETRY;
-    metering.temp2->gauge = TT_NO_TELEMETRY;
+    tt.n.temp2.name = "Temp2";
+    tt.n.temp2.value = 0;
+    tt.n.temp2.min = 0;
+    tt.n.temp2.max = configuration.temp2_max;
+    tt.n.temp2.offset = 0;
+    tt.n.temp2.unit = TT_UNIT_C;
+    tt.n.temp2.divider = 1;
+    tt.n.temp2.high_res = pdFALSE;
+    tt.n.temp2.resend_time = TT_SLOW;
+    tt.n.temp2.chart = TT_NO_TELEMETRY;
+    tt.n.temp2.gauge = TT_NO_TELEMETRY;
        
-    metering.batt_i->name = "Current";
-    metering.batt_i->value = 0;
-    metering.batt_i->min = 0;
-    metering.batt_i->max = ((configuration.ct2_ratio * 50) / configuration.ct2_burden);
-    metering.batt_i->offset = 0;
-    metering.batt_i->unit = TT_UNIT_A;
-    metering.batt_i->divider = 10;
-    metering.batt_i->high_res = pdTRUE;
-    metering.batt_i->resend_time = TT_FAST;
-    metering.batt_i->chart = TT_NO_TELEMETRY;
-    metering.batt_i->gauge = 3;
+    tt.n.batt_i.name = "Current";
+    tt.n.batt_i.value = 0;
+    tt.n.batt_i.min = 0;
+    tt.n.batt_i.max = ((configuration.ct2_ratio * 50) / configuration.ct2_burden);
+    tt.n.batt_i.offset = 0;
+    tt.n.batt_i.unit = TT_UNIT_A;
+    tt.n.batt_i.divider = 10;
+    tt.n.batt_i.high_res = pdTRUE;
+    tt.n.batt_i.resend_time = TT_FAST;
+    tt.n.batt_i.chart = TT_NO_TELEMETRY;
+    tt.n.batt_i.gauge = 3;
         
-    metering.avg_power->name = "Power";
-    metering.avg_power->value = 0;
-    metering.avg_power->min = 0;
-    metering.avg_power->max = (configuration.r_top / 1000) * ((configuration.ct2_ratio * 50) / configuration.ct2_burden);
-    metering.avg_power->offset = 0;
-    metering.avg_power->unit = TT_UNIT_W;
-    metering.avg_power->divider = 1;
-    metering.avg_power->high_res = pdTRUE;
-    metering.avg_power->resend_time = TT_FAST;
-    metering.avg_power->chart = 3;
-    metering.avg_power->gauge = 2;
+    tt.n.avg_power.name = "Power";
+    tt.n.avg_power.value = 0;
+    tt.n.avg_power.min = 0;
+    tt.n.avg_power.max = (configuration.r_top / 1000) * ((configuration.ct2_ratio * 50) / configuration.ct2_burden);
+    tt.n.avg_power.offset = 0;
+    tt.n.avg_power.unit = TT_UNIT_W;
+    tt.n.avg_power.divider = 1;
+    tt.n.avg_power.high_res = pdTRUE;
+    tt.n.avg_power.resend_time = TT_FAST;
+    tt.n.avg_power.chart = 3;
+    tt.n.avg_power.gauge = 2;
     
 }
 
@@ -264,25 +249,25 @@ void show_overlay_100ms(port_str *ptr){
     	//Term_Erase_Screen(ptr);
     	Term_Box(row_pos, col_pos, row_pos + 11, col_pos + 25, ptr);
     	Term_Move_Cursor(row_pos + 1, col_pos + 1, ptr);
-    	ret = snprintf(buffer, sizeof(buffer), "Bus Voltage:       %4iV", metering.bus_v->value);
+    	ret = snprintf(buffer, sizeof(buffer), "Bus Voltage:       %4iV", tt.n.bus_v.value);
         send_buffer((uint8_t*)buffer,ret,ptr);
 
     	Term_Move_Cursor(row_pos + 2, col_pos + 1, ptr);
-    	ret = snprintf(buffer, sizeof(buffer), "Battery Voltage:   %4iV", metering.batt_v->value);
+    	ret = snprintf(buffer, sizeof(buffer), "Battery Voltage:   %4iV", tt.n.batt_v.value);
         send_buffer((uint8_t*)buffer,ret,ptr);
 
     	Term_Move_Cursor(row_pos + 3, col_pos + 1, ptr);
-    	ret = snprintf(buffer, sizeof(buffer), "Temp 1:          %4i *C", metering.temp1->value);
+    	ret = snprintf(buffer, sizeof(buffer), "Temp 1:          %4i *C", tt.n.temp1.value);
         send_buffer((uint8_t*)buffer,ret,ptr);
 
     	Term_Move_Cursor(row_pos + 4, col_pos + 1, ptr);
-    	ret = snprintf(buffer, sizeof(buffer), "Temp 2:          %4i *C", metering.temp2->value);
+    	ret = snprintf(buffer, sizeof(buffer), "Temp 2:          %4i *C", tt.n.temp2.value);
         send_buffer((uint8_t*)buffer,ret,ptr);
 
     	Term_Move_Cursor(row_pos + 5, col_pos + 1, ptr);
         SEND_CONST_STRING("Bus status: ", ptr);
 
-    	switch (metering.bus_status->value) {
+    	switch (tt.n.bus_status.value) {
     	case BUS_READY:
             SEND_CONST_STRING("       Ready", ptr);
     		break;
@@ -301,26 +286,26 @@ void show_overlay_100ms(port_str *ptr){
     	}
 
     	Term_Move_Cursor(row_pos + 6, col_pos + 1, ptr);
-    	ret = snprintf(buffer, sizeof(buffer), "Average power:     %4iW", metering.avg_power->value);
+    	ret = snprintf(buffer, sizeof(buffer), "Average power:     %4iW", tt.n.avg_power.value);
         send_buffer((uint8_t*)buffer,ret,ptr);
 
     	Term_Move_Cursor(row_pos + 7, col_pos + 1, ptr);
-    	ret = snprintf(buffer, sizeof(buffer), "Average Current: %4i.%iA", metering.batt_i->value / 10, metering.batt_i->value % 10);
+    	ret = snprintf(buffer, sizeof(buffer), "Average Current: %4i.%iA", tt.n.batt_i.value / 10, tt.n.batt_i.value % 10);
         send_buffer((uint8_t*)buffer,ret,ptr);
 
     	Term_Move_Cursor(row_pos + 8, col_pos + 1, ptr);
-    	ret = snprintf(buffer, sizeof(buffer), "Primary Current:   %4iA", metering.primary_i->value);
+    	ret = snprintf(buffer, sizeof(buffer), "Primary Current:   %4iA", tt.n.primary_i.value);
         send_buffer((uint8_t*)buffer,ret,ptr);
         
         Term_Move_Cursor(row_pos + 9, col_pos + 1, ptr);
-    	ret = snprintf(buffer, sizeof(buffer), "MIDI voices:         %1i/4", metering.midi_voices->value);
+    	ret = snprintf(buffer, sizeof(buffer), "MIDI voices:         %1i/4", tt.n.midi_voices.value);
         send_buffer((uint8_t*)buffer,ret,ptr);
         
         Term_Move_Cursor(row_pos + 10, col_pos + 1, ptr);
-        if(metering.fres->value==-1){
+        if(tt.n.fres.value==-1){
             ret = snprintf(buffer, sizeof(buffer), "Fres:        no feedback");
         }else{
-    	    ret = snprintf(buffer, sizeof(buffer), "Fres:          %4i.%ikHz", metering.fres->value / 10, metering.fres->value % 10);
+    	    ret = snprintf(buffer, sizeof(buffer), "Fres:          %4i.%ikHz", tt.n.fres.value / 10, tt.n.fres.value % 10);
         }
         send_buffer((uint8_t*)buffer,ret,ptr);
 
@@ -329,17 +314,17 @@ void show_overlay_100ms(port_str *ptr){
         
     
     }else{
-        for(uint32_t i = 0;i<sizeof(meter)/sizeof(TELE);i++){
-            if(meter[i].resend_time == TT_FAST){
-                if(meter[i].gauge!=TT_NO_TELEMETRY){
-                    if(meter[i].high_res){
-                        send_gauge32(meter[i].gauge, meter[i].value, ptr);
+        for(uint32_t i = 0;i<N_TELE;i++){
+            if(tt.a[i].resend_time == TT_FAST){
+                if(tt.a[i].gauge!=TT_NO_TELEMETRY){
+                    if(tt.a[i].high_res){
+                        send_gauge32(tt.a[i].gauge, tt.a[i].value, ptr);
                     }else{
-                        send_gauge(meter[i].gauge, meter[i].value, ptr);
+                        send_gauge(tt.a[i].gauge, tt.a[i].value, ptr);
                     }
                 }
-                if(meter[i].chart!=TT_NO_TELEMETRY && chart){
-                    send_chart(meter[i].chart, meter[i].value, ptr);
+                if(tt.a[i].chart!=TT_NO_TELEMETRY && chart){
+                    send_chart(tt.a[i].chart, tt.a[i].value, ptr);
                 }
             }
         }
@@ -361,23 +346,23 @@ void show_overlay_100ms(port_str *ptr){
 
 void show_overlay_400ms(port_str *ptr) {
     if(ptr->term_mode == PORT_TERM_TT){
-        for(uint32_t i = 0;i<sizeof(meter)/sizeof(TELE);i++){
-            if(meter[i].resend_time == TT_FAST){
-                if(meter[i].gauge!=TT_NO_TELEMETRY){
-                    if(meter[i].high_res){
-                        send_gauge32(meter[i].gauge, meter[i].value, ptr);
+        for(uint32_t i = 0;i<N_TELE;i++){
+            if(tt.a[i].resend_time == TT_FAST){
+                if(tt.a[i].gauge!=TT_NO_TELEMETRY){
+                    if(tt.a[i].high_res){
+                        send_gauge32(tt.a[i].gauge, tt.a[i].value, ptr);
                     }else{
-                        send_gauge(meter[i].gauge, meter[i].value, ptr);
+                        send_gauge(tt.a[i].gauge, tt.a[i].value, ptr);
                     }
                 }
-                if(meter[i].chart!=TT_NO_TELEMETRY && chart){
-                    send_chart(meter[i].chart, meter[i].value, ptr);
+                if(tt.a[i].chart!=TT_NO_TELEMETRY && chart){
+                    send_chart(tt.a[i].chart, tt.a[i].value, ptr);
                 }
             }
         }
         
         if(ptr->term_mode!=PORT_TERM_MQTT){
-            send_status(metering.bus_status->value!=BUS_OFF,
+            send_status(tt.n.bus_status.value!=BUS_OFF,
                         tr_running!=0,
                         configuration.ps_scheme!=AC_NO_RELAY_BUS_SCHEME,
                         blocked,
@@ -451,6 +436,108 @@ void tsk_overlay_TaskProc(void *pvParameters) {
 	}
 }
 
+/*****************************************************************************
+* Helper function for spawning the overlay task
+******************************************************************************/
+void start_overlay_task(port_str *ptr){
+    if (ptr->telemetry_handle == NULL) {
+        switch(ptr->type){
+        case PORT_TYPE_SERIAL:
+        	xTaskCreate(tsk_overlay_TaskProc, "Overl_S", STACK_OVERLAY, ptr, PRIO_OVERLAY, &ptr->telemetry_handle);
+        break;
+        case PORT_TYPE_USB:
+    		xTaskCreate(tsk_overlay_TaskProc, "Overl_U", STACK_OVERLAY, ptr, PRIO_OVERLAY, &ptr->telemetry_handle);
+        break;
+        case PORT_TYPE_MIN:
+        	xTaskCreate(tsk_overlay_TaskProc, "Overl_M", STACK_OVERLAY, ptr, PRIO_OVERLAY, &ptr->telemetry_handle);
+        break;
+        }    
+    }
+}
+
+
+/*****************************************************************************
+* Helper function for killing the overlay task
+******************************************************************************/
+void stop_overlay_task(port_str *ptr){
+    if (ptr->telemetry_handle != NULL) {
+        vTaskDelete(ptr->telemetry_handle);
+    	ptr->telemetry_handle = NULL;
+    }
+}
+
+/*****************************************************************************
+* Initializes the teslaterm telemetry
+* Spawns the overlay task for telemetry stream generation
+******************************************************************************/
+void init_tt(uint8_t with_chart, port_str *ptr){
+    
+    for(uint32_t i = 0;i<N_TELE;i++){
+            if(tt.a[i].resend_time == TT_FAST){
+                if(tt.a[i].gauge!=TT_NO_TELEMETRY){
+                    if(tt.a[i].high_res){
+                        send_gauge_config32(0, tt.a[i].min, tt.a[i].max, tt.a[i].divider, tt.a[i].name, ptr);
+                    }else{
+                        send_gauge_config(0, tt.a[i].min, tt.a[i].max, tt.a[i].name, ptr);
+                    }
+                }
+                if(tt.a[i].chart!=TT_NO_TELEMETRY && with_chart){
+                    send_chart_config(0, tt.a[i].min, tt.a[i].max, tt.a[i].offset, tt.a[i].unit, tt.a[i].name, ptr);
+                }
+            }
+        }
+
+    start_overlay_task(ptr);
+}
+
+/*****************************************************************************
+* 
+******************************************************************************/
+uint8_t command_status(char *commandline, port_str *ptr) {
+    SKIP_SPACE(commandline);
+    CHECK_NULL(commandline);
+	
+
+	if (ntlibc_stricmp(commandline, "start") == 0) {
+		start_overlay_task(ptr);
+        return 1;
+	}
+	if (ntlibc_stricmp(commandline, "stop") == 0) {
+		stop_overlay_task(ptr);
+        return 1;
+	}
+
+	HELP_TEXT("Usage: status [start|stop]\r\n");
+}
+
+uint8_t command_tterm(char *commandline, port_str *ptr){
+    SKIP_SPACE(commandline);
+    CHECK_NULL(commandline);
+    
+	if (ntlibc_stricmp(commandline, "start") == 0) {
+        ptr->term_mode = PORT_TERM_TT;
+        init_tt(pdTRUE,ptr);
+        return 1;
+    }
+    if (ntlibc_stricmp(commandline, "mqtt") == 0) {
+        ptr->term_mode = PORT_TERM_MQTT;
+        init_tt(pdFALSE,ptr);
+        return 1;
+    }
+	if (ntlibc_stricmp(commandline, "notelemetry") == 0) {
+        ptr->term_mode = PORT_TERM_TT;
+        stop_overlay_task(ptr);
+        return 1;
+    }
+	if (ntlibc_stricmp(commandline, "stop") == 0) {
+        ptr->term_mode = PORT_TERM_VT100;
+        stop_overlay_task(ptr);
+        return 1;
+	} 
+    
+    HELP_TEXT("Usage: tterm [start|stop|mqtt|notelemetry]\r\n");
+}
+
 
 uint8_t telemetry_command_setup(char *commandline, port_str *ptr){
     SKIP_SPACE(commandline);
@@ -466,8 +553,8 @@ uint8_t telemetry_command_setup(char *commandline, port_str *ptr){
     if (ntlibc_stricmp(buffer[0], "list") == 0){
         for(int i=0;i<N_GAUGES;i++){
             int cnt=-1;
-            for(uint8_t w=0;w<sizeof(meter)/sizeof(TELE);w++){
-                if(i==meter[w].gauge){
+            for(uint8_t w=0;w<N_TELE;w++){
+                if(i==tt.a[w].gauge){
                     cnt=w;
                     break;
                 }
@@ -475,18 +562,18 @@ uint8_t telemetry_command_setup(char *commandline, port_str *ptr){
             if(cnt==TT_NO_TELEMETRY){
                 ret = snprintf(temp, sizeof(temp),"Gauge %i: none\r\n",i);
             }else{
-                if(meter[cnt].high_res && meter[cnt].divider > 1){
-                    ret = snprintf(temp, sizeof(temp),"Gauge %i: %s = %.2f %s\r\n",i,meter[cnt].name,(float)meter[cnt].value/(float)meter[cnt].divider,units[meter[cnt].unit]);
+                if(tt.a[cnt].high_res && tt.a[cnt].divider > 1){
+                    ret = snprintf(temp, sizeof(temp),"Gauge %i: %s = %.2f %s\r\n",i,tt.a[cnt].name,(float)tt.a[cnt].value/(float)tt.a[cnt].divider,units[tt.a[cnt].unit]);
                 }else{
-                    ret = snprintf(temp, sizeof(temp),"Gauge %i: %s = %i %s\r\n",i,meter[cnt].name,meter[cnt].value,units[meter[cnt].unit]);
+                    ret = snprintf(temp, sizeof(temp),"Gauge %i: %s = %i %s\r\n",i,tt.a[cnt].name,tt.a[cnt].value,units[tt.a[cnt].unit]);
                 }
             }
             send_buffer((uint8_t*)temp,ret,ptr);
         }
         for(int i=0;i<N_CHARTS;i++){
             int cnt=-1;
-            for(uint8_t w=0;w<sizeof(meter)/sizeof(TELE);w++){
-                if(i==meter[w].chart){
+            for(uint8_t w=0;w<N_TELE;w++){
+                if(i==tt.a[w].chart){
                     cnt=w;
                     break;
                 }
@@ -494,10 +581,10 @@ uint8_t telemetry_command_setup(char *commandline, port_str *ptr){
             if(cnt==TT_NO_TELEMETRY){
                 ret = snprintf(temp, sizeof(temp),"Chart %i: none\r\n",i);
             }else{
-                if(meter[cnt].high_res && meter[cnt].divider > 1){
-                    ret = snprintf(temp, sizeof(temp),"Chart %i: %s = %.2f %s\r\n",i,meter[cnt].name,(float)meter[cnt].value/(float)meter[cnt].divider,units[meter[cnt].unit]);
+                if(tt.a[cnt].high_res && tt.a[cnt].divider > 1){
+                    ret = snprintf(temp, sizeof(temp),"Chart %i: %s = %.2f %s\r\n",i,tt.a[cnt].name,(float)tt.a[cnt].value/(float)tt.a[cnt].divider,units[tt.a[cnt].unit]);
                 }else{
-                    ret = snprintf(temp, sizeof(temp),"Chart %i: %s = %i %s\r\n",i,meter[cnt].name,meter[cnt].value,units[meter[cnt].unit]);
+                    ret = snprintf(temp, sizeof(temp),"Chart %i: %s = %i %s\r\n",i,tt.a[cnt].name,tt.a[cnt].value,units[tt.a[cnt].unit]);
                 }
             }
             send_buffer((uint8_t*)temp,ret,ptr);
@@ -507,88 +594,82 @@ uint8_t telemetry_command_setup(char *commandline, port_str *ptr){
     } else if (ntlibc_stricmp(buffer[0], "gauge") == 0 && items == 3) {
         int n = ntlibc_atoi(buffer[1]);
         if(n>=N_GAUGES || n<0){
-            ret = snprintf(temp, sizeof(temp),"Gauge number must be between 0 and 6\r\n");
-            send_buffer((uint8_t*)temp,ret,ptr);
+            SEND_CONST_STRING("Gauge number must be between 0 and 6\r\n",ptr);
             return 0;
         }
         if(ntlibc_stricmp(buffer[2],"none")==0){
-            for(uint8_t w=0;w<sizeof(meter)/sizeof(TELE);w++){
-                if(n==meter[w].gauge){
-                    meter[w].gauge=TT_NO_TELEMETRY;
+            for(uint8_t w=0;w<N_TELE;w++){
+                if(n==tt.a[w].gauge){
+                    tt.a[w].gauge=TT_NO_TELEMETRY;
                 }
             }
             send_gauge_config(n,0,0,"none",ptr);
-            ret = snprintf(temp, sizeof(temp),"OK\r\n");
-            send_buffer((uint8_t*)temp,ret,ptr);
+            SEND_CONST_STRING("OK\r\n",ptr);
             return pdPASS;
         }
         
         
         int cnt=-1;
-        for(uint8_t w=0;w<sizeof(meter)/sizeof(TELE);w++){
-            if(ntlibc_stricmp(buffer[2],meter[w].name)==0){
-                for(uint8_t i=0;i<sizeof(meter)/sizeof(TELE);i++){
-                    if(n==meter[i].gauge)meter[i].gauge=TT_NO_TELEMETRY;
+        for(uint8_t w=0;w<N_TELE;w++){
+            if(ntlibc_stricmp(buffer[2],tt.a[w].name)==0){
+                for(uint8_t i=0;i<N_TELE;i++){
+                    if(n==tt.a[i].gauge)tt.a[i].gauge=TT_NO_TELEMETRY;
                 }
                 cnt=w;
                 break;
             }
         }
         if(cnt==TT_NO_TELEMETRY){
-            ret = snprintf(temp, sizeof(temp),"Telemetry name not found\r\n");  
+            SEND_CONST_STRING("Telemetry name not found\r\n",ptr); 
         }else{
-            meter[cnt].gauge = n;
-            ret = snprintf(temp, sizeof(temp),"OK\r\n");
-            if(meter[cnt].high_res){
-                    send_gauge_config32(n,meter[cnt].min,meter[cnt].max,meter[cnt].divider,meter[cnt].name,ptr);
+            tt.a[cnt].gauge = n;
+            SEND_CONST_STRING("OK\r\n",ptr);
+            if(tt.a[cnt].high_res){
+                    send_gauge_config32(n,tt.a[cnt].min,tt.a[cnt].max,tt.a[cnt].divider,tt.a[cnt].name,ptr);
             }else{
-                    send_gauge_config(n,meter[cnt].min,meter[cnt].max,meter[cnt].name,ptr);
+                    send_gauge_config(n,tt.a[cnt].min,tt.a[cnt].max,tt.a[cnt].name,ptr);
             }
         }
-        send_buffer((uint8_t*)temp,ret,ptr);
         return pdPASS;
 
     } else if (ntlibc_stricmp(buffer[0], "chart") == 0 && items == 3) {
         int8_t n = ntlibc_atoi(buffer[1]);
         if(n>=N_CHARTS || n<0){
-            ret = snprintf(temp, sizeof(temp),"Chart number must be between 0 and 3\r\n");
-            send_buffer((uint8_t*)temp,ret,ptr);
+            SEND_CONST_STRING("Chart number must be between 0 and 3\r\n",ptr);
             return 0;
         }
         if(ntlibc_stricmp(buffer[2],"none")==0){
-            for(uint8_t w=0;w<sizeof(meter)/sizeof(TELE);w++){
-                if(n==meter[w].chart){
-                    meter[w].chart=TT_NO_TELEMETRY;
+            for(uint8_t w=0;w<N_TELE;w++){
+                if(n==tt.a[w].chart){
+                    tt.a[w].chart=TT_NO_TELEMETRY;
                 }
             }
             send_chart_config(n,0,0,0,TT_UNIT_NONE,"none",ptr);
-            ret = snprintf(temp, sizeof(temp),"OK\r\n");
-            send_buffer((uint8_t*)temp,ret,ptr);
+            SEND_CONST_STRING("OK\r\n",ptr);
             return pdPASS;
         }
         int cnt=-1;
-        for(uint8_t w=0;w<sizeof(meter)/sizeof(TELE);w++){
-            if(ntlibc_stricmp(buffer[2],meter[w].name)==0){
-                for(uint8_t i=0;i<sizeof(meter)/sizeof(TELE);i++){
-                    if(n==meter[i].chart)meter[i].chart=TT_NO_TELEMETRY;
+        for(uint8_t w=0;w<N_TELE;w++){
+            if(ntlibc_stricmp(buffer[2],tt.a[w].name)==0){
+                for(uint8_t i=0;i<N_TELE;i++){
+                    if(n==tt.a[i].chart)tt.a[i].chart=TT_NO_TELEMETRY;
                 }
                 cnt=w;
                 break;
             }
         }
         if(cnt==TT_NO_TELEMETRY){
-            ret = snprintf(temp, sizeof(temp),"Telemetry name not found\r\n");  
+            SEND_CONST_STRING("Telemetry name not found\r\n",ptr);
         }else{
-            meter[cnt].chart = n;
-            ret = snprintf(temp, sizeof(temp),"OK\r\n");
-            send_chart_config(n,meter[cnt].min,meter[cnt].max,meter[cnt].offset,meter[cnt].unit,meter[cnt].name,ptr);
+            tt.a[cnt].chart = n;
+            SEND_CONST_STRING("OK\r\n",ptr);
+            send_chart_config(n,tt.a[cnt].min,tt.a[cnt].max,tt.a[cnt].offset,tt.a[cnt].unit,tt.a[cnt].name,ptr);
         }
-        send_buffer((uint8_t*)temp,ret,ptr);
         return pdPASS;
 
     } else if (ntlibc_stricmp(buffer[0], "ls") == 0) {
-        for(uint8_t w=0;w<sizeof(meter)/sizeof(TELE);w++){
-            ret = snprintf(temp, sizeof(temp),"%i: %s\r\n", w+1, meter[w].name);
+        for(uint8_t w=0;w<N_TELE;w++){
+            ret = snprintf(temp, sizeof(temp),"%i: %s\r\n", w+1, tt.a[w].name);
             send_buffer((uint8_t*)temp,ret,ptr);
         }
         return pdPASS;

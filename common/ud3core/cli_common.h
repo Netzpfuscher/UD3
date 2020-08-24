@@ -41,11 +41,11 @@ void init_config();
 void eeprom_load(port_str *ptr);
 
 uint8_t command_cls(char *commandline, port_str *ptr);
-void stop_overlay_task(port_str *ptr);
+
 void uart_baudrate(uint32_t baudrate);
 void spi_speed(uint32_t speed);
 void update_visibilty(void);
-void init_tt(uint8_t with_chart, port_str *ptr);
+
 
 extern parameter_entry confparam[];
 volatile uint8_t qcw_reg;

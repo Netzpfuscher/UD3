@@ -42,6 +42,13 @@ void tsk_overlay_chart_stop();
 void tsk_overlay_chart_start();
 uint8_t telemetry_command_setup(char *commandline, port_str *ptr);
 void init_telemetry();
+void start_overlay_task(port_str *ptr);
+void stop_overlay_task(port_str *ptr);
+void init_tt(uint8_t with_chart, port_str *ptr);
+
+uint8_t command_status(char *commandline, port_str *ptr);
+uint8_t command_tterm(char *commandline, port_str *ptr);
+
 /*
  * Add user function prototypes in the below merge region to add user
  * functionality to the task definition.

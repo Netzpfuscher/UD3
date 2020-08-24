@@ -28,6 +28,7 @@
 #include "tsk_midi.h"
 #include "tsk_fault.h"
 #include "clock.h"
+#include "version.h"
 
 xTaskHandle tsk_midi_TaskHandle;
 uint8 tsk_midi_initVar = 0u;
@@ -278,14 +279,14 @@ static inline void compute_adsr_sid(uint8_t ch){
 static inline void synthcode_MIDI(uint32_t r){
     PULSE pulse;
 	uint8_t flag[N_CHANNEL];
-    metering.midi_voices->value=0;
+    tt.n.midi_voices.value=0;
 	for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
 
         compute_adsr_midi(ch);
         
         flag[ch] = 0;
 		if (channel[ch].volume > 0) {
-            metering.midi_voices->value++;
+            tt.n.midi_voices.value++;
 			if ((r / channel[ch].halfcount) % 2 > 0) {
 				flag[ch] = 1;
 			}
@@ -313,7 +314,7 @@ uint32_t last_frame=4294967295;
 
 static inline void synthcode_SID(uint32_t r){
   
-    metering.midi_voices->value=0;
+    tt.n.midi_voices.value=0;
     
     if (l_time > next_frame){
         if(xQueueReceiveFromISR(qSID,&sid_frm,0)){
@@ -350,13 +351,13 @@ static inline void synthcode_SID(uint32_t r){
 
 		flag[ch] = 0;
 		if (channel[ch].volume > 0) {
-            metering.midi_voices->value++;
+            tt.n.midi_voices.value++;
 			if ((r / channel[ch].halfcount) % 2 > 0) {
 				flag[ch] = 1; 
 			}
 		}
 		if (flag[ch] > old_flag[ch]) {
-            if(!(sid_frm.wave[ch] && (random & 0x03))){
+            if(!(sid_frm.wave[ch] && (random & SID_NOISE_WEIGHT))){
                 pulse.volume = channel[ch].volume;
                 pulse.pw = sid_frm.master_pw;
 #if USE_DEBUG_PW
@@ -378,13 +379,13 @@ static inline void synthcode_SID(uint32_t r){
 static inline void synthcode_QMIDI(uint32_t r){
     qcw_handle_synth();
     int16_t vol=0;
-    metering.midi_voices->value=0;
+    tt.n.midi_voices.value=0;
 	for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
 
         compute_adsr_midi(ch);
 
 		if (channel[ch].volume > 0) {
-            metering.midi_voices->value++;
+            tt.n.midi_voices.value++;
 			if ((r / channel[ch].halfcount) % 2 > 0) {
                 vol +=channel[ch].volume;
 			}else{
@@ -400,7 +401,7 @@ static inline void synthcode_QMIDI(uint32_t r){
 static inline void synthcode_QSID(uint32_t r){
     qcw_handle_synth();
     
-    metering.midi_voices->value=0;
+    tt.n.midi_voices.value=0;
     
     if (l_time > next_frame){
         if(xQueueReceiveFromISR(qSID,&sid_frm,0)){
@@ -439,7 +440,7 @@ static inline void synthcode_QSID(uint32_t r){
         compute_adsr_sid(ch);
 
 		if (channel[ch].volume > 0) {
-            metering.midi_voices->value++;
+            tt.n.midi_voices.value++;
 			if ((r / channel[ch].halfcount) % 2 > 0) {
                 if(sid_frm.wave[ch]){
                     vol +=(((int)channel[ch].volume*random)/127);
@@ -678,7 +679,7 @@ void process(NOTE *v) {
 }
 
 void update_midi_duty(){
-    if(!metering.midi_voices->value) return;
+    if(!tt.n.midi_voices.value) return;
     uint32_t dutycycle=0;
 
     for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {    
@@ -687,7 +688,7 @@ void update_midi_duty(){
         }
 	}
   
-    metering.duty->value = dutycycle;
+    tt.n.duty.value = dutycycle;
     if(dutycycle>(configuration.max_tr_duty-param.temp_duty)){
         interrupter.pw = (param.pw * (configuration.max_tr_duty-param.temp_duty)) / dutycycle;
     }else{
@@ -707,14 +708,13 @@ void reflect() {
 			if (channel[ch].adsr_state) {
                 pb = ((((uint32_t)midich[mch].pitchbend*midich[mch].bendrange)<<10) / PITCHBEND_DIVIDER)<<6;
                 channel[ch].freq=Q16n16_mtof((channel[ch].miditone<<16)+pb);
-                channel[ch].halfcount= (160000<<14) / (channel[ch].freq>>2);
+                channel[ch].halfcount= (SG_CLOCK_HALFCOUNT<<14) / (channel[ch].freq>>2);
                 channel[ch].freq = channel[ch].freq >>16;
                 if(filter.channel[ch]==0 || channel[ch].freq < filter.min || channel[ch].freq > filter.max){
                     channel[ch].adsr_state = ADSR_IDLE;   
                     channel[ch].volume = 0;
                     channel[ch].sustain = 0;
                 }
-
 			}
 			channel[ch].updated = 0;													// Mission channel update work done
 		}
@@ -728,7 +728,7 @@ void reflect() {
 	}
     
     
-    metering.duty->value = dutycycle;
+    tt.n.duty.value = dutycycle;
     if(dutycycle>(configuration.max_tr_duty-param.temp_duty)){
         interrupter.pw = (param.pw * (configuration.max_tr_duty-param.temp_duty)) / dutycycle;
     }else{
@@ -748,7 +748,7 @@ void kill_accu(){
 
 void switch_synth(uint8_t synth){
     skip_flag=0;
-    metering.midi_voices->value=0;
+    tt.n.midi_voices.value=0;
     xQueueReset(qMIDI_rx);
     xQueueReset(qSID);
     kill_accu();   

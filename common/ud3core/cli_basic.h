@@ -38,7 +38,7 @@
     int16_t:    TYPE_SIGNED, \
     int32_t:    TYPE_SIGNED, \
     float:      TYPE_FLOAT, \
-    uint16_t*:  TYPE_STRING, \
+    uint16_t*:  TYPE_BUFFER, \
     char:       TYPE_CHAR, \
     char*:      TYPE_STRING)
 

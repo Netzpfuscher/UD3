@@ -45,6 +45,7 @@ void init_telemetry();
 void start_overlay_task(port_str *ptr);
 void stop_overlay_task(port_str *ptr);
 void init_tt(uint8_t with_chart, port_str *ptr);
+void recalc_telemetry_limits();
 
 uint8_t command_status(char *commandline, port_str *ptr);
 uint8_t command_tterm(char *commandline, port_str *ptr);

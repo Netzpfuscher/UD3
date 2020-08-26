@@ -94,8 +94,6 @@ typedef struct
 	uint64_t sum_squares;
 } rms_t;
 
-//int16 ADC_sample[4];
-
 uint16 ADC_sample_buf_0[4*ADC_BUFFER_CNT];
 uint16 ADC_sample_buf_1[4*ADC_BUFFER_CNT];
 uint16 *ADC_active_sample_buf = ADC_sample_buf_0;
@@ -181,12 +179,9 @@ uint8_t i2t_calculate(){
 /* `#START USER_TASK_LOCAL_CODE` */
 
 CY_ISR(ADC_data_ready_ISR) {
-    static uint8_t active_buffer = 1;
-    if(active_buffer==0){
-        active_buffer=1;
+    if(ADC_active_sample_buf==ADC_sample_buf_0 ){
         ADC_active_sample_buf = ADC_sample_buf_1;
     } else {
-        active_buffer=0;
         ADC_active_sample_buf = ADC_sample_buf_0;
     }
 	xSemaphoreGiveFromISR(adc_ready_Semaphore, NULL);
@@ -274,7 +269,6 @@ void calculate_rms(void) {
 	}
     
     // read the driver voltage
-	//tt.n.driver_v.value = ADC_CountsTo_mVolts(ADC_active_sample_buf[DATA_VDRIVER]) *10; //11 Takes the input impedance of 180k from the SAR into account
     tt.n.driver_v.value = read_driver_mv(ADC_active_sample_buf[DATA_VDRIVER]);
     tt.n.primary_i.value = CT1_Get_Current(CT_PRIMARY);
     

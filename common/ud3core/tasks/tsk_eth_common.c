@@ -106,7 +106,7 @@ void process_sid(uint8_t* ptr, uint16_t len) {
                 case SID_FREQHI1:
                     SID_frame.freq[0] |= ((uint16_t)*ptr << 8);
                     SID_frame.freq[0] = ((uint32_t)SID_frame.freq[0]<<7)/2179;
-                    SID_frame.half[0] = 160000 / SID_frame.freq[0];
+                    SID_frame.half[0] = SG_CLOCK_HALFCOUNT / SID_frame.freq[0];
                     break;
                 case SID_PWLO1:
 		            SID_frame.pw[0] = (SID_frame.pw[0] & 0xff00) + *ptr;
@@ -136,7 +136,7 @@ void process_sid(uint8_t* ptr, uint16_t len) {
                 case SID_FREQHI2:
                     SID_frame.freq[1] |= ((uint16_t)*ptr << 8);
                     SID_frame.freq[1] = ((uint32_t)SID_frame.freq[1]<<7)/2179;
-                    SID_frame.half[1] = 160000 / SID_frame.freq[1];
+                    SID_frame.half[1] = SG_CLOCK_HALFCOUNT / SID_frame.freq[1];
                     break;
                 case SID_PWLO2:
 		            SID_frame.pw[1] = (SID_frame.pw[1] & 0xff00) + *ptr;
@@ -166,7 +166,7 @@ void process_sid(uint8_t* ptr, uint16_t len) {
                 case SID_FREQHI3:
                     SID_frame.freq[2] |= ((uint16_t)*ptr << 8);
                     SID_frame.freq[2] = ((uint32_t)SID_frame.freq[2]<<7)/2179;
-                    SID_frame.half[2] = 160000 / SID_frame.freq[2];
+                    SID_frame.half[2] = SG_CLOCK_HALFCOUNT / SID_frame.freq[2];
                     break;
                 case SID_PWLO3:
 		            SID_frame.pw[2] = (SID_frame.pw[2] & 0xff00) + *ptr;

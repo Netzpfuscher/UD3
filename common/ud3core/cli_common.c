@@ -306,7 +306,6 @@ void eeprom_load(port_str *ptr){
     uart_baudrate(configuration.baudrate);
     spi_speed(configuration.spi_speed);
     callback_synthFilter(NULL,0, ptr);
-    
     ramp.changed = pdTRUE;
     qcw_regenerate_ramp();
     init_telemetry();
@@ -752,6 +751,8 @@ uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, port_st
 	configure_ZCD_to_PWM();
     update_visibilty();
     reconfig_charge_timer();
+    
+    recalc_telemetry_limits();
     
 	system_fault_Control = sfflag;
     return 1;

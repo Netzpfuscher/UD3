@@ -132,7 +132,6 @@ void init_telemetry(){
     tt.n.batt_v.name = "Voltage2";
     tt.n.batt_v.value = 0;
     tt.n.batt_v.min = 0;
-    tt.n.batt_v.max = configuration.r_top / 1000;;
     tt.n.batt_v.offset = 0;
     tt.n.batt_v.unit = TT_UNIT_V;
     tt.n.batt_v.divider = 1;
@@ -144,7 +143,6 @@ void init_telemetry(){
     tt.n.primary_i.name = "Primary";
     tt.n.primary_i.value = 0;
     tt.n.primary_i.min = 0;
-    tt.n.primary_i.max = ((5000ul * configuration.ct1_ratio) / configuration.ct1_burden)/100;
     tt.n.primary_i.offset = 0;
     tt.n.primary_i.unit = TT_UNIT_A;
     tt.n.primary_i.divider = 0;
@@ -168,7 +166,6 @@ void init_telemetry(){
     tt.n.bus_v.name = "Voltage";
     tt.n.bus_v.value = 0;
     tt.n.bus_v.min = 0;
-    tt.n.bus_v.max = configuration.r_top / 1000;
     tt.n.bus_v.offset = 0;
     tt.n.bus_v.unit = TT_UNIT_V;
     tt.n.bus_v.divider = 1;
@@ -180,7 +177,6 @@ void init_telemetry(){
     tt.n.temp1.name = "Temp1";
     tt.n.temp1.value = 0;
     tt.n.temp1.min = 0;
-    tt.n.temp1.max = configuration.temp1_max;
     tt.n.temp1.offset = 0;
     tt.n.temp1.unit = TT_UNIT_C;
     tt.n.temp1.divider = 1;
@@ -192,7 +188,6 @@ void init_telemetry(){
     tt.n.temp2.name = "Temp2";
     tt.n.temp2.value = 0;
     tt.n.temp2.min = 0;
-    tt.n.temp2.max = configuration.temp2_max;
     tt.n.temp2.offset = 0;
     tt.n.temp2.unit = TT_UNIT_C;
     tt.n.temp2.divider = 1;
@@ -204,7 +199,6 @@ void init_telemetry(){
     tt.n.batt_i.name = "Current";
     tt.n.batt_i.value = 0;
     tt.n.batt_i.min = 0;
-    tt.n.batt_i.max = ((configuration.ct2_ratio * 50) / configuration.ct2_burden);
     tt.n.batt_i.offset = 0;
     tt.n.batt_i.unit = TT_UNIT_A;
     tt.n.batt_i.divider = 10;
@@ -216,7 +210,6 @@ void init_telemetry(){
     tt.n.avg_power.name = "Power";
     tt.n.avg_power.value = 0;
     tt.n.avg_power.min = 0;
-    tt.n.avg_power.max = (configuration.r_top / 1000) * ((configuration.ct2_ratio * 50) / configuration.ct2_burden);
     tt.n.avg_power.offset = 0;
     tt.n.avg_power.unit = TT_UNIT_W;
     tt.n.avg_power.divider = 1;
@@ -225,6 +218,18 @@ void init_telemetry(){
     tt.n.avg_power.chart = 3;
     tt.n.avg_power.gauge = 2;
     
+    recalc_telemetry_limits();
+    
+}
+
+void recalc_telemetry_limits(){
+    tt.n.batt_v.max = configuration.r_top / 1000;
+    tt.n.primary_i.max = ((5000ul * configuration.ct1_ratio) / configuration.ct1_burden)/100;
+    tt.n.bus_v.max = configuration.r_top / 1000;
+    tt.n.batt_i.max = ((configuration.ct2_ratio * 50) / configuration.ct2_burden);
+    tt.n.temp1.max = configuration.temp1_max;
+    tt.n.temp2.max = configuration.temp2_max;
+    tt.n.avg_power.max = (configuration.r_top / 1000) * ((configuration.ct2_ratio * 50) / configuration.ct2_burden);
 }
 
 
@@ -234,7 +239,6 @@ void tsk_overlay_chart_stop(){
 void tsk_overlay_chart_start(){
     chart=1;
 }
-
 
 void show_overlay_100ms(port_str *ptr){
 

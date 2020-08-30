@@ -27,6 +27,7 @@
 #include "qcw.h"
 #include "interrupter.h"
 #include "ntlibc.h"
+#include "hardware.h"
 
 #include "ZCDtoPWM.h"
 #include "helper/teslaterm.h"
@@ -34,6 +35,7 @@
 
 void qcw_handle(){
     if(SG_Timer_ReadCounter() < timer.time_stop){
+        qcw_modulate(0);
         qcw_reg = 0;
         QCW_enable_Control = 0;
         return;

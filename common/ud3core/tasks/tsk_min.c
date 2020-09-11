@@ -365,14 +365,11 @@ void tsk_min_TaskProc(void *pvParameters) {
             uint16_t eth_bytes=xStreamBufferBytesAvailable(min_port[i].tx);
             if(eth_bytes){
                 bytes_waiting+=eth_bytes;
-                bytes_cnt = xStreamBufferReceive(min_port[i].tx, buffer, LOCAL_UART_BUFFER_SIZE, 0);
-                if(bytes_cnt){
-                    uint8_t res=0;
-                    res = min_queue_frame(&min_ctx,i,buffer,bytes_cnt);
-                    while(!res){
-                        poll_UART(buffer_u);
-                        vTaskDelay(1);   
-                        res = min_queue_frame(&min_ctx,i,buffer,bytes_cnt);
+                if(eth_bytes>LOCAL_UART_BUFFER_SIZE) eth_bytes = LOCAL_UART_BUFFER_SIZE;
+                if(min_queue_has_space_for_frame(&min_ctx,eth_bytes)){
+                    bytes_cnt = xStreamBufferReceive(min_port[i].tx, buffer, LOCAL_UART_BUFFER_SIZE, 0);
+                    if(bytes_cnt){
+                        min_queue_frame(&min_ctx,i,buffer,bytes_cnt);
                     }
                 }
             }

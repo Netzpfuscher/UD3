@@ -8,7 +8,7 @@
 #define TRANSPORT_FIFO_SIZE_FRAME_DATA_MASK         ((uint16_t)((1U << TRANSPORT_FIFO_SIZE_FRAME_DATA_BITS) - 1U))
 
 // Number of bytes needed for a frame with a given payload length, excluding stuff bytes
-// 3 header bytes, ID/control byte, length byte, seq byte, 4 byte CRC, EOF byte
+// 3 header bytes, ID/control byte, length byte, 4 byte seq, 4 byte CRC, EOF byte
 #define ON_WIRE_SIZE(p)                             ((p) + 14U)
 
 // Special protocol bytes
@@ -316,6 +316,11 @@ bool min_queue_frame(struct min_context *self, uint8_t min_id, uint8_t *payload,
         self->transport_fifo.dropped_frames++;
         return false;
     }
+}
+
+bool min_queue_has_space_for_frame(struct min_context *self, uint8_t payload_len) {
+    return self->transport_fifo.n_frames < TRANSPORT_FIFO_MAX_FRAMES &&
+           self->transport_fifo.n_ring_buffer_bytes <= TRANSPORT_FIFO_MAX_FRAME_DATA - payload_len;
 }
 
 // Finds the frame in the window that was sent least recently

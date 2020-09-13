@@ -367,7 +367,7 @@ void tsk_min_TaskProc(void *pvParameters) {
                 bytes_waiting+=eth_bytes;
                 if(eth_bytes>LOCAL_UART_BUFFER_SIZE) eth_bytes = LOCAL_UART_BUFFER_SIZE;
                 if(min_queue_has_space_for_frame(&min_ctx,eth_bytes)){
-                    bytes_cnt = xStreamBufferReceive(min_port[i].tx, buffer, LOCAL_UART_BUFFER_SIZE, 0);
+                    bytes_cnt = xStreamBufferReceive(min_port[i].tx, buffer, eth_bytes, 0);
                     if(bytes_cnt){
                         min_queue_frame(&min_ctx,i,buffer,bytes_cnt);
                     }

@@ -476,7 +476,7 @@ static void valid_frame_received(struct min_context *self)
 #endif // TRANSPORT_PROTOCOL
 }
 
-static void rx_byte(struct min_context *self, uint8_t byte)
+void min_rx_byte(struct min_context *self, uint8_t byte)
 {
     // Regardless of state, three header bytes means "start of frame" and
     // should reset the frame buffer and be ready to receive frame data
@@ -619,7 +619,7 @@ static void rx_byte(struct min_context *self, uint8_t byte)
 void min_poll(struct min_context *self, uint8_t *buf, uint32_t buf_len)
 {
     for(uint32_t i = 0; i < buf_len; i++) {
-        rx_byte(self, buf[i]);
+        min_rx_byte(self, buf[i]);
     }
 
 #ifdef TRANSPORT_PROTOCOL

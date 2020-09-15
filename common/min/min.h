@@ -177,6 +177,8 @@ void min_poll(struct min_context *self, uint8_t *buf, uint32_t buf_len);
 // Reset the state machine and (optionally) tell the other side that we have done so
 void min_transport_reset(struct min_context *self, bool inform_other_side);
 
+void min_rx_byte(struct min_context *self, uint8_t byte);
+
 // CALLBACK. Handle incoming MIN frame
 void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_payload, uint8_t port);
 

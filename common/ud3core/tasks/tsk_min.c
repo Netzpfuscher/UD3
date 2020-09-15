@@ -42,6 +42,8 @@
 xTaskHandle tsk_min_TaskHandle;
 uint8 tsk_min_initVar = 0u;
 
+SemaphoreHandle_t min_Semaphore;
+
 
 /* ------------------------------------------------------------------------ */
 /*
@@ -238,19 +240,17 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
 }
 
 
-void poll_UART(uint8_t* ptr){
+void poll_UART(){
         
     uint16_t bytes = UART_GetRxBufferSize();
-    uint16_t bytes_cnt=0;
     if(bytes){
         rx_blink_Write(1);
-        if (bytes > LOCAL_UART_BUFFER_SIZE) bytes = LOCAL_UART_BUFFER_SIZE;
-            while(bytes_cnt < bytes){
-                ptr[bytes_cnt] = UART_GetByte();
-                bytes_cnt++;
-            }
+        while(bytes){
+            min_rx_byte(&min_ctx, UART_GetByte());
+            bytes--;
+        }
     }
-    min_poll(&min_ctx, ptr, bytes_cnt);
+    min_poll(&min_ctx, NULL, 0);
     
 }
 
@@ -279,6 +279,19 @@ void min_reset_flow(void){
     flow_ctl=0;
 }
 
+uint8_t min_queue(uint8_t id, uint8_t *data, uint8_t len, TickType_t ticks){
+    if(min_queue_has_space_for_frame(&min_ctx,len)== false) return pdFAIL;
+    
+    if(xSemaphoreTake(min_Semaphore,ticks)){
+        uint8_t ret = min_queue_frame(&min_ctx,id,data,len);      
+        xSemaphoreGive(min_Semaphore);
+        return ret;   
+    }else{
+        return pdFAIL;
+    }
+        
+}
+
 
 
 /* `#END` */
@@ -296,9 +309,9 @@ void tsk_min_TaskProc(void *pvParameters) {
 	/* `#START TASK_VARIABLES` */
     
     uint8_t buffer[LOCAL_UART_BUFFER_SIZE];
-    uint8_t buffer_u[LOCAL_UART_BUFFER_SIZE];
-
     uint8_t bytes_cnt=0;
+    
+    
    
 
 	/* `#END` */
@@ -327,57 +340,65 @@ void tsk_min_TaskProc(void *pvParameters) {
     uint32_t next_sid_flow = 0;
     alarm_push(ALM_PRIO_INFO,warn_task_min, ALM_NO_VALUE);
     
+    xSemaphoreGive(min_Semaphore);
+    
     send_command_wq(&min_ctx,CMD_HELLO_WORLD, configuration.ud_name);
     
 	for (;;) {
-
-        bytes_waiting=UART_GetRxBufferSize();
         
-        if(transmit_features){
-            uint8_t temp=(sizeof(version)/sizeof(char*))-transmit_features;
-            min_queue_frame(&min_ctx, MIN_ID_FEATURE, (uint8_t*)version[temp],strlen(version[temp]));  
-            transmit_features--;
-        }
-        
-        for(i=0;i<NUM_MIN_CON;i++){
-        
-    		/* `#START TASK_LOOP_CODE` */
-             
-            poll_UART(buffer_u);
-            if(socket_info[i].socket==SOCKET_DISCONNECTED) goto end;   
+        if(xSemaphoreTake(min_Semaphore,100)){
+            bytes_waiting=UART_GetRxBufferSize();
             
+            if(transmit_features){
+                uint8_t temp=(sizeof(version)/sizeof(char*))-transmit_features;
+                min_queue_frame(&min_ctx, MIN_ID_FEATURE, (uint8_t*)version[temp],strlen(version[temp]));  
+                transmit_features--;
+            }
+        
+        
+        
+            for(i=0;i<NUM_MIN_CON;i++){
             
-            if(param.synth==SYNTH_SID || param.synth==SYNTH_SID_QCW){
-                if(uxQueueSpacesAvailable(qSID) < 30 && flow_ctl){
-                    min_queue_frame(&min_ctx, MIN_ID_MIDI, (uint8_t*)&min_stop,1);
-                    flow_ctl=0;
-                }else if(uxQueueSpacesAvailable(qSID) > 45 && !flow_ctl){ //
-                    min_queue_frame(&min_ctx, MIN_ID_MIDI, (uint8_t*)&min_start,1);
-                    flow_ctl=1;
-                }else if(uxQueueSpacesAvailable(qSID) > 59){
-                    if(xTaskGetTickCount()>next_sid_flow){
-                        next_sid_flow = xTaskGetTickCount() + FLOW_RETRANSMIT_TICKS;
-                        min_send_frame(&min_ctx, MIN_ID_MIDI, (uint8_t*)&min_start,1);
+        		/* `#START TASK_LOOP_CODE` */
+                 
+                poll_UART();
+                if(socket_info[i].socket==SOCKET_DISCONNECTED) goto end;   
+                
+                
+                if(param.synth==SYNTH_SID || param.synth==SYNTH_SID_QCW){
+                    if(uxQueueSpacesAvailable(qSID) < 30 && flow_ctl){
+                        min_queue_frame(&min_ctx, MIN_ID_MIDI, (uint8_t*)&min_stop,1);
+                        flow_ctl=0;
+                    }else if(uxQueueSpacesAvailable(qSID) > 45 && !flow_ctl){ //
+                        min_queue_frame(&min_ctx, MIN_ID_MIDI, (uint8_t*)&min_start,1);
                         flow_ctl=1;
+                    }else if(uxQueueSpacesAvailable(qSID) > 59){
+                        if(xTaskGetTickCount()>next_sid_flow){
+                            next_sid_flow = xTaskGetTickCount() + FLOW_RETRANSMIT_TICKS;
+                            min_send_frame(&min_ctx, MIN_ID_MIDI, (uint8_t*)&min_start,1);
+                            flow_ctl=1;
+                        }
                     }
                 }
-            }
-            uint16_t eth_bytes=xStreamBufferBytesAvailable(min_port[i].tx);
-            if(eth_bytes){
-                bytes_waiting+=eth_bytes;
-                if(eth_bytes>LOCAL_UART_BUFFER_SIZE) eth_bytes = LOCAL_UART_BUFFER_SIZE;
-                if(min_queue_has_space_for_frame(&min_ctx,eth_bytes)){
-                    bytes_cnt = xStreamBufferReceive(min_port[i].tx, buffer, eth_bytes, 0);
-                    if(bytes_cnt){
-                        min_queue_frame(&min_ctx,i,buffer,bytes_cnt);
+                uint16_t eth_bytes=xStreamBufferBytesAvailable(min_port[i].tx);
+                if(eth_bytes){
+                    bytes_waiting+=eth_bytes;
+                    if(eth_bytes>LOCAL_UART_BUFFER_SIZE) eth_bytes = LOCAL_UART_BUFFER_SIZE;
+                    if(min_queue_has_space_for_frame(&min_ctx,eth_bytes)){
+                        bytes_cnt = xStreamBufferReceive(min_port[i].tx, buffer, eth_bytes, 0);
+                        if(bytes_cnt){
+                            min_queue_frame(&min_ctx,i,buffer,bytes_cnt);
+                        }
                     }
                 }
+                end:;
             }
-            end:;
+            xSemaphoreGive(min_Semaphore);
+            if(bytes_waiting==0){
+                vTaskDelay(1);
+            }
         }
-        if(bytes_waiting==0){
-            vTaskDelay(1);
-        }
+        
 		/* `#END` */
 	}
 }
@@ -393,6 +414,7 @@ void tsk_min_Start(void) {
 	/* `#END` */
     UART_Start();
     
+    min_Semaphore = xSemaphoreCreateBinary();
     
 	if (tsk_min_initVar != 1) {
 		/*

@@ -71,7 +71,7 @@ struct _time time;
  */
 /* `#START USER_TASK_LOCAL_CODE` */
 
-#define LOCAL_UART_BUFFER_SIZE  127     //bytes
+#define LOCAL_UART_BUFFER_SIZE  250     //bytes
 #define FLOW_RETRANSMIT_TICKS 50
 
 #define ITEMS			32								//Stärke des Lowpass-Filters

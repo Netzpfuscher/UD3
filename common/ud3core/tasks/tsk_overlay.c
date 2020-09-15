@@ -364,7 +364,7 @@ void show_overlay_400ms(port_str *ptr) {
                 }
             }
         }
-        
+
         if(ptr->term_mode!=PORT_TERM_MQTT){
             send_status(tt.n.bus_status.value!=BUS_OFF,
                         tr_running!=0,

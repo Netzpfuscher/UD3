@@ -33,6 +33,8 @@
 #include "cli_common.h"
 #include "interrupter.h"
 #include "tasks/tsk_analog.h"
+#include "tasks/tsk_overlay.h"
+#include "ntlibc.h"
 
 #define FREQ 0
 #define CURR 1
@@ -42,6 +44,44 @@
 
 #define OFFSET_X 20
 #define OFFSET_Y 20
+
+uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint8_t channel, uint8_t delay, port_str *ptr);
+
+
+/*****************************************************************************
+* commands a frequency sweep for the primary coil. It searches for a peak
+* and makes a second run with +-6kHz around the peak
+******************************************************************************/
+uint8_t command_tune(char *commandline, port_str *ptr) {
+    SKIP_SPACE(commandline);
+    CHECK_NULL(commandline);
+    
+    
+    SEND_CONST_STRING("Warning: The bridge will switch hard, make sure that the bus voltage is appropriate\r\n",ptr);
+    SEND_CONST_STRING("Press [y] to proceed\r\n",ptr);
+    
+    if(getch(ptr, portMAX_DELAY) != 'y'){
+        SEND_CONST_STRING("Tune aborted\r\n",ptr);
+        return 0;
+    }
+    if(ptr->term_mode == PORT_TERM_TT){
+        tsk_overlay_chart_stop();
+        send_chart_clear(ptr);
+        
+    }
+    SEND_CONST_STRING("Start sweep:\r\n",ptr);
+    if (ntlibc_stricmp(commandline, "prim") == 0) {
+    	run_adc_sweep(param.tune_start, param.tune_end, param.tune_pw, CT_PRIMARY, param.tune_delay, ptr);
+        SEND_CONST_STRING("Type cls to go back to normal telemtry chart\r\n",ptr);
+        return 0;
+    }else if (ntlibc_stricmp(commandline, "sec") == 0) {
+        run_adc_sweep(param.tune_start, param.tune_end, param.tune_pw, CT_SECONDARY, param.tune_delay, ptr);
+        SEND_CONST_STRING("Type cls to go back to normal telemetry chart\r\n",ptr);
+        return 0;
+    }
+
+    HELP_TEXT("Usage: tune [prim|sec]\r\n");
+}
 
 void autotune_draw_d(port_str *ptr){
     uint16_t f;

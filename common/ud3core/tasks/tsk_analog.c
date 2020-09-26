@@ -36,6 +36,7 @@
 #include "semphr.h"
 #include "timers.h"
 #include "interrupter.h"
+#include "helper/FastPID.h"
 
 #include <stdlib.h>
 #include "math.h"
@@ -55,6 +56,8 @@ TimerHandle_t xCharge_Timer;
 
 
 #define NEW_DATA_RATE_MS (0.125 * ADC_BUFFER_CNT)  //ms
+
+#define CURRENT_PID_HZ 320
 
 
 /* ------------------------------------------------------------------------ */
@@ -94,9 +97,12 @@ typedef struct
 	uint64_t sum_squares;
 } rms_t;
 
-uint16 ADC_sample_buf_0[4*ADC_BUFFER_CNT];
-uint16 ADC_sample_buf_1[4*ADC_BUFFER_CNT];
-uint16 *ADC_active_sample_buf = ADC_sample_buf_0;
+
+adc_sample_t ADC_sample_buf_0[ADC_BUFFER_CNT];
+adc_sample_t ADC_sample_buf_1[ADC_BUFFER_CNT];
+adc_sample_t *ADC_active_sample_buf = ADC_sample_buf_0;
+
+FastPID pid_current;
 
 rms_t current_idc;
 uint8_t ADC_mux_ctl[4] = {0x05, 0x02, 0x03, 0x00};
@@ -249,28 +255,43 @@ uint16_t average_filter(uint32_t *ptr, uint16_t sample) {
 
 void calculate_rms(void) {
     static uint16_t count=0;
+    
+    static uint16_t old_curr_setpoint=0;
+    
 	//while (uxQueueMessagesWaiting(adc_data)) {
-    for(uint8_t i=0;i<ADC_BUFFER_CNT;i+=4){
+    for(uint8_t i=0;i<ADC_BUFFER_CNT;i++){
 
 		// read the battery voltage
-		tt.n.batt_v.value = read_bus_mv(ADC_active_sample_buf[i+DATA_VBATT]) / 1000;
+		tt.n.batt_v.value = read_bus_mv(ADC_active_sample_buf[i].v_batt) / 1000;
 
 		// read the bus voltage
-		tt.n.bus_v.value = read_bus_mv(ADC_active_sample_buf[i+DATA_VBUS]) / 1000;
+		tt.n.bus_v.value = read_bus_mv(ADC_active_sample_buf[i].v_bus) / 1000;
 
 		// read the battery current
         if(configuration.ct2_type==CT2_TYPE_CURRENT){
-		    tt.n.batt_i.value = (((uint32_t)rms_filter(&current_idc, ADC_active_sample_buf[i+DATA_IBUS]) * params.idc_ma_count) / 100);
+		    tt.n.batt_i.value = (((uint32_t)rms_filter(&current_idc, ADC_active_sample_buf[i].i_bus) * params.idc_ma_count) / 100);
         }else{
-            tt.n.batt_i.value = ((((int32_t)rms_filter(&current_idc, ADC_active_sample_buf[i+DATA_IBUS])-params.ct2_offset_cnt) * params.idc_ma_count) / 100);
+            tt.n.batt_i.value = ((((int32_t)rms_filter(&current_idc, ADC_active_sample_buf[i].i_bus)-params.ct2_offset_cnt) * params.idc_ma_count) / 100);
         }
 
 		tt.n.avg_power.value = tt.n.batt_i.value * tt.n.bus_v.value / 10;
 	}
     
     // read the driver voltage
-    tt.n.driver_v.value = read_driver_mv(ADC_active_sample_buf[DATA_VDRIVER]);
+    tt.n.driver_v.value = read_driver_mv(ADC_active_sample_buf[0].v_driver);
     tt.n.primary_i.value = CT1_Get_Current(CT_PRIMARY);
+    
+    if(configuration.max_dc_curr){
+        param.temp_duty = configuration.max_tr_duty-pid_step(&pid_current,configuration.max_dc_curr,tt.n.batt_i.value);
+        if(param.temp_duty != old_curr_setpoint){
+            if(tr_running==1){
+                update_interrupter();
+            }else{
+                update_midi_duty();
+            }
+        }
+        old_curr_setpoint = param.temp_duty;
+    }
     
     if(configuration.max_const_i){  //Only do i2t calculation if enabled
         if(count<100){
@@ -279,6 +300,7 @@ void calculate_rms(void) {
         }else{
             count = 0;   
         }
+       
         switch (i2t_calculate()){
             case I2T_LIMIT:
                 sysfault.fuse=1;
@@ -476,6 +498,16 @@ void reconfig_charge_timer(){
     }
 }
 
+uint8_t callback_pid(parameter_entry * params, uint8_t index, port_str *ptr){
+    pid_new(&pid_current,configuration.pid_curr_p,configuration.pid_curr_i,0,CURRENT_PID_HZ,10,false);
+    pid_set_anti_windup(&pid_current,0,configuration.max_tr_duty);
+    pid_set_limits(&pid_current,0,configuration.max_tr_duty);
+    if(pid_current._cfg_err==true){
+        SEND_CONST_STRING("PID value error\r\n",ptr);   
+    }
+    return pdPASS;
+}
+
 /* `#END` */
 /* ------------------------------------------------------------------------ */
 /*
@@ -505,6 +537,7 @@ void tsk_analog_TaskProc(void *pvParameters) {
 	adc_ready_Semaphore = xSemaphoreCreateBinary();
 
 	initialize_analogs();
+
     
     alarm_push(ALM_PRIO_INFO,warn_task_analog, ALM_NO_VALUE);
 

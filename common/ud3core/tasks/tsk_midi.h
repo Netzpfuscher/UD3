@@ -122,6 +122,8 @@ struct _filter{
 extern struct _filter filter;
 
 uint8_t command_SynthMon(char *commandline, port_str *ptr);
+uint8_t callback_synthFilter(parameter_entry * params, uint8_t index, port_str *ptr);
+uint8_t callback_SynthFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 
 /*
  * Add user function prototypes in the below merge region to add user

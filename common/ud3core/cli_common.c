@@ -72,7 +72,6 @@ uint8_t command_set(char *commandline, port_str *ptr);
 uint8_t command_tr(char *commandline, port_str *ptr);
 uint8_t command_udkill(char *commandline, port_str *ptr);
 uint8_t command_eprom(char *commandline, port_str *ptr);
-uint8_t command_tune(char *commandline, port_str *ptr);
 uint8_t command_tasks(char *commandline, port_str *ptr);
 uint8_t command_bootloader(char *commandline, port_str *ptr);
 uint8_t command_qcw(char *commandline, port_str *ptr);
@@ -80,7 +79,6 @@ uint8_t command_bus(char *commandline, port_str *ptr);
 uint8_t command_load_default(char *commandline, port_str *ptr);
 uint8_t command_reset(char *commandline, port_str *ptr);
 uint8_t command_config_get(char *commandline, port_str *ptr);
-uint8_t command_exit(char *commandline, port_str *ptr);
 uint8_t command_fuse(char *commandline, port_str *ptr);
 uint8_t command_signals(char *commandline, port_str *ptr);
 uint8_t command_alarms(char *commandline, port_str *ptr);
@@ -97,7 +95,6 @@ uint8_t callback_TTupdateFunction(parameter_entry * params, uint8_t index, port_
 uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_OfftimeFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, port_str *ptr);
-uint8_t callback_SynthFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_i2tFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_baudrateFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_SPIspeedFunction(parameter_entry * params, uint8_t index, port_str *ptr);
@@ -105,7 +102,6 @@ uint8_t callback_VisibleFunction(parameter_entry * params, uint8_t index, port_s
 uint8_t callback_MchFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_MchCopyFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_ivoUART(parameter_entry * params, uint8_t index, port_str *ptr);
-uint8_t callback_synthFilter(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_rampFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 
 void update_ivo_uart();
@@ -165,6 +161,10 @@ void init_config(){
     configuration.ivo_uart = 0;  //Nothing inverted
     configuration.line_code = 0; //UART
     configuration.enable_display = 0;
+    configuration.pid_curr_p = 50;
+    configuration.pid_curr_i = 5;
+    configuration.max_dc_curr = 0;
+    configuration.ext_interrupter = 0;
     
     param.pw = 0;
     param.pwd = 50000;
@@ -205,10 +205,10 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"pwd"             , param.pwd                     , 0      ,60000  ,0      ,callback_TRFunction         ,"Pulsewidthdelay")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"bon"             , param.burst_on                , 0      ,1000   ,0      ,callback_BurstFunction      ,"Burst mode ontime [ms] 0=off")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"boff"            , param.burst_off               , 0      ,1000   ,0      ,callback_BurstFunction      ,"Burst mode offtime [ms]")
-    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"tune_start"      , param.tune_start              , 5      ,5000   ,10     ,callback_TuneFunction       ,"Start frequency [kHz]")
-    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"tune_end"        , param.tune_end                , 5      ,5000   ,10     ,callback_TuneFunction       ,"End frequency [kHz]")
-    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"tune_pw"         , param.tune_pw                 , 0      ,800    ,0      ,NULL                        ,"Tune pulsewidth")
-    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"tune_delay"      , param.tune_delay              , 1      ,200    ,0      ,NULL                        ,"Tune delay")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"tune_start"      , param.tune_start              , 5      ,5000   ,10     ,callback_TuneFunction       ,"Start frequency [kHz]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"tune_end"        , param.tune_end                , 5      ,5000   ,10     ,callback_TuneFunction       ,"End frequency [kHz]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"tune_pw"         , param.tune_pw                 , 0      ,800    ,0      ,NULL                        ,"Tune pulsewidth")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"tune_delay"      , param.tune_delay              , 1      ,200    ,0      ,NULL                        ,"Tune delay")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"offtime"         , param.offtime                 , 2      ,250    ,0      ,NULL                        ,"Offtime for MIDI")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_ramp"        , param.qcw_ramp                , 1      ,10000  ,100    ,callback_rampFunction       ,"QCW Ramp inc/125us")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_offset"      , param.qcw_offset              , 0      ,255    ,0      ,callback_rampFunction       ,"QCW Ramp start value")
@@ -261,6 +261,10 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"r_bus"           , configuration.r_top           , 100    ,1000000,1000   ,callback_TTupdateFunction   ,"Series resistor of voltage input [kOhm]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ena_display"     , configuration.enable_display  , 0      ,6      ,0      ,NULL                        ,"Enables the WS2812 display")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"synth_filter"    , configuration.synth_filter    , 0      ,0      ,0      ,callback_synthFilter        ,"Synthesizer filter string")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"pid_curr_p"      , configuration.pid_curr_p      , 0      ,200    ,0      ,callback_pid                ,"Current PI")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"pid_curr_i"      , configuration.pid_curr_i      , 0      ,200    ,0      ,callback_pid                ,"Current PI")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_dc_curr"     , configuration.max_dc_curr     , 0      ,2000   ,10     ,callback_pid                ,"Maximum DC-Bus current")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ena_ext_int"     , configuration.ext_interrupter , 0      ,1      ,0      ,callback_ext_interrupter    ,"Enable external interrupter")
     ADD_PARAM(PARAM_CONFIG  ,pdFALSE,"d_calib"         , vdriver_lut                   , 0      ,0      ,0      ,NULL                        ,"For voltage measurement")
 };
 
@@ -309,6 +313,8 @@ void eeprom_load(port_str *ptr){
     ramp.changed = pdTRUE;
     qcw_regenerate_ramp();
     init_telemetry();
+    callback_pid(confparam,0,ptr);
+    callback_ext_interrupter(confparam,0,ptr);
 }
 
 
@@ -345,92 +351,6 @@ uint8_t callback_rampFunction(parameter_entry * params, uint8_t index, port_str 
     return pdPASS;
 }
 
-
-uint8_t callback_synthFilter(parameter_entry * params, uint8_t index, port_str *ptr){
-    uint8_t cnt=0;
-    uint16_t number=0;
-    char substring[20];
-    uint8_t str_size = ntlibc_strlen(configuration.synth_filter);
-    uint8_t flag=0;
-    
-    filter.min=0;
-    filter.max=20000;
-    if(configuration.synth_filter[0]=='\0'){  //No filter
-        for(uint8_t i=0;i<16;i++){
-            filter.channel[i]=pdTRUE;
-        }
-        return 1;
-    }else{
-        for(uint8_t i=0;i<16;i++){
-            filter.channel[i]=pdFALSE;
-        }
-    }
-    
-    for(uint8_t i=0;i<str_size;i++){
-        if(configuration.synth_filter[i]=='\0') break;
-        
-        if(configuration.synth_filter[i]=='c'){
-            cnt=0;
-            substring[0]='\0';
-            for(uint8_t w=i+1;w<str_size;w++){
-                if(ntlibc_isdigit(configuration.synth_filter[w])){
-                    substring[cnt]=configuration.synth_filter[w];
-                    cnt++;
-                }else{
-                    substring[cnt]='\0';
-                    break;
-                }
-            }
-            if(substring[0]){
-                number = ntlibc_atoi(substring);
-                if(number<16){
-                    filter.channel[number]=pdTRUE;
-                    flag=1;
-                }
-            }  
-        }else if(configuration.synth_filter[i]=='f'){
-            if(configuration.synth_filter[i+1]=='>' || configuration.synth_filter[i+1]=='<'){
-                cnt=0;
-                for(uint8_t w=i+2;w<str_size;w++){
-                    if(ntlibc_isdigit(configuration.synth_filter[w])){
-                        substring[cnt]=configuration.synth_filter[w];
-                        cnt++;
-                    }else{
-                        substring[cnt]='\0';
-                        break;
-                    }
-                }
-                if(cnt){
-                    number = ntlibc_atoi(substring);
-                    if(number<20000){
-                        if(configuration.synth_filter[i+1]=='>') filter.max = number;
-                        if(configuration.synth_filter[i+1]=='<') filter.min = number;
-                    }
-                } 
-            }
-        }     
-    }
-    if(filter.min > filter.max){
-        SEND_CONST_STRING("Error: Min frequency ist greater than max\r\n",ptr);
-    }
-    if(!flag){
-        for(uint8_t i=0;i<16;i++){
-            filter.channel[i]=pdTRUE;
-        }   
-    }
-    uint8_t ret;
-    char buf[50];
-    for(uint8_t i=0;i<sizeof(filter.channel);i++){
-        ret= snprintf(buf,sizeof(buf),"Channel %u: %u\r\n",i,filter.channel[i]);
-        send_buffer((uint8_t*)buf,ret,ptr);
-    }
-    ret= snprintf(buf,sizeof(buf),"Min frequency: %u\r\n",filter.min);
-    send_buffer((uint8_t*)buf,ret,ptr);
-    ret= snprintf(buf,sizeof(buf),"Max frequency: %u\r\n",filter.max);
-    send_buffer((uint8_t*)buf,ret,ptr);
-    
-    return 1;
-}
 
 
 /*****************************************************************************
@@ -558,14 +478,6 @@ uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, port_str 
 		return 0;
 	} else
 		return 1;
-}
-
-/*****************************************************************************
-* Switches the synthesizer
-******************************************************************************/
-uint8_t callback_SynthFunction(parameter_entry * params, uint8_t index, port_str *ptr){
-    switch_synth(param.synth);
-    return 1;
 }
 
 /*****************************************************************************
@@ -980,28 +892,28 @@ uint8_t command_calib(char *commandline, port_str *ptr){
     SEND_CONST_STRING("Driver voltage measurement calibration [y] for next [a] for abort\r\n",ptr);
     SEND_CONST_STRING("Set Vdriver to 7V\r\n",ptr);
     if(getch(ptr, portMAX_DELAY) != 'y') return 1;
-    temp = 7000*512/ADC_active_sample_buf[DATA_VDRIVER];
+    temp = 7000*512/ADC_active_sample_buf[0].v_driver;
     vdriver_lut[2]= temp;
     vdriver_lut[1]= temp/2;
     SEND_CONST_STRING("Set Vdriver to 10V\r\n",ptr);
     if(getch(ptr, portMAX_DELAY) != 'y') return 1;
-    temp = 10000*768/ADC_active_sample_buf[DATA_VDRIVER];
+    temp = 10000*768/ADC_active_sample_buf[0].v_driver;
     vdriver_lut[3]= temp;
     SEND_CONST_STRING("Set Vdriver to 14V\r\n",ptr);
     if(getche(ptr, portMAX_DELAY) != 'y') return 1;
-    temp = 14000*1024/ADC_active_sample_buf[DATA_VDRIVER];
+    temp = 14000*1024/ADC_active_sample_buf[0].v_driver;
     vdriver_lut[4]= temp;
     SEND_CONST_STRING("Set Vdriver to 17V\r\n",ptr);
     if(getch(ptr, portMAX_DELAY) != 'y') return 1;
-    temp = 17000*1280/ADC_active_sample_buf[DATA_VDRIVER];
+    temp = 17000*1280/ADC_active_sample_buf[0].v_driver;
     vdriver_lut[5]= temp;
     SEND_CONST_STRING("Set Vdriver to 20V\r\n",ptr);
     if(getch(ptr, portMAX_DELAY) != 'y') return 1;
-    temp = 20000*1536/ADC_active_sample_buf[DATA_VDRIVER];
+    temp = 20000*1536/ADC_active_sample_buf[0].v_driver;
     vdriver_lut[6]= temp;
     SEND_CONST_STRING("Set Vdriver to 24V\r\n",ptr);
     if(getch(ptr, portMAX_DELAY) != 'y') return 1;
-    temp = 24000*1792/ADC_active_sample_buf[DATA_VDRIVER];
+    temp = 24000*1792/ADC_active_sample_buf[0].v_driver;
     vdriver_lut[7]= temp;
     temp = temp*2048/1792;
     vdriver_lut[8]= temp;
@@ -1191,40 +1103,6 @@ uint8_t command_udkill(char *commandline, port_str *ptr) {
     HELP_TEXT("Usage: kill [set|reset|get]\r\n");
 }
 
-/*****************************************************************************
-* commands a frequency sweep for the primary coil. It searches for a peak
-* and makes a second run with +-6kHz around the peak
-******************************************************************************/
-uint8_t command_tune(char *commandline, port_str *ptr) {
-    SKIP_SPACE(commandline);
-    CHECK_NULL(commandline);
-    
-    
-    SEND_CONST_STRING("Warning: The bridge will switch hard, make sure that the bus voltage is appropriate\r\n",ptr);
-    SEND_CONST_STRING("Press [y] to proceed\r\n",ptr);
-    
-    if(getch(ptr, portMAX_DELAY) != 'y'){
-        SEND_CONST_STRING("Tune aborted\r\n",ptr);
-        return 0;
-    }
-    if(ptr->term_mode == PORT_TERM_TT){
-        tsk_overlay_chart_stop();
-        send_chart_clear(ptr);
-        
-    }
-    SEND_CONST_STRING("Start sweep:\r\n",ptr);
-    if (ntlibc_stricmp(commandline, "prim") == 0) {
-    	run_adc_sweep(param.tune_start, param.tune_end, param.tune_pw, CT_PRIMARY, param.tune_delay, ptr);
-        SEND_CONST_STRING("Type cls to go back to normal telemtry chart\r\n",ptr);
-        return 0;
-    }else if (ntlibc_stricmp(commandline, "sec") == 0) {
-        run_adc_sweep(param.tune_start, param.tune_end, param.tune_pw, CT_SECONDARY, param.tune_delay, ptr);
-        SEND_CONST_STRING("Type cls to go back to normal telemetry chart\r\n",ptr);
-        return 0;
-    }
-
-    HELP_TEXT("Usage: tune [prim|sec]\r\n");
-}
 
 /*****************************************************************************
 * Prints the task list needs to be enabled in FreeRTOSConfig.h
@@ -1507,28 +1385,23 @@ uint8_t command_relay(char *commandline, port_str *ptr){
     SKIP_SPACE(commandline);
     CHECK_NULL(commandline);
     
-    if (ntlibc_stricmp(commandline, "3 on") == 0) {
-		Relay3_Write(1);
-		SEND_CONST_STRING("Relay 3 ON\r\n", ptr);
-        return 1;
-	}
-    if (ntlibc_stricmp(commandline, "3 off") == 0) {
-		Relay3_Write(0);
-		SEND_CONST_STRING("Relay 3 OFF\r\n", ptr);
-        return 1;
-	}
-    if (ntlibc_stricmp(commandline, "4 on") == 0) {
-		Relay4_Write(1);
-		SEND_CONST_STRING("Relay 4 ON\r\n", ptr);
-        return 1;
-	}
-    if (ntlibc_stricmp(commandline, "4 off") == 0) {
-		Relay4_Write(0);
-		SEND_CONST_STRING("Relay 4 OFF\r\n", ptr);
-        return 1;
-	}
+    char *buffer[2];
+    uint8_t items = split(commandline, buffer, sizeof(buffer)/sizeof(char*), ' ');
+    if(items<2) goto helptext;
     
-    HELP_TEXT("Usage: relay 3 [on|off]\r\n");
+    uint8_t r_number = ntlibc_atoi(buffer[0]);
+    uint8_t value = ntlibc_atoi(buffer[1]);
+    if(value > 1) goto helptext;
+    
+    if(r_number == 3){
+        Relay3_Write(value);
+        return 1;
+    }
+    if(r_number == 4){
+        Relay4_Write(value);
+        return 1;
+    }    
+    HELP_TEXT("Usage: relay 3/4 [1|0]\r\n");
 }
 
 
@@ -1656,10 +1529,10 @@ uint8_t command_signals(char *commandline, port_str *ptr) {
         snprintf(buffer,sizeof(buffer),"Temp 1: %i*C Temp 2: %i*C\r\n", tt.n.temp1.value, tt.n.temp2.value);
         send_string(buffer, ptr);
         SEND_CONST_STRING("                                    \r", ptr);
-        snprintf(buffer,sizeof(buffer),"Vbus: %u mV Vbatt: %u mV\r\n", ADC_CountsTo_mVolts(ADC_active_sample_buf[DATA_VBUS]),ADC_CountsTo_mVolts(ADC_active_sample_buf[DATA_VBATT]));
+        snprintf(buffer,sizeof(buffer),"Vbus: %u mV Vbatt: %u mV\r\n", ADC_CountsTo_mVolts(ADC_active_sample_buf[0].v_bus),ADC_CountsTo_mVolts(ADC_active_sample_buf[0].v_batt));
         send_string(buffer, ptr);
         SEND_CONST_STRING("                                    \r", ptr);
-        snprintf(buffer,sizeof(buffer),"Ibus: %u mV Vdriver: %u mV\r\n\r\n", ADC_CountsTo_mVolts(ADC_active_sample_buf[DATA_IBUS]),tt.n.driver_v.value);
+        snprintf(buffer,sizeof(buffer),"Ibus: %u mV Vdriver: %u mV\r\n\r\n", ADC_CountsTo_mVolts(ADC_active_sample_buf[0].i_bus),tt.n.driver_v.value);
         send_string(buffer, ptr);
 
     }

@@ -31,6 +31,7 @@
  */
 /* `#START USER_TYPES_AND_DEFINES` */
 #include <device.h>
+#include "cli_basic.h"
 
 #define CT_PRIMARY 0
 #define CT_SECONDARY 1
@@ -71,6 +72,16 @@ void initialize_charging(void);
 void control_precharge(void);
 extern uint16_t vdriver_lut[9];
 
+
+typedef struct
+{
+	uint16_t v_bus;
+	uint16_t v_batt;
+    uint16_t i_bus;
+    uint16_t v_driver;
+} adc_sample_t;
+
+
 /* `#END` */
 
 void tsk_analog_Start(void);
@@ -81,7 +92,8 @@ void i2t_set_limit(uint32_t const_current, uint32_t ovr_current, uint32_t limit_
 void i2t_set_warning(uint8_t percent);
 void i2t_reset();
 void reconfig_charge_timer();
-extern uint16 *ADC_active_sample_buf;
+uint8_t callback_pid(parameter_entry * params, uint8_t index, port_str *ptr);
+extern adc_sample_t *ADC_active_sample_buf;
 /*
  * Add user function prototypes in the below merge region to add user
  * functionality to the task definition.

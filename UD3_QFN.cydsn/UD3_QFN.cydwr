@@ -1730,7 +1730,9 @@
       <Data key="5c1decb5-69e3-4a8d-bb0c-281221d15217" value="UVLO" />
       <Data key="06d4fcad-2164-4492-9838-df946d446c53" value="Relay1" />
       <Data key="6d60edf3-e349-4689-bea2-2ba7bb0e8e84" value="TX_422" />
+      <Data key="7be81f30-0a4e-48ab-ac8f-aba3ac57abb0" value="Relay4" />
       <Data key="7ea88270-49e6-43be-82b7-63948e7960a3/16a808f6-2e13-45b9-bce0-b001c8655113" value="ADC_Bypass" />
+      <Data key="8d318d8b-cf7b-4b6b-b02c-ab1c5c49d0ba" value="Ext_Interrupter" />
       <Data key="8ecba497-612c-422e-8426-91832f4dc07d" value="GD2B" />
       <Data key="9ddc42ab-facd-495c-962a-8d45bfc4862c" value="Vdriver" />
       <Data key="13d5721e-017e-4f36-866d-01a4b6a3504a" value="Ibus" />
@@ -1739,6 +1741,7 @@
       <Data key="83b2fde2-60ad-45b6-9e5c-cb3baa6e3f9a" value="SCLK" />
       <Data key="83fc8610-854c-47f6-b3ec-8847b2c290d3" value="RX_422_EN" />
       <Data key="299df0a5-d2ed-4b72-b3d7-ae900bca29ed" value="CTout" />
+      <Data key="549a4e41-b717-44bb-b13e-c01052667238" value="Relay3" />
       <Data key="958e9411-0a95-4df9-865e-f68273cf2d90" value="Vin" />
       <Data key="6400ba9d-054d-4648-a80b-c36ed9080f64" value="CT_SEC" />
       <Data key="6533b513-81b1-46af-8e19-d98fd9cc0e1c/16a808f6-2e13-45b9-bce0-b001c8655113" value="ADC_therm_Bypass" />
@@ -4953,6 +4956,11 @@
     <Group key="7ea88270-49e6-43be-82b7-63948e7960a3/16a808f6-2e13-45b9-bce0-b001c8655113">
       <Group key="0">
         <Data key="Port Format" value="0,2" />
+      </Group>
+    </Group>
+    <Group key="8d318d8b-cf7b-4b6b-b02c-ab1c5c49d0ba">
+      <Group key="0">
+        <Data key="Port Format" value="2,2" />
       </Group>
     </Group>
     <Group key="8ecba497-612c-422e-8426-91832f4dc07d">

@@ -31,6 +31,7 @@ Its a 16 bit PWM clocked at 1MHz, so thats 1uS per count.
 #define INTERRUPTER_H
 
 #include <device.h>
+#include "cli_basic.h"
 
 #define INTERRUPTER_CLK_FREQ 1000000
 
@@ -58,6 +59,8 @@ void update_interrupter();
 void ramp_control(void);
 void interrupter_oneshot(uint16_t pw, uint8_t vol);
 uint8_t interrupter_get_kill(void);
+
+uint8_t callback_ext_interrupter(parameter_entry * params, uint8_t index, port_str *ptr);
 
 void interrupter_kill(void);
 

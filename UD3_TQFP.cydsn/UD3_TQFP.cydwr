@@ -1737,6 +1737,7 @@
       <Data key="6d60edf3-e349-4689-bea2-2ba7bb0e8e84" value="TX_422" />
       <Data key="7be81f30-0a4e-48ab-ac8f-aba3ac57abb0" value="Relay4" />
       <Data key="7ea88270-49e6-43be-82b7-63948e7960a3/16a808f6-2e13-45b9-bce0-b001c8655113" value="ADC_Bypass" />
+      <Data key="8d318d8b-cf7b-4b6b-b02c-ab1c5c49d0ba" value="Ext_Interrupter" />
       <Data key="8d860acf-4e4e-45f2-a96e-1fb75a566e08" value="DEBUG_DA" />
       <Data key="8ecba497-612c-422e-8426-91832f4dc07d" value="GD2B" />
       <Data key="9ddc42ab-facd-495c-962a-8d45bfc4862c" value="Vdriver" />
@@ -4956,6 +4957,11 @@
         <Data key="Port Format" value="0,2" />
       </Group>
     </Group>
+    <Group key="8d318d8b-cf7b-4b6b-b02c-ab1c5c49d0ba">
+      <Group key="0">
+        <Data key="Port Format" value="12,2" />
+      </Group>
+    </Group>
     <Group key="8d860acf-4e4e-45f2-a96e-1fb75a566e08">
       <Group key="0">
         <Data key="Port Format" value="3,6" />
@@ -5117,7 +5123,7 @@
         <Data key="0" value="131771052770711059" />
       </Group>
       <Group key="d1817f9f-1083-43a0-873b-9935f73c2a53">
-        <Data key="0" value="131771053054866928" />
+        <Data key="0" value="132456193831711057" />
       </Group>
       <Group key="efe99b71-ea8e-4255-954e-cd80c2ccf46e">
         <Data key="0" value="131771052677377797" />

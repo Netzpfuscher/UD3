@@ -117,16 +117,39 @@ void interrupter_oneshot(uint16_t pw, uint8_t vol) {
 	CyGlobalIntDisable;
 	int1_prd = prd - 3;
 	int1_cmp = prd - pw - 3;
-	interrupter1_control_Control = 0b01;
-	interrupter1_control_Control = 0b00;
+	interrupter1_control_Control = 0b001;
+	interrupter1_control_Control = 0b000;
     CyGlobalIntEnable;
+}
+
+
+void interrupter_enable_ext() {
+
+	ct1_dac_val[0] = params.max_tr_cl_dac_val;
+
+    uint16_t prd = param.offtime + configuration.max_tr_pw;
+	/* Update Interrupter PWMs with new period/pw */
+	CyGlobalIntDisable;
+	int1_prd = prd - 3;
+	int1_cmp = prd - configuration.max_tr_pw - 3;
+	interrupter1_control_Control = 0b100;
+    CyGlobalIntEnable;
+}
+
+uint8_t callback_ext_interrupter(parameter_entry * params, uint8_t index, port_str *ptr){
+    if(configuration.ext_interrupter){
+        interrupter1_control_Control = 0b100;
+    }else{
+        interrupter1_control_Control = 0b000;
+    }
+    return pdPASS;
 }
 
 void update_interrupter() {
     
 	/* Check if PW = 0, this indicates that the interrupter should be shut off */
 	if (interrupter.pw == 0 || blocked) {
-		interrupter1_control_Control = 0b00;
+		interrupter1_control_Control = 0b000;
         return;
 	}
     uint16_t limited_pw;
@@ -156,8 +179,8 @@ void update_interrupter() {
 		int1_prd = interrupter.prd - 3;
 		int1_cmp = interrupter.prd - limited_pw - 3;
 		if (interrupter1_control_Control == 0) {
-			interrupter1_control_Control = 0b11;
-			interrupter1_control_Control = 0b10;
+			interrupter1_control_Control = 0b011;
+			interrupter1_control_Control = 0b010;
 		}
 	}
 	CyGlobalIntEnable;

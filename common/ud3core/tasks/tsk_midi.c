@@ -47,6 +47,7 @@ uint8 tsk_midi_initVar = 0u;
 #include "telemetry.h"
 #include "alarmevent.h"
 #include "qcw.h"
+#include "ntlibc.h"
 #include "helper/printf.h"
 #include <device.h>
 #include <stdlib.h>
@@ -59,8 +60,101 @@ uint8 tsk_midi_initVar = 0u;
 #define COMMAND_CONTROLCHANGE 2
 #define COMMAND_PITCHBEND 3
 
-
 struct _filter filter;
+
+/*****************************************************************************
+* Switches the synthesizer
+******************************************************************************/
+uint8_t callback_SynthFunction(parameter_entry * params, uint8_t index, port_str *ptr){
+    switch_synth(param.synth);
+    return 1;
+}
+
+uint8_t callback_synthFilter(parameter_entry * params, uint8_t index, port_str *ptr){
+    uint8_t cnt=0;
+    uint16_t number=0;
+    char substring[20];
+    uint8_t str_size = ntlibc_strlen(configuration.synth_filter);
+    uint8_t flag=0;
+    
+    filter.min=0;
+    filter.max=20000;
+    if(configuration.synth_filter[0]=='\0'){  //No filter
+        for(uint8_t i=0;i<16;i++){
+            filter.channel[i]=pdTRUE;
+        }
+        return 1;
+    }else{
+        for(uint8_t i=0;i<16;i++){
+            filter.channel[i]=pdFALSE;
+        }
+    }
+    
+    for(uint8_t i=0;i<str_size;i++){
+        if(configuration.synth_filter[i]=='\0') break;
+        
+        if(configuration.synth_filter[i]=='c'){
+            cnt=0;
+            substring[0]='\0';
+            for(uint8_t w=i+1;w<str_size;w++){
+                if(ntlibc_isdigit(configuration.synth_filter[w])){
+                    substring[cnt]=configuration.synth_filter[w];
+                    cnt++;
+                }else{
+                    substring[cnt]='\0';
+                    break;
+                }
+            }
+            if(substring[0]){
+                number = ntlibc_atoi(substring);
+                if(number<16){
+                    filter.channel[number]=pdTRUE;
+                    flag=1;
+                }
+            }  
+        }else if(configuration.synth_filter[i]=='f'){
+            if(configuration.synth_filter[i+1]=='>' || configuration.synth_filter[i+1]=='<'){
+                cnt=0;
+                for(uint8_t w=i+2;w<str_size;w++){
+                    if(ntlibc_isdigit(configuration.synth_filter[w])){
+                        substring[cnt]=configuration.synth_filter[w];
+                        cnt++;
+                    }else{
+                        substring[cnt]='\0';
+                        break;
+                    }
+                }
+                if(cnt){
+                    number = ntlibc_atoi(substring);
+                    if(number<20000){
+                        if(configuration.synth_filter[i+1]=='>') filter.max = number;
+                        if(configuration.synth_filter[i+1]=='<') filter.min = number;
+                    }
+                } 
+            }
+        }     
+    }
+    if(filter.min > filter.max){
+        SEND_CONST_STRING("Error: Min frequency ist greater than max\r\n",ptr);
+    }
+    if(!flag){
+        for(uint8_t i=0;i<16;i++){
+            filter.channel[i]=pdTRUE;
+        }   
+    }
+    uint8_t ret;
+    char buf[50];
+    for(uint8_t i=0;i<sizeof(filter.channel);i++){
+        ret= snprintf(buf,sizeof(buf),"Channel %u: %u\r\n",i,filter.channel[i]);
+        send_buffer((uint8_t*)buf,ret,ptr);
+    }
+    ret= snprintf(buf,sizeof(buf),"Min frequency: %u\r\n",filter.min);
+    send_buffer((uint8_t*)buf,ret,ptr);
+    ret= snprintf(buf,sizeof(buf),"Max frequency: %u\r\n",filter.max);
+    send_buffer((uint8_t*)buf,ret,ptr);
+    
+    return 1;
+}
 
 void reflect();
 

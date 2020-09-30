@@ -113,6 +113,7 @@ struct parameter_entry_struct {
 };
 
 uint8_t updateDefaultFunction(parameter_entry * params, char * newValue, uint8_t index, port_str *ptr);
+void EEPROM_check_hash(parameter_entry * params, uint8_t param_size, port_str *ptr);
 void EEPROM_write_conf(parameter_entry * params, uint8_t param_size, uint16_t eeprom_offset ,port_str *ptr);
 void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eeprom_offset ,port_str *ptr);
 void print_param_help(parameter_entry * params, uint8_t param_size, port_str *ptr);

@@ -369,7 +369,7 @@ void show_overlay_400ms(port_str *ptr) {
             send_status(tt.n.bus_status.value!=BUS_OFF,
                         tr_running!=0,
                         configuration.ps_scheme!=AC_NO_RELAY_BUS_SCHEME,
-                        blocked,
+                        sysfault.interlock,
                         ptr);
         }
     }

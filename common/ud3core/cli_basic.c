@@ -541,6 +541,42 @@ uint32_t djb_hash(const char* cp)
     return hash;
 }
 
+void EEPROM_check_hash(parameter_entry * params, uint8_t param_size, port_str *ptr){
+    uint32_t temp_hash1;
+    uint32_t temp_hash2;
+    uint32_t collision=0;
+    char buffer[70];
+    uint8_t ret;
+    for (uint8_t  current_parameter = 0; current_parameter < param_size; current_parameter++) {
+        if(params[current_parameter].parameter_type == PARAM_CONFIG){
+            temp_hash1=djb_hash(params[current_parameter].name);
+            for (uint8_t  n = 0; n < current_parameter; n++) {
+                if(params[n].parameter_type == PARAM_CONFIG){
+                    temp_hash2=djb_hash(params[n].name);
+                    if(temp_hash1==temp_hash2){
+                        ret = snprintf(buffer, sizeof(buffer),"Found collision %s <-> %s\r\n", params[current_parameter].name, params[n].name);
+                        send_buffer((uint8_t*)buffer, ret, ptr); 
+                        collision=1;
+                    }
+                }
+            }
+            for (uint8_t  n = current_parameter+1; n < param_size; n++) {
+                if(params[n].parameter_type == PARAM_CONFIG){
+                    temp_hash2=djb_hash(params[n].name);
+                    if(temp_hash1==temp_hash2){
+                        ret = snprintf(buffer, sizeof(buffer),"Found collision %s <-> %s\r\n", params[current_parameter].name, params[n].name);
+                        send_buffer((uint8_t*)buffer, ret, ptr); 
+                        collision=1;
+                    }
+                }
+            }
+        }
+    }
+    if(collision==0){
+        SEND_CONST_STRING("Check for hash collision done.\r\n",ptr);   
+    }
+}
+
 void EEPROM_write_conf(parameter_entry * params, uint8_t param_size, uint16_t eeprom_offset ,port_str *ptr){
     byte_cnt=0;
 	uint16_t count = eeprom_offset;

@@ -28,6 +28,7 @@
 #include "autotune.h"
 #include "cli_common.h"
 #include "qcw.h"
+#include "tasks/tsk_fault.h"
 
 #include <device.h>
 #include <math.h>
@@ -36,19 +37,15 @@ uint16 int1_prd, int1_cmp;
 
 uint8_t tr_running = 0;
 
-uint8_t blocked=0; 
 
 //CY_ISR(OCD_ISR)
 //{
 //    //QCW_enable_Control = 0;
 //}
 
-uint8_t interrupter_get_kill(void){
-    return blocked;   
-}
 
 void interrupter_kill(void){
-    blocked=1;
+    sysfault.interlock = 1;
     tr_running=0;
     interrupter.pw =0;
     param.pw=0;
@@ -56,7 +53,7 @@ void interrupter_kill(void){
 }
 
 void interrupter_unkill(void){
-    blocked=0;
+    sysfault.interlock=0;
 }
 
 void initialize_interrupter(void) {
@@ -101,7 +98,7 @@ void initialize_interrupter(void) {
 
 
 void interrupter_oneshot(uint16_t pw, uint8_t vol) {
-    if(blocked) return;
+    if(sysfault.interlock) return;
     
 	if (vol < 127) {
 		ct1_dac_val[0] = params.min_tr_cl_dac_val + ((vol * params.diff_tr_cl_dac_val) >> 7);
@@ -117,8 +114,8 @@ void interrupter_oneshot(uint16_t pw, uint8_t vol) {
 	CyGlobalIntDisable;
 	int1_prd = prd - 3;
 	int1_cmp = prd - pw - 3;
-	interrupter1_control_Control = 0b001;
-	interrupter1_control_Control = 0b000;
+	interrupter1_control_Control = 0b0001;
+	interrupter1_control_Control = 0b0000;
     CyGlobalIntEnable;
 }
 
@@ -132,15 +129,20 @@ void interrupter_enable_ext() {
 	CyGlobalIntDisable;
 	int1_prd = prd - 3;
 	int1_cmp = prd - configuration.max_tr_pw - 3;
-	interrupter1_control_Control = 0b100;
+    if(configuration.ext_interrupter==1){
+	    interrupter1_control_Control = 0b0100;
+    }else{
+        interrupter1_control_Control = 0b1100;
+    }
     CyGlobalIntEnable;
 }
 
 uint8_t callback_ext_interrupter(parameter_entry * params, uint8_t index, port_str *ptr){
     if(configuration.ext_interrupter){
-        interrupter1_control_Control = 0b100;
+        alarm_push(ALM_PRIO_WARN,warn_interrupter_ext, configuration.ext_interrupter);
+        interrupter_enable_ext();
     }else{
-        interrupter1_control_Control = 0b000;
+        interrupter1_control_Control = 0b0000;
     }
     return pdPASS;
 }
@@ -148,8 +150,8 @@ uint8_t callback_ext_interrupter(parameter_entry * params, uint8_t index, port_s
 void update_interrupter() {
     
 	/* Check if PW = 0, this indicates that the interrupter should be shut off */
-	if (interrupter.pw == 0 || blocked) {
-		interrupter1_control_Control = 0b000;
+	if (interrupter.pw == 0 || sysfault.interlock) {
+		interrupter1_control_Control = 0b0000;
         return;
 	}
     uint16_t limited_pw;
@@ -179,8 +181,8 @@ void update_interrupter() {
 		int1_prd = interrupter.prd - 3;
 		int1_cmp = interrupter.prd - limited_pw - 3;
 		if (interrupter1_control_Control == 0) {
-			interrupter1_control_Control = 0b011;
-			interrupter1_control_Control = 0b010;
+			interrupter1_control_Control = 0b0011;
+			interrupter1_control_Control = 0b0010;
 		}
 	}
 	CyGlobalIntEnable;

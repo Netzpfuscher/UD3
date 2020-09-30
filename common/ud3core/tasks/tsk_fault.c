@@ -113,7 +113,7 @@ void handle_FAULT(void) {
 	//UVLO feedback via system_fault (LED2)
 	uint8_t flag=1;
     for(uint8_t i=0;i<sizeof(SYSFAULT);i++){
-        if(((uint8_t*)&sysfault)[i]) flag = 0;
+        if(((uint8_t*)&sysfault)[i]) flag = 0; //Sysfault is active low
     }
     system_fault_Control = flag;
 }

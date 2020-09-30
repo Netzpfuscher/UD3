@@ -254,11 +254,9 @@ uint16_t average_filter(uint32_t *ptr, uint16_t sample) {
 }
 
 void calculate_rms(void) {
-    static uint16_t count=0;
     
     static uint16_t old_curr_setpoint=0;
     
-	//while (uxQueueMessagesWaiting(adc_data)) {
     for(uint8_t i=0;i<ADC_BUFFER_CNT;i++){
 
 		// read the battery voltage
@@ -294,41 +292,17 @@ void calculate_rms(void) {
     }
     
     if(configuration.max_const_i){  //Only do i2t calculation if enabled
-        if(count<100){
-            int16_t e= abs(tt.n.batt_i.value-configuration.max_const_i);
-            count += e;
-        }else{
-            count = 0;   
-        }
-       
         switch (i2t_calculate()){
             case I2T_LIMIT:
                 sysfault.fuse=1;
                 interrupter_kill();   
                 break;
             case I2T_WARNING:
-                sysfault.fuse=1;
-                if(tt.n.batt_i.value>configuration.max_const_i && !count){
-                    if(param.temp_duty<configuration.max_tr_duty) param.temp_duty++; 
-                    if(tr_running==1){
-                        update_interrupter();
-                    }else{
-                        update_midi_duty();
-                    }
-                }
+                sysfault.fuse=0;
                 break;
             case I2T_NORMAL:
                 sysfault.fuse=0;
-                if(tt.n.batt_i.value<configuration.max_const_i && !count){
-                    if(param.temp_duty>0) param.temp_duty--; 
-                    if(tr_running==1){
-                        update_interrupter();
-                    }else{
-                        update_midi_duty();
-                    }
-                }
-                break;
-                
+                break;      
         }
     }
     
@@ -467,10 +441,10 @@ void control_precharge(void) { //this gets called from tsk_analogs.c when the AD
 	if (bus_command == BUS_COMMAND_ON) {
         switch(configuration.ps_scheme){
             case BAT_PRECHARGE_BUS_SCHEME:
-
+                //Not implemented
             break;
             case BAT_BOOST_BUS_SCHEME:
-
+                //Not implemented
             break;
             case AC_PRECHARGE_BUS_SCHEME:
                 ac_precharge_bus_scheme();

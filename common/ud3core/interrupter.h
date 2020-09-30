@@ -49,8 +49,6 @@ typedef struct
 
 interrupter_params interrupter;
 
-
-//extern volatile uint8 qcw_dl_ovf_counter;
 extern uint8_t tr_running;
 extern uint8_t blocked; 
 
@@ -58,7 +56,6 @@ void initialize_interrupter(void);
 void update_interrupter();
 void ramp_control(void);
 void interrupter_oneshot(uint16_t pw, uint8_t vol);
-uint8_t interrupter_get_kill(void);
 
 uint8_t callback_ext_interrupter(parameter_entry * params, uint8_t index, port_str *ptr);
 

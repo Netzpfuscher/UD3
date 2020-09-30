@@ -263,8 +263,8 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"synth_filter"    , configuration.synth_filter    , 0      ,0      ,0      ,callback_synthFilter        ,"Synthesizer filter string")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"pid_curr_p"      , configuration.pid_curr_p      , 0      ,200    ,0      ,callback_pid                ,"Current PI")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"pid_curr_i"      , configuration.pid_curr_i      , 0      ,200    ,0      ,callback_pid                ,"Current PI")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_dc_curr"     , configuration.max_dc_curr     , 0      ,2000   ,10     ,callback_pid                ,"Maximum DC-Bus current")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ena_ext_int"     , configuration.ext_interrupter , 0      ,1      ,0      ,callback_ext_interrupter    ,"Enable external interrupter")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_dc_curr"     , configuration.max_dc_curr     , 0      ,2000   ,10     ,callback_pid                ,"Maximum DC-Bus current [A] 0=off")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ena_ext_int"     , configuration.ext_interrupter , 0      ,2      ,0      ,callback_ext_interrupter    ,"Enable external interrupter 2=inverted")
     ADD_PARAM(PARAM_CONFIG  ,pdFALSE,"d_calib"         , vdriver_lut                   , 0      ,0      ,0      ,NULL                        ,"For voltage measurement")
 };
 
@@ -1093,7 +1093,7 @@ uint8_t command_udkill(char *commandline, port_str *ptr) {
     }else if (ntlibc_stricmp(commandline, "get") == 0) {
         char buf[30];
         Term_Color_Red(ptr);
-        int ret = snprintf(buf,sizeof(buf), "Killbit: %u\r\n",interrupter_get_kill());
+        int ret = snprintf(buf,sizeof(buf), "Killbit: %u\r\n",sysfault.interlock);
         send_buffer((uint8_t*)buf,ret,ptr);
         Term_Color_White(ptr);
         return 1;
@@ -1254,7 +1254,7 @@ uint8_t command_eprom(char *commandline, port_str *ptr) {
 	uint8 sfflag = system_fault_Read();
 	system_fault_Control = 0; //halt tesla coil operation during updates!
 	if (ntlibc_stricmp(commandline, "save") == 0) {
-
+        EEPROM_check_hash(confparam,PARAM_SIZE(confparam),ptr);
 	    EEPROM_write_conf(confparam, PARAM_SIZE(confparam),0, ptr);
 
 		system_fault_Control = sfflag;
@@ -1488,7 +1488,9 @@ uint8_t command_signals(char *commandline, port_str *ptr) {
         send_signal_state(sysfault.update,pdFALSE,ptr);
         SEND_CONST_STRING("Sysfault bus undervoltage: ", ptr);
         send_signal_state(sysfault.bus_uv,pdFALSE,ptr);
-        SEND_CONST_STRING("Sysfault combined: ", ptr);
+        SEND_CONST_STRING("Sysfault interlock: ", ptr);
+        send_signal_state_wo(sysfault.interlock,pdFALSE,ptr);
+        SEND_CONST_STRING(" combined: ", ptr);
         send_signal_state(system_fault_Read(),pdTRUE,ptr);
         
         SEND_CONST_STRING("Relay 1: ", ptr);

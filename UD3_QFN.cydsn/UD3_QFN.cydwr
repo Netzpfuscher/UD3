@@ -1703,13 +1703,15 @@
       <Data key="9d178943-a2e6-45cb-a262-b16444a207ec" value="uart_rx" />
       <Data key="9da6251c-7193-4905-b500-c8ed56bec282" value="uart_tx" />
       <Data key="29aa49e1-b695-418d-b21c-cd85130a5a1c" value="qcw_end" />
-      <Data key="226a7587-c4e4-4cd3-bd95-0cc66f0cdfc3/10dce1ed-dd83-44c0-9cff-cc3ee25204cd" value="UART_2_RXInternalInterrupt" />
-      <Data key="226a7587-c4e4-4cd3-bd95-0cc66f0cdfc3/0758f7e0-b58c-4a6b-bb59-e7d003cac7de" value="UART_2_TXInternalInterrupt" />
+      <Data key="226a7587-c4e4-4cd3-bd95-0cc66f0cdfc3/10dce1ed-dd83-44c0-9cff-cc3ee25204cd" value="UART_RXInternalInterrupt" />
+      <Data key="226a7587-c4e4-4cd3-bd95-0cc66f0cdfc3/0758f7e0-b58c-4a6b-bb59-e7d003cac7de" value="UART_TXInternalInterrupt" />
       <Data key="6533b513-81b1-46af-8e19-d98fd9cc0e1c/b73dcd38-4bce-4cd7-acec-33f53e91ccd6" value="ADC_therm_IRQ" />
       <Data key="8759c8f7-2d39-40ac-839a-fcdda7f406e7" value="therm_sample" />
       <Data key="1190957d-2d75-429b-86e8-ff9a02fc3853" value="OCD" />
       <Data key="affc1367-3aa2-45e1-81fc-fe0b51fd27b1" value="isr_primary_current" />
       <Data key="ccf7552c-98fc-46a0-91ef-eac693332ad4" value="qcw_dl_ovf" />
+      <Data key="d3503b2d-99b5-4577-b2d0-7b06df5a2edb/2b704f3c-201b-49ce-b9ea-d28896abd3d8" value="Disp_fisr" />
+      <Data key="d3503b2d-99b5-4577-b2d0-7b06df5a2edb/b730f705-089b-4688-acbb-7f4384b0672b" value="Disp_cisr" />
       <Data key="d5994c35-66e1-4204-a1a6-5d40de4380cc" value="ADC_data_ready" />
       <Data key="dec47964-b682-4738-b517-03b0233c3cbf" value="int_wd" />
     </Group>
@@ -4850,6 +4852,20 @@
     </Group>
   </Group>
   <Group key="Interrupt">
+    <Group key="2e6a47c6-d5f4-4ebd-966c-a132f3287d0c">
+      <Group key="CortexM3">
+        <Data key="Assigned" value="True" />
+        <Data key="Priority" value="0" />
+        <Data key="Vector" value="-1" />
+      </Group>
+    </Group>
+    <Group key="2fb7452b-f15f-4615-b66c-bdee4f657095">
+      <Group key="CortexM3">
+        <Data key="Assigned" value="True" />
+        <Data key="Priority" value="0" />
+        <Data key="Vector" value="-1" />
+      </Group>
+    </Group>
     <Group key="29aa49e1-b695-418d-b21c-cd85130a5a1c">
       <Group key="CortexM3">
         <Data key="Assigned" value="True" />

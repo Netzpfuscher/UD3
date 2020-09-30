@@ -278,10 +278,11 @@ struct sid_f sid_frm;
 uint8_t old_flag[N_CHANNEL];
 
 #define ADSR_IDLE    0
-#define ADSR_ATTACK  1
-#define ADSR_DECAY   2
-#define ADSR_SUSTAIN 3
-#define ADSR_RELEASE 4
+#define ADSR_PENDING 1
+#define ADSR_ATTACK  2
+#define ADSR_DECAY   3
+#define ADSR_SUSTAIN 4
+#define ADSR_RELEASE 5
 
 
 static const uint8_t envelope[16] = {0,0,1,2,3,4,5,6,8,20,41,67,83,251,255,255};
@@ -316,8 +317,8 @@ static inline void compute_adsr_midi(uint8_t ch){
         case ADSR_RELEASE:
             if(channel[ch].adsr_count>=midich[channel[ch].midich].release){
                 channel[ch].volume--;
-                if(channel[ch].volume==0 || channel[ch].volume>127) {
-                    channel[ch].volume=0;
+                if(channel[ch].volume==0) {
+                    channel[ch].sustain=0;
                     channel[ch].adsr_state=ADSR_IDLE;
                 }
                 channel[ch].adsr_count=0;
@@ -357,8 +358,7 @@ static inline void compute_adsr_sid(uint8_t ch){
             case ADSR_RELEASE:
                 if(channel[ch].adsr_count>=envelope[sid_frm.release[ch]]){
                     channel[ch].volume--;
-                    if(channel[ch].volume==0 || channel[ch].volume>127) {
-                        channel[ch].volume=0;
+                    if(channel[ch].volume==0) {
                         channel[ch].adsr_state=ADSR_IDLE;
                     }
                     channel[ch].adsr_count=0;
@@ -373,6 +373,7 @@ static inline void synthcode_MIDI(uint32_t r){
     PULSE pulse;
 	uint8_t flag[N_CHANNEL];
     tt.n.midi_voices.value=0;
+    
 	for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
 
         compute_adsr_midi(ch);
@@ -668,7 +669,6 @@ void process(NOTE *v) {
 		if (v->data.noteonoff.vol > 0) {		 // Note ON
 			for (ch = 0; ch < N_CHANNEL; ch++) { // Search for ports that are already ringing with the same MIDI channel & node number
 				if (channel[ch].adsr_state != ADSR_IDLE && channel[ch].midich == v->midich && channel[ch].miditone == v->data.noteonoff.tone){
-                    
 					break;
                 }
 			}
@@ -686,7 +686,7 @@ void process(NOTE *v) {
   
                 if(v->data.noteonoff.vol>0){
                     if(param.synth == SYNTH_MIDI_QCW && !QCW_enable_Control) qcw_start();
-                    channel[ch].adsr_state = ADSR_ATTACK;
+                    channel[ch].adsr_state = ADSR_PENDING;
                 }else{
                     channel[ch].adsr_state = ADSR_RELEASE;
                 }
@@ -700,8 +700,6 @@ void process(NOTE *v) {
 					break;
 			}
 			if (ch < N_CHANNEL) { // A port was found
-				//channel[ch].volume = 0;
-                channel[ch].sustain=0;
                 channel[ch].adsr_state=ADSR_RELEASE;
 				channel[ch].updated = 1; // This port has been updated
 			}
@@ -709,10 +707,6 @@ void process(NOTE *v) {
 	} else if (v->command == COMMAND_CONTROLCHANGE) { // Control Change Processing
 
 		switch (v->data.controlchange.n) {
-		case 0x0b: // Expression
-			//midich[v->midich].expression = v->data.controlchange.value;
-			//midich[v->midich].updated = 1; // This MIDI channel has been updated
-			break;
         case 0x48: //Release
             midich[v->midich].release = v->data.controlchange.value;
             break;
@@ -764,10 +758,8 @@ void process(NOTE *v) {
 			break;
 		}
 	} else if (v->command == COMMAND_PITCHBEND) { // Processing Pitch Bend
-        
 		midich[v->midich].pitchbend = v->data.pitchbend.value;
 		midich[v->midich].updated = 1; // This MIDI channel has been updated
-        reflect();
 	}
 }
 
@@ -800,9 +792,10 @@ void reflect() {
 		if (channel[ch].updated || midich[mch].updated) {
 			if (channel[ch].adsr_state) {
                 pb = ((((uint32_t)midich[mch].pitchbend*midich[mch].bendrange)<<10) / PITCHBEND_DIVIDER)<<6;
-                channel[ch].freq=Q16n16_mtof((channel[ch].miditone<<16)+pb);
-                channel[ch].halfcount= (SG_CLOCK_HALFCOUNT<<14) / (channel[ch].freq>>2);
+                channel[ch].freq = Q16n16_mtof((channel[ch].miditone<<16)+pb);
+                channel[ch].halfcount = (SG_CLOCK_HALFCOUNT<<14) / (channel[ch].freq>>2);
                 channel[ch].freq = channel[ch].freq >>16;
+                if(channel[ch].adsr_state==ADSR_PENDING) channel[ch].adsr_state = ADSR_ATTACK;
                 if(filter.channel[ch]==0 || channel[ch].freq < filter.min || channel[ch].freq > filter.max){
                     channel[ch].adsr_state = ADSR_IDLE;   
                     channel[ch].volume = 0;
@@ -810,17 +803,14 @@ void reflect() {
                 }
 			}
 			channel[ch].updated = 0;													// Mission channel update work done
-		}
+		    midich[mch].updated = 0; // MIDI channel update work done
+        }
         
         if (channel[ch].sustain > 0){
             dutycycle+= ((uint32)channel[ch].sustain*(uint32)param.pw)/(127000ul/(uint32)channel[ch].freq);
         }
 	}
-	for (mch = 0; mch < N_MIDICHANNEL; mch++) {
-		midich[mch].updated = 0; // MIDI channel update work done
-	}
-    
-    
+   
     tt.n.duty.value = dutycycle;
     if(dutycycle>(configuration.max_tr_duty-param.temp_duty)){
         interrupter.pw = (param.pw * (configuration.max_tr_duty-param.temp_duty)) / dutycycle;

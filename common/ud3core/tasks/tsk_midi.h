@@ -65,10 +65,7 @@ typedef struct __channel__ {
     uint8 old_gate;
 } CHANNEL;
     
-#define N_CHANNEL 8
-
 #define N_MIDICHANNEL 16
-
 #define SID_CHANNELS 3
 
 xQueueHandle qMIDI_rx;
@@ -107,11 +104,13 @@ struct sid_f{
     uint32_t next_frame;
 };
 
-#define SYNTH_OFF       0
-#define SYNTH_MIDI      1
-#define SYNTH_SID       2
-#define SYNTH_MIDI_QCW  3
-#define SYNTH_SID_QCW   4
+enum SYNTH{
+    SYNTH_OFF=0,
+    SYNTH_MIDI,
+    SYNTH_SID,
+    SYNTH_MIDI_QCW,
+    SYNTH_SID_QCW
+};
 
 struct _filter{
     uint16_t min;

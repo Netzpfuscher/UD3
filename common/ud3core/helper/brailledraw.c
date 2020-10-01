@@ -32,14 +32,9 @@ const unsigned char pixmap[4][2] = {
 	{0x04, 0x20},
 	{0x40, 0x80}};
 
-typedef struct pix_struct pix_str;
-struct pix_struct {
-    uint8_t data[PIX_HEIGHT];
-};
+uint8_t *pix;
 
-pix_str *pix_buffer[PIX_WIDTH / 8];
-
-char out_buffer[3] = {0x00, 0x00, 0x00};
+#define pix_select(x,y)  pix[x*PIX_HEIGHT+y]
 
 void raise_mermory_error(port_str *ptr){
     SEND_CONST_STRING("WARNING: NULL pointer; malloc failed\r\n", ptr);
@@ -61,19 +56,15 @@ static void set_bytes(char *pbuffer, const unsigned char c) {
 }
 
 void braille_malloc(port_str *ptr){
-    for(uint8_t i=0;i<PIX_WIDTH / 8;i++){
-        pix_buffer[i] =  pvPortMalloc(sizeof(pix_str));
-        if(pix_buffer[i]==NULL)
-            raise_mermory_error(ptr);
-    }
+    pix = pvPortMalloc(sizeof(uint8_t)*PIX_HEIGHT*(PIX_WIDTH / 8));
+    if(pix==NULL)
+        raise_mermory_error(ptr);
 }
 void braille_free(port_str *ptr){
-   for(uint8_t i=0;i<PIX_WIDTH / 8;i++){
-        if(pix_buffer[i]==NULL){
-            raise_mermory_error(ptr);
-        }else{
-            vPortFree(pix_buffer[i]);
-        }
+    if(pix==NULL){
+        raise_mermory_error(ptr);
+    }else{
+        vPortFree(pix);
     }
 }
 
@@ -84,8 +75,8 @@ void braille_setPixel(uint8_t x, uint8_t y) {
 		y = PIX_HEIGHT - 1;
 	uint8_t byte = x / 8;
 	uint8_t bit = x % 8;
-    if(pix_buffer[byte]==NULL) return;
-    pix_buffer[byte]->data[y] |= 1 << bit;
+    if(pix==NULL) return;
+    pix_select(byte,y) |= 1 << bit;
 }
 
 void braille_line(int x0, int y0, int x1, int y1) {
@@ -111,44 +102,49 @@ void braille_line(int x0, int y0, int x1, int y1) {
 }
 
 void braille_clear(void) {
-	for (uint8_t x = 0; x < PIX_WIDTH / 8; x++) {
-		for (uint8_t y = 0; y < PIX_HEIGHT; y++) {
-            if(pix_buffer[x]!=NULL)
-                pix_buffer[x]->data[y] = 0x00;
-		}
-	}
+    if(pix!=NULL){
+        for (uint8_t x = 0; x < PIX_WIDTH / 8; x++) {
+		    for (uint8_t y = 0; y < PIX_HEIGHT; y++) {
+                pix_select(x,y) = 0x00;
+		    }
+	    }  
+    }
+    
+	
 }
 
 void braille_draw(port_str *ptr) {
 	unsigned char byte;
+    if(pix==NULL){
+        raise_mermory_error(ptr);
+        return;
+    }
 	for (uint16_t y = 0; y < PIX_HEIGHT; y += 4) {
 		for (uint16_t x = 0; x < PIX_WIDTH / 8; x++) {
 			for (uint16_t bpos = 0; bpos < 8; bpos += 2) {
 				byte = 0x00;
-                if(pix_buffer[x]==NULL){
-                    raise_mermory_error(ptr);
-                    return;
-                }
-				if (pix_buffer[x]->data[y] & (1 << bpos))
+                
+				if (pix_select(x,y) & (1 << bpos))
 					byte |= 1 << 0;
-				if (pix_buffer[x]->data[y] & (1 << (bpos + 1)))
+				if (pix_select(x,y) & (1 << (bpos + 1)))
 					byte |= 1 << 3;
 
-				if (pix_buffer[x]->data[y+1] & (1 << bpos))
+				if (pix_select(x,y+1) & (1 << bpos))
 					byte |= 1 << 1;
-				if (pix_buffer[x]->data[y+1] & (1 << (bpos + 1)))
+				if (pix_select(x,y+1) & (1 << (bpos + 1)))
 					byte |= 1 << 4;
 
-				if (pix_buffer[x]->data[y+2] & (1 << bpos))
+				if (pix_select(x,y+2) & (1 << bpos))
 					byte |= 1 << 2;
-				if (pix_buffer[x]->data[y+2] & (1 << (bpos + 1)))
+				if (pix_select(x,y+2) & (1 << (bpos + 1)))
 					byte |= 1 << 5;
 
-				if (pix_buffer[x]->data[y+3] & (1 << bpos))
+				if (pix_select(x,y+3) & (1 << bpos))
 					byte |= 1 << 6;
-				if (pix_buffer[x]->data[y+3] & (1 << (bpos + 1)))
+				if (pix_select(x,y+3) & (1 << (bpos + 1)))
 					byte |= 1 << 7;
-
+                
+                char out_buffer[3];
 				set_bytes(out_buffer, byte);
 				send_buffer((uint8_t*)out_buffer, sizeof(out_buffer),ptr);
 			}

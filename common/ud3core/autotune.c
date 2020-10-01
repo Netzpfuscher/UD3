@@ -183,6 +183,7 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 	//Draw Diagram
 
     if(ptr->term_mode == PORT_TERM_VT100){
+        
         braille_malloc(ptr);
         braille_clear();
 	    braille_line(0, 63, 127, 63);

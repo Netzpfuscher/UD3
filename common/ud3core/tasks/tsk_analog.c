@@ -28,6 +28,7 @@
 #include "tsk_analog.h"
 #include "tsk_fault.h"
 #include "alarmevent.h"
+#include "config.h"
 
 /* RTOS includes. */
 #include "FreeRTOS.h"
@@ -52,12 +53,7 @@ xQueueHandle adc_data;
 TimerHandle_t xCharge_Timer;
 
 
-#define ADC_BUFFER_CNT  25
 
-
-#define NEW_DATA_RATE_MS (0.125 * ADC_BUFFER_CNT)  //ms
-
-#define CURRENT_PID_HZ 320
 
 
 /* ------------------------------------------------------------------------ */
@@ -84,10 +80,6 @@ TimerHandle_t xCharge_Timer;
 #define ADC_DMA_REQUEST_PER_BURST 1
 #define ADC_DMA_SRC_BASE (CYDEV_PERIPH_BASE)
 #define ADC_DMA_DST_BASE (CYDEV_SRAM_BASE)
-
-#define SAMPLES_COUNT 2048
-
-#define BUSV_R_BOT 5000UL
 
 #define INITIAL 0 /* Initial value of the filter memory. */
 

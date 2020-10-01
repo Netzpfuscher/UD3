@@ -22,13 +22,25 @@
 #define bit_is_clear(var, bit) !bit_is_set(var, bit)
 
 #define PARAM_SIZE(param) sizeof(param) / sizeof(parameter_entry)
-    
-#define TYPE_UNSIGNED   0
-#define TYPE_SIGNED     1
-#define TYPE_FLOAT      2
-#define TYPE_CHAR       3
-#define TYPE_STRING     4
-#define TYPE_BUFFER     5
+
+enum cli_types{
+    TYPE_UNSIGNED,
+    TYPE_SIGNED,
+    TYPE_FLOAT,
+    TYPE_CHAR,
+    TYPE_STRING,
+    TYPE_BUFFER
+};
+
+enum port{
+    PORT_TYPE_NULL,
+    PORT_TYPE_SERIAL,
+    PORT_TYPE_USB,
+    PORT_TYPE_MIN,
+    PORT_TERM_VT100,
+    PORT_TERM_TT,
+    PORT_TERM_MQTT
+};
     
 #define typename(x) _Generic((x), \
     uint8_t:    TYPE_UNSIGNED, \
@@ -61,17 +73,7 @@
     
 #define SEND_CONST_STRING(string,port) send_buffer((uint8_t*)string,strlen(string),port);
 
-
-#define PORT_TYPE_NULL      0    
-#define PORT_TYPE_SERIAL    1
-#define PORT_TYPE_USB       2
-#define PORT_TYPE_MIN       3
-    
-#define PORT_TERM_VT100  0
-#define PORT_TERM_TT     1
-#define PORT_TERM_MQTT   2
-    
-    
+   
 #define CT2_TYPE_CURRENT      0
 #define CT2_TYPE_VOLTAGE      1
     

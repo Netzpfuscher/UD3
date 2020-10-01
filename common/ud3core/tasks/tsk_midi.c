@@ -55,10 +55,21 @@ uint8 tsk_midi_initVar = 0u;
 #define PITCHBEND_ZEROBIAS (0x2000)
 #define PITCHBEND_DIVIDER ((uint32_t)0x1fff)
 
-#define COMMAND_NOTEONOFF 1
-#define COMMAND_NOTEOFF 4
-#define COMMAND_CONTROLCHANGE 2
-#define COMMAND_PITCHBEND 3
+enum midi_commands{
+    COMMAND_NOTEONOFF,
+    COMMAND_NOTEOFF,
+    COMMAND_CONTROLCHANGE,
+    COMMAND_PITCHBEND
+};
+
+enum ADSR{
+    ADSR_IDLE = 0,
+    ADSR_PENDING,
+    ADSR_ATTACK,
+    ADSR_DECAY,
+    ADSR_SUSTAIN,
+    ADSR_RELEASE,
+};
 
 struct _filter filter;
 
@@ -152,7 +163,7 @@ uint8_t callback_synthFilter(parameter_entry * params, uint8_t index, port_str *
     send_buffer((uint8_t*)buf,ret,ptr);
     ret= snprintf(buf,sizeof(buf),"Max frequency: %u\r\n",filter.max);
     send_buffer((uint8_t*)buf,ret,ptr);
-    
+
     return 1;
 }
 
@@ -276,13 +287,6 @@ struct sid_f sid_frm;
 
 
 uint8_t old_flag[N_CHANNEL];
-
-#define ADSR_IDLE    0
-#define ADSR_PENDING 1
-#define ADSR_ATTACK  2
-#define ADSR_DECAY   3
-#define ADSR_SUSTAIN 4
-#define ADSR_RELEASE 5
 
 
 static const uint8_t envelope[16] = {0,0,1,2,3,4,5,6,8,20,41,67,83,251,255,255};
@@ -893,9 +897,9 @@ void tsk_midi_TaskProc(void *pvParameters) {
 	 * the the section below.
 	 */
 	/* `#START TASK_VARIABLES` */
-	qMIDI_rx = xQueueCreate(256, sizeof(NOTE));
-    qSID = xQueueCreate(64, sizeof(struct sid_f));
-    qPulse = xQueueCreate(16, sizeof(PULSE));
+	qMIDI_rx = xQueueCreate(N_QUEUE_MIDI, sizeof(NOTE));
+    qSID = xQueueCreate(N_QUEUE_SID, sizeof(struct sid_f));
+    qPulse = xQueueCreate(N_QUEUE_PULSE, sizeof(PULSE));
 
 	NOTE note_struct;
     

@@ -45,7 +45,7 @@
 #define BUSV_R_BOT 5000UL           //Bus voltage bottom resistor
     
 //Synthesizer
-#define N_QUEUE_SID     64          //Size of the SID frame buffer
+#define N_QUEUE_SID     256          //Size of the SID frame buffer
 #define N_QUEUE_MIDI    256         //Size of the midi event buffer
 #define N_QUEUE_PULSE   16          //Size of the oneshot buffer
 #define N_CHANNEL 8                 //Number of parallel voices

@@ -247,7 +247,7 @@ void process_min_sid(uint8_t* ptr, uint16_t len) {
     len--;
     ptr++;
     
-    if(len==(SID_BYTES*n_frames)){
+    if(len!=(SID_BYTES*n_frames)){
         alarm_push(ALM_PRIO_WARN,warn_sid_malformed, ALM_NO_VALUE);
         return;
     }

@@ -383,6 +383,7 @@ void tsk_min_TaskProc(void *pvParameters) {
                         }
                     }
                 }
+
                 uint16_t eth_bytes=xStreamBufferBytesAvailable(min_port[i].tx);
                 if(eth_bytes){
                     bytes_waiting+=eth_bytes;

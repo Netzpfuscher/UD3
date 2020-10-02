@@ -16,6 +16,7 @@
 #include <cytypes.h>
 #include <device.h>
 #include "telemetry.h"
+#include "alarmevent.h"
 #include "cli_common.h"
 #include "tasks/tsk_midi.h"
 #include "tasks/tsk_fault.h"
@@ -58,6 +59,7 @@ void process_midi(uint8_t* ptr, uint16_t len) {
 	}
 }
 
+#define SID_BYTES       29
 #define SID_FREQLO1     0
 #define SID_FREQHI1     1
 #define SID_PWLO1       2
@@ -88,8 +90,6 @@ void process_midi(uint8_t* ptr, uint16_t len) {
 #define SID_UD_TIME2    27
 #define SID_UD_TIME3    28
 #define SID_END         29
-
-
 
 void process_sid(uint8_t* ptr, uint16_t len) {
     static uint8_t SID_frame_marker=0;
@@ -242,3 +242,91 @@ void process_sid(uint8_t* ptr, uint16_t len) {
     }  
 }
 
+void process_min_sid(uint8_t* ptr, uint16_t len) {
+    uint8_t n_frames = *ptr;
+    len--;
+    ptr++;
+    
+    if(len==(SID_BYTES*n_frames)){
+        alarm_push(ALM_PRIO_WARN,warn_sid_malformed, ALM_NO_VALUE);
+        return;
+    }
+    
+    struct sid_f SID_frame;
+
+    while(n_frames){
+        uint16_t dutycycle=0;
+        for(uint32_t i = 0;i<SID_CHANNELS;i++){
+            //SID_FREQLO1
+            SID_frame.freq[i] = *ptr;
+            ptr++;
+            //SID_FREQHI1
+            SID_frame.freq[i] |= ((uint16_t)*ptr << 8);
+            SID_frame.freq[i] = ((uint32_t)SID_frame.freq[i]<<7)/2179;
+            SID_frame.half[i] = SG_CLOCK_HALFCOUNT / SID_frame.freq[i];
+            ptr++;
+            //SID_PWLO1
+            SID_frame.pw[i] = (SID_frame.pw[i] & 0xff00) + *ptr;
+            ptr++;
+            //SID_PWHI1
+            SID_frame.pw[i] = (SID_frame.pw[i] & 0xff) + ((uint16_t)*ptr << 8);
+            ptr++;
+            //SID_CR1
+            if(filter.channel[i]==0 || SID_frame.freq[i] > filter.max || SID_frame.freq[i] < filter.min){
+                SID_frame.gate[i]=0;
+            }else{
+                SID_frame.gate[i] = *ptr & 0x01;
+            }
+            SID_frame.wave[i] = *ptr & 0x80;
+            ptr++;
+            //SID_AD1
+            SID_frame.attack[i] = (*ptr >> 4) & 0x0F;
+            SID_frame.decay[i] = (*ptr) & 0x0F;
+            ptr++;
+            //SID_SR1
+            SID_frame.sustain[i] = ((*ptr & 0xF0) >> 1);
+            SID_frame.release[i] = (*ptr) & 0x0F;
+            ptr++;
+            
+            //Calculate dutycycle
+            if (SID_frame.gate[i]){
+                if(SID_frame.wave[i]){
+                    dutycycle+= (((uint32)127*(uint32)param.pw)/(127000ul/(uint32)SID_frame.freq[i])/2); //Noise
+                }else{
+                    dutycycle+= ((uint32)127*(uint32)param.pw)/(127000ul/(uint32)SID_frame.freq[i]); //Normal wave
+                }
+            }
+        }
+        //SID_FCLO
+        ptr++;
+        //SID_FCHI
+        ptr++;
+        //SID_Res_Filt
+        ptr++;
+        //SID_Mode_Vol
+        ptr++;
+        //SID_UD_TIME0
+        SID_frame.next_frame = *ptr<<24;
+        ptr++;
+        //SID_UD_TIME1
+        SID_frame.next_frame |= *ptr<<16;
+        ptr++;
+        //SID_UD_TIME2
+        SID_frame.next_frame |= *ptr<<8;
+        ptr++;
+        //SID_UD_TIME3
+        SID_frame.next_frame |= *ptr;
+        ptr++;
+        n_frames--;
+        
+        tt.n.duty.value = dutycycle;
+        if(dutycycle>configuration.max_tr_duty - param.temp_duty){
+            SID_frame.master_pw = (param.pw * (configuration.max_tr_duty - param.temp_duty)) / dutycycle;
+        }else{
+            SID_frame.master_pw = param.pw;
+        }  
+        xQueueSend(qSID,&SID_frame,0);
+        
+    }
+   
+}

@@ -208,6 +208,9 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
                     break;
             }
             break;
+        case MIN_ID_SID:
+            process_min_sid(min_payload, len_payload);
+            break;
         case MIN_ID_WD:
                 if(len_payload==4){
                 	time.remote  = ((uint32_t)min_payload[0]<<24);

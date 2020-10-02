@@ -3,6 +3,7 @@
 
 #define MIN_ID_WD       10
 #define MIN_ID_MIDI     20
+#define MIN_ID_SID      21
 #define MIN_ID_TERM     0
 #define MIN_ID_RESET    11
 #define MIN_ID_COMMAND  12

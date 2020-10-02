@@ -652,8 +652,6 @@ void PortVolumeAllOff() {
 
 void MidichInit(MIDICH ptr[]) {
 	for (uint8_t cnt = 0; cnt < N_MIDICHANNEL; cnt++) {
-		//ptr[cnt].expression = 127; // Expression (0 - 127): Control change (Bxh) 0 BH xx
-
 		// Keep RPN in reset state: In order to avoid malfunctioning when data entry comes in suddenly
 		ptr[cnt].rpn_lsb = 127; // RPN (LSB): Control change (Bxh) 64H xx
 		ptr[cnt].rpn_msb = 127; // RPN (MSB): Control change (Bxh) 65H xx

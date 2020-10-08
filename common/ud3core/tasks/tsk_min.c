@@ -209,6 +209,7 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
             }
             break;
         case MIN_ID_SID:
+            //process_sid(min_payload, len_payload);
             process_min_sid(min_payload, len_payload);
             break;
         case MIN_ID_WD:

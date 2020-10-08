@@ -76,7 +76,8 @@ void init_telemetry(){
     tt.n.i2t_i.offset = 0;
     tt.n.i2t_i.unit = TT_UNIT_PERCENT;
     tt.n.i2t_i.divider = 1;
-    tt.n.i2t_i.high_res = pdFALSE;
+    //tt.n.i2t_i.high_res = pdFALSE;
+    tt.n.i2t_i.high_res = pdTRUE;
     tt.n.i2t_i.resend_time = TT_FAST;
     tt.n.i2t_i.chart = TT_NO_TELEMETRY;
     tt.n.i2t_i.gauge = 6;

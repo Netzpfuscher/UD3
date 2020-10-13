@@ -202,8 +202,8 @@ uint16_t read_driver_mv(uint16_t raw_adc){
     return driver_voltage;
 }
 
-uint16_t CT1_Get_Current(uint8_t channel) {
-    uint32_t counts = ADC_DelSig_1_GetResult16();
+uint32_t CT1_Get_Current(uint8_t channel) {
+    int32_t counts = ADC_DelSig_1_GetResult32();
 	if (channel == CT_PRIMARY) {
 		return ((ADC_DelSig_1_CountsTo_mVolts(counts) * configuration.ct1_ratio) / configuration.ct1_burden) / 100;
 	} else {
@@ -212,7 +212,7 @@ uint16_t CT1_Get_Current(uint8_t channel) {
 }
 
 float CT1_Get_Current_f(uint8_t channel) {
-    uint32_t counts = ADC_DelSig_1_GetResult16();
+    int32_t counts = ADC_DelSig_1_GetResult32();
 	if (channel == CT_PRIMARY) {
 		return ((float)(ADC_DelSig_1_CountsTo_Volts(counts) * 10) / (float)(configuration.ct1_burden) * configuration.ct1_ratio);
 	} else {

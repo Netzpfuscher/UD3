@@ -76,8 +76,7 @@ void init_telemetry(){
     tt.n.i2t_i.offset = 0;
     tt.n.i2t_i.unit = TT_UNIT_PERCENT;
     tt.n.i2t_i.divider = 1;
-    //tt.n.i2t_i.high_res = pdFALSE;
-    tt.n.i2t_i.high_res = pdTRUE;
+    tt.n.i2t_i.high_res = pdFALSE;
     tt.n.i2t_i.resend_time = TT_FAST;
     tt.n.i2t_i.chart = TT_NO_TELEMETRY;
     tt.n.i2t_i.gauge = 6;
@@ -352,7 +351,7 @@ void show_overlay_100ms(port_str *ptr){
 void show_overlay_400ms(port_str *ptr) {
     if(ptr->term_mode == PORT_TERM_TT){
         for(uint32_t i = 0;i<N_TELE;i++){
-            if(tt.a[i].resend_time == TT_FAST){
+            if(tt.a[i].resend_time == TT_SLOW){
                 if(tt.a[i].gauge!=TT_NO_TELEMETRY){
                     if(tt.a[i].high_res){
                         send_gauge32(tt.a[i].gauge, tt.a[i].value, ptr);

@@ -203,20 +203,20 @@ uint16_t read_driver_mv(uint16_t raw_adc){
 }
 
 uint32_t CT1_Get_Current(uint8_t channel) {
-    int32_t counts = ADC_DelSig_1_GetResult32();
+    int32_t counts = ADC_peak_GetResult16();
 	if (channel == CT_PRIMARY) {
-		return ((ADC_DelSig_1_CountsTo_mVolts(counts) * configuration.ct1_ratio) / configuration.ct1_burden) / 100;
+		return ((ADC_peak_CountsTo_mVolts(counts) * configuration.ct1_ratio) / configuration.ct1_burden) / 100;
 	} else {
-		return ((ADC_DelSig_1_CountsTo_mVolts(counts) * configuration.ct3_ratio) / configuration.ct3_burden) / 100;
+		return ((ADC_peak_CountsTo_mVolts(counts) * configuration.ct3_ratio) / configuration.ct3_burden) / 100;
 	}
 }
 
 float CT1_Get_Current_f(uint8_t channel) {
-    int32_t counts = ADC_DelSig_1_GetResult32();
+    int32_t counts = ADC_peak_GetResult16();
 	if (channel == CT_PRIMARY) {
-		return ((float)(ADC_DelSig_1_CountsTo_Volts(counts) * 10) / (float)(configuration.ct1_burden) * configuration.ct1_ratio);
+		return ((float)(ADC_peak_CountsTo_Volts(counts) * 10) / (float)(configuration.ct1_burden) * configuration.ct1_ratio);
 	} else {
-		return ((float)(ADC_DelSig_1_CountsTo_Volts(counts) * 10) / (float)(configuration.ct3_burden) * configuration.ct3_ratio);
+		return ((float)(ADC_peak_CountsTo_Volts(counts) * 10) / (float)(configuration.ct3_burden) * configuration.ct3_ratio);
 	}
 }
 
@@ -307,7 +307,7 @@ void calculate_rms(void) {
 void initialize_analogs(void) {
 	
 	CT_MUX_Start();
-	ADC_DelSig_1_Start();
+    ADC_peak_Start();
 	Sample_Hold_1_Start();
 	Comp_1_Start();
 

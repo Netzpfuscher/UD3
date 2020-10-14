@@ -97,7 +97,7 @@ int16_t get_temp_counts(uint8_t channel){
     vTaskDelay(20);
     ADC_therm_StartConvert();
     vTaskDelay(20);
-    return ADC_therm_GetResult16();
+    return ADC_therm_GetResult16()-80;  //compensate for 100mV Offset
 }
 
 uint16 run_temp_check(void) {

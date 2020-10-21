@@ -9,7 +9,8 @@
 #define MIN_ID_SYNTH    14
 #define MIN_ID_FEATURE  15
 #define MIN_ID_MIDI     20
-#define MIN_ID_SID      21    
+#define MIN_ID_SID      21
+#define MIN_ID_DEBUG    42
     
 #define SYNTH_CMD_FLUSH     1
 #define SYNTH_CMD_SID       2

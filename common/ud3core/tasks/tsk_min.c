@@ -37,7 +37,9 @@
 #include "clock.h"
 #include "version.h"
 
+
 #include "helper/printf.h"
+#include "helper/debug.h"
 
 xTaskHandle tsk_min_TaskHandle;
 uint8 tsk_min_initVar = 0u;
@@ -253,6 +255,11 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
         case MIN_ID_COMMAND:
             if(len_payload<1) return;
             min_command(min_payload[0], &min_payload[1],--len_payload);
+            break;
+        case MIN_ID_DEBUG:
+            if(debug_port!=NULL){
+                send_buffer(min_payload,len_payload,debug_port);
+            }
             break;
         default:
             alarm_push(ALM_PRIO_INFO, warn_min_id, min_id);

@@ -34,6 +34,7 @@
 #include <project.h>
 #include <stdint.h>
 #include "helper/printf.h"
+#include "helper/debug.h"
 
 #include "cyapicallbacks.h"
 #include <cytypes.h>
@@ -299,6 +300,7 @@ command_entry commands[] = {
     ADD_COMMAND("features"	    ,command_features       ,"Get supported features")
     ADD_COMMAND("ramp"	        ,qcw_command_ramp       ,"Write QCW ramp")
     ADD_COMMAND("telemetry"	    ,telemetry_command_setup,"Telemetry options")
+    ADD_COMMAND("debug"	        ,command_debug          ,"Debug mode")
 };
 
 

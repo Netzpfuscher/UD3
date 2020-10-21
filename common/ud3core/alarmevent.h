@@ -97,6 +97,8 @@ static const char warn_watchdog[]= "WD: Watchdog triggerd";
 static const char warn_serial_overrun[]= "COM: Serial buffer overrun";
 static const char warn_midi_overrun[]= "COM: MIDI buffer overrun";
 
+static const char warn_min_id[]= "COM: Unknown MIN ID";
+static const char warn_min_command[]= "COM: Unknown command";
 static const char warn_min_reset[]= "COM: MIN reset";
 
 static const char warn_midi_noSpace[]= "MIDI: No Space";

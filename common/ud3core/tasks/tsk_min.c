@@ -181,6 +181,17 @@ void send_command(struct min_context *ctx, uint8_t cmd, char *str){
 }
 uint8_t transmit_features=0;
 
+void min_command(uint8_t command, uint8_t *min_payload, uint8_t len_payload){
+    switch(command){
+        case CMD_LINK:
+            sysfault.link_state = *min_payload ? pdTRUE : pdFALSE;
+            break;
+        default:
+            alarm_push(ALM_PRIO_INFO, warn_min_command, command);
+            break;      
+    }
+}
+
 void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_payload, uint8_t port)
 {
     switch(min_id){
@@ -209,7 +220,6 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
             }
             break;
         case MIN_ID_SID:
-            //process_sid(min_payload, len_payload);
             process_min_sid(min_payload, len_payload);
             break;
         case MIN_ID_WD:
@@ -240,6 +250,13 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
         case MIN_ID_SYNTH:
             process_synth(min_payload,len_payload);
             break;
+        case MIN_ID_COMMAND:
+            if(len_payload<1) return;
+            min_command(min_payload[0], &min_payload[1],--len_payload);
+            break;
+        default:
+            alarm_push(ALM_PRIO_INFO, warn_min_id, min_id);
+            break; 
     }
 }
 

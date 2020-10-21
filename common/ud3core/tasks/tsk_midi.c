@@ -844,13 +844,15 @@ uint8_t command_SynthMon(char *commandline, port_str *ptr){
     uint8_t ret;
     uint32_t freq=0;
     uint8_t channels=N_CHANNEL;
-    if(param.synth== SYNTH_SID) channels=3;
+    
     Term_Disable_Cursor(ptr);
     Term_Erase_Screen(ptr);
     SEND_CONST_STRING("Synthesizer monitor    (press q for quit)\r\n",ptr);
     SEND_CONST_STRING("-----------------------------------------------------------\r\n",ptr);
-    while(getch(ptr,100 /portTICK_RATE_MS) != 'q'){
+    while(Term_check_break(ptr,100)){
         Term_Move_Cursor(3,1,ptr);
+        if(param.synth == SYNTH_SID || param.synth == SYNTH_SID_QCW) channels=SID_CHANNELS;
+        if(param.synth == SYNTH_MIDI || param.synth == SYNTH_MIDI_QCW) channels=N_CHANNEL;
         
         for(uint8_t i=0;i<channels;i++){
             ret=sprintf(buf,"Ch:   Freq:      \r");

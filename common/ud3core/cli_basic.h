@@ -141,6 +141,7 @@ void Term_Box(uint8_t row1, uint8_t col1, uint8_t row2, uint8_t col2, port_str *
 uint8_t getch(port_str *ptr, TickType_t xTicksToWait);
 uint8_t getche(port_str *ptr, TickType_t xTicksToWait);
 uint8_t kbhit(port_str *ptr);
+uint8_t Term_check_break(port_str *ptr, uint32_t ms_to_wait);
 void send_char(uint8_t c, port_str *ptr);
 void send_string(char *data, port_str *ptr);
 void send_buffer(uint8_t *data, uint16_t len, port_str *ptr);

@@ -765,7 +765,7 @@ uint8_t command_alarms(char *commandline, port_str *ptr) {
             }
             old_num=temp.num;
         }
-        while(getch(ptr,50 /portTICK_RATE_MS) != 'q'){
+        while(Term_check_break(ptr,50)){
            if(alarm_get(alarm_get_num()-1,&temp)==pdPASS){
                 if(temp.num>old_num){
                     print_alarm(&temp,ptr);
@@ -831,7 +831,7 @@ uint8_t con_minstat(port_str *ptr){
     int ret=0;
     Term_Disable_Cursor(ptr);
   
-    while(getch(ptr,200 /portTICK_RATE_MS) != 'q'){
+    while(Term_check_break(ptr,200)){
         Term_Erase_Screen(ptr);
         SEND_CONST_STRING("MIN monitor    (press q for quit)\r\n",ptr);
         ret = snprintf(buffer, sizeof(buffer),"Dropped frames        : %lu\r\n",min_ctx.transport_fifo.dropped_frames);
@@ -1463,7 +1463,7 @@ uint8_t command_signals(char *commandline, port_str *ptr) {
     char buffer[80];
     Term_Disable_Cursor(ptr);
     Term_Erase_Screen(ptr);
-    while(getch(ptr,250 /portTICK_RATE_MS) != 'q'){
+    while(Term_check_break(ptr,250)){
         Term_Move_Cursor(1,1,ptr);
         SEND_CONST_STRING("Signal state (q for quit):\r\n", ptr);
         SEND_CONST_STRING("**************************\r\n", ptr);
@@ -1490,6 +1490,8 @@ uint8_t command_signals(char *commandline, port_str *ptr) {
         send_signal_state(sysfault.bus_uv,pdFALSE,ptr);
         SEND_CONST_STRING("Sysfault interlock: ", ptr);
         send_signal_state_wo(sysfault.interlock,pdFALSE,ptr);
+        SEND_CONST_STRING(" link: ", ptr);
+        send_signal_state_wo(sysfault.link_state,pdFALSE,ptr);
         SEND_CONST_STRING(" combined: ", ptr);
         send_signal_state(system_fault_Read(),pdTRUE,ptr);
         

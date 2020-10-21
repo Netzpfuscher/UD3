@@ -826,10 +826,20 @@ uint8_t getche(port_str *ptr, TickType_t xTicksToWait){
 
 uint8_t kbhit(port_str *ptr){
     if(xStreamBufferIsEmpty(ptr->rx)){
-        return 0;
+        return pdFALSE;
     }else{
-        return 1;
+        return pdTRUE;
     }
+}
+
+uint8_t Term_check_break(port_str *ptr, uint32_t ms_to_wait){
+    uint8_t c = getch(ptr,ms_to_wait /portTICK_RATE_MS);
+    if(c=='q' || c == 0x03){  //0x03 = CTRL+C
+        return pdFALSE;
+    }else{
+        return pdTRUE;
+    }
+    
 }
 
 uint8_t split(char *ptr, char *ret[], uint8_t size_ret, char split_char){

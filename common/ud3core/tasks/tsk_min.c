@@ -37,7 +37,6 @@
 #include "clock.h"
 #include "version.h"
 
-
 #include "helper/printf.h"
 #include "helper/debug.h"
 
@@ -46,6 +45,7 @@ uint8 tsk_min_initVar = 0u;
 
 SemaphoreHandle_t min_Semaphore;
 
+uint8_t min_debug=pdFALSE;
 
 /* ------------------------------------------------------------------------ */
 /*
@@ -140,6 +140,18 @@ void time_cb(uint32_t remote_time){
     }else{
         clock_trim(time.diff);
     }   
+}
+
+void min_debug_print(const char *fmt, ...){
+    if(min_debug == pdFALSE) return;
+    if(debug_port == NULL) return;
+    char buf[100];
+    uint8_t len;
+    va_list args;
+    va_start (args, fmt );
+    vsnprintf(buf, sizeof(buf), fmt, args);
+    va_end (args);
+    send_buffer(buf,len,debug_port);
 }
 
 uint8_t flow_ctl=1;

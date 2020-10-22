@@ -62,6 +62,7 @@ void tsk_min_Start(void);
 void min_reset_flow(void);
 extern struct _socket_info socket_info[NUM_MIN_CON];
 extern struct _time time;
+extern uint8_t min_debug;
 
 /*
  * Add user function prototypes in the below merge region to add user

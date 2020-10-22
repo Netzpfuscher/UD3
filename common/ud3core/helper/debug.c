@@ -59,9 +59,25 @@ uint8_t print_debug(port_str *ptr, uint8_t id){
     return 1;
 }
 
+uint8_t print_min_debug(port_str *ptr){
+    Term_Erase_Screen(ptr);
+    SEND_CONST_STRING("Entering min debug @%u [CTRL+C] for exit\r\n",ptr)
+    debug_port = ptr;
+    min_debug = pdTRUE;
+    while(Term_check_break(ptr,250));
+    min_debug = pdFALSE;
+    debug_port = NULL;
+    SEND_CONST_STRING("\r\n",ptr);
+    return 1;
+}
+
 uint8_t command_debug(char *commandline, port_str *ptr) {
     SKIP_SPACE(commandline); 
     CHECK_NULL(commandline);
+    if (ntlibc_stricmp(commandline, "min") == 0) {
+        print_min_debug(ptr);
+        return 0;
+	}
     uint8_t id = ntlibc_atoi(commandline);
     print_debug(ptr,id);
     return 0;

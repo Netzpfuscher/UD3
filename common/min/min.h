@@ -211,7 +211,7 @@ void min_reset(uint8_t port);
 // (Can have multiple MIN contexts)
 void min_init_context(struct min_context *self, uint8_t port);
 //#define MIN_DEBUG_PRINTING
-#ifdef MIN_DEBUG_PRINTING
+#ifndef MIN_DEBUG_PRINTING
 // Debug print
 void min_debug_print(const char *msg, ...);
 #else

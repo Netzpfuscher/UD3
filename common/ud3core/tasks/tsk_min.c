@@ -146,10 +146,9 @@ void min_debug_print(const char *fmt, ...){
     if(min_debug == pdFALSE) return;
     if(debug_port == NULL) return;
     char buf[100];
-    uint8_t len;
     va_list args;
     va_start (args, fmt );
-    vsnprintf(buf, sizeof(buf), fmt, args);
+    uint8_t len = vsnprintf(buf, sizeof(buf), fmt, args);
     va_end (args);
     send_buffer(buf,len,debug_port);
 }
@@ -210,6 +209,7 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
 {
     if(min_id==debug_id && debug_port!=NULL){
         send_buffer(min_payload,len_payload,debug_port);
+        SEND_CONST_STRING("\r\n",debug_port);
     }
     
     switch(min_id){

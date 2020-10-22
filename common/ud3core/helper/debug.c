@@ -41,7 +41,7 @@ uint8_t print_debug(port_str *ptr, uint8_t id){
     char buffer[80];
     uint8_t ret = snprintf(buffer,sizeof(buffer),"Entering debug @%u [CTRL+C] for exit\r\n", id);
     send_buffer(buffer,ret,ptr);
-    uint8_t c;
+    uint8_t c=0;
     uint8_t len;
     while(c != CTRL_C){
         xSemaphoreGive(ptr->term_block);
@@ -61,7 +61,7 @@ uint8_t print_debug(port_str *ptr, uint8_t id){
 
 uint8_t print_min_debug(port_str *ptr){
     Term_Erase_Screen(ptr);
-    SEND_CONST_STRING("Entering min debug @%u [CTRL+C] for exit\r\n",ptr)
+    SEND_CONST_STRING("Entering min debug [CTRL+C] for exit\r\n",ptr)
     debug_port = ptr;
     min_debug = pdTRUE;
     while(Term_check_break(ptr,250));

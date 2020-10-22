@@ -159,7 +159,7 @@ static void transport_fifo_pop(struct min_context *self)
     assert(self->transport_fifo.n_frames != 0);
 #endif
     struct transport_frame *frame = &self->transport_fifo.frames[self->transport_fifo.head_idx];
-    min_debug_print("Popping frame id=%d seq=%d\n", frame->min_id, frame->seq);
+    min_debug_print("Popping frame id=%d seq=%d\r\n", frame->min_id, frame->seq);
 
 #ifdef ASSERTION_CHECKING
     assert(self->transport_fifo.n_ring_buffer_bytes >= frame->payload_len);
@@ -203,11 +203,11 @@ static struct transport_frame *transport_fifo_push(struct min_context *self, uin
             self->transport_fifo.tail_idx &= TRANSPORT_FIFO_SIZE_FRAMES_MASK;
         }
         else {
-            min_debug_print("No FIFO payload space: data_size=%d, n_ring_buffer_bytes=%d\n", data_size, self->transport_fifo.n_ring_buffer_bytes);
+            min_debug_print("No FIFO payload space: data_size=%d, n_ring_buffer_bytes=%d\r\n", data_size, self->transport_fifo.n_ring_buffer_bytes);
         }
     }
     else {
-        min_debug_print("No FIFO frame slots\n");
+        min_debug_print("No FIFO frame slots\r\n");
     }
     return ret;
 }
@@ -232,7 +232,7 @@ static void send_ack(struct min_context *self)
 {
     // In the embedded end we don't reassemble out-of-order frames and so never ask for retransmits. Payload is
     // always the same as the sequence number.
-    min_debug_print("send ACK: seq=%d\n", self->transport_fifo.rn);
+    min_debug_print("send ACK: seq=%d\r\n", self->transport_fifo.rn);
     if(ON_WIRE_SIZE(8) <= min_tx_space(self->port)) {
         //on_wire_bytes(self, ACK, self->transport_fifo.rn, &self->transport_fifo.rn, 0, 0xffU, 1U);
 		uint8_t sq[8];
@@ -253,7 +253,7 @@ static void send_ack(struct min_context *self)
 // We don't queue an RESET frame - we send it straight away (if there's space to do so)
 static void send_reset(struct min_context *self)
 {
-    min_debug_print("send RESET\n");
+    min_debug_print("send RESET\r\n");
     if(ON_WIRE_SIZE(0) <= min_tx_space(self->port)) {
         on_wire_bytes(self, RESET, 0, 0, 0, 0, 0);
     }
@@ -309,7 +309,7 @@ bool min_queue_frame(struct min_context *self, uint8_t min_id, uint8_t *payload,
             payload_offset++;
             payload_offset &= TRANSPORT_FIFO_SIZE_FRAME_DATA_MASK;
         }
-        min_debug_print("Queued ID=%u, len=%d\n", min_id, payload_len);
+        min_debug_print("Queued ID=%u, len=%d\r\n", min_id, payload_len);
         return true;
     }
     else {
@@ -407,7 +407,7 @@ static void valid_frame_received(struct min_context *self)
 #endif
                 // Now pop off all the frames up to (but not including) rn
                 // The ACK contains Rn; all frames before Rn are ACKed and can be removed from the window
-                min_debug_print("Received ACK seq=%d, num_acked=%d, num_nacked=%d\n", seq, num_acked, num_nacked);
+                min_debug_print("Received ACK seq=%d, num_acked=%d, num_nacked=%d\r\n", seq, num_acked, num_nacked);
                 for(uint8_t i = 0; i < num_acked; i++) {
                     transport_fifo_pop(self);
                 }
@@ -421,7 +421,7 @@ static void valid_frame_received(struct min_context *self)
                 }
             }
             else {
-                min_debug_print("Received spurious ACK seq=%d\n", seq);
+                min_debug_print("Received spurious ACK seq=%d\r\n", seq);
                 self->transport_fifo.spurious_acks++;
             }
             break;
@@ -456,7 +456,7 @@ static void valid_frame_received(struct min_context *self)
                     // Now ready to pass this up to the application handlers
 
                     // Pass frame up to application handler to deal with
-                    min_debug_print("Incoming app frame seq=%d, id=%d, payload len=%d\n", seq, id_control & (uint8_t)0x3fU, payload_len);
+                    min_debug_print("Incoming app frame seq=%d, id=%d, payload len=%d\r\n", seq, id_control & (uint8_t)0x3fU, payload_len);
                     min_application_handler(id_control & (uint8_t)0x3fU, payload, payload_len, self->port);
                 } else {
                     // Discard this frame because we aren't looking for it: it's either a dupe because it was

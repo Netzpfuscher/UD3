@@ -54,6 +54,14 @@ enum port{
     char:       TYPE_CHAR, \
     char*:      TYPE_STRING)
 
+
+#define send_buffer(data,len,ptr) _Generic((data), \
+                uint8_t*        : send_buffer_u8, \
+                char*           : send_buffer_c,  \
+                const char*     : send_buffer_c,  \
+                const uint8_t*  : send_buffer_u8  \
+)(data,len,ptr)
+
 #define SIZEP(x) ((char*)(&(x) + 1) - (char*)&(x))
 #define ADD_PARAM(para_type, visible,text, value_var, min, max, div, update_func, help_text) {para_type, visible,text, &value_var, SIZEP(value_var), typename(value_var),min, max, div, update_func, help_text},
 #define ADD_COMMAND(command, command_func, help_text) {command, command_func, help_text},
@@ -71,7 +79,7 @@ enum port{
 #define CYDEV_EE_SIZE 0x00000800u
 #define CY_EEPROM_SIZE              (CYDEV_EE_SIZE)
     
-#define SEND_CONST_STRING(string,port) send_buffer((uint8_t*)string,strlen(string),port);
+#define SEND_CONST_STRING(string,port) send_buffer(string,strlen(string),port);
 
    
 #define CT2_TYPE_CURRENT      0
@@ -144,7 +152,8 @@ uint8_t kbhit(port_str *ptr);
 uint8_t Term_check_break(port_str *ptr, uint32_t ms_to_wait);
 void send_char(uint8_t c, port_str *ptr);
 void send_string(char *data, port_str *ptr);
-void send_buffer(uint8_t *data, uint16_t len, port_str *ptr);
+void send_buffer_u8(uint8_t *data, uint16_t len, port_str *ptr);
+void send_buffer_c(char *data, uint16_t len, port_str *ptr);
 uint8_t split(char *ptr, char *ret[], uint8_t size_ret, char split_char);
 
 uint8_t term_config_changed(void);

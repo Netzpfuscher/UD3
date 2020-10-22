@@ -254,19 +254,19 @@ void show_overlay_100ms(port_str *ptr){
     	Term_Box(row_pos, col_pos, row_pos + 11, col_pos + 25, ptr);
     	Term_Move_Cursor(row_pos + 1, col_pos + 1, ptr);
     	ret = snprintf(buffer, sizeof(buffer), "Bus Voltage:       %4iV", tt.n.bus_v.value);
-        send_buffer((uint8_t*)buffer,ret,ptr);
+        send_buffer(buffer,ret,ptr);
 
     	Term_Move_Cursor(row_pos + 2, col_pos + 1, ptr);
     	ret = snprintf(buffer, sizeof(buffer), "Battery Voltage:   %4iV", tt.n.batt_v.value);
-        send_buffer((uint8_t*)buffer,ret,ptr);
+        send_buffer(buffer,ret,ptr);
 
     	Term_Move_Cursor(row_pos + 3, col_pos + 1, ptr);
     	ret = snprintf(buffer, sizeof(buffer), "Temp 1:          %4i *C", tt.n.temp1.value);
-        send_buffer((uint8_t*)buffer,ret,ptr);
+        send_buffer(buffer,ret,ptr);
 
     	Term_Move_Cursor(row_pos + 4, col_pos + 1, ptr);
     	ret = snprintf(buffer, sizeof(buffer), "Temp 2:          %4i *C", tt.n.temp2.value);
-        send_buffer((uint8_t*)buffer,ret,ptr);
+        send_buffer(buffer,ret,ptr);
 
     	Term_Move_Cursor(row_pos + 5, col_pos + 1, ptr);
         SEND_CONST_STRING("Bus status: ", ptr);
@@ -291,19 +291,19 @@ void show_overlay_100ms(port_str *ptr){
 
     	Term_Move_Cursor(row_pos + 6, col_pos + 1, ptr);
     	ret = snprintf(buffer, sizeof(buffer), "Average power:     %4iW", tt.n.avg_power.value);
-        send_buffer((uint8_t*)buffer,ret,ptr);
+        send_buffer(buffer,ret,ptr);
 
     	Term_Move_Cursor(row_pos + 7, col_pos + 1, ptr);
     	ret = snprintf(buffer, sizeof(buffer), "Average Current: %4i.%iA", tt.n.batt_i.value / 10, tt.n.batt_i.value % 10);
-        send_buffer((uint8_t*)buffer,ret,ptr);
+        send_buffer(buffer,ret,ptr);
 
     	Term_Move_Cursor(row_pos + 8, col_pos + 1, ptr);
     	ret = snprintf(buffer, sizeof(buffer), "Primary Current:   %4iA", tt.n.primary_i.value);
-        send_buffer((uint8_t*)buffer,ret,ptr);
+        send_buffer(buffer,ret,ptr);
         
         Term_Move_Cursor(row_pos + 9, col_pos + 1, ptr);
     	ret = snprintf(buffer, sizeof(buffer), "MIDI voices:         %1i/4", tt.n.midi_voices.value);
-        send_buffer((uint8_t*)buffer,ret,ptr);
+        send_buffer(buffer,ret,ptr);
         
         Term_Move_Cursor(row_pos + 10, col_pos + 1, ptr);
         if(tt.n.fres.value==-1){
@@ -311,7 +311,7 @@ void show_overlay_100ms(port_str *ptr){
         }else{
     	    ret = snprintf(buffer, sizeof(buffer), "Fres:          %4i.%ikHz", tt.n.fres.value / 10, tt.n.fres.value % 10);
         }
-        send_buffer((uint8_t*)buffer,ret,ptr);
+        send_buffer(buffer,ret,ptr);
 
     	Term_Restore_Cursor(ptr);
     	Term_Enable_Cursor(ptr);
@@ -570,7 +570,7 @@ uint8_t telemetry_command_setup(char *commandline, port_str *ptr){
                     ret = snprintf(temp, sizeof(temp),"Gauge %i: %s = %i %s\r\n",i,tt.a[cnt].name,tt.a[cnt].value,units[tt.a[cnt].unit]);
                 }
             }
-            send_buffer((uint8_t*)temp,ret,ptr);
+            send_buffer(temp,ret,ptr);
         }
         for(int i=0;i<N_CHARTS;i++){
             int cnt=-1;
@@ -589,7 +589,7 @@ uint8_t telemetry_command_setup(char *commandline, port_str *ptr){
                     ret = snprintf(temp, sizeof(temp),"Chart %i: %s = %i %s\r\n",i,tt.a[cnt].name,tt.a[cnt].value,units[tt.a[cnt].unit]);
                 }
             }
-            send_buffer((uint8_t*)temp,ret,ptr);
+            send_buffer(temp,ret,ptr);
         }
         return pdPASS;
         
@@ -672,7 +672,7 @@ uint8_t telemetry_command_setup(char *commandline, port_str *ptr){
     } else if (ntlibc_stricmp(buffer[0], "ls") == 0) {
         for(uint8_t w=0;w<N_TELE;w++){
             ret = snprintf(temp, sizeof(temp),"%i: %s\r\n", w+1, tt.a[w].name);
-            send_buffer((uint8_t*)temp,ret,ptr);
+            send_buffer(temp,ret,ptr);
         }
         return pdPASS;
     }

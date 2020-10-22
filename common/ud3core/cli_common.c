@@ -700,11 +700,11 @@ void print_alarm(ALARMS *temp,port_str *ptr){
     char buffer[80];
     Term_Move_Cursor_right(c_A,ptr);
     ret = snprintf(buffer, sizeof(buffer),"%u",temp->num);
-    send_buffer((uint8_t*)buffer,ret,ptr); 
+    send_buffer(buffer,ret,ptr); 
     
     Term_Move_Cursor_right(c_B,ptr);
     ret = snprintf(buffer, sizeof(buffer),"| %u ms",temp->timestamp);
-    send_buffer((uint8_t*)buffer,ret,ptr); 
+    send_buffer(buffer,ret,ptr); 
     
     Term_Move_Cursor_right(c_C,ptr);
     send_char('|',ptr);
@@ -727,7 +727,7 @@ void print_alarm(ALARMS *temp,port_str *ptr){
     }else{
         ret = snprintf(buffer, sizeof(buffer)," %s | Value: %i\r\n",temp->message ,temp->value);
     }
-    send_buffer((uint8_t*)buffer,ret,ptr); 
+    send_buffer(buffer,ret,ptr); 
     Term_Color_White(ptr);
 }
 
@@ -802,10 +802,10 @@ void con_info(port_str *ptr){
         if(socket_info[i].socket==SOCKET_CONNECTED){
             Term_Move_Cursor_right(COL_A,ptr);
             ret = snprintf(buffer,sizeof(buffer), "\033[36m%d", i);
-            send_buffer((uint8_t*)buffer,ret,ptr);
+            send_buffer(buffer,ret,ptr);
             Term_Move_Cursor_right(COL_B,ptr);
             ret = snprintf(buffer,sizeof(buffer), "\033[32m%s\r\n", socket_info[i].info);
-            send_buffer((uint8_t*)buffer,ret,ptr);
+            send_buffer(buffer,ret,ptr);
         }
     }
     Term_Color_White(ptr); 
@@ -821,7 +821,7 @@ void con_numcon(port_str *ptr){
         }
     }
     ret = snprintf(buffer,sizeof(buffer), "CLI-Sessions: %u/%u\r\n",cnt ,NUM_MIN_CON);
-    send_buffer((uint8_t*)buffer,ret,ptr);
+    send_buffer(buffer,ret,ptr);
 }
 
 /*****************************************************************************
@@ -835,27 +835,27 @@ uint8_t con_minstat(port_str *ptr){
   
     while(Term_check_break(ptr,200)){
         Term_Erase_Screen(ptr);
-        SEND_CONST_STRING("MIN monitor    (press q for quit)\r\n",ptr);
+        SEND_CONST_STRING("MIN monitor    (press [CTRL+C] for quit)\r\n",ptr);
         ret = snprintf(buffer, sizeof(buffer),"Dropped frames        : %lu\r\n",min_ctx.transport_fifo.dropped_frames);
-        send_buffer((uint8_t*)buffer,ret,ptr);
+        send_buffer(buffer,ret,ptr);
         ret = snprintf(buffer, sizeof(buffer),"Spurious acks         : %lu\r\n",min_ctx.transport_fifo.spurious_acks);
-        send_buffer((uint8_t*)buffer,ret,ptr);
+        send_buffer(buffer,ret,ptr);
         ret = snprintf(buffer, sizeof(buffer),"Resets received       : %lu\r\n",min_ctx.transport_fifo.resets_received);
-        send_buffer((uint8_t*)buffer,ret,ptr);
+        send_buffer(buffer,ret,ptr);
         ret = snprintf(buffer, sizeof(buffer),"Sequence mismatch drop: %lu\r\n",min_ctx.transport_fifo.sequence_mismatch_drop);
-        send_buffer((uint8_t*)buffer,ret,ptr);
+        send_buffer(buffer,ret,ptr);
         ret = snprintf(buffer, sizeof(buffer),"Max frames in buffer  : %u\r\n",min_ctx.transport_fifo.n_frames_max);
-        send_buffer((uint8_t*)buffer,ret,ptr);
+        send_buffer(buffer,ret,ptr);
         ret = snprintf(buffer, sizeof(buffer),"CRC errors            : %u\r\n",min_ctx.transport_fifo.crc_fails);
-        send_buffer((uint8_t*)buffer,ret,ptr);
+        send_buffer(buffer,ret,ptr);
         ret = snprintf(buffer, sizeof(buffer),"Remote Time           : %u\r\n",time.remote);
-        send_buffer((uint8_t*)buffer,ret,ptr);
+        send_buffer(buffer,ret,ptr);
         ret = snprintf(buffer, sizeof(buffer),"Local Time            : %u\r\n",l_time);
-        send_buffer((uint8_t*)buffer,ret,ptr);
+        send_buffer(buffer,ret,ptr);
         ret = snprintf(buffer, sizeof(buffer),"Diff Time             : %i\r\n",time.diff);
-        send_buffer((uint8_t*)buffer,ret,ptr);
+        send_buffer(buffer,ret,ptr);
         ret = snprintf(buffer, sizeof(buffer),"Resync count          : %u\r\n",time.resync);
-        send_buffer((uint8_t*)buffer,ret,ptr);
+        send_buffer(buffer,ret,ptr);
     }
     SEND_CONST_STRING("\r\n",ptr);
     Term_Enable_Cursor(ptr);
@@ -1096,7 +1096,7 @@ uint8_t command_udkill(char *commandline, port_str *ptr) {
         char buf[30];
         Term_Color_Red(ptr);
         int ret = snprintf(buf,sizeof(buf), "Killbit: %u\r\n",sysfault.interlock);
-        send_buffer((uint8_t*)buf,ret,ptr);
+        send_buffer(buf,ret,ptr);
         Term_Color_White(ptr);
         return 1;
     }
@@ -1467,7 +1467,7 @@ uint8_t command_signals(char *commandline, port_str *ptr) {
     Term_Erase_Screen(ptr);
     while(Term_check_break(ptr,250)){
         Term_Move_Cursor(1,1,ptr);
-        SEND_CONST_STRING("Signal state (q for quit):\r\n", ptr);
+        SEND_CONST_STRING("Signal state [CTRL+C] for quit:\r\n", ptr);
         SEND_CONST_STRING("**************************\r\n", ptr);
         SEND_CONST_STRING("UVLO pin: ", ptr);
         send_signal_state_wo(UVLO_status_Status,pdTRUE,ptr);

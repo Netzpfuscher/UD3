@@ -53,7 +53,7 @@ void send_chart(uint8_t chart, int16_t val, port_str *ptr){
     send_buffer(chartbuf,sizeof(chartbuf),ptr);
 }
 void send_chart_draw(port_str *ptr){
-    send_buffer((uint8_t*)chartdraw,sizeof(chartdraw),ptr);
+    send_buffer(chartdraw,sizeof(chartdraw),ptr);
 }
 
 void send_chart_config(uint8_t chart, int16_t min, int16_t max, int16_t offset,uint8_t unit, char * text, port_str *ptr){
@@ -71,7 +71,7 @@ void send_chart_config(uint8_t chart, int16_t min, int16_t max, int16_t offset,u
     buf[9] = (offset>>8);
     buf[10] = unit;
     send_buffer(buf,sizeof(buf),ptr);
-    send_buffer((uint8_t*)text,bytes, ptr);
+    send_buffer(text,bytes, ptr);
 }
 
 void send_gauge_config(uint8_t gauge, int16_t min, int16_t max, char * text, port_str *ptr){
@@ -86,7 +86,7 @@ void send_gauge_config(uint8_t gauge, int16_t min, int16_t max, char * text, por
     buf[6] = max;
     buf[7] = (max>>8);
     send_buffer(buf,sizeof(buf),ptr);
-    send_buffer((uint8_t*)text,bytes, ptr);
+    send_buffer(text,bytes, ptr);
 }
 
 void send_gauge_config32(uint8_t gauge, int32_t min, int32_t max, int32 div ,char * text, port_str *ptr){
@@ -109,11 +109,11 @@ void send_gauge_config32(uint8_t gauge, int32_t min, int32_t max, int32 div ,cha
     buf[14] = (div>>16);
     buf[15] = (div>>24);
     send_buffer(buf,sizeof(buf),ptr);
-    send_buffer((uint8_t*)text,bytes, ptr);
+    send_buffer(text,bytes, ptr);
 }
 
 void send_chart_clear(port_str *ptr){
-    send_buffer((uint8_t*)chartclear,sizeof(chartclear),ptr); 
+    send_buffer(chartclear,sizeof(chartclear),ptr); 
 }
 
 void send_chart_line(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint8_t color, port_str *ptr){

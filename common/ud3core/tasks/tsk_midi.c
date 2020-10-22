@@ -157,12 +157,12 @@ uint8_t callback_synthFilter(parameter_entry * params, uint8_t index, port_str *
     char buf[50];
     for(uint8_t i=0;i<sizeof(filter.channel);i++){
         ret= snprintf(buf,sizeof(buf),"Channel %u: %u\r\n",i,filter.channel[i]);
-        send_buffer((uint8_t*)buf,ret,ptr);
+        send_buffer(buf,ret,ptr);
     }
     ret= snprintf(buf,sizeof(buf),"Min frequency: %u\r\n",filter.min);
-    send_buffer((uint8_t*)buf,ret,ptr);
+    send_buffer(buf,ret,ptr);
     ret= snprintf(buf,sizeof(buf),"Max frequency: %u\r\n",filter.max);
-    send_buffer((uint8_t*)buf,ret,ptr);
+    send_buffer(buf,ret,ptr);
 
     return 1;
 }
@@ -847,7 +847,7 @@ uint8_t command_SynthMon(char *commandline, port_str *ptr){
     
     Term_Disable_Cursor(ptr);
     Term_Erase_Screen(ptr);
-    SEND_CONST_STRING("Synthesizer monitor    (press q for quit)\r\n",ptr);
+    SEND_CONST_STRING("Synthesizer monitor    [CTRL+C] for quit\r\n",ptr);
     SEND_CONST_STRING("-----------------------------------------------------------\r\n",ptr);
     while(Term_check_break(ptr,100)){
         Term_Move_Cursor(3,1,ptr);
@@ -856,17 +856,17 @@ uint8_t command_SynthMon(char *commandline, port_str *ptr){
         
         for(uint8_t i=0;i<channels;i++){
             ret=sprintf(buf,"Ch:   Freq:      \r");
-            send_buffer((uint8_t*)buf,ret,ptr);   
+            send_buffer(buf,ret,ptr);   
             if(channel[i].volume>0){
                 freq=channel[i].freq;
             }else{
                 freq=0;
             }
             ret=sprintf(buf,"Ch: %u Freq: %u",i+1,freq);
-            send_buffer((uint8_t*)buf,ret,ptr);                 
+            send_buffer(buf,ret,ptr);                 
             Term_Move_Cursor_right(20,ptr);
             ret=sprintf(buf,"Vol: ",i+1);
-            send_buffer((uint8_t*)buf,ret,ptr);
+            send_buffer(buf,ret,ptr);
             uint8_t cnt = channel[i].volume/12;
 
             for(uint8_t w=0;w<10;w++){

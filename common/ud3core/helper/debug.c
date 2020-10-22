@@ -24,17 +24,37 @@
 
 #include "debug.h"
 #include "ntlibc.h"
+#include "printf.h"
+#include "min.h"
+#include "tasks/tsk_min.h"
 
 port_str *debug_port;
+uint8_t debug_id=0xFF;
 
-uint8_t print_debug(port_str *ptr){
+#define CTRL_C        0x03
+#define DEBUG_LOOP_MS 10
+
+uint8_t print_debug(port_str *ptr, uint8_t id){
     debug_port = ptr;
+    debug_id = id;
     Term_Erase_Screen(ptr);
-    SEND_CONST_STRING("Entering debug [q] for exit\r\n",ptr);
-    while(Term_check_break(ptr,250)){
+    char buffer[80];
+    uint8_t ret = snprintf(buffer,sizeof(buffer),"Entering debug @%u [CTRL+C] for exit\r\n", id);
+    send_buffer(buffer,ret,ptr);
+    uint8_t c;
+    uint8_t len;
+    while(c != CTRL_C){
+        xSemaphoreGive(ptr->term_block);
+        len = xStreamBufferReceive(ptr->rx,buffer,sizeof(buffer),DEBUG_LOOP_MS /portTICK_RATE_MS);
+        xSemaphoreTake(ptr->term_block, portMAX_DELAY);
+        for(uint32_t i=0;i<len;i++){
+            if(buffer[i]==CTRL_C) c = CTRL_C;   
+        }
+        min_send_frame(&min_ctx,id,(uint8_t*)buffer,len);
 
     }
     debug_port = NULL;
+    debug_id = 0xFF;
     SEND_CONST_STRING("\r\n",ptr);
     return 1;
 }
@@ -42,11 +62,11 @@ uint8_t print_debug(port_str *ptr){
 uint8_t command_debug(char *commandline, port_str *ptr) {
     SKIP_SPACE(commandline); 
     CHECK_NULL(commandline);
-    if (ntlibc_stricmp(commandline, "start") == 0) {
-        print_debug(ptr);
-        return 0;
-	}
-    HELP_TEXT("Usage: debug [start]\r\n");
+    uint8_t id = ntlibc_atoi(commandline);
+    print_debug(ptr,id);
+    return 0;
+    
+    HELP_TEXT("Usage: debug [id]\r\n");
 }
 
 

@@ -159,7 +159,7 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 		}
 		freq_resp->curr[f] = round(current_buffer / (float)configuration.autotune_s * 10);
 		ret = snprintf(buffer, sizeof(buffer), "Frequency: %i00Hz Current: %4i,%iA     \r", freq_resp->freq[f], freq_resp->curr[f] / 10, freq_resp->curr[f] % 10);
-		send_buffer((uint8_t*)buffer, ret, ptr);
+		send_buffer(buffer, ret, ptr);
 	}
 	SEND_CONST_STRING("\r\n", ptr);
 
@@ -203,10 +203,10 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
     	for (f = 0; f < PIX_WIDTH / 2; f += 4) {
     		if (!f) {
     			ret = snprintf(buffer, sizeof(buffer), "%i", freq_resp->freq[f*2]);
-    			send_buffer((uint8_t*)buffer, ret, ptr);
+    			send_buffer(buffer, ret, ptr);
     		} else {
     			ret = snprintf(buffer, sizeof(buffer), "%4i", freq_resp->freq[f*2]);
-    			send_buffer((uint8_t*)buffer, ret, ptr);
+    			send_buffer(buffer, ret, ptr);
     		}
     	}
         braille_free(ptr);
@@ -252,7 +252,7 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
     }
     
 	ret = snprintf(buffer, sizeof(buffer), "\r\nFound Peak at: %i00Hz\r\n", freq_resp->freq[max_curr_num]);
-	send_buffer((uint8_t*)buffer, ret, ptr);
+	send_buffer(buffer, ret, ptr);
     uint16_t temp = freq_resp->freq[max_curr_num];
     vPortFree(freq_resp);
     return temp;

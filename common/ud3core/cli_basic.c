@@ -161,7 +161,7 @@ uint8_t updateDefaultFunction(parameter_entry * params, char * newValue, uint8_t
         }else{
             ret = snprintf(buffer, sizeof(buffer), "E:Range %i-%i\r\n", params[index].min, params[index].max);
         }
-        send_buffer((uint8_t*)buffer,ret,ptr);
+        send_buffer(buffer,ret,ptr);
 
     return 0;
 }
@@ -187,7 +187,7 @@ void print_param_helperfunc(parameter_entry * params, uint8_t param_size, port_s
         if(params[current_parameter].parameter_type==param_type && params[current_parameter].visible){
             Term_Move_Cursor_right(COL_A,ptr);
             ret = snprintf(buffer,sizeof(buffer), "\033[36m%s", params[current_parameter].name);
-            send_buffer((uint8_t*)buffer,ret,ptr);
+            send_buffer(buffer,ret,ptr);
 
             switch (params[current_parameter].type){
             case TYPE_UNSIGNED:
@@ -212,7 +212,7 @@ void print_param_helperfunc(parameter_entry * params, uint8_t param_size, port_s
                 }else{
                     ret = snprintf(buffer, sizeof(buffer), "\033[37m| \033[32m%u", u_temp_buffer);
                 }
-                send_buffer((uint8_t*)buffer,ret,ptr);
+                send_buffer(buffer,ret,ptr);
 
                 break;
             case TYPE_SIGNED:
@@ -244,21 +244,21 @@ void print_param_helperfunc(parameter_entry * params, uint8_t param_size, port_s
                 }else{
                     ret = snprintf(buffer, sizeof(buffer), "\033[37m| \033[32m%i", i_temp_buffer);
                 }
-                send_buffer((uint8_t*)buffer,ret,ptr);
+                send_buffer(buffer,ret,ptr);
 
                 break;
             case TYPE_FLOAT:
 
                 Term_Move_Cursor_right(COL_B,ptr);
                 ret = snprintf(buffer, sizeof(buffer), "\033[37m| \033[32m%f", *(float*)params[current_parameter].value);
-                send_buffer((uint8_t*)buffer,ret,ptr);
+                send_buffer(buffer,ret,ptr);
 
                 break;
             case TYPE_CHAR:
 
                 Term_Move_Cursor_right(COL_B,ptr);
                 ret = snprintf(buffer, sizeof(buffer), "\033[37m| \033[32m%c", *(char*)params[current_parameter].value);
-                send_buffer((uint8_t*)buffer,ret,ptr);
+                send_buffer(buffer,ret,ptr);
 
                 break;
             case TYPE_STRING:
@@ -272,7 +272,7 @@ void print_param_helperfunc(parameter_entry * params, uint8_t param_size, port_s
             }
             Term_Move_Cursor_right(COL_C,ptr);
             ret = snprintf(buffer, sizeof(buffer), "\033[37m| %s\r\n", params[current_parameter].help);
-            send_buffer((uint8_t*)buffer,ret,ptr);
+            send_buffer(buffer,ret,ptr);
         }
     }
 }
@@ -311,7 +311,7 @@ void print_param(parameter_entry * params, uint8_t index, port_str *ptr){
             }else{
                 ret = snprintf(buffer, sizeof(buffer), "\t%s=%u\r\n", params[index].name,u_temp_buffer);
             }
-            send_buffer((uint8_t*)buffer,ret,ptr);
+            send_buffer(buffer,ret,ptr);
             break;
         case TYPE_SIGNED:
             switch (params[index].size){
@@ -339,20 +339,20 @@ void print_param(parameter_entry * params, uint8_t index, port_str *ptr){
             }else{
                 ret = snprintf(buffer, sizeof(buffer), "\t%s=%i\r\n", params[index].name,i_temp_buffer);
             }
-	        send_buffer((uint8_t*)buffer,ret,ptr);
+	        send_buffer(buffer,ret,ptr);
             break;
         case TYPE_FLOAT:
             f_temp_buffer = *(float*)params[index].value;
             ret = snprintf(buffer, sizeof(buffer), "\t%s=%f\r\n", params[index].name,f_temp_buffer);
-            send_buffer((uint8_t*)buffer,ret,ptr);
+            send_buffer(buffer,ret,ptr);
             break;
         case TYPE_CHAR:
             ret = snprintf(buffer, sizeof(buffer), "\t%s=%c\r\n", params[index].name,*(char*)params[index].value);
-            send_buffer((uint8_t*)buffer,ret,ptr);
+            send_buffer(buffer,ret,ptr);
             break;
         case TYPE_STRING:
             ret = snprintf(buffer, sizeof(buffer), "\t%s=%s\r\n", params[index].name,(char*)params[index].value);
-            send_buffer((uint8_t*)buffer,ret,ptr);
+            send_buffer(buffer,ret,ptr);
             break;
         }
 }
@@ -555,7 +555,7 @@ void EEPROM_check_hash(parameter_entry * params, uint8_t param_size, port_str *p
                     temp_hash2=djb_hash(params[n].name);
                     if(temp_hash1==temp_hash2){
                         ret = snprintf(buffer, sizeof(buffer),"Found collision %s <-> %s\r\n", params[current_parameter].name, params[n].name);
-                        send_buffer((uint8_t*)buffer, ret, ptr); 
+                        send_buffer(buffer, ret, ptr); 
                         collision=1;
                     }
                 }
@@ -565,7 +565,7 @@ void EEPROM_check_hash(parameter_entry * params, uint8_t param_size, port_str *p
                     temp_hash2=djb_hash(params[n].name);
                     if(temp_hash1==temp_hash2){
                         ret = snprintf(buffer, sizeof(buffer),"Found collision %s <-> %s\r\n", params[current_parameter].name, params[n].name);
-                        send_buffer((uint8_t*)buffer, ret, ptr); 
+                        send_buffer(buffer, ret, ptr); 
                         collision=1;
                     }
                 }
@@ -631,7 +631,7 @@ void EEPROM_write_conf(parameter_entry * params, uint8_t param_size, uint16_t ee
 		EEPROM_buffer_write(0x00, count,1);
         alarm_push(ALM_PRIO_INFO,warn_eeprom_written, change_count);
 		ret = snprintf(buffer, sizeof(buffer),"%i / %i new config params written. %i bytes from 2048 used.\r\n", change_count, param_count, byte_cnt);
-        send_buffer((uint8_t*)buffer, ret, ptr);
+        send_buffer(buffer, ret, ptr);
 }
 
 void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eeprom_offset ,port_str *ptr){
@@ -683,7 +683,7 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
             #ifndef BOOT
             alarm_push(ALM_PRIO_WARN,warn_eeprom_unknown_id, data[0]);
             ret = snprintf(buffer, sizeof(buffer), "WARNING: Unknown param ID %i found in EEPROM\r\n", data[0]);
-            send_buffer((uint8_t*)buffer, ret, ptr);
+            send_buffer(buffer, ret, ptr);
             #endif
         }
     }
@@ -708,14 +708,14 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
             if(!found_param){
                 alarm_push(ALM_PRIO_WARN,warn_eeprom_unknown_param, current_parameter);
                 ret = snprintf(buffer, sizeof(buffer), "WARNING: Param [%s] not found in EEPROM\r\n",params[current_parameter].name);
-                send_buffer((uint8_t*)buffer, ret, ptr);
+                send_buffer(buffer, ret, ptr);
             }
         }
     }
     #ifndef BOOT
     alarm_push(ALM_PRIO_INFO,warn_eeprom_loaded, ALM_NO_VALUE);
     ret = snprintf(buffer, sizeof(buffer), "%i / %i config params loaded\r\n", change_count, param_count);
-    send_buffer((uint8_t*)buffer, ret, ptr);
+    send_buffer(buffer, ret, ptr);
     #endif
 }
 
@@ -743,20 +743,20 @@ void Term_Move_Cursor_right(uint8_t column, port_str *ptr) {
 	char buffer[10];
     int ret=0;
 	ret = snprintf(buffer, sizeof(buffer), "\033[%i`", column);
-	send_buffer((uint8_t*)buffer, ret, ptr);
+	send_buffer(buffer, ret, ptr);
 }
 void Term_Move_Cursor_left(uint8_t column, port_str *ptr) {
 	char buffer[10];
     int ret=0;
 	ret = snprintf(buffer, sizeof(buffer), "\033[%iD", column);
-	send_buffer((uint8_t*)buffer, ret, ptr);
+	send_buffer(buffer, ret, ptr);
 }
 
 void Term_Move_Cursor(uint8_t row, uint8_t column, port_str *ptr) {
 	char buffer[20];
     int ret=0;
 	ret = snprintf(buffer, sizeof(buffer), "\033[%i;%iH", row, column);
-	send_buffer((uint8_t*)buffer, ret, ptr);
+	send_buffer(buffer, ret, ptr);
 }
 
 void Term_Box(uint8_t row1, uint8_t col1, uint8_t row2, uint8_t col2, port_str *ptr) {
@@ -832,14 +832,15 @@ uint8_t kbhit(port_str *ptr){
     }
 }
 
+#define CTRL_C  0x03
+
 uint8_t Term_check_break(port_str *ptr, uint32_t ms_to_wait){
     uint8_t c = getch(ptr,ms_to_wait /portTICK_RATE_MS);
-    if(c=='q' || c == 0x03){  //0x03 = CTRL+C
+    if(c == CTRL_C){  //0x03 = CTRL+C
         return pdFALSE;
     }else{
         return pdTRUE;
-    }
-    
+    } 
 }
 
 uint8_t split(char *ptr, char *ret[], uint8_t size_ret, char split_char){
@@ -896,7 +897,21 @@ void send_string(char *data, port_str *ptr) {
 /********************************************
 * Sends buffer to transmit queue
 *********************************************/
-void send_buffer(uint8_t *data, uint16_t len, port_str *ptr) {
+void send_buffer_u8(uint8_t *data, uint16_t len, port_str *ptr) {
+    if (ptr->tx != NULL) {
+    	while(len){
+			uint16_t space = xStreamBufferSpacesAvailable(ptr->tx);
+			uint16_t len_t = len;
+			if(len>space) len_t = space;
+			uint16_t count = xStreamBufferSend(ptr->tx,data, len_t,0);
+			data+=count;
+			len-=count;
+			if(!count) vTaskDelay(5);
+    	}
+	}
+}
+
+void send_buffer_c(char *data, uint16_t len, port_str *ptr) {
     if (ptr->tx != NULL) {
     	while(len){
 			uint16_t space = xStreamBufferSpacesAvailable(ptr->tx);

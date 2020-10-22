@@ -196,6 +196,10 @@ void min_command(uint8_t command, uint8_t *min_payload, uint8_t len_payload){
 
 void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_payload, uint8_t port)
 {
+    if(min_id==debug_id && debug_port!=NULL){
+        send_buffer(min_payload,len_payload,debug_port);
+    }
+    
     switch(min_id){
         case 0 ... 9:
             if(min_id>(NUM_MIN_CON-1)) return;
@@ -255,11 +259,6 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
         case MIN_ID_COMMAND:
             if(len_payload<1) return;
             min_command(min_payload[0], &min_payload[1],--len_payload);
-            break;
-        case MIN_ID_DEBUG:
-            if(debug_port!=NULL){
-                send_buffer(min_payload,len_payload,debug_port);
-            }
             break;
         default:
             alarm_push(ALM_PRIO_INFO, warn_min_id, min_id);

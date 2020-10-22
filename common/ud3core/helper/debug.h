@@ -28,6 +28,7 @@
 #include "cli_basic.h"
     
 extern port_str *debug_port;
+extern uint8_t debug_id;
 uint8_t command_debug(char *commandline, port_str *ptr);
 
 #endif

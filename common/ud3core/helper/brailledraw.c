@@ -146,7 +146,7 @@ void braille_draw(port_str *ptr) {
                 
                 char out_buffer[3];
 				set_bytes(out_buffer, byte);
-				send_buffer((uint8_t*)out_buffer, sizeof(out_buffer),ptr);
+				send_buffer(out_buffer, sizeof(out_buffer),ptr);
 			}
 		}
 		SEND_CONST_STRING("\r\n", ptr);

@@ -363,6 +363,7 @@ void show_overlay_100ms(port_str *ptr){
              ALARMS temp;
             if(alarm_pop(&temp)==pdPASS){
                 send_event(&temp,ptr);
+                alarm_free(&temp);
             }
         }else{
             if(chart){

@@ -37,6 +37,7 @@ xQueueHandle qAlarms;
 
 uint16_t num=0;
 
+
 void alarm_push(uint8_t level, const char* message, int32_t value){
     ALARMS temp;
     if(uxQueueSpacesAvailable(qAlarms)==0){
@@ -87,8 +88,19 @@ uint32_t alarm_pop(ALARMS * alm){
     }
 }
 
+uint32_t alarm_free(ALARMS * alm){
+    if(alm->message > (char*)END_OF_FLASH){
+        vPortFree(alm->message);
+        return pdTRUE;
+    }
+    return pdFAIL;
+}
+
 void alarm_clear(){
-    xQueueReset(qAlarms);    
+    ALARMS temp;
+    while(alarm_pop(&temp)){
+        if(temp.message > (char*)END_OF_FLASH) vPortFree(temp.message);
+    }
 }
 void alarm_init(){
     qAlarms = xQueueCreate(AE_QUEUE_SIZE, sizeof(ALARMS));

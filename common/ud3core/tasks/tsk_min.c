@@ -274,6 +274,9 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
             if(len_payload<1) return;
             min_command(min_payload[0], &min_payload[1],--len_payload);
             break;
+        case MIN_ID_ALARM:
+            alarm_push_c(min_payload[0],(char*)&min_payload[2],len_payload-2,min_payload[1]);
+            break;
         default:
             alarm_push(ALM_PRIO_INFO, warn_min_id, min_id);
             break; 

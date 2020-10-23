@@ -45,6 +45,7 @@ void alarm_init();
 uint32_t alarm_get(uint32_t index, ALARMS * alm);
 void alarm_clear();
 uint32_t alarm_pop(ALARMS * alm);
+uint32_t alarm_free(ALARMS * alm);
 
 #define ALM_PRIO_INFO       0
 #define ALM_PRIO_WARN       1

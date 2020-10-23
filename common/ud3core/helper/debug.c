@@ -42,10 +42,9 @@ uint8_t print_debug(port_str *ptr, uint8_t id){
     uint8_t ret = snprintf(buffer,sizeof(buffer),"Entering debug @%u [CTRL+C] for exit\r\n", id);
     send_buffer(buffer,ret,ptr);
     uint8_t c=0;
-    uint8_t len;
     while(c != CTRL_C){
         xSemaphoreGive(ptr->term_block);
-        len = xStreamBufferReceive(ptr->rx,buffer,sizeof(buffer),DEBUG_LOOP_MS /portTICK_RATE_MS);
+        uint8_t len = xStreamBufferReceive(ptr->rx,buffer,sizeof(buffer),DEBUG_LOOP_MS /portTICK_RATE_MS);
         xSemaphoreTake(ptr->term_block, portMAX_DELAY);
         for(uint32_t i=0;i<len;i++){
             if(buffer[i]==CTRL_C) c = CTRL_C;   
@@ -82,7 +81,8 @@ uint8_t command_debug(char *commandline, port_str *ptr) {
     print_debug(ptr,id);
     return 0;
     
-    HELP_TEXT("Usage: debug [id]\r\n");
+    HELP_TEXT("Usage: debug [id]\r\n"
+              "debug min\r\n");
 }
 
 

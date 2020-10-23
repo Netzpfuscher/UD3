@@ -210,10 +210,15 @@ void min_reset(uint8_t port);
 // Initialize a MIN context ready for receiving bytes from a serial link
 // (Can have multiple MIN contexts)
 void min_init_context(struct min_context *self, uint8_t port);
+extern uint8_t min_debug;
+
 #define MIN_DEBUG_PRINTING
 #ifdef MIN_DEBUG_PRINTING
 // Debug print
-void min_debug_print(const char *msg, ...);
+void min_debug_prt(const char *msg, ...);
+    
+#define min_debug_print(msg, ...) if(min_debug) min_debug_prt(msg, ##__VA_ARGS__);
+
 #else
 #define min_debug_print(...)
 #endif

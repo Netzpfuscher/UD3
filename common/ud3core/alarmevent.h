@@ -34,8 +34,11 @@ char* message;
 uint32_t timestamp;
 uint32_t value;
 } ALARMS;
+
+
     
 
+void alarm_push_c(uint8_t level, char* message, uint16_t len, int32_t value);
 void alarm_push(uint8_t level, const char* message, int32_t value);
 uint32_t alarm_get_num();
 void alarm_init();

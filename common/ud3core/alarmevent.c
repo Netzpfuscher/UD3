@@ -33,14 +33,33 @@
 xQueueHandle qAlarms;
 
 
+#define END_OF_FLASH 0x0003FFFF
+
+uint16_t num=0;
+
 void alarm_push(uint8_t level, const char* message, int32_t value){
-    static uint16_t num=0;
     ALARMS temp;
     if(uxQueueSpacesAvailable(qAlarms)==0){
         xQueueReceive(qAlarms,&temp,0);
     }
     temp.alarm_level = level;
     temp.message = (char*)message;
+    temp.num = num;
+    temp.value = value;
+    temp.timestamp = xTaskGetTickCount() * portTICK_RATE_MS;
+    xQueueSend(qAlarms,&temp,0);   
+    num++;
+}
+
+void alarm_push_c(uint8_t level, char* message, uint16_t len, int32_t value){
+    ALARMS temp;
+    if(uxQueueSpacesAvailable(qAlarms)==0){
+        xQueueReceive(qAlarms,&temp,0);
+        if(temp.message > (char*)END_OF_FLASH) vPortFree(temp.message);
+    }
+    temp.alarm_level = level;
+    temp.message = (char*)pvPortMalloc(len+1);
+    strncpy(temp.message,message,len+1);
     temp.num = num;
     temp.value = value;
     temp.timestamp = xTaskGetTickCount() * portTICK_RATE_MS;

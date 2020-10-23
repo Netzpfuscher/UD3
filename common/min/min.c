@@ -7,6 +7,8 @@
 #define TRANSPORT_FIFO_SIZE_FRAMES_MASK             ((uint8_t)((1U << TRANSPORT_FIFO_SIZE_FRAMES_BITS) - 1U))
 #define TRANSPORT_FIFO_SIZE_FRAME_DATA_MASK         ((uint16_t)((1U << TRANSPORT_FIFO_SIZE_FRAME_DATA_BITS) - 1U))
 
+uint8_t min_debug=0;
+
 // Number of bytes needed for a frame with a given payload length, excluding stuff bytes
 // 3 header bytes, ID/control byte, length byte, 4 byte seq, 4 byte CRC, EOF byte
 #define ON_WIRE_SIZE(p)                             ((p) + 14U)

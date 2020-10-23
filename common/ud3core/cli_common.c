@@ -540,6 +540,9 @@ void uart_baudrate(uint32_t baudrate){
     Mantmr_WritePeriod(delay_tmr-3);
     UART_CLK_SetDividerValue(divider_selected);
     
+    tt.n.rx_datarate.max = baudrate / 8;
+    tt.n.tx_datarate.max = baudrate / 8;
+    
     UART_Start();  
     
 }

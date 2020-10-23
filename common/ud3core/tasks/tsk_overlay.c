@@ -36,6 +36,7 @@
 #include "semphr.h"
 #include "helper/teslaterm.h"
 #include "tasks/tsk_priority.h"
+#include "tsk_min.h"
 
 /* ------------------------------------------------------------------------ */
 /*
@@ -218,6 +219,30 @@ void init_telemetry(){
     tt.n.avg_power.chart = 3;
     tt.n.avg_power.gauge = 2;
     
+    tt.n.tx_datarate.name = "TX_Datarate";
+    tt.n.tx_datarate.value = 0;
+    tt.n.tx_datarate.min = 0;
+    tt.n.tx_datarate.max = 57600;
+    tt.n.tx_datarate.offset = 0;
+    tt.n.tx_datarate.unit = TT_UNIT_W;
+    tt.n.tx_datarate.divider = 1;
+    tt.n.tx_datarate.high_res = pdTRUE;
+    tt.n.tx_datarate.resend_time = TT_FAST;
+    tt.n.tx_datarate.chart = TT_NO_TELEMETRY;
+    tt.n.tx_datarate.gauge = TT_NO_TELEMETRY;
+    
+    tt.n.rx_datarate.name = "RX_Datarate";
+    tt.n.rx_datarate.value = 0;
+    tt.n.rx_datarate.min = 0;
+    tt.n.rx_datarate.max = 57600;
+    tt.n.rx_datarate.offset = 0;
+    tt.n.rx_datarate.unit = TT_UNIT_W;
+    tt.n.rx_datarate.divider = 1;
+    tt.n.rx_datarate.high_res = pdTRUE;
+    tt.n.rx_datarate.resend_time = TT_FAST;
+    tt.n.rx_datarate.chart = TT_NO_TELEMETRY;
+    tt.n.rx_datarate.gauge = TT_NO_TELEMETRY;
+    
     recalc_telemetry_limits();
     
 }
@@ -375,6 +400,14 @@ void show_overlay_400ms(port_str *ptr) {
     }
 }
 
+void calculate_datarate(){
+    static uint32 last_rx=0;
+    static uint32 last_tx=0;
+  
+    tt.n.rx_datarate.value = ((uart_bytes_received-last_rx)*10)/4;
+    tt.n.tx_datarate.value = ((uart_bytes_transmitted-last_tx)*10)/4;
+    
+}
 
 
 /* `#END` */
@@ -424,6 +457,7 @@ void tsk_overlay_TaskProc(void *pvParameters) {
             cnt++;
         }else{
             cnt=0;
+            calculate_datarate();
             show_overlay_400ms(pvParameters);
         }
         

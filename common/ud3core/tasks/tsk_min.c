@@ -45,7 +45,6 @@ uint8 tsk_min_initVar = 0u;
 
 SemaphoreHandle_t min_Semaphore;
 
-uint8_t min_debug=pdFALSE;
 
 /* ------------------------------------------------------------------------ */
 /*
@@ -63,6 +62,9 @@ uint8_t min_debug=pdFALSE;
 
 struct min_context min_ctx;
 struct _time time;
+
+uint32_t uart_bytes_received=0;
+uint32_t uart_bytes_transmitted=0;
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */
@@ -112,6 +114,7 @@ uint32_t min_rx_space(uint8_t port){
 }
 
 void min_tx_byte(uint8_t port, uint8_t byte){
+    uart_bytes_transmitted++;
     UART_PutChar(byte);
 }
 
@@ -142,8 +145,7 @@ void time_cb(uint32_t remote_time){
     }   
 }
 
-void min_debug_print(const char *fmt, ...){
-    if(min_debug == pdFALSE) return;
+void min_debug_prt(const char *fmt, ...){
     if(debug_port == NULL) return;
     char buf[100];
     va_list args;
@@ -284,6 +286,7 @@ void poll_UART(){
     uint16_t bytes = UART_GetRxBufferSize();
     if(bytes){
         rx_blink_Write(1);
+        uart_bytes_received+=bytes;
         while(bytes){
             min_rx_byte(&min_ctx, UART_GetByte());
             bytes--;

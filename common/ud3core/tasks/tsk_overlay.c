@@ -224,7 +224,7 @@ void init_telemetry(){
     tt.n.tx_datarate.min = 0;
     tt.n.tx_datarate.max = 57600;
     tt.n.tx_datarate.offset = 0;
-    tt.n.tx_datarate.unit = TT_UNIT_W;
+    tt.n.tx_datarate.unit = TT_UNIT_PERCENT;
     tt.n.tx_datarate.divider = 1;
     tt.n.tx_datarate.high_res = pdTRUE;
     tt.n.tx_datarate.resend_time = TT_FAST;
@@ -408,6 +408,8 @@ void calculate_datarate(){
     tt.n.rx_datarate.value = ((uart_bytes_received-last_rx)*10)/4;
     tt.n.tx_datarate.value = ((uart_bytes_transmitted-last_tx)*10)/4;
     
+    last_rx=uart_bytes_received;
+    last_tx=uart_bytes_transmitted;
 }
 
 

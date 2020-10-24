@@ -57,6 +57,7 @@ struct _time{
 extern struct min_context min_ctx;    
 
 uint8_t min_queue(uint8_t id, uint8_t *data, uint8_t len, TickType_t ticks);
+uint8_t min_send(uint8_t id, uint8_t *data, uint8_t len, TickType_t ticks);
 
 void tsk_min_Start(void);
 void min_reset_flow(void);

@@ -49,7 +49,9 @@ uint8_t print_debug(port_str *ptr, uint8_t id){
         for(uint32_t i=0;i<len;i++){
             if(buffer[i]==CTRL_C) c = CTRL_C;   
         }
-        min_send_frame(&min_ctx,id,(uint8_t*)buffer,len);
+        if(len) {
+            min_send(id,(uint8_t*)buffer,len,DEBUG_LOOP_MS /portTICK_RATE_MS);
+        }
 
     }
     debug_port = NULL;

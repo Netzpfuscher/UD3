@@ -333,8 +333,17 @@ uint8_t min_queue(uint8_t id, uint8_t *data, uint8_t len, TickType_t ticks){
         return ret;   
     }else{
         return pdFAIL;
-    }
-        
+    }      
+}
+
+uint8_t min_send(uint8_t id, uint8_t *data, uint8_t len, TickType_t ticks){
+    if(xSemaphoreTake(min_Semaphore,ticks)){
+        min_send_frame(&min_ctx,id,data,len);      
+        xSemaphoreGive(min_Semaphore);
+        return pdTRUE;   
+    }else{
+        return pdFAIL;
+    }      
 }
 
 

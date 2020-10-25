@@ -26,6 +26,7 @@
 #include "ntlibc.h"
 #include "printf.h"
 #include "min.h"
+#include "min_id.h"
 #include "tasks/tsk_min.h"
 
 port_str *debug_port;
@@ -34,12 +35,18 @@ uint8_t debug_id=0xFF;
 #define CTRL_C        0x03
 #define DEBUG_LOOP_MS 10
 
-uint8_t print_debug(port_str *ptr, uint8_t id){
+uint8_t print_debug(port_str *ptr, uint8_t id, uint8_t fibernet){
     debug_port = ptr;
     debug_id = id;
     Term_Erase_Screen(ptr);
     char buffer[80];
-    uint8_t ret = snprintf(buffer,sizeof(buffer),"Entering debug @%u [CTRL+C] for exit\r\n", id);
+    uint8_t ret;
+    if(fibernet){
+        ret = snprintf(buffer,sizeof(buffer),"Entering fibernet [CTRL+C] for exit\r\n");
+        min_send(id,(uint8_t*)ESC_STR "c",sizeof(ESC_STR "c"),DEBUG_LOOP_MS /portTICK_RATE_MS);
+    }else{
+        ret = snprintf(buffer,sizeof(buffer),"Entering debug @%u [CTRL+C] for exit\r\n", id);
+    }
     send_buffer(buffer,ret,ptr);
     uint8_t c=0;
     while(c != CTRL_C){
@@ -79,8 +86,12 @@ uint8_t command_debug(char *commandline, port_str *ptr) {
         print_min_debug(ptr);
         return 0;
 	}
+    if (ntlibc_stricmp(commandline, "fibernet") == 0) {
+        print_debug(ptr,MIN_ID_DEBUG,pdTRUE);
+        return 0;
+	}
     uint8_t id = ntlibc_atoi(commandline);
-    print_debug(ptr,id);
+    print_debug(ptr,id,pdFALSE);
     return 0;
     
     HELP_TEXT("Usage: debug [id]\r\n"

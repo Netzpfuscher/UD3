@@ -108,6 +108,7 @@ static const char warn_min_reset[]= "COM: MIN reset";
 static const char warn_midi_noSpace[]= "MIDI: No Space";
 
 static const char warn_sid_malformed[]= "SID: Malformed SID frame";
+static const char warn_sid_old[]= "SID: Old SID frame received";
 
 static const char warn_interrupter_ext[]= "INT: External interrupter active";
 

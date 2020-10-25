@@ -719,43 +719,47 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
     #endif
 }
 
+void Term_Reset(port_str *ptr) {
+	SEND_CONST_STRING(ESC_STR "c", ptr);
+}
+
 void Term_Erase_Screen(port_str *ptr) {
-	SEND_CONST_STRING("\033[2J\033[1;1H", ptr);
+	SEND_CONST_STRING(ESC_STR "[2J\033[1;1H", ptr);
 }
 
 void Term_Color_Green(port_str *ptr) {
-	SEND_CONST_STRING("\033[32m", ptr);
+	SEND_CONST_STRING(ESC_STR "[32m", ptr);
 }
 void Term_Color_Red(port_str *ptr) {
-	SEND_CONST_STRING("\033[31m", ptr);
+	SEND_CONST_STRING(ESC_STR "[31m", ptr);
 }
 void Term_Color_White(port_str *ptr) {
-	SEND_CONST_STRING("\033[37m", ptr);
+	SEND_CONST_STRING(ESC_STR "[37m", ptr);
 }
 void Term_Color_Cyan(port_str *ptr) {
-	SEND_CONST_STRING("\033[36m", ptr);
+	SEND_CONST_STRING(ESC_STR "[36m", ptr);
 }
 void Term_BGColor_Blue(port_str *ptr) {
-	SEND_CONST_STRING("\033[44m", ptr);
+	SEND_CONST_STRING(ESC_STR "[44m", ptr);
 }
 
 void Term_Move_Cursor_right(uint8_t column, port_str *ptr) {
 	char buffer[10];
     int ret=0;
-	ret = snprintf(buffer, sizeof(buffer), "\033[%i`", column);
+	ret = snprintf(buffer, sizeof(buffer), ESC_STR "[%i`", column);
 	send_buffer(buffer, ret, ptr);
 }
 void Term_Move_Cursor_left(uint8_t column, port_str *ptr) {
 	char buffer[10];
     int ret=0;
-	ret = snprintf(buffer, sizeof(buffer), "\033[%iD", column);
+	ret = snprintf(buffer, sizeof(buffer), ESC_STR "[%iD", column);
 	send_buffer(buffer, ret, ptr);
 }
 
 void Term_Move_Cursor(uint8_t row, uint8_t column, port_str *ptr) {
 	char buffer[20];
     int ret=0;
-	ret = snprintf(buffer, sizeof(buffer), "\033[%i;%iH", row, column);
+	ret = snprintf(buffer, sizeof(buffer), ESC_STR "[%i;%iH", row, column);
 	send_buffer(buffer, ret, ptr);
 }
 
@@ -784,16 +788,16 @@ void Term_Box(uint8_t row1, uint8_t col1, uint8_t row2, uint8_t col2, port_str *
 }
 
 void Term_Save_Cursor(port_str *ptr) {
-	SEND_CONST_STRING("\033[s", ptr);
+	SEND_CONST_STRING(ESC_STR "[s", ptr);
 }
 void Term_Restore_Cursor(port_str *ptr) {
-	SEND_CONST_STRING("\033[u", ptr);
+	SEND_CONST_STRING(ESC_STR "[u", ptr);
 }
 void Term_Disable_Cursor(port_str *ptr) {
-	SEND_CONST_STRING("\033[?25l", ptr);
+	SEND_CONST_STRING(ESC_STR "[?25l", ptr);
 }
 void Term_Enable_Cursor(port_str *ptr) {
-	SEND_CONST_STRING("\033[?25h", ptr);
+	SEND_CONST_STRING(ESC_STR "[?25h", ptr);
 }
 
 

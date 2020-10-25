@@ -211,7 +211,6 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
 {
     if(min_id==debug_id && debug_port!=NULL){
         send_buffer(min_payload,len_payload,debug_port);
-        SEND_CONST_STRING("\r\n",debug_port);
     }
     
     switch(min_id){

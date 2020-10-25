@@ -7,6 +7,8 @@
 #include "semphr.h"
 #include "stream_buffer.h" 
 #include "task.h"
+    
+#define ESC_STR "\x1b"
    
     
 #define set_bit(var, bit) ((var) |= (1 << (bit)))
@@ -135,6 +137,7 @@ void input_restart(void);
 void Term_Move_Cursor_right(uint8_t column, port_str *ptr);
 void Term_Move_Cursor_left(uint8_t column, port_str *ptr);
 void Term_Move_Cursor(uint8_t row, uint8_t column, port_str *ptr);
+void Term_Reset(port_str *ptr);
 void Term_Erase_Screen(port_str *ptr);
 void Term_Color_Green(port_str *ptr);
 void Term_Color_Red(port_str *ptr);

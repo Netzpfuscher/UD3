@@ -20,6 +20,7 @@
 #include "cli_common.h"
 #include "tasks/tsk_midi.h"
 #include "tasks/tsk_fault.h"
+#include "clock.h"
 
 void process_midi(uint8_t* ptr, uint16_t len) {
 	uint8_t c;
@@ -222,7 +223,12 @@ void process_sid(uint8_t* ptr, uint16_t len) {
                 }else{
                     SID_frame.master_pw = param.pw;
                 }  
-                xQueueSend(qSID,&SID_frame,0);
+                int32_t diff = SID_frame.next_frame - l_time;
+                if(diff<-1000){
+                    alarm_push(ALM_PRIO_WARN,warn_sid_old, diff);
+                }else{   
+                    xQueueSend(qSID,&SID_frame,0);
+                }
                 SID_register=0;
                 start_frame=0;
             }
@@ -325,7 +331,12 @@ void process_min_sid(uint8_t* ptr, uint16_t len) {
         }else{
             SID_frame.master_pw = param.pw;
         }  
-        xQueueSend(qSID,&SID_frame,0);
+        int32_t diff = SID_frame.next_frame - l_time;
+        if(diff<-1000){
+            alarm_push(ALM_PRIO_WARN,warn_sid_old, diff);
+        }else{   
+            xQueueSend(qSID,&SID_frame,0);
+        }
         
     }
    

@@ -207,10 +207,34 @@ void min_command(uint8_t command, uint8_t *min_payload, uint8_t len_payload){
     }
 }
 
+struct __event_response {
+    uint8 id;
+    uint8 struct_version;
+    uint32 unique_id[2];
+    char udname[16];   
+};
+typedef struct __event_response event_resonse;
+
+void min_event(uint8_t command, uint8_t *min_payload, uint8_t len_payload){
+    if(command==EVENT_GET_INFO){
+        event_resonse response;
+        response.id = EVENT_GET_INFO;
+        response.struct_version = 1;
+        CyGetUniqueId(response.unique_id);
+        ntlibc_strcpy(response.udname, configuration.ud_name);
+        min_send_frame(&min_ctx,MIN_ID_EVENT,(uint8_t*)&response,sizeof(response));
+    }else{
+        alarm_push(ALM_PRIO_INFO, warn_min_command, command);
+    }
+    
+}
+
 void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_payload, uint8_t port)
 {
     if(min_id==debug_id && debug_port!=NULL){
+        xSemaphoreTake(debug_port->term_block, 100);
         send_buffer(min_payload,len_payload,debug_port);
+        xSemaphoreGive(debug_port->term_block);
     }
     
     switch(min_id){
@@ -273,6 +297,9 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
             if(len_payload<1) return;
             min_command(min_payload[0], &min_payload[1],--len_payload);
             break;
+        case MIN_ID_EVENT:
+            min_event(min_payload[0], &min_payload[1],--len_payload);
+            break;
         case MIN_ID_ALARM:
             alarm_push_c(min_payload[0],(char*)&min_payload[2],len_payload-2,min_payload[1]);
             break;
@@ -284,7 +311,6 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
 
 
 void poll_UART(){
-        
     uint16_t bytes = UART_GetRxBufferSize();
     if(bytes){
         rx_blink_Write(1);

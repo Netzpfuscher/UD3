@@ -43,16 +43,14 @@ uint8_t print_debug(port_str *ptr, uint8_t id, uint8_t fibernet){
     uint8_t ret;
     if(fibernet){
         ret = snprintf(buffer,sizeof(buffer),"Entering fibernet [CTRL+C] for exit\r\n");
-        min_send(id,(uint8_t*)ESC_STR "c",sizeof(ESC_STR "c"),DEBUG_LOOP_MS /portTICK_RATE_MS);
+        min_send(id,(uint8_t*)ESC_STR "c",strlen(ESC_STR "c"),DEBUG_LOOP_MS /portTICK_RATE_MS);
     }else{
         ret = snprintf(buffer,sizeof(buffer),"Entering debug @%u [CTRL+C] for exit\r\n", id);
     }
     send_buffer(buffer,ret,ptr);
     uint8_t c=0;
     while(c != CTRL_C){
-        xSemaphoreGive(ptr->term_block);
         uint8_t len = xStreamBufferReceive(ptr->rx,buffer,sizeof(buffer),DEBUG_LOOP_MS /portTICK_RATE_MS);
-        xSemaphoreTake(ptr->term_block, portMAX_DELAY);
         for(uint32_t i=0;i<len;i++){
             if(buffer[i]==CTRL_C) c = CTRL_C;   
         }

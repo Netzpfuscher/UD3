@@ -11,7 +11,7 @@
 #define MIN_ID_MIDI     20
 #define MIN_ID_SID      21
     
-#define MIN_ID_EVENT    41
+#define MIN_ID_EVENT    40
 #define MIN_ID_ALARM    41
 #define MIN_ID_DEBUG    42
     
@@ -27,5 +27,7 @@
 #define CMD_HELLO_WORLD     0x01    
 #define CMD_FEATURE_FRAME   0x02
 #define CMD_LINK            0x03
+    
+#define EVENT_GET_INFO      1    
     
 #endif

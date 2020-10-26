@@ -225,8 +225,7 @@ void min_event(uint8_t command, uint8_t *min_payload, uint8_t len_payload){
         min_send_frame(&min_ctx,MIN_ID_EVENT,(uint8_t*)&response,sizeof(response));
     }else{
         alarm_push(ALM_PRIO_INFO, warn_min_command, command);
-    }
-    
+    }    
 }
 
 void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_payload, uint8_t port)
@@ -242,7 +241,7 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
             if(min_id>(NUM_MIN_CON-1)) return;
             if(socket_info[min_id].socket==SOCKET_DISCONNECTED) return;
             xStreamBufferSend(min_port[min_id].rx,min_payload, len_payload,1);
-            break;
+            return;
         case MIN_ID_MIDI:
             switch(param.synth){
                 case SYNTH_OFF:
@@ -261,10 +260,10 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
                     process_sid(min_payload, len_payload);
                     break;
             }
-            break;
+            return;
         case MIN_ID_SID:
             process_min_sid(min_payload, len_payload);
-            break;
+            return;
         case MIN_ID_WD:
                 if(len_payload==4){
                 	time.remote  = ((uint32_t)min_payload[0]<<24);
@@ -274,7 +273,7 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
                     time_cb(time.remote);
                 }
                 WD_reset();
-            break;
+            return;
         case MIN_ID_SOCKET:
             if(*min_payload>(NUM_MIN_CON-1)) return;
             socket_info[*min_payload].socket = *(min_payload+1);
@@ -289,23 +288,25 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
                 min_port[*min_payload].term_mode = PORT_TERM_VT100;    
                 stop_overlay_task(&min_port[*min_payload]);   
             }
-            break;
+            return;
         case MIN_ID_SYNTH:
             process_synth(min_payload,len_payload);
-            break;
+            return;
         case MIN_ID_COMMAND:
             if(len_payload<1) return;
             min_command(min_payload[0], &min_payload[1],--len_payload);
-            break;
+            return;
         case MIN_ID_EVENT:
             min_event(min_payload[0], &min_payload[1],--len_payload);
-            break;
+            return;
         case MIN_ID_ALARM:
             alarm_push_c(min_payload[0],(char*)&min_payload[2],len_payload-2,min_payload[1]);
-            break;
+            return;
         default:
-            alarm_push(ALM_PRIO_INFO, warn_min_id, min_id);
             break; 
+    }
+    if(min_id!=debug_id){
+        alarm_push(ALM_PRIO_INFO, warn_min_id, min_id);
     }
 }
 
@@ -332,8 +333,6 @@ uint8_t assemble_command(uint8_t cmd, char *str, uint8_t *buf){
     memcpy(buf,str,len);
     return len+1;
 }
-
-
 
 void send_command_wq(struct min_context *ctx, uint8_t cmd, char *str){
     uint8_t len=0;

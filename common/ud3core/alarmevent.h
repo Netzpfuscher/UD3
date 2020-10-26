@@ -26,6 +26,7 @@
 #define alarmevent_H
     
 #include <device.h>
+#include "FreeRTOS.h"
     
 typedef struct __alarms__ {
 uint16 num;
@@ -37,7 +38,7 @@ uint32_t value;
 
 
     
-
+BaseType_t ptr_is_in_flash(void* ptr);
 void alarm_push_c(uint8_t level, char* message, uint16_t len, int32_t value);
 void alarm_push(uint8_t level, const char* message, int32_t value);
 uint32_t alarm_get_num();

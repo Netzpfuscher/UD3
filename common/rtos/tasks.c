@@ -263,7 +263,10 @@ typedef struct tskTaskControlBlock       /* The old naming convention is used to
     UBaseType_t uxPriority;                     /*< The priority of the task.  0 is the lowest priority. */
     StackType_t * pxStack;                      /*< Points to the start of the stack. */
     char pcTaskName[ configMAX_TASK_NAME_LEN ]; /*< Descriptive name given to the task when created.  Facilitates debugging only. */ /*lint !e971 Unqualified char types are allowed for strings and single characters only. */
-
+    #if configTRACK_HEAP_USAGE
+    uint32_t ulUsedHeap;
+    #endif
+        
     #if ( ( portSTACK_GROWTH > 0 ) || ( configRECORD_STACK_HIGH_ADDRESS == 1 ) )
         StackType_t * pxEndOfStack; /*< Points to the highest valid address for the stack. */
     #endif
@@ -3082,7 +3085,16 @@ void vTaskSwitchContext( void )
     }
 }
 /*-----------------------------------------------------------*/
-
+#if configTRACK_HEAP_USAGE
+void vTaskMallocTrackHeapUsage( uint32_t ulBytesUsed){
+    pxCurrentTCB->ulUsedHeap+=ulBytesUsed;
+}
+/*-----------------------------------------------------------*/
+void vTaskFreeTrackHeapUsage( uint32_t ulBytesFreed){
+    pxCurrentTCB->ulUsedHeap-=ulBytesFreed;
+}
+#endif
+/*-----------------------------------------------------------*/
 void vTaskPlaceOnEventList( List_t * const pxEventList,
                             const TickType_t xTicksToWait )
 {
@@ -3722,7 +3734,10 @@ static void prvCheckTasksWaitingTermination( void )
         pxTaskStatus->uxCurrentPriority = pxTCB->uxPriority;
         pxTaskStatus->pxStackBase = pxTCB->pxStack;
         pxTaskStatus->xTaskNumber = pxTCB->uxTCBNumber;
-
+        #if configTRACK_HEAP_USAGE
+        pxTaskStatus->usedHeap = pxTCB->ulUsedHeap;
+        #endif
+        
         #if ( configUSE_MUTEXES == 1 )
             {
                 pxTaskStatus->uxBasePriority = pxTCB->uxBasePriority;

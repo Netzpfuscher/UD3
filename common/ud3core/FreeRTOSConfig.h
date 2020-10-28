@@ -118,8 +118,8 @@
 #define configQUEUE_REGISTRY_SIZE		10
 #define configUSE_MALLOC_FAILED_HOOK	1
     
-
 #if ACTIVATE_TASK_INFO   
+    #define configTRACK_HEAP_USAGE 1
     #define configGENERATE_RUN_TIME_STATS	1  
     #define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() vConfigureTimerForRunTimeStats()
     #define portGET_RUN_TIME_COUNTER_VALUE() ((uint32_t)(4294967296ul-SG_Timer_ReadCounter())/128ul)

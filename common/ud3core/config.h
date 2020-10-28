@@ -24,7 +24,7 @@
     
     
 //FreeRTOS
-#define ACTIVATE_TASK_INFO 0
+#define ACTIVATE_TASK_INFO 1
 #define HEAP_SIZE 50    //kb
     
     

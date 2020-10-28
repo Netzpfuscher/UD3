@@ -210,7 +210,10 @@ void * pvPortMalloc( size_t xWantedSize )
                     }
 
                     xFreeBytesRemaining -= pxBlock->xBlockSize;
-
+                    #if configTRACK_HEAP_USAGE
+                    vTaskMallocTrackHeapUsage(pxBlock->xBlockSize);
+                    #endif
+                    
                     if( xFreeBytesRemaining < xMinimumEverFreeBytesRemaining )
                     {
                         xMinimumEverFreeBytesRemaining = xFreeBytesRemaining;
@@ -294,6 +297,9 @@ void vPortFree( void * pv )
                 {
                     /* Add this block to the list of free blocks. */
                     xFreeBytesRemaining += pxLink->xBlockSize;
+                    #if configTRACK_HEAP_USAGE
+                    vTaskFreeTrackHeapUsage(pxLink->xBlockSize);
+                    #endif
                     traceFREE( pv, pxLink->xBlockSize );
                     prvInsertBlockIntoFreeList( ( ( BlockLink_t * ) pxLink ) );
                     xNumberOfSuccessfulFrees++;

@@ -1121,12 +1121,12 @@ uint8_t command_tasks(char *commandline, port_str *ptr) {
             return 0;
         }
         
-	    SEND_CONST_STRING("**********************************************\n\r", ptr);
-	    SEND_CONST_STRING("Task            State   Prio    Stack    Num\n\r", ptr);
-	    SEND_CONST_STRING("**********************************************\n\r", ptr);
+	    SEND_CONST_STRING("*******************************************************\n\r", ptr);
+	    SEND_CONST_STRING("Task            State   Prio    Stack    Num    Heap\n\r", ptr);
+	    SEND_CONST_STRING("*******************************************************\n\r", ptr);
 	    vTaskList(buff);
 	    send_string(buff, ptr);
-	    SEND_CONST_STRING("**********************************************\n\r\n\r", ptr);
+	    SEND_CONST_STRING("*******************************************************\n\r\n\r", ptr);
         SEND_CONST_STRING("**********************************************\n\r", ptr);
 	    SEND_CONST_STRING("Task            Abs time        % time\n\r", ptr);
 	    SEND_CONST_STRING("**********************************************\n\r", ptr);

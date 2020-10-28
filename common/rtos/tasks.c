@@ -3087,10 +3087,12 @@ void vTaskSwitchContext( void )
 /*-----------------------------------------------------------*/
 #if configTRACK_HEAP_USAGE
 void vTaskMallocTrackHeapUsage( uint32_t ulBytesUsed){
+    if( pxCurrentTCB == NULL ) return;
     pxCurrentTCB->ulUsedHeap+=ulBytesUsed;
 }
 /*-----------------------------------------------------------*/
 void vTaskFreeTrackHeapUsage( uint32_t ulBytesFreed){
+    if( pxCurrentTCB == NULL ) return;
     pxCurrentTCB->ulUsedHeap-=ulBytesFreed;
 }
 #endif
@@ -4519,7 +4521,7 @@ static void prvResetNextTaskUnblockTime( void )
                 pcWriteBuffer = prvWriteNameToBuffer( pcWriteBuffer, pxTaskStatusArray[ x ].pcTaskName );
 
                 /* Write the rest of the string. */
-                sprintf( pcWriteBuffer, "\t%c\t%u\t%u\t%u\r\n", cStatus, ( unsigned int ) pxTaskStatusArray[ x ].uxCurrentPriority, ( unsigned int ) pxTaskStatusArray[ x ].usStackHighWaterMark, ( unsigned int ) pxTaskStatusArray[ x ].xTaskNumber ); /*lint !e586 sprintf() allowed as this is compiled with many compilers and this is a utility function only - not part of the core kernel implementation. */
+                sprintf( pcWriteBuffer, "\t%c\t%u\t%u\t%u\t%u\r\n", cStatus, ( unsigned int ) pxTaskStatusArray[ x ].uxCurrentPriority, ( unsigned int ) pxTaskStatusArray[ x ].usStackHighWaterMark, ( unsigned int ) pxTaskStatusArray[ x ].xTaskNumber, ( unsigned int ) pxTaskStatusArray[ x ].usedHeap ); /*lint !e586 sprintf() allowed as this is compiled with many compilers and this is a utility function only - not part of the core kernel implementation. */
                 pcWriteBuffer += strlen( pcWriteBuffer );                                                                                                                                                                                                /*lint !e9016 Pointer arithmetic ok on char pointers especially as in this case where it best denotes the intent of the code. */
             }
 

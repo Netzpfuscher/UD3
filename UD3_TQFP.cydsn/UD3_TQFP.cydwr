@@ -1755,7 +1755,7 @@
       <Data key="549a4e41-b717-44bb-b13e-c01052667238" value="Relay3" />
       <Data key="958e9411-0a95-4df9-865e-f68273cf2d90" value="Vin" />
       <Data key="6400ba9d-054d-4648-a80b-c36ed9080f64" value="CT_SEC" />
-      <Data key="6533b513-81b1-46af-8e19-d98fd9cc0e1c/16a808f6-2e13-45b9-bce0-b001c8655113" value="ADC_therm_Bypass" />
+      <Data key="6533b513-81b1-46af-8e19-d98fd9cc0e1c/16a808f6-2e13-45b9-bce0-b001c8655113" value="ADC_peak_Bypass" />
       <Data key="183169da-5db0-456e-85f3-54d1ef93695d" value="TP6" />
       <Data key="1425177d-0d0e-4468-8bcc-e638e5509a9b" value="MISO" />
       <Data key="77715107-f8d5-47e5-a629-0fb83101ac6b" value="Track" />
@@ -4912,7 +4912,7 @@
     </Group>
     <Group key="3a960253-138e-4757-af7c-c31e478282fd">
       <Group key="0">
-        <Data key="Port Format" value="3,3" />
+        <Data key="Port Format" value="3,0" />
       </Group>
     </Group>
     <Group key="4ae2603f-6bff-43e6-915a-eafa3248ff68">
@@ -5067,7 +5067,7 @@
     </Group>
     <Group key="a4c246a0-55f8-4012-a160-95210e380870">
       <Group key="0">
-        <Data key="Port Format" value="3,0" />
+        <Data key="Port Format" value="3,3" />
       </Group>
     </Group>
     <Group key="a33d362e-32d3-4bd2-a4e3-6ca8b8e69c1f">

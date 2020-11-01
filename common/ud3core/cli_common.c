@@ -73,7 +73,7 @@ uint8_t command_set(char *commandline, port_str *ptr);
 uint8_t command_tr(char *commandline, port_str *ptr);
 uint8_t command_udkill(char *commandline, port_str *ptr);
 uint8_t command_eprom(char *commandline, port_str *ptr);
-uint8_t command_tasks(char *commandline, port_str *ptr);
+uint8_t command_top(char *commandline, port_str *ptr);
 uint8_t command_bootloader(char *commandline, port_str *ptr);
 uint8_t command_qcw(char *commandline, port_str *ptr);
 uint8_t command_bus(char *commandline, port_str *ptr);
@@ -285,7 +285,7 @@ command_entry commands[] = {
     ADD_COMMAND("qcw"           ,command_qcw            ,"QCW [start/stop]")
     ADD_COMMAND("reset"         ,command_reset          ,"Resets UD3")
     ADD_COMMAND("status"	    ,command_status         ,"Displays coil status")
-    ADD_COMMAND("tasks"	        ,command_tasks          ,"Show running Tasks")
+    ADD_COMMAND("top"	        ,command_top            ,"Show running Tasks")
     ADD_COMMAND("tr"		    ,command_tr             ,"Transient [start/stop]")
     ADD_COMMAND("tune"	        ,command_tune           ,"Autotune [prim/sec]")
     ADD_COMMAND("tterm"	        ,command_tterm          ,"Changes terminal mode")
@@ -1108,45 +1108,90 @@ uint8_t command_udkill(char *commandline, port_str *ptr) {
     HELP_TEXT("Usage: kill [set|reset|get]\r\n");
 }
 
+#define VT100_ERASE_LINE_END "\x1b[K"
+#define VT100_BACKGROUND_COLOR_WHITE "\x1b[47m"
+#define VT100_FOREGROUND_COLOR_BLACK "\x1b[30m"
+#define VT100_ERASE_LINE_END "\x1b[K"
+#define VT100_RESET_ATTRIB "\x1b[0m"
+
+uint32_t SYS_getCPULoadFine(TaskStatus_t * taskStats, uint32_t taskCount, uint32_t sysTime){
+    uint32_t currTask = 0;
+    for(;currTask < taskCount; currTask++){
+        if(strlen(taskStats[currTask].pcTaskName) == 4 && strcmp(taskStats[currTask].pcTaskName, "IDLE") == 0){
+            return configTICK_RATE_HZ - ((taskStats[currTask].ulRunTimeCounter) / (sysTime/configTICK_RATE_HZ));
+        }
+    }
+    return -1;
+}
+
+const char * SYS_getTaskStateString(eTaskState state){
+    switch(state){
+        case eRunning:
+            return "running";
+        case eReady:
+            return "ready";
+        case eBlocked:
+            return "blocked";
+        case eSuspended:
+            return "suspended";
+        case eDeleted:
+            return "deleted";
+        default:
+            return "invalid";
+    }
+}
 
 /*****************************************************************************
 * Prints the task list needs to be enabled in FreeRTOSConfig.h
 * only use it for debugging reasons
 ******************************************************************************/
-uint8_t command_tasks(char *commandline, port_str *ptr) {
-    #if configUSE_STATS_FORMATTING_FUNCTIONS && configUSE_TRACE_FACILITY && configGENERATE_RUN_TIME_STATS
-        char * buff = pvPortMalloc(sizeof(char)* 40 * uxTaskGetNumberOfTasks());
-        if(buff == NULL){
-            SEND_CONST_STRING("Malloc failed\r\n", ptr);
-            return 0;
-        }
+uint8_t command_top(char *commandline, port_str *ptr) {
+    
+    Term_Erase_Screen(ptr);
+    do{
         
-	    SEND_CONST_STRING("*******************************************************\n\r", ptr);
-	    SEND_CONST_STRING("Task            State   Prio    Stack    Num    Heap\n\r", ptr);
-	    SEND_CONST_STRING("*******************************************************\n\r", ptr);
-	    vTaskList(buff);
-	    send_string(buff, ptr);
-	    SEND_CONST_STRING("*******************************************************\n\r\n\r", ptr);
-        SEND_CONST_STRING("**********************************************\n\r", ptr);
-	    SEND_CONST_STRING("Task            Abs time        % time\n\r", ptr);
-	    SEND_CONST_STRING("**********************************************\n\r", ptr);
-        vTaskGetRunTimeStats( buff );
-        send_string(buff, ptr);
-        SEND_CONST_STRING("**********************************************\n\r\r\n", ptr);
-        sprintf(buff, "Free heap: %d\r\n",xPortGetFreeHeapSize());
-        send_string(buff,ptr);
-        vPortFree(buff);
-        return 0;
-    #endif
-    
-        #if !configUSE_STATS_FORMATTING_FUNCTIONS && !configUSE_TRACE_FACILITY
-	    SEND_CONST_STRING("Taskinfo not active, activate it in FreeRTOSConfig.h\n\r", ptr);
-	    char buff[30];
-        sprintf(buff, "Free heap: %d\r\n",xPortGetFreeHeapSize());
-        send_string(buff,ptr);
-        return 0;
-	#endif
-    
+        TaskStatus_t * taskStats;
+        uint32_t taskCount = uxTaskGetNumberOfTasks();
+        uint32_t sysTime;
+        taskStats = pvPortMalloc( taskCount * sizeof( TaskStatus_t ) );
+        taskCount = uxTaskGetSystemState(taskStats, taskCount, &sysTime);
+        
+        Term_Move_Cursor(1,1,ptr);
+        char buf[100];
+        uint32_t ret;
+        
+        uint32_t cpuLoad = SYS_getCPULoadFine(taskStats, taskCount, sysTime);
+        ret = snprintf(buf,sizeof(buf),"%sbottom - %d\r\n%sTasks: \t%d\r\n%sCPU: \t%d,%d%%\r\n", VT100_ERASE_LINE_END, xTaskGetTickCount(), VT100_ERASE_LINE_END, taskCount, VT100_ERASE_LINE_END, cpuLoad / 10, cpuLoad % 10);
+        send_buffer(buf,ret,ptr);
+        
+        uint32_t heapRemaining = xPortGetFreeHeapSize();
+        
+        ret = snprintf(buf,sizeof(buf),"%sMem: \t%db total,\t %db free,\t %db used (%d%%)\r\n", VT100_ERASE_LINE_END, configTOTAL_HEAP_SIZE, heapRemaining, configTOTAL_HEAP_SIZE - heapRemaining, ((configTOTAL_HEAP_SIZE - heapRemaining) * 100) / configTOTAL_HEAP_SIZE);
+        send_buffer(buf,ret,ptr);
+        //taskStats[0].
+        ret = snprintf(buf,sizeof(buf),"%s%s%s", VT100_BACKGROUND_COLOR_WHITE, VT100_ERASE_LINE_END, VT100_FOREGROUND_COLOR_BLACK);
+        send_buffer(buf,ret,ptr);
+        ret = snprintf(buf,sizeof(buf),"PID \r\x1b[%dCName \r\x1b[%dCstate \r\x1b[%dC%%Cpu \r\x1b[%dCtime  \r\x1b[%dCStack \r\x1b[%dCHeap\r\n", 6, 7 + configMAX_TASK_NAME_LEN, 20 + configMAX_TASK_NAME_LEN, 27 + configMAX_TASK_NAME_LEN, 38 + configMAX_TASK_NAME_LEN, 45 + configMAX_TASK_NAME_LEN);
+        send_buffer(buf,ret,ptr);
+        ret = snprintf(buf,sizeof(buf),"%s", VT100_RESET_ATTRIB);
+        send_buffer(buf,ret,ptr);
+        
+        uint32_t currTask = 0;
+        for(;currTask < taskCount; currTask++){
+            if(strlen(taskStats[currTask].pcTaskName) != 4 || strcmp(taskStats[currTask].pcTaskName, "IDLE") != 0){
+                char name[configMAX_TASK_NAME_LEN+1];
+                strncpy(name, taskStats[currTask].pcTaskName, configMAX_TASK_NAME_LEN);
+                uint32_t load = (taskStats[currTask].ulRunTimeCounter) / (sysTime/500);
+                ret = snprintf(buf,sizeof(buf),"%s%d\r\x1b[%dC%s\r\x1b[%dC%s\r\x1b[%dC%d,%d\r\x1b[%dC%d\r\x1b[%dC%u\r\x1b[%dC%d\r\n", VT100_ERASE_LINE_END, taskStats[currTask].xTaskNumber, 6, name, 7 + configMAX_TASK_NAME_LEN
+                        , SYS_getTaskStateString(taskStats[currTask].eCurrentState), 20 + configMAX_TASK_NAME_LEN, load / 10, load % 10, 27 + configMAX_TASK_NAME_LEN, taskStats[currTask].ulRunTimeCounter
+                        , 38 + configMAX_TASK_NAME_LEN, taskStats[currTask].usStackHighWaterMark, 45 + configMAX_TASK_NAME_LEN, taskStats[currTask].usedHeap);
+                send_buffer(buf,ret,ptr);
+            }
+        }
+        vPortFree(taskStats);
+    }while(Term_check_break(ptr,1000));
+
+    return pdTRUE;
 	
 }
 

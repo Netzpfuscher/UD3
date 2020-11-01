@@ -263,8 +263,9 @@ typedef struct tskTaskControlBlock       /* The old naming convention is used to
     UBaseType_t uxPriority;                     /*< The priority of the task.  0 is the lowest priority. */
     StackType_t * pxStack;                      /*< Points to the start of the stack. */
     char pcTaskName[ configMAX_TASK_NAME_LEN ]; /*< Descriptive name given to the task when created.  Facilitates debugging only. */ /*lint !e971 Unqualified char types are allowed for strings and single characters only. */
-    #if configTRACK_HEAP_USAGE
-    uint32_t ulUsedHeap;
+    
+    #if ( configTRACK_HEAP_USAGE == 1 )
+    int32_t ulUsedHeap;
     #endif
         
     #if ( ( portSTACK_GROWTH > 0 ) || ( configRECORD_STACK_HIGH_ADDRESS == 1 ) )
@@ -963,6 +964,12 @@ static void prvInitialiseNewTask( TaskFunction_t pxTaskCode,
             pxNewTCB->ulRunTimeCounter = 0UL;
         }
     #endif /* configGENERATE_RUN_TIME_STATS */
+
+    #if ( configTRACK_HEAP_USAGE == 1 )
+        {
+        pxNewTCB->ulUsedHeap = 0UL;
+        }
+    #endif
 
     #if ( portUSING_MPU_WRAPPERS == 1 )
         {
@@ -3085,15 +3092,19 @@ void vTaskSwitchContext( void )
     }
 }
 /*-----------------------------------------------------------*/
-#if configTRACK_HEAP_USAGE
-void vTaskMallocTrackHeapUsage( uint32_t ulBytesUsed){
-    if( pxCurrentTCB == NULL ) return;
-    pxCurrentTCB->ulUsedHeap+=ulBytesUsed;
+#if ( configTRACK_HEAP_USAGE == 1 )
+void vTaskMallocTrackHeapUsage(TaskHandle_t handle, uint32_t ulBytesUsed){
+    if( handle == NULL ){
+        return;
+    }
+    handle->ulUsedHeap+=ulBytesUsed;
 }
 /*-----------------------------------------------------------*/
-void vTaskFreeTrackHeapUsage( uint32_t ulBytesFreed){
-    if( pxCurrentTCB == NULL ) return;
-    pxCurrentTCB->ulUsedHeap-=ulBytesFreed;
+void vTaskFreeTrackHeapUsage(TaskHandle_t handle, uint32_t ulBytesFreed){
+    if( handle == NULL ){
+        return;
+    }
+    handle->ulUsedHeap-=ulBytesFreed;
 }
 #endif
 /*-----------------------------------------------------------*/

@@ -1582,8 +1582,8 @@ void send_signal_state_wo_new(uint8_t signal, uint8_t inverted, TERMINAL_HANDLE 
 }
 
 uint8_t CMD_signals(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
-
-    while(Term_check_break(portM,250)){
+    TERM_sendVT100Code(handle, _VT100_CURSOR_DISABLE, 0);
+    do{
         TERM_sendVT100Code(handle, _VT100_CURSOR_POS1, 0);
         ttprintf("Signal state [CTRL+C] for quit:\r\n");
         ttprintf("**************************\r\n");
@@ -1656,7 +1656,8 @@ uint8_t CMD_signals(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         ttprintf("                                    \r");
         ttprintf("Ibus: %u mV Vdriver: %u mV\r\n\r\n", ADC_CountsTo_mVolts(ADC_active_sample_buf[0].i_bus),tt.n.driver_v.value);
 
-    }
+    }while(Term_check_break(portM,250));
+    
     TERM_sendVT100Code(handle, _VT100_RESET_ATTRIB, 0);
 
     return TERM_CMD_EXIT_SUCCESS;

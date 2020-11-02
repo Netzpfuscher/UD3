@@ -52,7 +52,7 @@ port_str min_port[NUM_MIN_CON];
 port_str null_port;
 
 TERMINAL_HANDLE * usb_handle;
-
+volatile uint8_t Test;
 
 void stream_printf(void * port, char * format, ...){
     va_list arg;
@@ -248,9 +248,7 @@ void tsk_cli_Start(void) {
 /* `#END` */
 
 	if (tsk_cli_initVar != 1) {
-        
-        
-       
+
         usb_port.type = PORT_TYPE_USB;
         usb_port.term_mode = PORT_TERM_VT100;
         usb_port.term_block = xSemaphoreCreateBinary();
@@ -261,8 +259,7 @@ void tsk_cli_Start(void) {
         usb_handle = TERM_createNewHandle(stream_printf,&usb_port,"usb");
         
         TERM_addCommand(CMD_signals, "signals","For debugging",0);
-        TERM_addCommand(CMD_cls, "cls","Clear screen",0);
-        TERM_addCommand(CMD_tr, "signals","Transient [start/stop]",0);
+        TERM_addCommand(CMD_tr, "tr","Transient [start/stop]",0);
         
         
         if(configuration.minprot==pdTRUE){

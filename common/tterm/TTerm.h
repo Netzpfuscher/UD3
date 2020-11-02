@@ -42,6 +42,8 @@
 #define _VT100_CURSOR_FORWARD_BY 22
 #define _VT100_CURSOR_SAVE_POSITION 23
 #define _VT100_CURSOR_RESTORE_POSITION 24
+#define _VT100_CURSOR_ENABLE 25
+#define _VT100_CURSOR_DISABLE 26
 
 //VT100 cmds given to us by the terminal software (they need to be > 8 bits so the handler can tell them apart from normal characters)
 #define _VT100_RESET                0x1000
@@ -134,7 +136,7 @@ struct __TERMINAL_HANDLE__{
     char ** autocompleteBuffer;
     uint32_t autocompleteBufferLength;
     uint32_t autocompleteStart;    
-    TermPrintHandler * print;
+    TermPrintHandler print;
     char * currUserName;
     char * historyBuffer[TERM_HISTORYSIZE];
     uint32_t currHistoryWritePosition;

@@ -52,7 +52,7 @@ TERMINAL_HANDLE * TERM_createNewHandle(TermPrintHandler printFunction ,const cha
     //TODO VT100 reset at boot
     //TODO add min start frame to signal that debugging started and print this again
     //TODO colors in the boot message
-    TERM_printBootMessage(ret);
+  //  TERM_printBootMessage(ret);
 #endif
     return ret;
 }
@@ -802,6 +802,12 @@ void TERM_sendVT100Code(TERMINAL_HANDLE * handle, uint16_t cmd, uint8_t var){
             break;
         case _VT100_CURSOR_RESTORE_POSITION:
             ttprintf("\x1b" "8");
+            break;
+        case _VT100_CURSOR_ENABLE:
+            ttprintf("\x1b[?25h");
+            break;
+        case _VT100_CURSOR_DISABLE:
+            ttprintf("\x1b[?25l");
             break;
             
     }

@@ -24,7 +24,6 @@
 
 #include "cyapicallbacks.h"
 #include <cytypes.h>
-#include <stdarg.h>
 
 #include "tsk_min.h"
 #include "tsk_midi.h"
@@ -39,6 +38,9 @@
 
 #include "helper/printf.h"
 #include "helper/debug.h"
+
+#include "TTerm.h"
+#include "cli_basic.h"
 
 xTaskHandle tsk_min_TaskHandle;
 uint8 tsk_min_initVar = 0u;
@@ -59,6 +61,7 @@ SemaphoreHandle_t min_Semaphore;
 #include "telemetry.h"
 #include "stream_buffer.h" 
 #include "ntlibc.h" 
+#include "helper/printf.h" 
 
 struct min_context min_ctx;
 struct _time time;
@@ -88,6 +91,7 @@ typedef struct {
 } average_buff;
 
 average_buff sample;
+
 
 /*******************************************************************************************
 Makes avaraging of given values

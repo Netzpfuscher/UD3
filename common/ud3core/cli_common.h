@@ -34,6 +34,7 @@
 #include "queue.h"
 #include "semphr.h"
 #include "timers.h"
+#include "TTerm.h"
 
 
 void nt_interpret(char *text, port_str *ptr);
@@ -46,6 +47,9 @@ void uart_baudrate(uint32_t baudrate);
 void spi_speed(uint32_t speed);
 void update_visibilty(void);
 
+uint8_t CMD_signals(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+uint8_t CMD_cls(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+uint8_t CMD_tr(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 
 extern parameter_entry confparam[];
 volatile uint8_t qcw_reg;

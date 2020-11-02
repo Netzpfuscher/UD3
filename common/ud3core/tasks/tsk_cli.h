@@ -26,11 +26,13 @@
 #include "task.h"
 #include "cli_basic.h"
 #include "tsk_eth_common.h"
+#include "TTerm.h"
 
 #if !defined(cli_TASK_H)
 #define cli_TASK_H
     
-
+#define portM   ((port_str*)handle->port)
+    
 /*
  * Add user task definitions, types, includes and other things in the below
  * merge region to customize the task.
@@ -47,6 +49,8 @@ extern port_str min_port[NUM_MIN_CON];
 extern port_str serial_port;
 extern port_str usb_port;
 extern port_str null_port;
+
+extern TERMINAL_HANDLE * usb_handle;
 
 /*
  * Add user function prototypes in the below merge region to add user

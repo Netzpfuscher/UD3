@@ -24,18 +24,22 @@
 
 #include "cyapicallbacks.h"
 #include <cytypes.h>
+#include <stdarg.h>
 
 #include "tsk_cli.h"
 #include "tsk_fault.h"
 #include "cli_basic.h"
 #include "alarmevent.h"
 
+#include "helper/printf.h"
 
 /* RTOS includes. */
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
 #include "semphr.h"
+
+
 
 xTaskHandle UART_Terminal_TaskHandle;
 xTaskHandle USB_Terminal_TaskHandle;
@@ -46,6 +50,27 @@ uint8 tsk_cli_initVar = 0u;
 port_str usb_port;
 port_str min_port[NUM_MIN_CON];
 port_str null_port;
+
+TERMINAL_HANDLE * usb_handle;
+
+
+void stream_printf(void * port, char * format, ...){
+    va_list arg;
+    va_start (arg, format);
+    char buf[256];
+    char* data = buf;
+    uint32_t len = vsnprintf(buf, sizeof(buf), format, arg);
+    while(len){
+		uint16_t space = xStreamBufferSpacesAvailable(((port_str*)port)->tx);
+		uint16_t len_t = len;
+		if(len>space) len_t = space;
+		uint16_t count = xStreamBufferSend(((port_str*)port)->tx,data, len_t,0);
+		data+=count;
+		len-=count;
+		if(!count) vTaskDelay(5);
+    	}  
+    va_end (arg);
+}
 
 
 /* ------------------------------------------------------------------------ */
@@ -167,6 +192,50 @@ void tsk_cli_TaskProc(void *pvParameters) {
         /* `#END` */
 	}
 }
+
+
+
+void tsk_new_cli_TaskProc(void *pvParameters) {
+	/*
+	 * Add and initialize local variables that are allocated on the Task stack
+	 * the the section below.
+	 */
+	/* `#START TASK_VARIABLES` */
+
+	TERMINAL_HANDLE * handle = pvParameters;
+
+
+    /* `#END` */
+
+	/*
+	 * Add the task initialzation code in the below merge region to be included
+     * in the task.
+	 */
+	/* `#START TASK_INIT_CODE` */
+    
+    switch(portM->type) {
+        case PORT_TYPE_SERIAL:
+            alarm_push(ALM_PRIO_INFO,warn_task_serial_cli, ALM_NO_VALUE);
+        break;
+        case PORT_TYPE_USB:
+            alarm_push(ALM_PRIO_INFO,warn_task_usb_cli, ALM_NO_VALUE);
+        break;
+        case PORT_TYPE_MIN:
+            alarm_push(ALM_PRIO_INFO,warn_task_min_cli, portM->num);
+        break;      
+    }
+
+    /* `#END` */
+    uint8_t c;
+    uint8_t len;
+	for (;;) {
+		/* `#START TASK_LOOP_CODE` */
+        len = xStreamBufferReceive(portM->rx, &c,sizeof(c), portMAX_DELAY);
+        TERM_processBuffer(&c,len,handle);
+
+        /* `#END` */
+	}
+}
 /* ------------------------------------------------------------------------ */
 void tsk_cli_Start(void) {
 /*
@@ -179,6 +248,8 @@ void tsk_cli_Start(void) {
 /* `#END` */
 
 	if (tsk_cli_initVar != 1) {
+        
+        
        
         usb_port.type = PORT_TYPE_USB;
         usb_port.term_mode = PORT_TERM_VT100;
@@ -186,6 +257,13 @@ void tsk_cli_Start(void) {
         usb_port.rx = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
         usb_port.tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,64);
         xSemaphoreGive(usb_port.term_block);
+        
+        usb_handle = TERM_createNewHandle(stream_printf,&usb_port,"usb");
+        
+        TERM_addCommand(CMD_signals, "signals","For debugging",0);
+        TERM_addCommand(CMD_cls, "cls","Clear screen",0);
+        TERM_addCommand(CMD_tr, "signals","Transient [start/stop]",0);
+        
         
         if(configuration.minprot==pdTRUE){
             for(uint8_t i=0;i<NUM_MIN_CON;i++){
@@ -214,7 +292,7 @@ void tsk_cli_Start(void) {
 	 	* will call the task procedure and start execution of the task.
 	 	*/
 
-		xTaskCreate(tsk_cli_TaskProc, "USB-CLI", STACK_TERMINAL,  &usb_port, PRIO_TERMINAL, &USB_Terminal_TaskHandle);
+		xTaskCreate(tsk_new_cli_TaskProc, "USB-CLI", STACK_TERMINAL,  usb_handle, PRIO_TERMINAL, &USB_Terminal_TaskHandle);
 		tsk_cli_initVar = 1;
 	}
 }

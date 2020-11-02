@@ -54,6 +54,7 @@
 #include "alarmevent.h"
 #include "version.h"
 #include "qcw.h"
+#include "system.h"
 
 #define UNUSED_VARIABLE(N) \
 	do {                   \
@@ -886,6 +887,26 @@ uint8_t command_con(char *commandline, port_str *ptr) {
     HELP_TEXT("Usage: con [info|numcon|min]\r\n");
 }
 
+uint8_t CMD_con(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
+    if(argCount==0) return TERM_CMD_EXIT_ERROR;
+    
+    if(strcmp(args[0], "info") == 0){
+        con_info(portM);
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+
+    if(strcmp(args[0], "numcon") == 0){
+        con_numcon(portM);
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+
+    if(strcmp(args[0], "min") == 0){
+        con_minstat(portM);
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    return TERM_CMD_EXIT_SUCCESS;
+}
+
 /*****************************************************************************
 * Calibrate Vdriver
 ******************************************************************************/
@@ -1005,6 +1026,45 @@ uint8_t command_tr(char *commandline, port_str *ptr) {
 	HELP_TEXT("Usage: tr [start|stop]\r\n");
 }
 
+uint8_t CMD_tr(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
+    
+    if(argCount==0) return TERM_CMD_EXIT_ERROR;
+    
+    if(strcmp(args[0], "start") == 0){
+        isr_interrupter_Disable();
+        interrupter.pw = param.pw;
+		interrupter.prd = param.pwd;
+        update_interrupter();
+
+		tr_running = 1;
+        
+        callback_BurstFunction(NULL, 0, portM);
+        
+		ttprintf("Transient Enabled\r\n");
+       
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+
+	if(strcmp(args[0], "start") == 0){
+        isr_interrupter_Enable();
+        if (xBurst_Timer != NULL) {
+			if(xTimerDelete(xBurst_Timer, 100 / portTICK_PERIOD_MS) != pdFALSE){
+			    xBurst_Timer = NULL;
+                burst_state = BURST_ON;
+            }
+        }
+
+        ttprintf("Transient Disabled\r\n");    
+ 
+		interrupter.pw = 0;
+		update_interrupter();
+		tr_running = 0;
+		
+		return TERM_CMD_EXIT_SUCCESS;
+	}
+    return TERM_CMD_EXIT_SUCCESS;
+}
+
 /*****************************************************************************
 * Timer callback for the QCW autofire
 ******************************************************************************/
@@ -1114,32 +1174,6 @@ uint8_t command_udkill(char *commandline, port_str *ptr) {
 #define VT100_ERASE_LINE_END "\x1b[K"
 #define VT100_RESET_ATTRIB "\x1b[0m"
 
-uint32_t SYS_getCPULoadFine(TaskStatus_t * taskStats, uint32_t taskCount, uint32_t sysTime){
-    uint32_t currTask = 0;
-    for(;currTask < taskCount; currTask++){
-        if(strlen(taskStats[currTask].pcTaskName) == 4 && strcmp(taskStats[currTask].pcTaskName, "IDLE") == 0){
-            return configTICK_RATE_HZ - ((taskStats[currTask].ulRunTimeCounter) / (sysTime/configTICK_RATE_HZ));
-        }
-    }
-    return -1;
-}
-
-const char * SYS_getTaskStateString(eTaskState state){
-    switch(state){
-        case eRunning:
-            return "running";
-        case eReady:
-            return "ready";
-        case eBlocked:
-            return "blocked";
-        case eSuspended:
-            return "suspended";
-        case eDeleted:
-            return "deleted";
-        default:
-            return "invalid";
-    }
-}
 
 /*****************************************************************************
 * Prints the task list needs to be enabled in FreeRTOSConfig.h
@@ -1479,6 +1513,20 @@ uint8_t command_cls(char *commandline, port_str *ptr) {
 	return 1;
 }
 
+/*
+uint8_t CMD_cls(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+    tsk_overlay_chart_start();
+	TERM_sendVT100Code(handle,_VT100_RESET,0);
+    ttprintf("  _   _   ___    ____    _____              _\r\n");
+    ttprintf(" | | | | |   \\  |__ /   |_   _|  ___   ___ | |  __ _\r\n");
+    ttprintf(" | |_| | | |) |  |_ \\     | |   / -_) (_-< | | / _` |\r\n");
+    ttprintf("  \\___/  |___/  |___/     |_|   \\___| /__/ |_| \\__,_|\r\n\r\n");
+    ttprintf("\tBuild: %s - %s\r\n",__DATE__, __TIME__);
+    ttprintf("\tCoil: %s\r\n\r\n",configuration.ud_name);
+	return 1;
+}
+*/
+
 /*****************************************************************************
 * Signal debugging
 ******************************************************************************/
@@ -1506,6 +1554,112 @@ void send_signal_state_wo(uint8_t signal, uint8_t inverted, port_str *ptr){
         SEND_CONST_STRING("false",ptr);
         Term_Color_White(ptr);
     }
+}
+
+void send_signal_state_new(uint8_t signal, uint8_t inverted, TERMINAL_HANDLE * handle){
+    if(inverted) signal = !signal; 
+    if(signal){
+        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_RED);
+        ttprintf("true \r\n");
+        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE); 
+    }else{
+        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_GREEN);
+        ttprintf("false\r\n");
+        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
+    }
+}
+void send_signal_state_wo_new(uint8_t signal, uint8_t inverted, TERMINAL_HANDLE * handle){
+    if(inverted) signal = !signal; 
+    if(signal){
+        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_RED);
+        ttprintf("true ");
+        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
+    }else{
+        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_GREEN);
+        ttprintf("false");
+        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
+    }
+}
+
+uint8_t CMD_signals(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+
+    while(Term_check_break(portM,250)){
+        TERM_sendVT100Code(handle, _VT100_CURSOR_POS1, 0);
+        ttprintf("Signal state [CTRL+C] for quit:\r\n");
+        ttprintf("**************************\r\n");
+        ttprintf("UVLO pin: ");
+        send_signal_state_wo_new(UVLO_status_Status,pdTRUE,handle);
+        ttprintf(" Crystal clock: ");
+        send_signal_state_new((CY_GET_XTND_REG8((void CYFAR *)CYREG_FASTCLK_XMHZ_CSR) & 0x80u),pdTRUE,handle);
+        
+        ttprintf("Sysfault driver undervoltage: ");
+        send_signal_state_new(sysfault.uvlo,pdFALSE,handle);
+        ttprintf("Sysfault Temp 1: ");
+        send_signal_state_wo_new(sysfault.temp1,pdFALSE,handle);
+        ttprintf(" Temp 2: ");
+        send_signal_state_new(sysfault.temp2,pdFALSE,handle);
+        ttprintf("Sysfault fuse: ");
+        send_signal_state_wo_new(sysfault.fuse,pdFALSE,handle);
+        ttprintf(" charging: ");
+        send_signal_state_new(sysfault.charge,pdFALSE,handle);
+        ttprintf("Sysfault watchdog: ");
+        send_signal_state_wo_new(sysfault.watchdog,pdFALSE,handle);
+        ttprintf(" updating: ");
+        send_signal_state_new(sysfault.update,pdFALSE,handle);
+        ttprintf("Sysfault bus undervoltage: ");
+        send_signal_state_new(sysfault.bus_uv,pdFALSE,handle);
+        ttprintf("Sysfault interlock: ");
+        send_signal_state_wo_new(sysfault.interlock,pdFALSE,handle);
+        ttprintf(" link: ");
+        send_signal_state_wo_new(sysfault.link_state,pdFALSE,handle);
+        ttprintf(" combined: ");
+        send_signal_state_new(system_fault_Read(),pdTRUE,handle);
+        
+        ttprintf("Relay 1: ");
+        send_signal_state_wo_new((relay_Read()&0b1),pdFALSE,handle);
+        ttprintf(" Relay 2: ");
+        send_signal_state_wo_new((relay_Read()&0b10),pdFALSE,handle);
+        ttprintf(" Relay 3: ");
+        send_signal_state_wo_new(Relay3_Read(),pdFALSE,handle);
+        ttprintf(" Relay 4: ");
+        send_signal_state_new(Relay4_Read(),pdFALSE,handle);
+        ttprintf("Fan: ");
+        send_signal_state_wo_new(Fan_Read(),pdFALSE,handle);
+        ttprintf(" Bus status: ");
+        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_CYAN);
+        switch(tt.n.bus_status.value){
+            case BUS_BATT_OV_FLT:
+                ttprintf("Overvoltage      ");
+            break;
+            case BUS_BATT_UV_FLT:
+                ttprintf("Undervoltage     ");
+            break;
+            case BUS_CHARGING:
+                ttprintf("Charging         ");
+            break;
+            case BUS_OFF:
+                ttprintf("Off              ");
+            break;
+            case BUS_READY:
+                ttprintf("Ready            ");
+            break;
+            case BUS_TEMP1_FAULT:
+                ttprintf("Temperature fault");
+            break;
+        }
+        ttprintf("\r\n");
+        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
+        ttprintf("                                    \r");
+        ttprintf("Temp 1: %i*C Temp 2: %i*C\r\n", tt.n.temp1.value, tt.n.temp2.value);
+        ttprintf("                                    \r");
+        ttprintf("Vbus: %u mV Vbatt: %u mV\r\n", ADC_CountsTo_mVolts(ADC_active_sample_buf[0].v_bus),ADC_CountsTo_mVolts(ADC_active_sample_buf[0].v_batt));
+        ttprintf("                                    \r");
+        ttprintf("Ibus: %u mV Vdriver: %u mV\r\n\r\n", ADC_CountsTo_mVolts(ADC_active_sample_buf[0].i_bus),tt.n.driver_v.value);
+
+    }
+    TERM_sendVT100Code(handle, _VT100_RESET_ATTRIB, 0);
+
+    return TERM_CMD_EXIT_SUCCESS;
 }
 
 uint8_t command_signals(char *commandline, port_str *ptr) {

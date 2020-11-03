@@ -628,7 +628,7 @@ uint8_t CMD_telemetry(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
                 }
             }
         }
-        return pdPASS;
+        return TERM_CMD_EXIT_SUCCESS;
         
     } else if(strcmp(args[0], "gauge") == 0 && argCount == 3){
         int n = ntlibc_atoi(args[1]);
@@ -644,7 +644,7 @@ uint8_t CMD_telemetry(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
             }
             send_gauge_config(n,0,0,"none",ptr);
             ttprintf("OK\r\n");
-            return pdPASS;
+            return TERM_CMD_EXIT_SUCCESS;
         }
         
         
@@ -669,13 +669,13 @@ uint8_t CMD_telemetry(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
                     send_gauge_config(n,tt.a[cnt].min,tt.a[cnt].max,tt.a[cnt].name,ptr);
             }
         }
-        return pdPASS;
+        return TERM_CMD_EXIT_SUCCESS;
 
     } else if (ntlibc_stricmp(args[0], "chart") == 0 && argCount == 3) {
         int8_t n = ntlibc_atoi(args[1]);
         if(n>=N_CHARTS || n<0){
             ttprintf("Chart number must be between 0 and 3\r\n");
-            return 0;
+            return TERM_CMD_EXIT_SUCCESS;
         }
         if(ntlibc_stricmp(args[2],"none")==0){
             for(uint8_t w=0;w<N_TELE;w++){
@@ -685,7 +685,7 @@ uint8_t CMD_telemetry(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
             }
             send_chart_config(n,0,0,0,TT_UNIT_NONE,"none",ptr);
             ttprintf("OK\r\n");
-            return pdPASS;
+            return TERM_CMD_EXIT_SUCCESS;
         }
         int cnt=-1;
         for(uint8_t w=0;w<N_TELE;w++){
@@ -704,12 +704,13 @@ uint8_t CMD_telemetry(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
             ttprintf("OK\r\n");
             send_chart_config(n,tt.a[cnt].min,tt.a[cnt].max,tt.a[cnt].offset,tt.a[cnt].unit,tt.a[cnt].name,ptr);
         }
-        return pdPASS;
+        return TERM_CMD_EXIT_SUCCESS;
 
     } else if (ntlibc_stricmp(args[0], "ls") == 0) {
         for(uint8_t w=0;w<N_TELE;w++){
             ttprintf("%i: %s\r\n", w+1, tt.a[w].name);
         }
-        return pdPASS;
+        return TERM_CMD_EXIT_SUCCESS;
     }
+    return TERM_CMD_EXIT_SUCCESS;
 }

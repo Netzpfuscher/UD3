@@ -139,8 +139,8 @@ void tsk_cli_TaskProc(void *pvParameters) {
     uint8_t len;
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
-        if (xSemaphoreTake(portM->term_block, portMAX_DELAY)) {
             len = xStreamBufferReceive(portM->rx, &c,sizeof(c), portMAX_DELAY);
+            if (xSemaphoreTake(portM->term_block, portMAX_DELAY)) {
             TERM_processBuffer(&c,len,handle);
             xSemaphoreGive(portM->term_block);
         }
@@ -209,7 +209,7 @@ void tsk_cli_Start(void) {
                 
                 min_handle[i] = TERM_createNewHandle(stream_printf,&min_port[i],"MIN");
                 
-                //xTaskCreate(tsk_cli_TaskProc, "MIN-CLI", STACK_TERMINAL, &min_handle[i], PRIO_TERMINAL, &MIN_Terminal_TaskHandle[i]);
+                xTaskCreate(tsk_cli_TaskProc, "MIN-CLI", STACK_TERMINAL, min_handle[i], PRIO_TERMINAL, &MIN_Terminal_TaskHandle[i]);
             }
         }else{
             min_port[0].type = PORT_TYPE_SERIAL;
@@ -222,7 +222,7 @@ void tsk_cli_Start(void) {
             
             min_handle[0] = TERM_createNewHandle(stream_printf,&min_port[0],"Serial");
             
-            xTaskCreate(tsk_cli_TaskProc, "UART-CLI", STACK_TERMINAL, &min_handle[0], PRIO_TERMINAL, &UART_Terminal_TaskHandle);
+            xTaskCreate(tsk_cli_TaskProc, "UART-CLI", STACK_TERMINAL, min_handle[0], PRIO_TERMINAL, &UART_Terminal_TaskHandle);
         }
 
 		/*

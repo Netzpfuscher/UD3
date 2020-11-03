@@ -730,6 +730,7 @@ uint8_t CMD_alarms(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         SEND_CONST_STRING("Alarms reset...\r\n", ptr);
         return TERM_CMD_EXIT_SUCCESS;
     }
+    return TERM_CMD_EXIT_SUCCESS;
 }
 
 
@@ -1196,6 +1197,7 @@ uint8_t CMD_bus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
 		ttprintf("BUS OFF\r\n");
         return TERM_CMD_EXIT_SUCCESS;
 	}
+    return TERM_CMD_EXIT_SUCCESS;
 }
 /*****************************************************************************
 * Resets the software fuse

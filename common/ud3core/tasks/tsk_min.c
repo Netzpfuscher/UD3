@@ -283,8 +283,8 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
             socket_info[*min_payload].socket = *(min_payload+1);
             strncpy(socket_info[*min_payload].info,(char*)min_payload+2,sizeof(socket_info[0].info));
             if(socket_info[*min_payload].socket==SOCKET_CONNECTED){
-                command_cls("",&min_port[*min_payload]);
-                send_string(":>", &min_port[*min_payload]);
+                //command_cls("",&min_port[*min_payload]);  <-------------need to port
+                //send_string(":>", &min_port[*min_payload]);  <-------------need to port
                 if(!transmit_features){
                     transmit_features=sizeof(version)/sizeof(char*);
                 }

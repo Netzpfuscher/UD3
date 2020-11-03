@@ -48,8 +48,23 @@ void spi_speed(uint32_t speed);
 void update_visibilty(void);
 
 uint8_t CMD_signals(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
-uint8_t CMD_cls(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 uint8_t CMD_tr(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+uint8_t CMD_con(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+uint8_t CMD_alarms(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+uint8_t CMD_bootloader(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+uint8_t CMD_bus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+uint8_t CMD_calib(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+uint8_t CMD_features(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+uint8_t CMD_config_get(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+uint8_t CMD_eeprom(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+uint8_t CMD_udkill(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+uint8_t CMD_fuse(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+uint8_t CMD_load_defaults(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+uint8_t CMD_get(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+uint8_t CMD_set(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+uint8_t CMD_qcw(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+uint8_t CMD_relay(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+uint8_t CMD_reset(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 
 extern parameter_entry confparam[];
 volatile uint8_t qcw_reg;

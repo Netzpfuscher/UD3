@@ -28,8 +28,13 @@
 
 #include "tsk_cli.h"
 #include "tsk_fault.h"
+#include "tsk_overlay.h"
+#include "tsk_midi.h"
 #include "cli_basic.h"
 #include "alarmevent.h"
+#include "autotune.h"
+#include "qcw.h"
+#include "helper/debug.h"
 
 #include "helper/printf.h"
 
@@ -52,25 +57,8 @@ port_str min_port[NUM_MIN_CON];
 port_str null_port;
 
 TERMINAL_HANDLE * usb_handle;
-volatile uint8_t Test;
+TERMINAL_HANDLE * min_handle[NUM_MIN_CON];
 
-void stream_printf(void * port, char * format, ...){
-    va_list arg;
-    va_start (arg, format);
-    char buf[256];
-    char* data = buf;
-    uint32_t len = vsnprintf(buf, sizeof(buf), format, arg);
-    while(len){
-		uint16_t space = xStreamBufferSpacesAvailable(((port_str*)port)->tx);
-		uint16_t len_t = len;
-		if(len>space) len_t = space;
-		uint16_t count = xStreamBufferSend(((port_str*)port)->tx,data, len_t,0);
-		data+=count;
-		len-=count;
-		if(!count) vTaskDelay(5);
-    	}  
-    va_end (arg);
-}
 
 
 /* ------------------------------------------------------------------------ */
@@ -81,7 +69,7 @@ void stream_printf(void * port, char * format, ...){
 /* `#START USER_INCLUDE SECTION` */
 
 #include "cli_common.h"
-#include "ntshell.h"
+
 #include "tsk_priority.h"
 #include "tsk_uart.h"
 #include "tsk_usb.h"
@@ -94,9 +82,7 @@ void stream_printf(void * port, char * format, ...){
 	} while (0)
 void *extobjt = 0;
 
-static int write(const char *buf, int cnt, void *extobj);
-void initialize_cli(ntshell_t *ptr, port_str *port);
-static int nt_callback(const char *text, void *extobj);
+
 /* `#END` */
 /* ------------------------------------------------------------------------ */
 /*
@@ -106,42 +92,9 @@ static int nt_callback(const char *text, void *extobj);
  */
 /* `#START USER_TASK_LOCAL_CODE` */
 
-void initialize_cli(ntshell_t *ptr, port_str *port) {
-    ntshell_init(ptr, write, nt_callback, port);
-	ntshell_set_prompt(ptr, ":>");
-	ntshell_show_promt(ptr);
-}
-
-static int write(const char *buf, int cnt, void *extobj) {
-    port_str *port = extobj;
-    if(port->type==PORT_TYPE_USB && 0u == USBMIDI_1_GetConfiguration()){
-            return cnt;
-    }
-    xStreamBufferSend(port->tx,buf, cnt,portMAX_DELAY);
-	return cnt;
-}
-
-static int nt_callback(const char *text, void *extobj) {
-	port_str *port = extobj;
-	nt_interpret((char*)text, port);
-	return 0;
-}
 
 
-uint8_t handle_terminal(ntshell_t *ptr, port_str *port) {
-	char c;
-	if (xStreamBufferReceive(port->rx, &c,1, portMAX_DELAY)) {
-        if (c==0x07){
-            WD_reset();
-            return 0;
-        }
-		if (xSemaphoreTake(port->term_block, portMAX_DELAY)) {
-			ntshell_execute_nb(ptr, c);
-			xSemaphoreGive(port->term_block);
-		} 
-	}
-	return 0;
-}
+
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */
@@ -150,52 +103,8 @@ uint8_t handle_terminal(ntshell_t *ptr, port_str *port) {
  * to preform the desired function within the merge regions of the task procedure
  * to add functionality to the task.
  */
+
 void tsk_cli_TaskProc(void *pvParameters) {
-	/*
-	 * Add and initialize local variables that are allocated on the Task stack
-	 * the the section below.
-	 */
-	/* `#START TASK_VARIABLES` */
-
-	ntshell_t ntsh;
-    port_str *port;
-    port = (port_str*)pvParameters;
-
-
-    /* `#END` */
-
-	/*
-	 * Add the task initialzation code in the below merge region to be included
-	 * in the task.
-	 */
-	/* `#START TASK_INIT_CODE` */
-
-	initialize_cli(&ntsh, port);
-    switch(port->type){
-        case PORT_TYPE_SERIAL:
-            alarm_push(ALM_PRIO_INFO,warn_task_serial_cli, ALM_NO_VALUE);
-        break;
-        case PORT_TYPE_USB:
-            alarm_push(ALM_PRIO_INFO,warn_task_usb_cli, ALM_NO_VALUE);
-        break;
-        case PORT_TYPE_MIN:
-            alarm_push(ALM_PRIO_INFO,warn_task_min_cli, port->num);
-        break;      
-    }
-
-    /* `#END` */
-
-	for (;;) {
-		/* `#START TASK_LOOP_CODE` */
-        handle_terminal(&ntsh,port);
-
-        /* `#END` */
-	}
-}
-
-
-
-void tsk_new_cli_TaskProc(void *pvParameters) {
 	/*
 	 * Add and initialize local variables that are allocated on the Task stack
 	 * the the section below.
@@ -230,8 +139,11 @@ void tsk_new_cli_TaskProc(void *pvParameters) {
     uint8_t len;
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
-        len = xStreamBufferReceive(portM->rx, &c,sizeof(c), portMAX_DELAY);
-        TERM_processBuffer(&c,len,handle);
+        if (xSemaphoreTake(portM->term_block, portMAX_DELAY)) {
+            len = xStreamBufferReceive(portM->rx, &c,sizeof(c), portMAX_DELAY);
+            TERM_processBuffer(&c,len,handle);
+            xSemaphoreGive(portM->term_block);
+        }
 
         /* `#END` */
 	}
@@ -260,8 +172,31 @@ void tsk_cli_Start(void) {
         
         TERM_addCommand(CMD_signals, "signals","For debugging",0);
         TERM_addCommand(CMD_tr, "tr","Transient [start/stop]",0);
-        
-        
+        TERM_addCommand(CMD_con, "con","Prints the connections",0);
+        TERM_addCommand(CMD_alarms, "alarms","Alarms [get/roll/reset]",0);
+        TERM_addCommand(CMD_SynthMon, "synthmon","Synthesizer status",0);
+        TERM_addCommand(CMD_bootloader, "bootloader","Enters the bootloader",0);
+        TERM_addCommand(CMD_bus, "bus","bus [on/off]",0);
+        TERM_addCommand(CMD_calib, "calib","Calibrate Vdriver",0);
+        TERM_addCommand(CMD_config_get, "config_get","Internal use",0);
+        TERM_addCommand(CMD_features, "features","Get supported features",0);
+        TERM_addCommand(CMD_eeprom, "eeprom","Save/Load config [load/save]",0);
+        TERM_addCommand(CMD_udkill, "kill","Stops the output",0);
+        TERM_addCommand(CMD_fuse, "fuse_reset","Reset the internal fuse",0);
+        TERM_addCommand(CMD_load_defaults, "load_default","Loads the default parameters",0);
+        TERM_addCommand(CMD_get, "get","Usage get [param]",0);
+        TERM_addCommand(CMD_set, "set","Usage set [param] [value]",0);
+        TERM_addCommand(CMD_qcw, "qcw","QCW [start/stop]",0);
+        TERM_addCommand(CMD_relay, "relay","Switch user relay 3/4",0);
+        TERM_addCommand(CMD_reset, "relay","Resets UD3",0);
+        TERM_addCommand(CMD_status, "status","Displays coil status",0);
+        TERM_addCommand(CMD_tterm, "tterm","Changes terminal mode",0);
+        TERM_addCommand(CMD_tune, "tune","Autotune [prim/sec]",0);
+        TERM_addCommand(CMD_telemetry, "telemetry","Telemetry options",0);
+        TERM_addCommand(CMD_ramp, "ramp","Write QCW ramp",0);
+        TERM_addCommand(CMD_debug, "debug","Debug mode",0);
+
+     
         if(configuration.minprot==pdTRUE){
             for(uint8_t i=0;i<NUM_MIN_CON;i++){
                 min_port[i].type = PORT_TYPE_MIN;
@@ -271,7 +206,10 @@ void tsk_cli_Start(void) {
                 min_port[i].rx = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
                 min_port[i].tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,256);
                 xSemaphoreGive(min_port[i].term_block);
-                xTaskCreate(tsk_cli_TaskProc, "MIN-CLI", STACK_TERMINAL, &min_port[i], PRIO_TERMINAL, &MIN_Terminal_TaskHandle[i]);
+                
+                min_handle[i] = TERM_createNewHandle(stream_printf,&min_port[i],"MIN");
+                
+                //xTaskCreate(tsk_cli_TaskProc, "MIN-CLI", STACK_TERMINAL, &min_handle[i], PRIO_TERMINAL, &MIN_Terminal_TaskHandle[i]);
             }
         }else{
             min_port[0].type = PORT_TYPE_SERIAL;
@@ -281,7 +219,10 @@ void tsk_cli_Start(void) {
             min_port[0].rx = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
             min_port[0].tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,1);
             xSemaphoreGive(min_port[0].term_block);
-            xTaskCreate(tsk_cli_TaskProc, "UART-CLI", STACK_TERMINAL, &min_port[0], PRIO_TERMINAL, &UART_Terminal_TaskHandle);
+            
+            min_handle[0] = TERM_createNewHandle(stream_printf,&min_port[0],"Serial");
+            
+            xTaskCreate(tsk_cli_TaskProc, "UART-CLI", STACK_TERMINAL, &min_handle[0], PRIO_TERMINAL, &UART_Terminal_TaskHandle);
         }
 
 		/*
@@ -289,7 +230,7 @@ void tsk_cli_Start(void) {
 	 	* will call the task procedure and start execution of the task.
 	 	*/
 
-		xTaskCreate(tsk_new_cli_TaskProc, "USB-CLI", STACK_TERMINAL,  usb_handle, PRIO_TERMINAL, &USB_Terminal_TaskHandle);
+		xTaskCreate(tsk_cli_TaskProc, "USB-CLI", STACK_TERMINAL,  usb_handle, PRIO_TERMINAL, &USB_Terminal_TaskHandle);
 		tsk_cli_initVar = 1;
 	}
 }

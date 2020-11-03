@@ -34,7 +34,9 @@
 #include <stdint.h>
 
 #include "printf.h"
-
+#include "FreeRTOS.h"
+#include "queue.h"
+#include "cli_basic.h"
 
 // define this globally (e.g. gcc -DPRINTF_INCLUDE_CONFIG_H ...) to include the
 // printf_config.h header file
@@ -758,3 +760,17 @@ int fctprintf(void (*out)(char character, void* arg), void* arg, const char* for
   va_end(va);
   return ret;
 }
+
+void send_stream(char character, void* arg){
+    xStreamBufferSend(((port_str*)arg)->tx,&character, 1,portMAX_DELAY);
+}
+
+void stream_printf(void * port, char* format, ...){
+    va_list va;
+    va_start(va, format);
+    const out_fct_wrap_type out_fct_wrap = { &send_stream, port };
+    _vsnprintf(_out_fct, (char*)&out_fct_wrap, (size_t)-1, format, va);
+    va_end(va);
+    return;
+}
+

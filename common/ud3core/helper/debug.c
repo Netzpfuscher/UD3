@@ -22,6 +22,8 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <stdlib.h>
+
 #include "debug.h"
 #include "ntlibc.h"
 #include "printf.h"
@@ -77,23 +79,25 @@ uint8_t print_min_debug(port_str *ptr){
     return 1;
 }
 
-uint8_t command_debug(char *commandline, port_str *ptr) {
-    SKIP_SPACE(commandline); 
-    CHECK_NULL(commandline);
-    if (ntlibc_stricmp(commandline, "min") == 0) {
+uint8_t CMD_debug(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+    if(argCount==0 || strcmp(args[0], "-?") == 0){
+        ttprintf(   "Usage: debug [id]\r\n"
+                    "debug min\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    } 
+    port_str * ptr = handle->port;
+
+    if(strcmp(args[0], "min") == 0){
         print_min_debug(ptr);
-        return 0;
+        return TERM_CMD_EXIT_SUCCESS;
 	}
-    if (ntlibc_stricmp(commandline, "fibernet") == 0) {
+    if(strcmp(args[0], "fn") == 0){
         print_debug(ptr,MIN_ID_DEBUG,pdTRUE);
-        return 0;
+        return TERM_CMD_EXIT_SUCCESS;
 	}
-    uint8_t id = ntlibc_atoi(commandline);
+    uint8_t id = atoi(args[0]);
     print_debug(ptr,id,pdFALSE);
-    return 0;
-    
-    HELP_TEXT("Usage: debug [id]\r\n"
-              "debug min\r\n");
+    return TERM_CMD_EXIT_SUCCESS;
 }
 
 

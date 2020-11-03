@@ -1,3 +1,25 @@
+/*
+ * TTerm
+ *
+ * Copyright (c) 2020 Thorben Zethoff
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
 
 #if !defined(TTerm_H)
 #define TTerm_H
@@ -11,6 +33,8 @@
 #endif    
 
 #define EXTENDED_PRINTF 1
+#define TERM_DEVICE_NAME "UD3"
+#define TERM_VERSION_STRING "V1.0"
 
 #if PIC32 == 1 
     #define START_OF_FLASH  0xa0000000
@@ -20,30 +44,33 @@
     #define END_OF_FLASH    0x1FFF8000
 #endif
 
-#define _VT100_CURSOR_POS1 3
-#define _VT100_CURSOR_END 4
-#define _VT100_FOREGROUND_COLOR 5
-#define _VT100_BACKGROUND_COLOR 6
-#define _VT100_RESET_ATTRIB 7
-#define _VT100_BRIGHT 8
-#define _VT100_DIM 9
-#define _VT100_UNDERSCORE 10
-#define _VT100_BLINK 11
-#define _VT100_REVERSE 12
-#define _VT100_HIDDEN 13
-#define _VT100_ERASE_SCREEN 14
-#define _VT100_ERASE_LINE 15
-#define _VT100_FONT_G0 16
-#define _VT100_FONT_G1 17
-#define _VT100_WRAP_ON 18
-#define _VT100_WRAP_OFF 19
-#define _VT100_ERASE_LINE_END 20
-#define _VT100_CURSOR_BACK_BY 21
-#define _VT100_CURSOR_FORWARD_BY 22
-#define _VT100_CURSOR_SAVE_POSITION 23
-#define _VT100_CURSOR_RESTORE_POSITION 24
-#define _VT100_CURSOR_ENABLE 25
-#define _VT100_CURSOR_DISABLE 26
+enum vt100{
+    _VT100_CURSOR_POS1,
+    _VT100_CURSOR_END,
+    _VT100_FOREGROUND_COLOR,
+    _VT100_BACKGROUND_COLOR,
+    _VT100_RESET_ATTRIB,
+    _VT100_BRIGHT,
+    _VT100_DIM,
+    _VT100_UNDERSCORE,
+    _VT100_BLINK,
+    _VT100_REVERSE,
+    _VT100_HIDDEN,
+    _VT100_ERASE_SCREEN,
+    _VT100_ERASE_LINE,
+    _VT100_FONT_G0,
+    _VT100_FONT_G1,
+    _VT100_WRAP_ON,
+    _VT100_WRAP_OFF,
+    _VT100_ERASE_LINE_END,
+    _VT100_CURSOR_BACK_BY,
+    _VT100_CURSOR_FORWARD_BY,
+    _VT100_CURSOR_SAVE_POSITION,
+    _VT100_CURSOR_RESTORE_POSITION,
+    _VT100_CURSOR_ENABLE,
+    _VT100_CURSOR_DISABLE,
+    _VT100_CLS
+};
 
 //VT100 cmds given to us by the terminal software (they need to be > 8 bits so the handler can tell them apart from normal characters)
 #define _VT100_RESET                0x1000
@@ -55,19 +82,20 @@
 #define _VT100_CURSOR_DOWN          0x1006
 #define _VT100_BACKWARDS_TAB        0x1007
 
-#define _VT100_BLACK 0
-#define _VT100_RED 1
-#define _VT100_GREEN 2
-#define _VT100_YELLOW 3
-#define _VT100_BLUE 4
-#define _VT100_MAGENTA 5
-#define _VT100_CYAN 6
-#define _VT100_WHITE 7
+enum color{
+    _VT100_BLACK,
+    _VT100_RED,
+    _VT100_GREEN,
+    _VT100_YELLOW,
+    _VT100_BLUE,
+    _VT100_MAGENTA,
+    _VT100_CYAN,
+    _VT100_WHITE
+};
+
+
 
 #define _VT100_POS_IGNORE 0xffff
-
-#define TERM_DEVICE_NAME "UD3 Fibernet"
-#define TERM_VERSION_STRING "V1.0"
 
 #define TERM_HISTORYSIZE 16
 #define TERM_INPUTBUFFER_SIZE 128

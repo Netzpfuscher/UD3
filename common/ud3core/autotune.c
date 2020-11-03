@@ -52,35 +52,38 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 * commands a frequency sweep for the primary coil. It searches for a peak
 * and makes a second run with +-6kHz around the peak
 ******************************************************************************/
-uint8_t command_tune(char *commandline, port_str *ptr) {
-    SKIP_SPACE(commandline);
-    CHECK_NULL(commandline);
+uint8_t CMD_tune(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+    if(argCount==0 || strcmp(args[0], "-?") == 0){
+        ttprintf("Usage: tune [prim|sec]\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
     
     
-    SEND_CONST_STRING("Warning: The bridge will switch hard, make sure that the bus voltage is appropriate\r\n",ptr);
-    SEND_CONST_STRING("Press [y] to proceed\r\n",ptr);
+    ttprintf("Warning: The bridge will switch hard, make sure that the bus voltage is appropriate\r\n");
+    ttprintf("Press [y] to proceed\r\n");
+    port_str * ptr = handle->port;
     
     if(getch(ptr, portMAX_DELAY) != 'y'){
-        SEND_CONST_STRING("Tune aborted\r\n",ptr);
-        return 0;
+        ttprintf("Tune aborted\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
     }
     if(ptr->term_mode == PORT_TERM_TT){
         tsk_overlay_chart_stop();
         send_chart_clear(ptr);
         
     }
-    SEND_CONST_STRING("Start sweep:\r\n",ptr);
-    if (ntlibc_stricmp(commandline, "prim") == 0) {
+    ttprintf("Start sweep:\r\n");
+    if(strcmp(args[0], "prim") == 0){
     	run_adc_sweep(param.tune_start, param.tune_end, param.tune_pw, CT_PRIMARY, param.tune_delay, ptr);
-        SEND_CONST_STRING("Type cls to go back to normal telemtry chart\r\n",ptr);
-        return 0;
-    }else if (ntlibc_stricmp(commandline, "sec") == 0) {
-        run_adc_sweep(param.tune_start, param.tune_end, param.tune_pw, CT_SECONDARY, param.tune_delay, ptr);
-        SEND_CONST_STRING("Type cls to go back to normal telemetry chart\r\n",ptr);
-        return 0;
+        ttprintf("Type cls to go back to normal telemtry chart\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
     }
-
-    HELP_TEXT("Usage: tune [prim|sec]\r\n");
+    if(strcmp(args[0], "sec") == 0){
+        run_adc_sweep(param.tune_start, param.tune_end, param.tune_pw, CT_SECONDARY, param.tune_delay, ptr);
+        ttprintf("Type cls to go back to normal telemetry chart\r\n");
+        return TERM_CMD_EXIT_SUCCESS;;
+    }
+    return TERM_CMD_EXIT_SUCCESS;
 }
 
 void autotune_draw_d(port_str *ptr){

@@ -154,34 +154,37 @@ void qcw_stop(){
     QCW_enable_Control = 0;
 }
 
-uint8_t qcw_command_ramp(char *commandline, port_str *ptr){
-    SKIP_SPACE(commandline);
-    CHECK_NULL(commandline); 
+uint8_t CMD_ramp(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+    if(argCount==0 || strcmp(args[0], "-?") == 0){
+        ttprintf(   "Usage: ramp line x1 y1 x2 y2\r\n"
+                    "       ramp point x y\r\n"
+                    "       ramp clear\r\n"
+                    "       ramp draw\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    } 
     
-    char *buffer[5];
-    uint8_t items = split(commandline, buffer, sizeof(buffer)/sizeof(char*), ' ');
+   port_str * ptr = handle->port;
     
-    
-    if (ntlibc_stricmp(buffer[0], "point") == 0 && items == 3){
-        int x = ntlibc_atoi(buffer[1]);
-        int y = ntlibc_atoi(buffer[2]);
+    if(strcmp(args[0], "point") == 0 && argCount == 3){
+        int x = ntlibc_atoi(args[1]);
+        int y = ntlibc_atoi(args[2]);
         qcw_ramp_point(x,y);
-        return pdPASS;
+        return TERM_CMD_EXIT_SUCCESS;
         
-    } else if (ntlibc_stricmp(buffer[0], "line") == 0 && items == 5) {
-        int x0 = ntlibc_atoi(buffer[1]);
-        int y0 = ntlibc_atoi(buffer[2]);
-        int x1 = ntlibc_atoi(buffer[3]);
-        int y1 = ntlibc_atoi(buffer[4]);
+    } else if(strcmp(args[0], "line") == 0 && argCount == 5){
+        int x0 = ntlibc_atoi(args[1]);
+        int y0 = ntlibc_atoi(args[2]);
+        int x1 = ntlibc_atoi(args[3]);
+        int y1 = ntlibc_atoi(args[4]);
         qcw_ramp_line(x0,y0,x1,y1);
-        return pdPASS;
+        return TERM_CMD_EXIT_SUCCESS;
         
-    } else if (ntlibc_stricmp(buffer[0], "clear") == 0) {
+    } else if(strcmp(args[0], "clear") == 0){
         for(uint16_t i = 0; i<sizeof(ramp.data);i++){
             ramp.data[i] = 0;
         }
-        return pdPASS;
-    } else if (ntlibc_stricmp(buffer[0], "draw") == 0) {
+        return TERM_CMD_EXIT_SUCCESS;
+    } else if(strcmp(args[0], "draw") == 0){
         tsk_overlay_chart_stop();
         send_chart_clear(ptr);
         CHART temp;
@@ -194,12 +197,7 @@ uint8_t qcw_command_ramp(char *commandline, port_str *ptr){
         
         tt_chart_init(&temp,ptr);
         qcw_ramp_visualize(&temp,ptr);
-        return pdPASS;
+        return TERM_CMD_EXIT_SUCCESS;
     }
-    
-    
- 	HELP_TEXT("Usage: ramp line x1 y1 x2 y2\r\n"
-              "       ramp point x y\r\n"
-              "       ramp clear\r\n"
-              "       ramp draw\r\n");   
+     return TERM_CMD_EXIT_SUCCESS;
 }

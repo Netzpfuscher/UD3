@@ -26,10 +26,9 @@
 #define AUTOTUNE_H
 
 #include <device.h>
-#include "cli_basic.h"
+#include "TTerm.h"
 
-uint8_t command_tune(char *commandline, port_str *ptr);
-
+uint8_t CMD_tune(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 
 #endif
 

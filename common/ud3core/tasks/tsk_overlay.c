@@ -532,64 +532,66 @@ void init_tt(uint8_t with_chart, port_str *ptr){
 /*****************************************************************************
 * 
 ******************************************************************************/
-uint8_t command_status(char *commandline, port_str *ptr) {
-    SKIP_SPACE(commandline);
-    CHECK_NULL(commandline);
+uint8_t CMD_status(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+    if(argCount==0 || strcmp(args[0], "-?") == 0){
+        ttprintf("Usage: status [start|stop]\r\n");
+    }
 	
 
-	if (ntlibc_stricmp(commandline, "start") == 0) {
-		start_overlay_task(ptr);
-        return 1;
+	if(strcmp(args[0], "start") == 0){
+		start_overlay_task(((port_str*)handle->port));
+        return TERM_CMD_EXIT_SUCCESS;
 	}
-	if (ntlibc_stricmp(commandline, "stop") == 0) {
-		stop_overlay_task(ptr);
-        return 1;
+	if(strcmp(args[0], "stop") == 0){
+		stop_overlay_task(((port_str*)handle->port));
+        return TERM_CMD_EXIT_SUCCESS;
 	}
-
-	HELP_TEXT("Usage: status [start|stop]\r\n");
+    return TERM_CMD_EXIT_SUCCESS;
 }
 
-uint8_t command_tterm(char *commandline, port_str *ptr){
-    SKIP_SPACE(commandline);
-    CHECK_NULL(commandline);
+uint8_t CMD_tterm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+    if(argCount==0 || strcmp(args[0], "-?") == 0){
+        ttprintf("Usage: tterm [start|stop|mqtt|notelemetry]\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    port_str * ptr = handle->port;
     
-	if (ntlibc_stricmp(commandline, "start") == 0) {
+	if(strcmp(args[0], "start") == 0){
         ptr->term_mode = PORT_TERM_TT;
         init_tt(pdTRUE,ptr);
-        return 1;
+        return TERM_CMD_EXIT_SUCCESS;
     }
-    if (ntlibc_stricmp(commandline, "mqtt") == 0) {
+    if(strcmp(args[0], "mqtt") == 0){
         ptr->term_mode = PORT_TERM_MQTT;
         init_tt(pdFALSE,ptr);
-        return 1;
+        return TERM_CMD_EXIT_SUCCESS;
     }
-	if (ntlibc_stricmp(commandline, "notelemetry") == 0) {
+    if(strcmp(args[0], "notelemetry") == 0){
         ptr->term_mode = PORT_TERM_TT;
         stop_overlay_task(ptr);
-        return 1;
+        return TERM_CMD_EXIT_SUCCESS;
     }
-	if (ntlibc_stricmp(commandline, "stop") == 0) {
+	if(strcmp(args[0], "stop") == 0){
         ptr->term_mode = PORT_TERM_VT100;
         stop_overlay_task(ptr);
-        return 1;
+        return TERM_CMD_EXIT_SUCCESS;
 	} 
-    
-    HELP_TEXT("Usage: tterm [start|stop|mqtt|notelemetry]\r\n");
+    return TERM_CMD_EXIT_SUCCESS;
 }
 
 
-uint8_t telemetry_command_setup(char *commandline, port_str *ptr){
-    SKIP_SPACE(commandline);
-    CHECK_NULL(commandline); 
+uint8_t CMD_telemetry(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+    if(argCount==0 || strcmp(args[0], "-?") == 0){
+        ttprintf(   "Usage: telemetry list\r\n"
+                    "       telemetry ls\r\n"
+                    "       telemetry gauge n [name]\r\n"
+                    "       telemetry chart n [name]\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    } 
     
-    char *buffer[5];
-    char temp[40];
-    uint8_t ret;
-    
-    uint8_t items = split(commandline, buffer, sizeof(buffer)/sizeof(char*), ' ');
-    
-    
-    if (ntlibc_stricmp(buffer[0], "list") == 0){
+    port_str * ptr = handle->port;
+        
+    if(strcmp(args[0], "list") == 0){
         for(int i=0;i<N_GAUGES;i++){
             int cnt=-1;
             for(uint8_t w=0;w<N_TELE;w++){
@@ -599,15 +601,14 @@ uint8_t telemetry_command_setup(char *commandline, port_str *ptr){
                 }
             }
             if(cnt==TT_NO_TELEMETRY){
-                ret = snprintf(temp, sizeof(temp),"Gauge %i: none\r\n",i);
+                ttprintf("Gauge %i: none\r\n",i);
             }else{
                 if(tt.a[cnt].high_res && tt.a[cnt].divider > 1){
-                    ret = snprintf(temp, sizeof(temp),"Gauge %i: %s = %.2f %s\r\n",i,tt.a[cnt].name,(float)tt.a[cnt].value/(float)tt.a[cnt].divider,units[tt.a[cnt].unit]);
+                    ttprintf("Gauge %i: %s = %.2f %s\r\n",i,tt.a[cnt].name,(float)tt.a[cnt].value/(float)tt.a[cnt].divider,units[tt.a[cnt].unit]);
                 }else{
-                    ret = snprintf(temp, sizeof(temp),"Gauge %i: %s = %i %s\r\n",i,tt.a[cnt].name,tt.a[cnt].value,units[tt.a[cnt].unit]);
+                    ttprintf("Gauge %i: %s = %i %s\r\n",i,tt.a[cnt].name,tt.a[cnt].value,units[tt.a[cnt].unit]);
                 }
             }
-            send_buffer(temp,ret,ptr);
         }
         for(int i=0;i<N_CHARTS;i++){
             int cnt=-1;
@@ -618,39 +619,38 @@ uint8_t telemetry_command_setup(char *commandline, port_str *ptr){
                 }
             }
             if(cnt==TT_NO_TELEMETRY){
-                ret = snprintf(temp, sizeof(temp),"Chart %i: none\r\n",i);
+                ttprintf("Chart %i: none\r\n",i);
             }else{
                 if(tt.a[cnt].high_res && tt.a[cnt].divider > 1){
-                    ret = snprintf(temp, sizeof(temp),"Chart %i: %s = %.2f %s\r\n",i,tt.a[cnt].name,(float)tt.a[cnt].value/(float)tt.a[cnt].divider,units[tt.a[cnt].unit]);
+                    ttprintf("Chart %i: %s = %.2f %s\r\n",i,tt.a[cnt].name,(float)tt.a[cnt].value/(float)tt.a[cnt].divider,units[tt.a[cnt].unit]);
                 }else{
-                    ret = snprintf(temp, sizeof(temp),"Chart %i: %s = %i %s\r\n",i,tt.a[cnt].name,tt.a[cnt].value,units[tt.a[cnt].unit]);
+                    ttprintf("Chart %i: %s = %i %s\r\n",i,tt.a[cnt].name,tt.a[cnt].value,units[tt.a[cnt].unit]);
                 }
             }
-            send_buffer(temp,ret,ptr);
         }
         return pdPASS;
         
-    } else if (ntlibc_stricmp(buffer[0], "gauge") == 0 && items == 3) {
-        int n = ntlibc_atoi(buffer[1]);
+    } else if(strcmp(args[0], "gauge") == 0 && argCount == 3){
+        int n = ntlibc_atoi(args[1]);
         if(n>=N_GAUGES || n<0){
-            SEND_CONST_STRING("Gauge number must be between 0 and 6\r\n",ptr);
+            ttprintf("Gauge number must be between 0 and 6\r\n");
             return 0;
         }
-        if(ntlibc_stricmp(buffer[2],"none")==0){
+        if(ntlibc_stricmp(args[2],"none")==0){
             for(uint8_t w=0;w<N_TELE;w++){
                 if(n==tt.a[w].gauge){
                     tt.a[w].gauge=TT_NO_TELEMETRY;
                 }
             }
             send_gauge_config(n,0,0,"none",ptr);
-            SEND_CONST_STRING("OK\r\n",ptr);
+            ttprintf("OK\r\n");
             return pdPASS;
         }
         
         
         int cnt=-1;
         for(uint8_t w=0;w<N_TELE;w++){
-            if(ntlibc_stricmp(buffer[2],tt.a[w].name)==0){
+            if(ntlibc_stricmp(args[2],tt.a[w].name)==0){
                 for(uint8_t i=0;i<N_TELE;i++){
                     if(n==tt.a[i].gauge)tt.a[i].gauge=TT_NO_TELEMETRY;
                 }
@@ -659,10 +659,10 @@ uint8_t telemetry_command_setup(char *commandline, port_str *ptr){
             }
         }
         if(cnt==TT_NO_TELEMETRY){
-            SEND_CONST_STRING("Telemetry name not found\r\n",ptr); 
+            ttprintf("Telemetry name not found\r\n"); 
         }else{
             tt.a[cnt].gauge = n;
-            SEND_CONST_STRING("OK\r\n",ptr);
+            ttprintf("OK\r\n");
             if(tt.a[cnt].high_res){
                     send_gauge_config32(n,tt.a[cnt].min,tt.a[cnt].max,tt.a[cnt].divider,tt.a[cnt].name,ptr);
             }else{
@@ -671,25 +671,25 @@ uint8_t telemetry_command_setup(char *commandline, port_str *ptr){
         }
         return pdPASS;
 
-    } else if (ntlibc_stricmp(buffer[0], "chart") == 0 && items == 3) {
-        int8_t n = ntlibc_atoi(buffer[1]);
+    } else if (ntlibc_stricmp(args[0], "chart") == 0 && argCount == 3) {
+        int8_t n = ntlibc_atoi(args[1]);
         if(n>=N_CHARTS || n<0){
-            SEND_CONST_STRING("Chart number must be between 0 and 3\r\n",ptr);
+            ttprintf("Chart number must be between 0 and 3\r\n");
             return 0;
         }
-        if(ntlibc_stricmp(buffer[2],"none")==0){
+        if(ntlibc_stricmp(args[2],"none")==0){
             for(uint8_t w=0;w<N_TELE;w++){
                 if(n==tt.a[w].chart){
                     tt.a[w].chart=TT_NO_TELEMETRY;
                 }
             }
             send_chart_config(n,0,0,0,TT_UNIT_NONE,"none",ptr);
-            SEND_CONST_STRING("OK\r\n",ptr);
+            ttprintf("OK\r\n");
             return pdPASS;
         }
         int cnt=-1;
         for(uint8_t w=0;w<N_TELE;w++){
-            if(ntlibc_stricmp(buffer[2],tt.a[w].name)==0){
+            if(ntlibc_stricmp(args[2],tt.a[w].name)==0){
                 for(uint8_t i=0;i<N_TELE;i++){
                     if(n==tt.a[i].chart)tt.a[i].chart=TT_NO_TELEMETRY;
                 }
@@ -698,25 +698,18 @@ uint8_t telemetry_command_setup(char *commandline, port_str *ptr){
             }
         }
         if(cnt==TT_NO_TELEMETRY){
-            SEND_CONST_STRING("Telemetry name not found\r\n",ptr);
+            ttprintf("Telemetry name not found\r\n");
         }else{
             tt.a[cnt].chart = n;
-            SEND_CONST_STRING("OK\r\n",ptr);
+            ttprintf("OK\r\n");
             send_chart_config(n,tt.a[cnt].min,tt.a[cnt].max,tt.a[cnt].offset,tt.a[cnt].unit,tt.a[cnt].name,ptr);
         }
         return pdPASS;
 
-    } else if (ntlibc_stricmp(buffer[0], "ls") == 0) {
+    } else if (ntlibc_stricmp(args[0], "ls") == 0) {
         for(uint8_t w=0;w<N_TELE;w++){
-            ret = snprintf(temp, sizeof(temp),"%i: %s\r\n", w+1, tt.a[w].name);
-            send_buffer(temp,ret,ptr);
+            ttprintf("%i: %s\r\n", w+1, tt.a[w].name);
         }
         return pdPASS;
     }
-    
-    
- 	HELP_TEXT("Usage: telemetry list\r\n"
-              "       telemetry ls\r\n"
-              "       telemetry gauge n [name]\r\n"
-              "       telemetry chart n [name]\r\n");
 }

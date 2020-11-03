@@ -33,6 +33,7 @@
 #include "telemetry.h"
 #include <project.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include "helper/printf.h"
 #include "helper/debug.h"
 
@@ -56,39 +57,13 @@
 #include "qcw.h"
 #include "system.h"
 
+
 #define UNUSED_VARIABLE(N) \
 	do {                   \
 		(void)(N);         \
 	} while (0)
         
 	
-typedef struct {
-	const char *text;
-	uint8_t (*commandFunction)(char *commandline, port_str *ptr);
-	const char *help;
-} command_entry;
-
-uint8_t command_help(char *commandline, port_str *ptr);
-uint8_t command_get(char *commandline, port_str *ptr);
-uint8_t command_set(char *commandline, port_str *ptr);
-uint8_t command_tr(char *commandline, port_str *ptr);
-uint8_t command_udkill(char *commandline, port_str *ptr);
-uint8_t command_eprom(char *commandline, port_str *ptr);
-uint8_t command_top(char *commandline, port_str *ptr);
-uint8_t command_bootloader(char *commandline, port_str *ptr);
-uint8_t command_qcw(char *commandline, port_str *ptr);
-uint8_t command_bus(char *commandline, port_str *ptr);
-uint8_t command_load_default(char *commandline, port_str *ptr);
-uint8_t command_reset(char *commandline, port_str *ptr);
-uint8_t command_config_get(char *commandline, port_str *ptr);
-uint8_t command_fuse(char *commandline, port_str *ptr);
-uint8_t command_signals(char *commandline, port_str *ptr);
-uint8_t command_alarms(char *commandline, port_str *ptr);
-uint8_t command_relay(char *commandline, port_str *ptr);
-uint8_t command_con(char *commandline, port_str *ptr);
-uint8_t command_calib(char *commandline, port_str *ptr);
-uint8_t command_features(char *commandline, port_str *ptr);
-
 uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_QCWFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, port_str *ptr);
@@ -270,41 +245,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdFALSE,"d_calib"         , vdriver_lut                   , 0      ,0      ,0      ,NULL                        ,"For voltage measurement")
 };
 
-/*****************************************************************************
-* Command struct
-******************************************************************************/
-command_entry commands[] = {
-    ADD_COMMAND("set"		    ,command_set            ,"Usage set [param] [value]")
-    ADD_COMMAND("get"		    ,command_get            ,"Usage get [param]")
-    ADD_COMMAND("bootloader"    ,command_bootloader     ,"Start bootloader")
-    ADD_COMMAND("bus"           ,command_bus            ,"Bus [on/off]")
-    ADD_COMMAND("cls"		    ,command_cls            ,"Clear screen")
-    ADD_COMMAND("eeprom"	    ,command_eprom          ,"Save/Load config [load/save]")
-    ADD_COMMAND("help"          ,command_help           ,"This text")
-    ADD_COMMAND("kill"		    ,command_udkill         ,"Kills all UD Coils")
-    ADD_COMMAND("load_default"  ,command_load_default   ,"Loads the default parameters")
-    ADD_COMMAND("qcw"           ,command_qcw            ,"QCW [start/stop]")
-    ADD_COMMAND("reset"         ,command_reset          ,"Resets UD3")
-    ADD_COMMAND("status"	    ,command_status         ,"Displays coil status")
-    ADD_COMMAND("top"	        ,command_top            ,"Show running Tasks")
-    ADD_COMMAND("tr"		    ,command_tr             ,"Transient [start/stop]")
-    ADD_COMMAND("tune"	        ,command_tune           ,"Autotune [prim/sec]")
-    ADD_COMMAND("tterm"	        ,command_tterm          ,"Changes terminal mode")
-    ADD_COMMAND("config_get"    ,command_config_get     ,"Internal use")
-    ADD_COMMAND("fuse_reset"    ,command_fuse           ,"Reset the internal fuse")
-    ADD_COMMAND("signals"       ,command_signals        ,"For debugging")
-    ADD_COMMAND("alarms"        ,command_alarms         ,"Alarms [get/roll/reset]")
-    ADD_COMMAND("synthmon"      ,command_SynthMon       ,"Synthesizer status")
-    ADD_COMMAND("relay"         ,command_relay          ,"Switch user relay 3/4")
-    ADD_COMMAND("con"	        ,command_con            ,"Prints the connections")
-    ADD_COMMAND("calib"	        ,command_calib          ,"Calibrate Vdriver")
-    ADD_COMMAND("features"	    ,command_features       ,"Get supported features")
-    ADD_COMMAND("ramp"	        ,qcw_command_ramp       ,"Write QCW ramp")
-    ADD_COMMAND("telemetry"	    ,telemetry_command_setup,"Telemetry options")
-    ADD_COMMAND("debug"	        ,command_debug          ,"Debug mode")
-};
-
-
+   
 void eeprom_load(port_str *ptr){
     EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,ptr);
     i2t_set_limit(configuration.max_const_i,configuration.max_fault_i,10000);
@@ -735,13 +676,16 @@ void print_alarm(ALARMS *temp,port_str *ptr){
     Term_Color_White(ptr);
 }
 
-uint8_t command_alarms(char *commandline, port_str *ptr) {
-    SKIP_SPACE(commandline);
-    CHECK_NULL(commandline);
 
+uint8_t CMD_alarms(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+    if(argCount==0 || strcmp(args[0], "-?") == 0){
+        ttprintf("alarms [get|roll|reset]\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
     ALARMS temp;
+    port_str * ptr = handle->port;
     
-    if (ntlibc_stricmp(commandline, "get") == 0) {
+    if(strcmp(args[0], "get") == 0){
 
         Term_Move_Cursor_right(c_A,ptr);
         SEND_CONST_STRING("Number", ptr);
@@ -755,9 +699,9 @@ uint8_t command_alarms(char *commandline, port_str *ptr) {
                 print_alarm(&temp,ptr);
             }
         }
-    	return 1;
+    	return TERM_CMD_EXIT_SUCCESS;
     }
-    if (ntlibc_stricmp(commandline, "roll") == 0) {
+    if(strcmp(args[0], "roll") == 0){
         Term_Move_Cursor_right(c_A,ptr);
         SEND_CONST_STRING("Number", ptr);
         Term_Move_Cursor_right(c_B,ptr);
@@ -779,15 +723,13 @@ uint8_t command_alarms(char *commandline, port_str *ptr) {
                 old_num=temp.num;
             } 
         }
-        return 1;
+        return TERM_CMD_EXIT_SUCCESS;
     }
-    if (ntlibc_stricmp(commandline, "reset") == 0) {
+    if(strcmp(args[0], "reset") == 0){
         alarm_clear();
         SEND_CONST_STRING("Alarms reset...\r\n", ptr);
-        return 1;
+        return TERM_CMD_EXIT_SUCCESS;
     }
-    
-    HELP_TEXT("Usage: alarms [get|roll|reset]\r\n");
 }
 
 
@@ -869,26 +811,10 @@ uint8_t con_minstat(port_str *ptr){
 /*****************************************************************************
 * Prints the ethernet connections
 ******************************************************************************/
-uint8_t command_con(char *commandline, port_str *ptr) {
-    SKIP_SPACE(commandline); 
-    CHECK_NULL(commandline);
-    if (ntlibc_stricmp(commandline, "info") == 0) {
-        con_info(ptr);
-        return 0;
-	}
-    if (ntlibc_stricmp(commandline, "numcon") == 0) {
-        con_numcon(ptr);
-        return 0;
-	} 
-    if (ntlibc_stricmp(commandline, "min") == 0) {
-        con_minstat(ptr);
-        return 0;
-	}
-    HELP_TEXT("Usage: con [info|numcon|min]\r\n");
-}
-
 uint8_t CMD_con(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
-    if(argCount==0) return TERM_CMD_EXIT_ERROR;
+    if(argCount==0 || strcmp(args[0], "-?") == 0){
+        ttprintf("con [info|numcon|min]\r\n");
+    }
     
     if(strcmp(args[0], "info") == 0){
         con_info(portM);
@@ -910,8 +836,9 @@ uint8_t CMD_con(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
 /*****************************************************************************
 * Calibrate Vdriver
 ******************************************************************************/
-uint8_t command_calib(char *commandline, port_str *ptr){
+uint8_t CMD_calib(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
    // uint16_t vdriver_lut[9] = {0,3500,7000,10430,13840,17310,20740,24200,27657};
+    port_str * ptr = handle->port;
     uint32_t temp;
     Term_Disable_Cursor(ptr);
     Term_Erase_Screen(ptr);
@@ -945,23 +872,25 @@ uint8_t command_calib(char *commandline, port_str *ptr){
     vdriver_lut[8]= temp;
     SEND_CONST_STRING("Calibration finished\r\n",ptr);
     Term_Enable_Cursor(ptr);
-    return 1; 
+    return TERM_CMD_EXIT_SUCCESS;
 }
 
 /*****************************************************************************
 * Sends the features to teslaterm
 ******************************************************************************/
-uint8_t command_features(char *commandline, port_str *ptr){
+uint8_t CMD_features(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
+    port_str * ptr = handle->port;
 	for (uint8_t i = 0; i < sizeof(version)/sizeof(char*); i++) {
        send_features(version[i],ptr); 
     }
-    return 1; 
+    return TERM_CMD_EXIT_SUCCESS; 
 }
 
 /*****************************************************************************
 * Sends the configuration to teslaterm
 ******************************************************************************/
-uint8_t command_config_get(char *commandline, port_str *ptr){
+uint8_t CMD_config_get(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+    port_str * ptr = handle->port;
     char buffer[80];
 	for (uint8_t current_parameter = 0; current_parameter < sizeof(confparam) / sizeof(parameter_entry); current_parameter++) {
         if(confparam[current_parameter].parameter_type == PARAM_CONFIG  && confparam[current_parameter].visible){
@@ -970,65 +899,29 @@ uint8_t command_config_get(char *commandline, port_str *ptr){
         }
     }
     send_config("NULL","NULL", ptr);
-    return 1; 
+    return TERM_CMD_EXIT_SUCCESS; 
 }
 
 /*****************************************************************************
 * Kicks the controller into the bootloader
 ******************************************************************************/
-uint8_t command_bootloader(char *commandline, port_str *ptr) {
+uint8_t CMD_bootloader(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
 #if USE_BOOTLOADER
     Bootloadable_Load();
 #endif
-	return 1;
+	return TERM_CMD_EXIT_SUCCESS;
 }
 
 /*****************************************************************************
 * starts or stops the transient mode (classic mode)
 * also spawns a timer for the burst mode.
 ******************************************************************************/
-uint8_t command_tr(char *commandline, port_str *ptr) {
-    SKIP_SPACE(commandline);
-    CHECK_NULL(commandline);
-    
-    
-	if (ntlibc_stricmp(commandline, "start") == 0) {
-        isr_interrupter_Disable();
-        interrupter.pw = param.pw;
-		interrupter.prd = param.pwd;
-        update_interrupter();
-
-		tr_running = 1;
-        
-        callback_BurstFunction(NULL, 0, ptr);
-        
-		SEND_CONST_STRING("Transient Enabled\r\n", ptr);
-       
-        return 0;
-	}
-	if (ntlibc_stricmp(commandline, "stop") == 0) {
-        isr_interrupter_Enable();
-        if (xBurst_Timer != NULL) {
-			if(xTimerDelete(xBurst_Timer, 100 / portTICK_PERIOD_MS) != pdFALSE){
-			    xBurst_Timer = NULL;
-                burst_state = BURST_ON;
-            }
-        }
-
-        SEND_CONST_STRING("Transient Disabled\r\n", ptr);    
- 
-		interrupter.pw = 0;
-		update_interrupter();
-		tr_running = 0;
-		
-		return 0;
-	}
-	HELP_TEXT("Usage: tr [start|stop]\r\n");
-}
-
 uint8_t CMD_tr(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     
-    if(argCount==0) return TERM_CMD_EXIT_ERROR;
+    if(argCount==0 || strcmp(args[0], "-?") == 0){
+        ttprintf("Transient [start/stop]");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
     
     if(strcmp(args[0], "start") == 0){
         isr_interrupter_Disable();
@@ -1079,11 +972,13 @@ void vQCW_Timer_Callback(TimerHandle_t xTimer){
 /*****************************************************************************
 * starts the QCW mode. Spawns a timer for the automatic QCW pulses.
 ******************************************************************************/
-uint8_t command_qcw(char *commandline, port_str *ptr) {
-    SKIP_SPACE(commandline);
-    CHECK_NULL(commandline);
+uint8_t CMD_qcw(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+    if(argCount==0 || strcmp(args[0], "-?") == 0){
+        ttprintf("Usage: qcw [start|stop]\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
         
-	if (ntlibc_stricmp(commandline, "start") == 0) {
+	if(strcmp(args[0], "start") == 0){
         
         switch_synth(SYNTH_MIDI);
         if(param.qcw_repeat>99){
@@ -1091,44 +986,48 @@ uint8_t command_qcw(char *commandline, port_str *ptr) {
                 xQCW_Timer = xTimerCreate("QCW-Tmr", param.qcw_repeat / portTICK_PERIOD_MS, pdFALSE,(void * ) 0, vQCW_Timer_Callback);
                 if(xQCW_Timer != NULL){
                     xTimerStart(xQCW_Timer, 0);
-                    SEND_CONST_STRING("QCW Enabled\r\n", ptr);
+                    ttprintf("QCW Enabled\r\n");
                 }else{
-                    SEND_CONST_STRING("Cannot create QCW Timer\r\n", ptr);
+                    ttprintf("Cannot create QCW Timer\r\n");
                 }
             }
         }else{
             qcw_regenerate_ramp();
 		    qcw_start();
-            SEND_CONST_STRING("QCW single shot\r\n", ptr);
+            ttprintf("QCW single shot\r\n");
         }
 		
-		return 0;
+		return TERM_CMD_EXIT_SUCCESS;
 	}
-	if (ntlibc_stricmp(commandline, "stop") == 0) {
+	if(strcmp(args[0], "stop") == 0){
         if (xQCW_Timer != NULL) {
 				if(xTimerDelete(xQCW_Timer, 200 / portTICK_PERIOD_MS) != pdFALSE){
 				    xQCW_Timer = NULL;
                 } else {
-                    SEND_CONST_STRING("Cannot delete QCW Timer\r\n", ptr);
+                    ttprintf("Cannot delete QCW Timer\r\n");
                 }
 		}
         qcw_stop();
-		SEND_CONST_STRING("QCW Disabled\r\n", ptr);
+		ttprintf("QCW Disabled\r\n");
         switch_synth(param.synth);
-		return 0;
+		return TERM_CMD_EXIT_SUCCESS;
 	}
-	HELP_TEXT("Usage: qcw [start|stop]\r\n");
+	return TERM_CMD_EXIT_SUCCESS;
 }
 
 
 /*****************************************************************************
 * sets the kill bit, stops the interrupter and switches the bus off
 ******************************************************************************/
-uint8_t command_udkill(char *commandline, port_str *ptr) {
-    SKIP_SPACE(commandline);
-    CHECK_NULL(commandline);
+uint8_t CMD_udkill(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     
-    if (ntlibc_stricmp(commandline, "set") == 0) {
+    if(argCount==0 || strcmp(args[0], "-?") == 0){
+        ttprintf("Usage: kill [set|reset|get]\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    port_str * ptr = handle->port;
+    
+    if(strcmp(args[0], "set") == 0){
         interrupter_kill();
     	USBMIDI_1_callbackLocalMidiEvent(0, (uint8_t*)kill_msg);
     	bus_command = BUS_COMMAND_OFF;
@@ -1145,8 +1044,8 @@ uint8_t command_udkill(char *commandline, port_str *ptr) {
     	SEND_CONST_STRING("Killbit set\r\n", ptr);
         alarm_push(ALM_PRIO_CRITICAL,warn_kill_set, ALM_NO_VALUE);
     	Term_Color_White(ptr);
-        return 1;
-    }else if (ntlibc_stricmp(commandline, "reset") == 0) {
+        return TERM_CMD_EXIT_SUCCESS;
+    }else if(strcmp(args[0], "reset") == 0){
         interrupter_unkill();
         reset_fault();
         system_fault_Control = 0xFF;
@@ -1154,102 +1053,44 @@ uint8_t command_udkill(char *commandline, port_str *ptr) {
     	SEND_CONST_STRING("Killbit reset\r\n", ptr);
         alarm_push(ALM_PRIO_INFO,warn_kill_reset, ALM_NO_VALUE);
     	Term_Color_White(ptr);
-        return 1;
-    }else if (ntlibc_stricmp(commandline, "get") == 0) {
+        return TERM_CMD_EXIT_SUCCESS;
+    }else if(strcmp(args[0], "get") == 0){
         char buf[30];
         Term_Color_Red(ptr);
         int ret = snprintf(buf,sizeof(buf), "Killbit: %u\r\n",sysfault.interlock);
         send_buffer(buf,ret,ptr);
         Term_Color_White(ptr);
-        return 1;
+        return TERM_CMD_EXIT_SUCCESS;
     }
-    
-        
-    HELP_TEXT("Usage: kill [set|reset|get]\r\n");
+    return TERM_CMD_EXIT_SUCCESS;
 }
 
-#define VT100_ERASE_LINE_END "\x1b[K"
-#define VT100_BACKGROUND_COLOR_WHITE "\x1b[47m"
-#define VT100_FOREGROUND_COLOR_BLACK "\x1b[30m"
-#define VT100_ERASE_LINE_END "\x1b[K"
-#define VT100_RESET_ATTRIB "\x1b[0m"
-
-
-/*****************************************************************************
-* Prints the task list needs to be enabled in FreeRTOSConfig.h
-* only use it for debugging reasons
-******************************************************************************/
-uint8_t command_top(char *commandline, port_str *ptr) {
-    
-    Term_Erase_Screen(ptr);
-    do{
-        
-        TaskStatus_t * taskStats;
-        uint32_t taskCount = uxTaskGetNumberOfTasks();
-        uint32_t sysTime;
-        taskStats = pvPortMalloc( taskCount * sizeof( TaskStatus_t ) );
-        taskCount = uxTaskGetSystemState(taskStats, taskCount, &sysTime);
-        
-        Term_Move_Cursor(1,1,ptr);
-        char buf[100];
-        uint32_t ret;
-        
-        uint32_t cpuLoad = SYS_getCPULoadFine(taskStats, taskCount, sysTime);
-        ret = snprintf(buf,sizeof(buf),"%sbottom - %d\r\n%sTasks: \t%d\r\n%sCPU: \t%d,%d%%\r\n", VT100_ERASE_LINE_END, xTaskGetTickCount(), VT100_ERASE_LINE_END, taskCount, VT100_ERASE_LINE_END, cpuLoad / 10, cpuLoad % 10);
-        send_buffer(buf,ret,ptr);
-        
-        uint32_t heapRemaining = xPortGetFreeHeapSize();
-        
-        ret = snprintf(buf,sizeof(buf),"%sMem: \t%db total,\t %db free,\t %db used (%d%%)\r\n", VT100_ERASE_LINE_END, configTOTAL_HEAP_SIZE, heapRemaining, configTOTAL_HEAP_SIZE - heapRemaining, ((configTOTAL_HEAP_SIZE - heapRemaining) * 100) / configTOTAL_HEAP_SIZE);
-        send_buffer(buf,ret,ptr);
-        //taskStats[0].
-        ret = snprintf(buf,sizeof(buf),"%s%s%s", VT100_BACKGROUND_COLOR_WHITE, VT100_ERASE_LINE_END, VT100_FOREGROUND_COLOR_BLACK);
-        send_buffer(buf,ret,ptr);
-        ret = snprintf(buf,sizeof(buf),"PID \r\x1b[%dCName \r\x1b[%dCstate \r\x1b[%dC%%Cpu \r\x1b[%dCtime  \r\x1b[%dCStack \r\x1b[%dCHeap\r\n", 6, 7 + configMAX_TASK_NAME_LEN, 20 + configMAX_TASK_NAME_LEN, 27 + configMAX_TASK_NAME_LEN, 38 + configMAX_TASK_NAME_LEN, 45 + configMAX_TASK_NAME_LEN);
-        send_buffer(buf,ret,ptr);
-        ret = snprintf(buf,sizeof(buf),"%s", VT100_RESET_ATTRIB);
-        send_buffer(buf,ret,ptr);
-        
-        uint32_t currTask = 0;
-        for(;currTask < taskCount; currTask++){
-            if(strlen(taskStats[currTask].pcTaskName) != 4 || strcmp(taskStats[currTask].pcTaskName, "IDLE") != 0){
-                char name[configMAX_TASK_NAME_LEN+1];
-                strncpy(name, taskStats[currTask].pcTaskName, configMAX_TASK_NAME_LEN);
-                uint32_t load = (taskStats[currTask].ulRunTimeCounter) / (sysTime/500);
-                ret = snprintf(buf,sizeof(buf),"%s%d\r\x1b[%dC%s\r\x1b[%dC%s\r\x1b[%dC%d,%d\r\x1b[%dC%d\r\x1b[%dC%u\r\x1b[%dC%d\r\n", VT100_ERASE_LINE_END, taskStats[currTask].xTaskNumber, 6, name, 7 + configMAX_TASK_NAME_LEN
-                        , SYS_getTaskStateString(taskStats[currTask].eCurrentState), 20 + configMAX_TASK_NAME_LEN, load / 10, load % 10, 27 + configMAX_TASK_NAME_LEN, taskStats[currTask].ulRunTimeCounter
-                        , 38 + configMAX_TASK_NAME_LEN, taskStats[currTask].usStackHighWaterMark, 45 + configMAX_TASK_NAME_LEN, taskStats[currTask].usedHeap);
-                send_buffer(buf,ret,ptr);
-            }
-        }
-        vPortFree(taskStats);
-    }while(Term_check_break(ptr,1000));
-
-    return pdTRUE;
-	
-}
 
 /*****************************************************************************
 * Get a value from a parameter or print all parameters
 ******************************************************************************/
-uint8_t command_get(char *commandline, port_str *ptr) {
-	SKIP_SPACE(commandline);
+uint8_t CMD_get(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
+    port_str * ptr = handle->port;
     
-	if (*commandline == 0 || commandline == 0) //no param --> show help text
-	{
-		print_param_help(confparam, PARAM_SIZE(confparam), ptr);
-		return 1;
-	}
-
+    if(argCount==0){
+        print_param_help(confparam, PARAM_SIZE(confparam), ptr);
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    
+    if(strcmp(args[0], "-?") == 0){
+        ttprintf("Usage: get [parameter]\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    
 	for (uint8_t current_parameter = 0; current_parameter < sizeof(confparam) / sizeof(parameter_entry); current_parameter++) {
-		if (ntlibc_stricmp(commandline, confparam[current_parameter].name) == 0) {
+		if (strcmp(args[0], confparam[current_parameter].name) == 0) {
 			//Parameter found:
 			print_param(confparam,current_parameter,ptr);
-			return 1;
+			return TERM_CMD_EXIT_SUCCESS;
 		}
 	}
 	Term_Color_Red(ptr);
-	SEND_CONST_STRING("E: unknown param\r\n", ptr);
+	ttprintf("E: unknown param\r\n");
 	Term_Color_White(ptr);
 	return 0;
 }
@@ -1257,94 +1098,72 @@ uint8_t command_get(char *commandline, port_str *ptr) {
 /*****************************************************************************
 * Set a new value to a parameter
 ******************************************************************************/
-uint8_t command_set(char *commandline, port_str *ptr) {
-	SKIP_SPACE(commandline);
-	char *param_value;
+uint8_t CMD_set(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
 
-	if (commandline == NULL) {
-		//if (!port)
-		Term_Color_Red(ptr);
-		SEND_CONST_STRING("E: no name\r\n", ptr);
-		Term_Color_White(ptr);
-		return 0;
-	}
-
-	param_value = strchr(commandline, ' ');
-	if (param_value == NULL) {
-		Term_Color_Red(ptr);
-		SEND_CONST_STRING("E: no value\r\n", ptr);
-		Term_Color_White(ptr);
-		return 0;
-	}
-
-	*param_value = 0;
-	param_value++;
-
-	if (*param_value == '\0') {
-		Term_Color_Red(ptr);
-		SEND_CONST_STRING("E: no val\r\n", ptr);
-		Term_Color_White(ptr);
-		return 0;
-	}
-
+	if(argCount<2){
+        ttprintf("Usage: set [parameter] [value]\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    port_str * ptr = handle->port;
+    
 	for (uint8_t current_parameter = 0; current_parameter < sizeof(confparam) / sizeof(parameter_entry); current_parameter++) {
-		if (ntlibc_stricmp(commandline, confparam[current_parameter].name) == 0) {
+		if (strcmp(args[0], confparam[current_parameter].name) == 0) {
 			//parameter name found:
 
-			if (updateDefaultFunction(confparam, param_value,current_parameter, ptr)){
+			if (updateDefaultFunction(confparam, args[1],current_parameter, ptr)){
                 if(confparam[current_parameter].callback_function){
                     if (confparam[current_parameter].callback_function(confparam, current_parameter, ptr)){
                         Term_Color_Green(ptr);
-                        SEND_CONST_STRING("OK\r\n", ptr);
+                        ttprintf("OK\r\n");
                         Term_Color_White(ptr);
                         return 1;
                     }else{
                         Term_Color_Red(ptr);
-                        SEND_CONST_STRING("ERROR: Callback\r\n", ptr);
+                        ttprintf("ERROR: Callback\r\n");
                         Term_Color_White(ptr);
                         return 1;
                     }
                 }else{
                     Term_Color_Green(ptr);
-                    SEND_CONST_STRING("OK\r\n", ptr);
+                    ttprintf("OK\r\n");
                     Term_Color_White(ptr);
                     return 1;
                 }
 			} else {
 				Term_Color_Red(ptr);
-				SEND_CONST_STRING("NOK\r\n", ptr);
+				ttprintf("NOK\r\n");
 				Term_Color_White(ptr);
 				return 1;
 			}
 		}
 	}
 	Term_Color_Red(ptr);
-	SEND_CONST_STRING("E: unknown param\r\n", ptr);
+	ttprintf("E: unknown param\r\n");
 	Term_Color_White(ptr);
 	return 0;
 }
 
 
-
-
 /*****************************************************************************
 * Saves confparams to eeprom
 ******************************************************************************/
-uint8_t command_eprom(char *commandline, port_str *ptr) {
-	SKIP_SPACE(commandline);
-    CHECK_NULL(commandline);
-    
+uint8_t CMD_eeprom(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
+    if(argCount==0 || strcmp(args[0], "-?") == 0){
+        ttprintf("Usage: eprom [load|save]\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    port_str * ptr = handle->port;
     EEPROM_1_UpdateTemperature();
 	uint8 sfflag = system_fault_Read();
 	system_fault_Control = 0; //halt tesla coil operation during updates!
-	if (ntlibc_stricmp(commandline, "save") == 0) {
+	if(strcmp(args[0], "save") == 0){
         EEPROM_check_hash(confparam,PARAM_SIZE(confparam),ptr);
 	    EEPROM_write_conf(confparam, PARAM_SIZE(confparam),0, ptr);
 
 		system_fault_Control = sfflag;
-		return 0;
+		return TERM_CMD_EXIT_SUCCESS;
 	}
-	if (ntlibc_stricmp(commandline, "load") == 0) {
+	if(strcmp(args[0], "load") == 0){
         uint8 sfflag = system_fault_Read();
         system_fault_Control = 0; //halt tesla coil operation during updates!
 		EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,ptr);
@@ -1353,179 +1172,83 @@ uint8_t command_eprom(char *commandline, port_str *ptr) {
 	    initialize_charging();
 	    configure_ZCD_to_PWM();
 	    system_fault_Control = sfflag;
-		return 0;
+		return TERM_CMD_EXIT_SUCCESS;
 	}
-	HELP_TEXT("Usage: eprom [load|save]\r\n");
-}
-
-/*****************************************************************************
-* Prints the help text
-******************************************************************************/
-uint8_t command_help(char *commandline, port_str *ptr) {
-	UNUSED_VARIABLE(commandline);
-	SEND_CONST_STRING("\r\nCommands:\r\n", ptr);
-	for (uint8_t current_command = 0; current_command < (sizeof(commands) / sizeof(command_entry)); current_command++) {
-		SEND_CONST_STRING("\t", ptr);
-		Term_Color_Cyan(ptr);
-		send_string((char *)commands[current_command].text, ptr);
-		Term_Color_White(ptr);
-		if (strlen(commands[current_command].text) > 7) {
-			SEND_CONST_STRING("\t-> ", ptr);
-		} else {
-			SEND_CONST_STRING("\t\t-> ", ptr);
-		}
-		send_string((char *)commands[current_command].help, ptr);
-		SEND_CONST_STRING("\r\n", ptr);
-	}
-
-	SEND_CONST_STRING("\r\nParameters:\r\n", ptr);
-	for (uint8_t current_command = 0; current_command < sizeof(confparam) / sizeof(parameter_entry); current_command++) {
-        if(confparam[current_command].parameter_type == PARAM_DEFAULT && confparam[current_command].visible){
-            SEND_CONST_STRING("\t", ptr);
-            Term_Color_Cyan(ptr);
-            send_string((char *)confparam[current_command].name, ptr);
-            Term_Color_White(ptr);
-            if (strlen(confparam[current_command].name) > 7) {
-                SEND_CONST_STRING("\t-> ", ptr);
-            } else {
-                SEND_CONST_STRING("\t\t-> ", ptr);
-            }
-
-            send_string((char *)confparam[current_command].help, ptr);
-            SEND_CONST_STRING("\r\n", ptr);
-        }
-	}
-
-	SEND_CONST_STRING("\r\nConfiguration:\r\n", ptr);
-	for (uint8_t current_command = 0; current_command < sizeof(confparam) / sizeof(parameter_entry); current_command++) {
-        if(confparam[current_command].parameter_type == PARAM_CONFIG && confparam[current_command].visible){
-            SEND_CONST_STRING("\t", ptr);
-            Term_Color_Cyan(ptr);
-            send_string((char *)confparam[current_command].name, ptr);
-            Term_Color_White(ptr);
-            if (strlen(confparam[current_command].name) > 7) {
-                SEND_CONST_STRING("\t-> ", ptr);
-            } else {
-                SEND_CONST_STRING("\t\t-> ", ptr);
-            }
-
-            send_string((char *)confparam[current_command].help, ptr);
-            SEND_CONST_STRING("\r\n", ptr);
-        }
-	}
-
-	return 0;
+    return TERM_CMD_EXIT_SUCCESS;
 }
 
 /*****************************************************************************
 * Switches the bus on/off
 ******************************************************************************/
-uint8_t command_bus(char *commandline, port_str *ptr) {
-    SKIP_SPACE(commandline);
-    CHECK_NULL(commandline);
+uint8_t CMD_bus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+    if(argCount==0 || strcmp(args[0], "-?") == 0){
+        ttprintf("Usage: bus [on|off]\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
 
-	if (ntlibc_stricmp(commandline, "on") == 0) {
+	if(strcmp(args[0], "on") == 0){
 		bus_command = BUS_COMMAND_ON;
-		SEND_CONST_STRING("BUS ON\r\n", ptr);
-        return 1;
+		ttprintf("BUS ON\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
 	}
-	if (ntlibc_stricmp(commandline, "off") == 0) {
+	if(strcmp(args[0], "off") == 0){
 		bus_command = BUS_COMMAND_OFF;
-		SEND_CONST_STRING("BUS OFF\r\n", ptr);
-        return 1;
+		ttprintf("BUS OFF\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
 	}
-    
-    HELP_TEXT("Usage: bus [on|off]\r\n");
 }
 /*****************************************************************************
 * Resets the software fuse
 ******************************************************************************/
-uint8_t command_fuse(char *commandline, port_str *ptr){
+uint8_t CMD_fuse(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     i2t_reset();
-    return 1;
+    return TERM_CMD_EXIT_SUCCESS;
 }
 
 /*****************************************************************************
 * Loads the default parametes out of flash
 ******************************************************************************/
-uint8_t command_load_default(char *commandline, port_str *ptr) {
-    SEND_CONST_STRING("Default parameters loaded\r\n", ptr);
+uint8_t CMD_load_defaults(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+    ttprintf("Default parameters loaded\r\n");
     init_config();
-    return 1;
+    return TERM_CMD_EXIT_SUCCESS;
 }
 
 /*****************************************************************************
 * Reset of the controller
 ******************************************************************************/
-uint8_t command_reset(char *commandline, port_str *ptr){
+uint8_t CMD_reset(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     CySoftwareReset();
-    return 1;
+    return TERM_CMD_EXIT_SUCCESS;
 }
 
 /*****************************************************************************
 * Switches the user relay 3 or 4
 ******************************************************************************/
-uint8_t command_relay(char *commandline, port_str *ptr){
-    SKIP_SPACE(commandline);
-    CHECK_NULL(commandline);
+uint8_t CMD_relay(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+    if(argCount<2 || strcmp(args[0], "-?") == 0){
+        ttprintf("Usage: relay 3/4 [1|0]\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
     
-    char *buffer[2];
-    uint8_t items = split(commandline, buffer, sizeof(buffer)/sizeof(char*), ' ');
-    if(items<2) goto helptext;
-    
-    uint8_t r_number = ntlibc_atoi(buffer[0]);
-    uint8_t value = ntlibc_atoi(buffer[1]);
-    if(value > 1) goto helptext;
+    uint8_t r_number = atoi(args[0]);
+    uint8_t value = atoi(args[1]);
+    if(value > 1){
+        ttprintf("Usage: relay 3/4 [1|0]\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
     
     if(r_number == 3){
         Relay3_Write(value);
-        return 1;
+        return TERM_CMD_EXIT_SUCCESS;
     }
     if(r_number == 4){
         Relay4_Write(value);
-        return 1;
-    }    
-    HELP_TEXT("Usage: relay 3/4 [1|0]\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    return TERM_CMD_EXIT_SUCCESS;
 }
 
-
-
-
-
-/*****************************************************************************
-* Clears the terminal screen and displays the logo
-******************************************************************************/
-uint8_t command_cls(char *commandline, port_str *ptr) {
-    tsk_overlay_chart_start();
-	Term_Erase_Screen(ptr);
-    SEND_CONST_STRING("  _   _   ___    ____    _____              _\r\n",ptr);
-    SEND_CONST_STRING(" | | | | |   \\  |__ /   |_   _|  ___   ___ | |  __ _\r\n",ptr);
-    SEND_CONST_STRING(" | |_| | | |) |  |_ \\     | |   / -_) (_-< | | / _` |\r\n",ptr);
-    SEND_CONST_STRING("  \\___/  |___/  |___/     |_|   \\___| /__/ |_| \\__,_|\r\n\r\n",ptr);
-    SEND_CONST_STRING("\tBuild: ",ptr);
-    SEND_CONST_STRING(__DATE__,ptr);
-    SEND_CONST_STRING(" - ",ptr);
-    SEND_CONST_STRING(__TIME__,ptr);
-    SEND_CONST_STRING("\r\n",ptr);
-    SEND_CONST_STRING("\tCoil: ",ptr);
-    send_string(configuration.ud_name,ptr);
-    SEND_CONST_STRING("\r\n\r\n",ptr);
-	return 1;
-}
-
-/*
-uint8_t CMD_cls(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
-    tsk_overlay_chart_start();
-	TERM_sendVT100Code(handle,_VT100_RESET,0);
-    ttprintf("  _   _   ___    ____    _____              _\r\n");
-    ttprintf(" | | | | |   \\  |__ /   |_   _|  ___   ___ | |  __ _\r\n");
-    ttprintf(" | |_| | | |) |  |_ \\     | |   / -_) (_-< | | / _` |\r\n");
-    ttprintf("  \\___/  |___/  |___/     |_|   \\___| /__/ |_| \\__,_|\r\n\r\n");
-    ttprintf("\tBuild: %s - %s\r\n",__DATE__, __TIME__);
-    ttprintf("\tCoil: %s\r\n\r\n",configuration.ud_name);
-	return 1;
-}
-*/
 
 /*****************************************************************************
 * Signal debugging
@@ -1582,6 +1305,7 @@ void send_signal_state_wo_new(uint8_t signal, uint8_t inverted, TERMINAL_HANDLE 
 }
 
 uint8_t CMD_signals(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+    TERM_sendVT100Code(handle, _VT100_CLS, 0);
     TERM_sendVT100Code(handle, _VT100_CURSOR_DISABLE, 0);
     do{
         TERM_sendVT100Code(handle, _VT100_CURSOR_POS1, 0);
@@ -1662,131 +1386,4 @@ uint8_t CMD_signals(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
 
     return TERM_CMD_EXIT_SUCCESS;
 }
-
-uint8_t command_signals(char *commandline, port_str *ptr) {
-    SKIP_SPACE(commandline);
-    char buffer[80];
-    Term_Disable_Cursor(ptr);
-    Term_Erase_Screen(ptr);
-    while(Term_check_break(ptr,250)){
-        Term_Move_Cursor(1,1,ptr);
-        SEND_CONST_STRING("Signal state [CTRL+C] for quit:\r\n", ptr);
-        SEND_CONST_STRING("**************************\r\n", ptr);
-        SEND_CONST_STRING("UVLO pin: ", ptr);
-        send_signal_state_wo(UVLO_status_Status,pdTRUE,ptr);
-        SEND_CONST_STRING(" Crystal clock: ", ptr);
-        send_signal_state((CY_GET_XTND_REG8((void CYFAR *)CYREG_FASTCLK_XMHZ_CSR) & 0x80u),pdTRUE,ptr);
-        
-        SEND_CONST_STRING("Sysfault driver undervoltage: ", ptr);
-        send_signal_state(sysfault.uvlo,pdFALSE,ptr);
-        SEND_CONST_STRING("Sysfault Temp 1: ", ptr);
-        send_signal_state_wo(sysfault.temp1,pdFALSE,ptr);
-        SEND_CONST_STRING(" Temp 2: ", ptr);
-        send_signal_state(sysfault.temp2,pdFALSE,ptr);
-        SEND_CONST_STRING("Sysfault fuse: ", ptr);
-        send_signal_state_wo(sysfault.fuse,pdFALSE,ptr);
-        SEND_CONST_STRING(" charging: ", ptr);
-        send_signal_state(sysfault.charge,pdFALSE,ptr);
-        SEND_CONST_STRING("Sysfault watchdog: ", ptr);
-        send_signal_state_wo(sysfault.watchdog,pdFALSE,ptr);
-        SEND_CONST_STRING(" updating: ", ptr);
-        send_signal_state(sysfault.update,pdFALSE,ptr);
-        SEND_CONST_STRING("Sysfault bus undervoltage: ", ptr);
-        send_signal_state(sysfault.bus_uv,pdFALSE,ptr);
-        SEND_CONST_STRING("Sysfault interlock: ", ptr);
-        send_signal_state_wo(sysfault.interlock,pdFALSE,ptr);
-        SEND_CONST_STRING(" link: ", ptr);
-        send_signal_state_wo(sysfault.link_state,pdFALSE,ptr);
-        SEND_CONST_STRING(" combined: ", ptr);
-        send_signal_state(system_fault_Read(),pdTRUE,ptr);
-        
-        SEND_CONST_STRING("Relay 1: ", ptr);
-        send_signal_state_wo((relay_Read()&0b1),pdFALSE,ptr);
-        SEND_CONST_STRING(" Relay 2: ", ptr);
-        send_signal_state_wo((relay_Read()&0b10),pdFALSE,ptr);
-        SEND_CONST_STRING(" Relay 3: ", ptr);
-        send_signal_state_wo(Relay3_Read(),pdFALSE,ptr);
-        SEND_CONST_STRING(" Relay 4: ", ptr);
-        send_signal_state(Relay4_Read(),pdFALSE,ptr);
-        SEND_CONST_STRING("Fan: ", ptr);
-        send_signal_state_wo(Fan_Read(),pdFALSE,ptr);
-        SEND_CONST_STRING(" Bus status: ", ptr);
-        Term_Color_Cyan(ptr);
-        switch(tt.n.bus_status.value){
-            case BUS_BATT_OV_FLT:
-                SEND_CONST_STRING("Overvoltage      ", ptr);
-            break;
-            case BUS_BATT_UV_FLT:
-                SEND_CONST_STRING("Undervoltage     ", ptr);
-            break;
-            case BUS_CHARGING:
-                SEND_CONST_STRING("Charging         ", ptr);
-            break;
-            case BUS_OFF:
-                SEND_CONST_STRING("Off              ", ptr);
-            break;
-            case BUS_READY:
-                SEND_CONST_STRING("Ready            ", ptr);
-            break;
-            case BUS_TEMP1_FAULT:
-                SEND_CONST_STRING("Temperature fault", ptr);
-            break;
-        }
-        SEND_CONST_STRING("\r\n", ptr);
-        Term_Color_White(ptr); 
-        SEND_CONST_STRING("                                    \r", ptr);
-        snprintf(buffer,sizeof(buffer),"Temp 1: %i*C Temp 2: %i*C\r\n", tt.n.temp1.value, tt.n.temp2.value);
-        send_string(buffer, ptr);
-        SEND_CONST_STRING("                                    \r", ptr);
-        snprintf(buffer,sizeof(buffer),"Vbus: %u mV Vbatt: %u mV\r\n", ADC_CountsTo_mVolts(ADC_active_sample_buf[0].v_bus),ADC_CountsTo_mVolts(ADC_active_sample_buf[0].v_batt));
-        send_string(buffer, ptr);
-        SEND_CONST_STRING("                                    \r", ptr);
-        snprintf(buffer,sizeof(buffer),"Ibus: %u mV Vdriver: %u mV\r\n\r\n", ADC_CountsTo_mVolts(ADC_active_sample_buf[0].i_bus),tt.n.driver_v.value);
-        send_string(buffer, ptr);
-
-    }
-    Term_Enable_Cursor(ptr);
-	return 1;
-}
-
-
-/*****************************************************************************
-* Interprets the Input String
-******************************************************************************/
-void nt_interpret(char *text, port_str *ptr) {
-    int8_t max_len=-1;
-    int8_t max_index=-1;
-    
-    char* p_text=text;
-    while(*p_text){
-        if(*p_text==' ') break;
-        *p_text=ntlibc_tolower(*p_text);
-        p_text++;
-    }
-    
-	for (uint8_t current_command = 0; current_command < (sizeof(commands) / sizeof(command_entry)); current_command++) {
-        uint8_t text_len = strlen(commands[current_command].text);
-		if (memcmp(text, commands[current_command].text, text_len) == 0) {
-            if(text_len > max_len){
-			    max_len = text_len;
-                max_index = current_command;
-            }
-		}
-	}
-    
-    if(max_index != -1){
-       commands[max_index].commandFunction((char *)strchr(text, ' '), ptr);
-       return;
-        
-    }
- 
-	if (*text) {
-		Term_Color_Red(ptr);
-		SEND_CONST_STRING("Unknown Command: ", ptr);
-		send_string(text, ptr);
-		SEND_CONST_STRING("\r\n", ptr);
-		Term_Color_White(ptr);
-	}
-}
-
 

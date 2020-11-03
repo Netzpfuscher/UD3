@@ -839,11 +839,12 @@ void switch_synth(uint8_t synth){
     kill_accu();   
 }
 
-uint8_t command_SynthMon(char *commandline, port_str *ptr){
+uint8_t CMD_SynthMon(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     char buf[80];
     uint8_t ret;
     uint32_t freq=0;
     uint8_t channels=N_CHANNEL;
+    port_str * ptr = handle->port;
     
     Term_Disable_Cursor(ptr);
     Term_Erase_Screen(ptr);
@@ -881,7 +882,7 @@ uint8_t command_SynthMon(char *commandline, port_str *ptr){
     }
     SEND_CONST_STRING("\r\n",ptr);
     Term_Enable_Cursor(ptr);
-    return 1;
+    return TERM_CMD_EXIT_SUCCESS;
 }
 
 /* `#END` */

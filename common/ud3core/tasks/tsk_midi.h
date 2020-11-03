@@ -39,6 +39,7 @@
 #include "semphr.h"
     
 #include "cli_basic.h"
+#include "TTerm.h"
     
 typedef struct __midich__ {
 	//uint8 expression; // Expression: Control change (Bxh) 0 bH
@@ -120,7 +121,7 @@ struct _filter{
 
 extern struct _filter filter;
 
-uint8_t command_SynthMon(char *commandline, port_str *ptr);
+uint8_t CMD_SynthMon(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 uint8_t callback_synthFilter(parameter_entry * params, uint8_t index, port_str *ptr);
 uint8_t callback_SynthFunction(parameter_entry * params, uint8_t index, port_str *ptr);
 

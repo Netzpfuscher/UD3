@@ -1,3 +1,26 @@
+/*
+ * TTerm
+ *
+ * Copyright (c) 2020 Thorben Zethoff
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+    
 #if PIC32 == 1
 #include <xc.h>
 #endif    
@@ -52,7 +75,7 @@ TERMINAL_HANDLE * TERM_createNewHandle(TermPrintHandler printFunction ,const cha
     //TODO VT100 reset at boot
     //TODO add min start frame to signal that debugging started and print this again
     //TODO colors in the boot message
-  //  TERM_printBootMessage(ret);
+    TERM_printBootMessage(ret);
 #endif
     return ret;
 }
@@ -180,7 +203,6 @@ void TERM_printBootMessage(TERMINAL_HANDLE * handle){
     ttprintf("\r\n\n\n%s\r\n", TERM_startupText1);
     ttprintf("%s\r\n", TERM_startupText2);
     ttprintf("%s\r\n", TERM_startupText3);
-    ttprintf("\r\n%s%sWARNING%s: You are now in the FiberNet console\r\n", TERM_getVT100Code(_VT100_BACKGROUND_COLOR, _VT100_RED), TERM_getVT100Code(_VT100_BLINK, 0), TERM_getVT100Code(_VT100_RESET_ATTRIB, 0)); TERM_sendVT100Code(handle, _VT100_WRAP_ON, 0);
     
     if(handle->currBufferLength == 0){
         ttprintf("\r\n\r\n%s@%s>", handle->currUserName, TERM_DEVICE_NAME);
@@ -809,6 +831,9 @@ void TERM_sendVT100Code(TERMINAL_HANDLE * handle, uint16_t cmd, uint8_t var){
         case _VT100_CURSOR_DISABLE:
             ttprintf("\x1b[?25l");
             break;
+        case _VT100_CLS:
+            ttprintf("\x1b[2J\033[1;1H");
+            break;
             
     }
 }
@@ -917,6 +942,16 @@ const char * TERM_getVT100Code(uint16_t cmd, uint8_t var){
         case _VT100_ERASE_LINE_END:
             return "\x1b[K";
             
+        case _VT100_CURSOR_ENABLE:
+            return "\x1b[?25h";
+            break;
+        case _VT100_CURSOR_DISABLE:
+            return "\x1b[?25l";
+            break;
+        case _VT100_CLS:
+            return "\x1b[2J\033[1;1H";
+            break;
+            
     }
     return "";
 }
@@ -931,7 +966,7 @@ void TERM_removeProgramm(TERMINAL_HANDLE * handle){
 
 
 #ifdef TERM_ENABLE_STARTUP_TEXT
-const char TERM_startupText1[] = "\r\n   _/    _/  _/_/_/    _/_/_/        _/_/_/_/  _/  _/                            _/      _/              _/      \r\n  _/    _/  _/    _/        _/      _/            _/_/_/      _/_/    _/  _/_/  _/_/    _/    _/_/    _/_/_/_/   ";
-const char TERM_startupText2[] = " _/    _/  _/    _/    _/_/        _/_/_/    _/  _/    _/  _/_/_/_/  _/_/      _/  _/  _/  _/_/_/_/    _/        \r\n_/    _/  _/    _/        _/      _/        _/  _/    _/  _/        _/        _/    _/_/  _/          _/         ";
-const char TERM_startupText3[] = " _/_/    _/_/_/    _/_/_/        _/        _/  _/_/_/      _/_/_/  _/        _/      _/    _/_/_/      _/_/   ";
+const char TERM_startupText1[] = "  _   _   ___    ____    _____              _\r\n | | | | |   \\  |__ /   |_   _|  ___   ___ | |  __ _\r\n | |_| | | |) |  |_ \\     | |   / -_) (_-< | | / _` |";
+const char TERM_startupText2[] = "  \\___/  |___/  |___/     |_|   \\___| /__/ |_| \\__,_|\r\n";
+const char TERM_startupText3[] = "\tBuild: " __DATE__ " - " __TIME__ "\r\n";
 #endif   

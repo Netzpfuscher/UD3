@@ -25,11 +25,11 @@
 #include <stdlib.h>
 
 #include "debug.h"
-#include "ntlibc.h"
 #include "printf.h"
 #include "min.h"
 #include "min_id.h"
 #include "tasks/tsk_min.h"
+#include "tasks/tsk_cli.h"
 
 port_str *debug_port;
 uint8_t debug_id=0xFF;
@@ -37,22 +37,20 @@ uint8_t debug_id=0xFF;
 #define CTRL_C        0x03
 #define DEBUG_LOOP_MS 10
 
-uint8_t print_debug(port_str *ptr, uint8_t id, uint8_t fibernet){
-    debug_port = ptr;
+uint8_t print_debug(TERMINAL_HANDLE * handle, uint8_t id, uint8_t fibernet){
+    debug_port = portM;
     debug_id = id;
-    Term_Erase_Screen(ptr);
+    TERM_sendVT100Code(handle, _VT100_CLS, 0);
     char buffer[80];
-    uint8_t ret;
     if(fibernet){
-        ret = snprintf(buffer,sizeof(buffer),"Entering fibernet [CTRL+C] for exit\r\n");
+        ttprintf("Entering fibernet [CTRL+C] for exit\r\n");
         min_send(id,(uint8_t*)ESC_STR "c",strlen(ESC_STR "c"),DEBUG_LOOP_MS /portTICK_RATE_MS);
     }else{
-        ret = snprintf(buffer,sizeof(buffer),"Entering debug @%u [CTRL+C] for exit\r\n", id);
+        ttprintf("Entering debug @%u [CTRL+C] for exit\r\n", id);
     }
-    send_buffer(buffer,ret,ptr);
     uint8_t c=0;
     while(c != CTRL_C){
-        uint8_t len = xStreamBufferReceive(ptr->rx,buffer,sizeof(buffer),DEBUG_LOOP_MS /portTICK_RATE_MS);
+        uint8_t len = xStreamBufferReceive(portM->rx,buffer,sizeof(buffer),DEBUG_LOOP_MS /portTICK_RATE_MS);
         for(uint32_t i=0;i<len;i++){
             if(buffer[i]==CTRL_C) c = CTRL_C;   
         }
@@ -63,19 +61,19 @@ uint8_t print_debug(port_str *ptr, uint8_t id, uint8_t fibernet){
     }
     debug_port = NULL;
     debug_id = 0xFF;
-    SEND_CONST_STRING("\r\n",ptr);
+    ttprintf("\r\n");
     return 1;
 }
 
-uint8_t print_min_debug(port_str *ptr){
-    Term_Erase_Screen(ptr);
-    SEND_CONST_STRING("Entering min debug [CTRL+C] for exit\r\n",ptr)
-    debug_port = ptr;
+uint8_t print_min_debug(TERMINAL_HANDLE * handle){
+    TERM_sendVT100Code(handle, _VT100_CLS, 0);
+    ttprintf("Entering min debug [CTRL+C] for exit\r\n");
+    debug_port = portM;
     min_debug = pdTRUE;
-    while(Term_check_break(ptr,250));
+    while(Term_check_break(handle,250));
     min_debug = pdFALSE;
     debug_port = NULL;
-    SEND_CONST_STRING("\r\n",ptr);
+    ttprintf("\r\n");
     return 1;
 }
 
@@ -85,18 +83,17 @@ uint8_t CMD_debug(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
                     "debug min\r\n");
         return TERM_CMD_EXIT_SUCCESS;
     } 
-    port_str * ptr = handle->port;
 
     if(strcmp(args[0], "min") == 0){
-        print_min_debug(ptr);
+        print_min_debug(handle);
         return TERM_CMD_EXIT_SUCCESS;
 	}
     if(strcmp(args[0], "fn") == 0){
-        print_debug(ptr,MIN_ID_DEBUG,pdTRUE);
+        print_debug(handle,MIN_ID_DEBUG,pdTRUE);
         return TERM_CMD_EXIT_SUCCESS;
 	}
     uint8_t id = atoi(args[0]);
-    print_debug(ptr,id,pdFALSE);
+    print_debug(handle,id,pdFALSE);
     return TERM_CMD_EXIT_SUCCESS;
 }
 

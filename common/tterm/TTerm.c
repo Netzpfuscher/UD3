@@ -192,6 +192,7 @@ uint8_t TERM_processBuffer(uint8_t * data, uint16_t length, TERMINAL_HANDLE * ha
             }
         }
     }
+    return TERM_CMD_EXIT_SUCCESS;
 }
 
 unsigned isACIILetter(char c){
@@ -463,6 +464,7 @@ uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle){
             TERM_printDebug(handle, "unknown code received: 0x%02x\r\n", c);
             break;
     }
+    return TERM_CMD_EXIT_SUCCESS;
 }
 
 void TERM_checkForCopy(TERMINAL_HANDLE * handle, COPYCHECK_MODE mode){
@@ -659,7 +661,6 @@ void TERM_freeCommandList(TermCommandDescriptor ** cl, uint16_t length){
 
 uint8_t TERM_buildCMDList(){
     uint16_t currPos = 1;
-    uint32_t startTime = xTaskGetTickCount();
     while(currPos < TERM_cmdCount){
         TermCommandDescriptor * currCMD = TERM_cmdList[currPos];
         TermCommandDescriptor * lastCMD = TERM_cmdList[currPos - 1];
@@ -672,7 +673,7 @@ uint8_t TERM_buildCMDList(){
             currPos ++;
         }
     }
-    //UART_print("Sorted the command list in %d ms\r\n", xTaskGetTickCount() - startTime);
+    return TERM_CMD_EXIT_SUCCESS;
 }
 
 TermCommandDescriptor * TERM_addCommand(TermCommandFunction function, const char * command, const char * description, uint8_t minPermissionLevel){

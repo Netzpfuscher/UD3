@@ -774,3 +774,15 @@ void stream_printf(void * port, char* format, ...){
     return;
 }
 
+void stream_buffer(void * port, uint8_t * buffer, uint32_t len){
+    while(len){
+		uint16_t space = xStreamBufferSpacesAvailable(((port_str*)port)->tx);
+		uint16_t len_t = len;
+		if(len>space) len_t = space;
+		uint16_t count = xStreamBufferSend(((port_str*)port)->tx,buffer, len_t,0);
+		buffer+=count;
+		len-=count;
+		if(!count) vTaskDelay(2);
+    }
+}
+

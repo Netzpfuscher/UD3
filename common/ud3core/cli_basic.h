@@ -7,6 +7,7 @@
 #include "semphr.h"
 #include "stream_buffer.h" 
 #include "task.h"
+#include "TTerm.h"
     
 #define ESC_STR "\x1b"
    
@@ -149,10 +150,10 @@ void Term_Restore_Cursor(port_str *ptr);
 void Term_Disable_Cursor(port_str *ptr);
 void Term_Enable_Cursor(port_str *ptr);
 void Term_Box(uint8_t row1, uint8_t col1, uint8_t row2, uint8_t col2, port_str *ptr);
-uint8_t getch(port_str *ptr, TickType_t xTicksToWait);
-uint8_t getche(port_str *ptr, TickType_t xTicksToWait);
-uint8_t kbhit(port_str *ptr);
-uint8_t Term_check_break(port_str *ptr, uint32_t ms_to_wait);
+uint8_t getch(TERMINAL_HANDLE * handle, TickType_t xTicksToWait);
+uint8_t getche(TERMINAL_HANDLE * handle, TickType_t xTicksToWait);
+uint8_t kbhit(TERMINAL_HANDLE * handle);
+uint8_t Term_check_break(TERMINAL_HANDLE * handle, uint32_t ms_to_wait);
 void send_char(uint8_t c, port_str *ptr);
 void send_string(char *data, port_str *ptr);
 void send_buffer_u8(uint8_t *data, uint16_t len, port_str *ptr);

@@ -169,6 +169,7 @@ void tsk_cli_Start(void) {
         xSemaphoreGive(usb_port.term_block);
         
         usb_handle = TERM_createNewHandle(stream_printf,&usb_port,"usb");
+        usb_handle->printBuffer = stream_buffer;
         
         TERM_addCommand(CMD_signals, "signals","For debugging",0);
         TERM_addCommand(CMD_tr, "tr","Transient [start/stop]",0);
@@ -208,6 +209,7 @@ void tsk_cli_Start(void) {
                 xSemaphoreGive(min_port[i].term_block);
                 
                 min_handle[i] = TERM_createNewHandle(stream_printf,&min_port[i],"MIN");
+                min_handle[i]->printBuffer = stream_buffer;
                 
                 xTaskCreate(tsk_cli_TaskProc, "MIN-CLI", STACK_TERMINAL, min_handle[i], PRIO_TERMINAL, &MIN_Terminal_TaskHandle[i]);
             }
@@ -221,6 +223,7 @@ void tsk_cli_Start(void) {
             xSemaphoreGive(min_port[0].term_block);
             
             min_handle[0] = TERM_createNewHandle(stream_printf,&min_port[0],"Serial");
+            min_handle[0]->printBuffer = stream_buffer;
             
             xTaskCreate(tsk_cli_TaskProc, "UART-CLI", STACK_TERMINAL, min_handle[0], PRIO_TERMINAL, &UART_Terminal_TaskHandle);
         }

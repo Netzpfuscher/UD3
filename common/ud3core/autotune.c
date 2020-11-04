@@ -34,7 +34,6 @@
 #include "interrupter.h"
 #include "tasks/tsk_analog.h"
 #include "tasks/tsk_overlay.h"
-#include "ntlibc.h"
 
 #define FREQ 0
 #define CURR 1
@@ -63,7 +62,7 @@ uint8_t CMD_tune(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     ttprintf("Press [y] to proceed\r\n");
     port_str * ptr = handle->port;
     
-    if(getch(ptr, portMAX_DELAY) != 'y'){
+    if(getch(handle, portMAX_DELAY) != 'y'){
         ttprintf("Tune aborted\r\n");
         return TERM_CMD_EXIT_SUCCESS;
     }

@@ -26,8 +26,6 @@
 #include "ZCDtoPWM.h"
 #include "autotune.h"
 #include "interrupter.h"
-#include "ntshell.h"
-#include "ntlibc.h"
 #include "clock.h"
 #include "hardware.h"
 #include "telemetry.h"
@@ -125,8 +123,8 @@ void init_config(){
     configuration.baudrate = 460800;
     configuration.spi_speed = 16;
     configuration.r_top = 500000;
-    ntlibc_strcpy(configuration.ud_name,"UD3-Tesla");
-    ntlibc_strcpy(configuration.synth_filter,"f<0f>20000");  //No filter
+    strncpy(configuration.ud_name,"UD3-Tesla", sizeof(configuration.ud_name));
+    strncpy(configuration.synth_filter,"f<0f>20000", sizeof(configuration.ud_name));  //No filter
     configuration.minprot = pdFALSE;
     configuration.max_const_i = 0;
     configuration.max_fault_i = 250;
@@ -715,7 +713,7 @@ uint8_t CMD_alarms(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
             }
             old_num=temp.num;
         }
-        while(Term_check_break(ptr,50)){
+        while(Term_check_break(handle,50)){
            if(alarm_get(alarm_get_num()-1,&temp)==pdPASS){
                 if(temp.num>old_num){
                     print_alarm(&temp,ptr);
@@ -734,78 +732,57 @@ uint8_t CMD_alarms(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
 }
 
 
-void con_info(port_str *ptr){
-    char buffer[40];
-    uint8_t ret;
+void con_info(TERMINAL_HANDLE * handle){
     #define COL_A 9
     #define COL_B 15
-    SEND_CONST_STRING("\r\nConnected clients:\r\n",ptr);
-    Term_Move_Cursor_right(COL_A,ptr);
-    SEND_CONST_STRING("Num", ptr);
-    Term_Move_Cursor_right(COL_B,ptr);
-    SEND_CONST_STRING("| Remote IP\r\n", ptr);
+    ttprintf("\r\nConnected clients:\r\n");
+    Term_Move_Cursor_right(COL_A,portM);
+    ttprintf("Num");
+    Term_Move_Cursor_right(COL_B,portM);
+    ttprintf("| Remote IP\r\n");
     
     for(uint8_t i=0;i<NUM_MIN_CON;i++){
         if(socket_info[i].socket==SOCKET_CONNECTED){
-            Term_Move_Cursor_right(COL_A,ptr);
-            ret = snprintf(buffer,sizeof(buffer), "\033[36m%d", i);
-            send_buffer(buffer,ret,ptr);
-            Term_Move_Cursor_right(COL_B,ptr);
-            ret = snprintf(buffer,sizeof(buffer), "\033[32m%s\r\n", socket_info[i].info);
-            send_buffer(buffer,ret,ptr);
+            Term_Move_Cursor_right(COL_A,portM);
+            ttprintf("\033[36m%d", i);
+            Term_Move_Cursor_right(COL_B,portM);
+            ttprintf("\033[32m%s\r\n", socket_info[i].info);
         }
     }
-    Term_Color_White(ptr); 
+    TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
 }
 
-void con_numcon(port_str *ptr){
-    char buffer[40];
-    uint8_t ret;
+void con_numcon(TERMINAL_HANDLE * handle){
     uint8_t cnt=0;
     for(uint8_t i=0;i<NUM_MIN_CON;i++){
         if(socket_info[i].socket==SOCKET_CONNECTED){
             cnt++;
         }
     }
-    ret = snprintf(buffer,sizeof(buffer), "CLI-Sessions: %u/%u\r\n",cnt ,NUM_MIN_CON);
-    send_buffer(buffer,ret,ptr);
+    ttprintf("CLI-Sessions: %u/%u\r\n",cnt ,NUM_MIN_CON);
 }
 
 /*****************************************************************************
 * Displays the statistics of the min protocol
 ******************************************************************************/
-uint8_t con_minstat(port_str *ptr){
-
-    char buffer[60];
-    int ret=0;
-    Term_Disable_Cursor(ptr);
+uint8_t con_minstat(TERMINAL_HANDLE * handle){
+    
+    TERM_sendVT100Code(handle, _VT100_CURSOR_DISABLE,0);
   
-    while(Term_check_break(ptr,200)){
-        Term_Erase_Screen(ptr);
-        SEND_CONST_STRING("MIN monitor    (press [CTRL+C] for quit)\r\n",ptr);
-        ret = snprintf(buffer, sizeof(buffer),"Dropped frames        : %lu\r\n",min_ctx.transport_fifo.dropped_frames);
-        send_buffer(buffer,ret,ptr);
-        ret = snprintf(buffer, sizeof(buffer),"Spurious acks         : %lu\r\n",min_ctx.transport_fifo.spurious_acks);
-        send_buffer(buffer,ret,ptr);
-        ret = snprintf(buffer, sizeof(buffer),"Resets received       : %lu\r\n",min_ctx.transport_fifo.resets_received);
-        send_buffer(buffer,ret,ptr);
-        ret = snprintf(buffer, sizeof(buffer),"Sequence mismatch drop: %lu\r\n",min_ctx.transport_fifo.sequence_mismatch_drop);
-        send_buffer(buffer,ret,ptr);
-        ret = snprintf(buffer, sizeof(buffer),"Max frames in buffer  : %u\r\n",min_ctx.transport_fifo.n_frames_max);
-        send_buffer(buffer,ret,ptr);
-        ret = snprintf(buffer, sizeof(buffer),"CRC errors            : %u\r\n",min_ctx.transport_fifo.crc_fails);
-        send_buffer(buffer,ret,ptr);
-        ret = snprintf(buffer, sizeof(buffer),"Remote Time           : %u\r\n",time.remote);
-        send_buffer(buffer,ret,ptr);
-        ret = snprintf(buffer, sizeof(buffer),"Local Time            : %u\r\n",l_time);
-        send_buffer(buffer,ret,ptr);
-        ret = snprintf(buffer, sizeof(buffer),"Diff Time             : %i\r\n",time.diff);
-        send_buffer(buffer,ret,ptr);
-        ret = snprintf(buffer, sizeof(buffer),"Resync count          : %u\r\n",time.resync);
-        send_buffer(buffer,ret,ptr);
+    while(Term_check_break(handle,200)){
+        ttprintf("MIN monitor    (press [CTRL+C] for quit)\r\n");
+        ttprintf("%sDropped frames        : %lu\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0), min_ctx.transport_fifo.dropped_frames);
+        ttprintf("%sSpurious acks         : %lu\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0),min_ctx.transport_fifo.spurious_acks);
+        ttprintf("%sResets received       : %lu\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0),min_ctx.transport_fifo.resets_received);
+        ttprintf("%sSequence mismatch drop: %lu\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0),min_ctx.transport_fifo.sequence_mismatch_drop);
+        ttprintf("%sMax frames in buffer  : %u\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0),min_ctx.transport_fifo.n_frames_max);
+        ttprintf("%sCRC errors            : %u\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0),min_ctx.transport_fifo.crc_fails);
+        ttprintf("%sRemote Time           : %u\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0),time.remote);
+        ttprintf("%sLocal Time            : %u\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0),l_time);
+        ttprintf("%sDiff Time             : %i\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0),time.diff);
+        ttprintf("%sResync count          : %u\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0),time.resync);
     }
-    SEND_CONST_STRING("\r\n",ptr);
-    Term_Enable_Cursor(ptr);
+    TERM_sendVT100Code(handle, _VT100_CURSOR_ENABLE,0);
     return 1; 
 }
 
@@ -818,17 +795,17 @@ uint8_t CMD_con(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     }
     
     if(strcmp(args[0], "info") == 0){
-        con_info(portM);
+        con_info(handle);
         return TERM_CMD_EXIT_SUCCESS;
     }
 
     if(strcmp(args[0], "numcon") == 0){
-        con_numcon(portM);
+        con_numcon(handle);
         return TERM_CMD_EXIT_SUCCESS;
     }
 
     if(strcmp(args[0], "min") == 0){
-        con_minstat(portM);
+        con_minstat(handle);
         return TERM_CMD_EXIT_SUCCESS;
     }
     return TERM_CMD_EXIT_SUCCESS;
@@ -839,40 +816,39 @@ uint8_t CMD_con(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
 ******************************************************************************/
 uint8_t CMD_calib(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
    // uint16_t vdriver_lut[9] = {0,3500,7000,10430,13840,17310,20740,24200,27657};
-    port_str * ptr = handle->port;
     uint32_t temp;
-    Term_Disable_Cursor(ptr);
-    Term_Erase_Screen(ptr);
-    SEND_CONST_STRING("Driver voltage measurement calibration [y] for next [a] for abort\r\n",ptr);
-    SEND_CONST_STRING("Set Vdriver to 7V\r\n",ptr);
-    if(getch(ptr, portMAX_DELAY) != 'y') return 1;
+    TERM_sendVT100Code(handle, _VT100_CURSOR_DISABLE, 0);
+    TERM_sendVT100Code(handle, _VT100_CLS, 0);
+    ttprintf("Driver voltage measurement calibration [y] for next [a] for abort\r\n");
+    ttprintf("Set Vdriver to 7V\r\n");
+    if(getch(handle, portMAX_DELAY) != 'y') return TERM_CMD_EXIT_SUCCESS;
     temp = 7000*512/ADC_active_sample_buf[0].v_driver;
     vdriver_lut[2]= temp;
     vdriver_lut[1]= temp/2;
-    SEND_CONST_STRING("Set Vdriver to 10V\r\n",ptr);
-    if(getch(ptr, portMAX_DELAY) != 'y') return 1;
+    ttprintf("Set Vdriver to 10V\r\n");
+    if(getch(handle, portMAX_DELAY) != 'y') return TERM_CMD_EXIT_SUCCESS;
     temp = 10000*768/ADC_active_sample_buf[0].v_driver;
     vdriver_lut[3]= temp;
-    SEND_CONST_STRING("Set Vdriver to 14V\r\n",ptr);
-    if(getche(ptr, portMAX_DELAY) != 'y') return 1;
+    ttprintf("Set Vdriver to 14V\r\n");
+    if(getche(handle, portMAX_DELAY) != 'y') return TERM_CMD_EXIT_SUCCESS;
     temp = 14000*1024/ADC_active_sample_buf[0].v_driver;
     vdriver_lut[4]= temp;
-    SEND_CONST_STRING("Set Vdriver to 17V\r\n",ptr);
-    if(getch(ptr, portMAX_DELAY) != 'y') return 1;
+    ttprintf("Set Vdriver to 17V\r\n");
+    if(getch(handle, portMAX_DELAY) != 'y') return TERM_CMD_EXIT_SUCCESS;
     temp = 17000*1280/ADC_active_sample_buf[0].v_driver;
     vdriver_lut[5]= temp;
-    SEND_CONST_STRING("Set Vdriver to 20V\r\n",ptr);
-    if(getch(ptr, portMAX_DELAY) != 'y') return 1;
+    ttprintf("Set Vdriver to 20V\r\n");
+    if(getch(handle, portMAX_DELAY) != 'y') return TERM_CMD_EXIT_SUCCESS;
     temp = 20000*1536/ADC_active_sample_buf[0].v_driver;
     vdriver_lut[6]= temp;
-    SEND_CONST_STRING("Set Vdriver to 24V\r\n",ptr);
-    if(getch(ptr, portMAX_DELAY) != 'y') return 1;
+    ttprintf("Set Vdriver to 24V\r\n");
+    if(getch(handle, portMAX_DELAY) != 'y') return TERM_CMD_EXIT_SUCCESS;
     temp = 24000*1792/ADC_active_sample_buf[0].v_driver;
     vdriver_lut[7]= temp;
     temp = temp*2048/1792;
     vdriver_lut[8]= temp;
-    SEND_CONST_STRING("Calibration finished\r\n",ptr);
-    Term_Enable_Cursor(ptr);
+    ttprintf("Calibration finished\r\n");
+    TERM_sendVT100Code(handle, _VT100_CURSOR_ENABLE, 0);
     return TERM_CMD_EXIT_SUCCESS;
 }
 
@@ -1382,7 +1358,7 @@ uint8_t CMD_signals(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         ttprintf("                                    \r");
         ttprintf("Ibus: %u mV Vdriver: %u mV\r\n\r\n", ADC_CountsTo_mVolts(ADC_active_sample_buf[0].i_bus),tt.n.driver_v.value);
 
-    }while(Term_check_break(portM,250));
+    }while(Term_check_break(handle,250));
     
     TERM_sendVT100Code(handle, _VT100_RESET_ATTRIB, 0);
 

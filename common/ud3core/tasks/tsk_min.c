@@ -60,7 +60,6 @@ SemaphoreHandle_t min_Semaphore;
 #include "min_id.h"
 #include "telemetry.h"
 #include "stream_buffer.h" 
-#include "ntlibc.h" 
 #include "helper/printf.h" 
 
 struct min_context min_ctx;
@@ -225,7 +224,7 @@ void min_event(uint8_t command, uint8_t *min_payload, uint8_t len_payload){
         response.id = EVENT_GET_INFO;
         response.struct_version = 1;
         CyGetUniqueId(response.unique_id);
-        ntlibc_strcpy(response.udname, configuration.ud_name);
+        strncpy(response.udname, configuration.ud_name, sizeof(configuration.ud_name));
         min_send_frame(&min_ctx,MIN_ID_EVENT,(uint8_t*)&response,sizeof(response));
     }else{
         alarm_push(ALM_PRIO_INFO, warn_min_command, command);

@@ -24,6 +24,7 @@
 
 #include "cyapicallbacks.h"
 #include <cytypes.h>
+#include <stdlib.h>
 
 #include "tsk_overlay.h"
 #include "tsk_fault.h"
@@ -51,8 +52,6 @@
 #include <project.h>
 #include "helper/printf.h"
 #include "ZCDtoPWM.h"
-
-#include "ntlibc.h"
 
 
 
@@ -631,12 +630,12 @@ uint8_t CMD_telemetry(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         return TERM_CMD_EXIT_SUCCESS;
         
     } else if(strcmp(args[0], "gauge") == 0 && argCount == 3){
-        int n = ntlibc_atoi(args[1]);
+        int n = atoi(args[1]);
         if(n>=N_GAUGES || n<0){
             ttprintf("Gauge number must be between 0 and 6\r\n");
             return 0;
         }
-        if(ntlibc_stricmp(args[2],"none")==0){
+        if(strcmp(args[2],"none")==0){
             for(uint8_t w=0;w<N_TELE;w++){
                 if(n==tt.a[w].gauge){
                     tt.a[w].gauge=TT_NO_TELEMETRY;
@@ -650,7 +649,7 @@ uint8_t CMD_telemetry(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         
         int cnt=-1;
         for(uint8_t w=0;w<N_TELE;w++){
-            if(ntlibc_stricmp(args[2],tt.a[w].name)==0){
+            if(strcmp(args[2],tt.a[w].name)==0){
                 for(uint8_t i=0;i<N_TELE;i++){
                     if(n==tt.a[i].gauge)tt.a[i].gauge=TT_NO_TELEMETRY;
                 }
@@ -671,13 +670,13 @@ uint8_t CMD_telemetry(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         }
         return TERM_CMD_EXIT_SUCCESS;
 
-    } else if (ntlibc_stricmp(args[0], "chart") == 0 && argCount == 3) {
-        int8_t n = ntlibc_atoi(args[1]);
+    } else if (strcmp(args[0], "chart") == 0 && argCount == 3) {
+        int8_t n = atoi(args[1]);
         if(n>=N_CHARTS || n<0){
             ttprintf("Chart number must be between 0 and 3\r\n");
             return TERM_CMD_EXIT_SUCCESS;
         }
-        if(ntlibc_stricmp(args[2],"none")==0){
+        if(strcmp(args[2],"none")==0){
             for(uint8_t w=0;w<N_TELE;w++){
                 if(n==tt.a[w].chart){
                     tt.a[w].chart=TT_NO_TELEMETRY;
@@ -689,7 +688,7 @@ uint8_t CMD_telemetry(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         }
         int cnt=-1;
         for(uint8_t w=0;w<N_TELE;w++){
-            if(ntlibc_stricmp(args[2],tt.a[w].name)==0){
+            if(strcmp(args[2],tt.a[w].name)==0){
                 for(uint8_t i=0;i<N_TELE;i++){
                     if(n==tt.a[i].chart)tt.a[i].chart=TT_NO_TELEMETRY;
                 }
@@ -706,7 +705,7 @@ uint8_t CMD_telemetry(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         }
         return TERM_CMD_EXIT_SUCCESS;
 
-    } else if (ntlibc_stricmp(args[0], "ls") == 0) {
+    } else if (strcmp(args[0], "ls") == 0) {
         for(uint8_t w=0;w<N_TELE;w++){
             ttprintf("%i: %s\r\n", w+1, tt.a[w].name);
         }

@@ -26,7 +26,6 @@
 #include <stdlib.h>
 #include "qcw.h"
 #include "interrupter.h"
-#include "ntlibc.h"
 #include "hardware.h"
 
 #include "ZCDtoPWM.h"
@@ -166,16 +165,16 @@ uint8_t CMD_ramp(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
    port_str * ptr = handle->port;
     
     if(strcmp(args[0], "point") == 0 && argCount == 3){
-        int x = ntlibc_atoi(args[1]);
-        int y = ntlibc_atoi(args[2]);
+        int x = atoi(args[1]);
+        int y = atoi(args[2]);
         qcw_ramp_point(x,y);
         return TERM_CMD_EXIT_SUCCESS;
         
     } else if(strcmp(args[0], "line") == 0 && argCount == 5){
-        int x0 = ntlibc_atoi(args[1]);
-        int y0 = ntlibc_atoi(args[2]);
-        int x1 = ntlibc_atoi(args[3]);
-        int y1 = ntlibc_atoi(args[4]);
+        int x0 = atoi(args[1]);
+        int y0 = atoi(args[2]);
+        int x1 = atoi(args[3]);
+        int y1 = atoi(args[4]);
         qcw_ramp_line(x0,y0,x1,y1);
         return TERM_CMD_EXIT_SUCCESS;
         

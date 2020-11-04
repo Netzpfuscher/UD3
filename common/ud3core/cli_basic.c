@@ -21,12 +21,11 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
-
+#include "tasks/tsk_cli.h"
 #include "cli_basic.h"
 #include "helper/printf.h"
 #include <stdlib.h>
 #include <device.h>
-#include "ntlibc.h"
 #ifndef BOOT
 #include "tasks/tsk_uart.h"
 #include "tasks/tsk_usb.h"
@@ -801,35 +800,35 @@ void Term_Enable_Cursor(port_str *ptr) {
 }
 
 
-uint8_t getch(port_str *ptr, TickType_t xTicksToWait){
+uint8_t getch(TERMINAL_HANDLE * handle, TickType_t xTicksToWait){
     uint8_t c=0;
     if(xTicksToWait>0){
-        xSemaphoreGive(ptr->term_block);
+        xSemaphoreGive(portM->term_block);
     }
-    xStreamBufferReceive(ptr->rx,&c,1,xTicksToWait);
+    xStreamBufferReceive(portM->rx,&c,1,xTicksToWait);
     if(xTicksToWait>0){
-        xSemaphoreTake(ptr->term_block, portMAX_DELAY);
+        xSemaphoreTake(portM->term_block, portMAX_DELAY);
     }
     return c;
 }
 
-uint8_t getche(port_str *ptr, TickType_t xTicksToWait){
+uint8_t getche(TERMINAL_HANDLE * handle, TickType_t xTicksToWait){
     uint8_t c=0;
     if(xTicksToWait>0){
-        xSemaphoreGive(ptr->term_block);
+        xSemaphoreGive(portM->term_block);
     }
-    xStreamBufferReceive(ptr->rx,&c,1,xTicksToWait);
+    xStreamBufferReceive(portM->rx,&c,1,xTicksToWait);
     if(xTicksToWait>0){
-        xSemaphoreTake(ptr->term_block, portMAX_DELAY);
+        xSemaphoreTake(portM->term_block, portMAX_DELAY);
     }
     if(c){
-        xStreamBufferSend(ptr->tx,&c,1,0);
+        xStreamBufferSend(portM->tx,&c,1,0);
     }
     return c;
 }
 
-uint8_t kbhit(port_str *ptr){
-    if(xStreamBufferIsEmpty(ptr->rx)){
+uint8_t kbhit(TERMINAL_HANDLE * handle){
+    if(xStreamBufferIsEmpty(portM->rx)){
         return pdFALSE;
     }else{
         return pdTRUE;
@@ -838,8 +837,8 @@ uint8_t kbhit(port_str *ptr){
 
 #define CTRL_C  0x03
 
-uint8_t Term_check_break(port_str *ptr, uint32_t ms_to_wait){
-    uint8_t c = getch(ptr,ms_to_wait /portTICK_RATE_MS);
+uint8_t Term_check_break(TERMINAL_HANDLE * handle, uint32_t ms_to_wait){
+    uint8_t c = getch(handle,ms_to_wait /portTICK_RATE_MS);
     if(c == CTRL_C){  //0x03 = CTRL+C
         return pdFALSE;
     }else{
@@ -885,7 +884,7 @@ void send_char(uint8 c, port_str *ptr) {
 * Sends string to transmit queue
 *********************************************/
 void send_string(char *data, port_str *ptr) {
-    uint16_t len = ntlibc_strlen(data);
+    uint16_t len = strlen(data);
     if (ptr->tx != NULL) {
     	while(len){
 			uint16_t space = xStreamBufferSpacesAvailable(ptr->tx);

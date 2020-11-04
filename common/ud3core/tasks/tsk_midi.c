@@ -47,7 +47,6 @@ uint8 tsk_midi_initVar = 0u;
 #include "telemetry.h"
 #include "alarmevent.h"
 #include "qcw.h"
-#include "ntlibc.h"
 #include "helper/printf.h"
 #include <device.h>
 #include <stdlib.h>
@@ -85,7 +84,7 @@ uint8_t callback_synthFilter(parameter_entry * params, uint8_t index, port_str *
     uint8_t cnt=0;
     uint16_t number=0;
     char substring[20];
-    uint8_t str_size = ntlibc_strlen(configuration.synth_filter);
+    uint8_t str_size = strlen(configuration.synth_filter);
     uint8_t flag=0;
     
     filter.min=0;
@@ -108,7 +107,7 @@ uint8_t callback_synthFilter(parameter_entry * params, uint8_t index, port_str *
             cnt=0;
             substring[0]='\0';
             for(uint8_t w=i+1;w<str_size;w++){
-                if(ntlibc_isdigit(configuration.synth_filter[w])){
+                if(isdigit(configuration.synth_filter[w])){
                     substring[cnt]=configuration.synth_filter[w];
                     cnt++;
                 }else{
@@ -117,7 +116,7 @@ uint8_t callback_synthFilter(parameter_entry * params, uint8_t index, port_str *
                 }
             }
             if(substring[0]){
-                number = ntlibc_atoi(substring);
+                number = atoi(substring);
                 if(number<16){
                     filter.channel[number]=pdTRUE;
                     flag=1;
@@ -127,7 +126,7 @@ uint8_t callback_synthFilter(parameter_entry * params, uint8_t index, port_str *
             if(configuration.synth_filter[i+1]=='>' || configuration.synth_filter[i+1]=='<'){
                 cnt=0;
                 for(uint8_t w=i+2;w<str_size;w++){
-                    if(ntlibc_isdigit(configuration.synth_filter[w])){
+                    if(isdigit(configuration.synth_filter[w])){
                         substring[cnt]=configuration.synth_filter[w];
                         cnt++;
                     }else{
@@ -136,7 +135,7 @@ uint8_t callback_synthFilter(parameter_entry * params, uint8_t index, port_str *
                     }
                 }
                 if(cnt){
-                    number = ntlibc_atoi(substring);
+                    number = atoi(substring);
                     if(number<20000){
                         if(configuration.synth_filter[i+1]=='>') filter.max = number;
                         if(configuration.synth_filter[i+1]=='<') filter.min = number;
@@ -850,7 +849,7 @@ uint8_t CMD_SynthMon(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     Term_Erase_Screen(ptr);
     SEND_CONST_STRING("Synthesizer monitor    [CTRL+C] for quit\r\n",ptr);
     SEND_CONST_STRING("-----------------------------------------------------------\r\n",ptr);
-    while(Term_check_break(ptr,100)){
+    while(Term_check_break(handle,100)){
         Term_Move_Cursor(3,1,ptr);
         if(param.synth == SYNTH_SID || param.synth == SYNTH_SID_QCW) channels=SID_CHANNELS;
         if(param.synth == SYNTH_MIDI || param.synth == SYNTH_MIDI_QCW) channels=N_CHANNEL;

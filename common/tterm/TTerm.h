@@ -120,10 +120,10 @@ const extern char TERM_startupText3[];
 
 #if EXTENDED_PRINTF == 1
 #define ttprintf(format, ...) (*handle->print)(handle->port, format, ##__VA_ARGS__)
-#define ttprintb(buffer, len) (*handle->printBuffer)(handle->port, buffer, len)
+#define ttprintb(buffer, len) (*handle->print)(handle->port, NULL, (uint8_t*)buffer, (uint32_t)len)
 #else
 #define ttprintf(format, ...) (*handle->print)(format, ##__VA_ARGS__)
-#define ttprintb(buffer, len) (*handle->printBuffer)(buffer, len)
+#define ttprintb(buffer, len) (*handle->print)(NULL, (uint8_t*)buffer, (uint32_t)len)
 #endif
 
 typedef struct __TERMINAL_HANDLE__ TERMINAL_HANDLE;
@@ -134,7 +134,7 @@ typedef uint8_t (* TermCommandInputHandler)(TERMINAL_HANDLE * handle, uint16_t c
 
 #if EXTENDED_PRINTF == 1
 typedef void (* TermPrintHandler)(void * port, char * format, ...);
-typedef void (* TermPrintBufferHandler)(void * port, uint8_t * buffer, uint32_t len);
+//typedef void (* TermPrintBufferHandler)(void * port, uint8_t * buffer, uint32_t len);
 #else
 typedef void (* TermPrintHandler)(char * format, ...);
 typedef void (* TermPrintBufferHandler)(uint8_t buffer, uint32_t len);
@@ -169,7 +169,7 @@ struct __TERMINAL_HANDLE__{
     uint32_t autocompleteBufferLength;
     uint32_t autocompleteStart;    
     TermPrintHandler print;
-    TermPrintBufferHandler printBuffer;
+//    TermPrintBufferHandler printBuffer;
     char * currUserName;
     char * historyBuffer[TERM_HISTORYSIZE];
     uint32_t currHistoryWritePosition;

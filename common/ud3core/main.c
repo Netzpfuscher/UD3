@@ -32,6 +32,7 @@
 #include "ZCDtoPWM.h"
 #include "interrupter.h"
 #include "telemetry.h"
+#include "helper/printf.h"
 #include <device.h>
 
 #include "cli_common.h"
@@ -66,7 +67,10 @@ int main() {
     null_port.tx = NULL;
     null_port.rx = NULL;
     
-    eeprom_load(&null_port);
+    null_handle->port = &null_port;
+    null_handle->print = stream_printf;
+    
+    eeprom_load(null_handle);
    
     
 	initialize_DMA();		  //sets up all DMA channels

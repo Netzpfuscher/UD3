@@ -283,13 +283,13 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
             strncpy(socket_info[*min_payload].info,(char*)min_payload+2,sizeof(socket_info[0].info));
             if(socket_info[*min_payload].socket==SOCKET_CONNECTED){
                 //command_cls("",&min_port[*min_payload]); // <-------------need to port
-                send_string(":>", &min_port[*min_payload]);  //<-------------need to port
+                //send_string(":>", &min_port[*min_payload]);  //<-------------need to port
                 if(!transmit_features){
                     transmit_features=sizeof(version)/sizeof(char*);
                 }
             }else{
                 min_port[*min_payload].term_mode = PORT_TERM_VT100;    
-                stop_overlay_task(&min_port[*min_payload]);   
+                stop_overlay_task(min_handle[*min_payload]);   
             }
             return;
         case MIN_ID_SYNTH:

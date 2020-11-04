@@ -57,7 +57,7 @@ void update_interrupter();
 void ramp_control(void);
 void interrupter_oneshot(uint16_t pw, uint8_t vol);
 
-uint8_t callback_ext_interrupter(parameter_entry * params, uint8_t index, port_str *ptr);
+uint8_t callback_ext_interrupter(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 
 void interrupter_kill(void);
 

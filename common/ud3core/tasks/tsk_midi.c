@@ -75,12 +75,12 @@ struct _filter filter;
 /*****************************************************************************
 * Switches the synthesizer
 ******************************************************************************/
-uint8_t callback_SynthFunction(parameter_entry * params, uint8_t index, port_str *ptr){
+uint8_t callback_SynthFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     switch_synth(param.synth);
     return 1;
 }
 
-uint8_t callback_synthFilter(parameter_entry * params, uint8_t index, port_str *ptr){
+uint8_t callback_synthFilter(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     uint8_t cnt=0;
     uint16_t number=0;
     char substring[20];
@@ -145,23 +145,19 @@ uint8_t callback_synthFilter(parameter_entry * params, uint8_t index, port_str *
         }     
     }
     if(filter.min > filter.max){
-        SEND_CONST_STRING("Error: Min frequency ist greater than max\r\n",ptr);
+        ttprintf("Error: Min frequency ist greater than max\r\n");
     }
     if(!flag){
         for(uint8_t i=0;i<16;i++){
             filter.channel[i]=pdTRUE;
         }   
     }
-    uint8_t ret;
-    char buf[50];
+
     for(uint8_t i=0;i<sizeof(filter.channel);i++){
-        ret= snprintf(buf,sizeof(buf),"Channel %u: %u\r\n",i,filter.channel[i]);
-        send_buffer(buf,ret,ptr);
+        ttprintf("Channel %u: %u\r\n",i,filter.channel[i]);
     }
-    ret= snprintf(buf,sizeof(buf),"Min frequency: %u\r\n",filter.min);
-    send_buffer(buf,ret,ptr);
-    ret= snprintf(buf,sizeof(buf),"Max frequency: %u\r\n",filter.max);
-    send_buffer(buf,ret,ptr);
+    ttprintf("Min frequency: %u\r\n",filter.min);
+    ttprintf("Max frequency: %u\r\n",filter.max);
 
     return 1;
 }

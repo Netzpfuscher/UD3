@@ -46,9 +46,11 @@ void tsk_cli_TaskProc(void *pvParameters);
 extern xTaskHandle MIN_Terminal_TaskHandle[NUM_MIN_CON];
 
 extern port_str min_port[NUM_MIN_CON];
+extern TERMINAL_HANDLE * min_handle[NUM_MIN_CON];
 extern port_str serial_port;
 extern port_str usb_port;
 extern port_str null_port;
+extern TERMINAL_HANDLE * null_handle;
 
 extern TERMINAL_HANDLE * usb_handle;
 

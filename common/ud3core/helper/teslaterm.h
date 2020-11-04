@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include "cli_basic.h"
 #include "alarmevent.h"
+#include "TTerm.h"
 
 #define TT_GAUGE        1
 #define TT_GAUGE_CONF   2
@@ -51,23 +52,23 @@ typedef struct __chart__ {
 
 
 
-void send_gauge(uint8_t gauge, int16_t val, port_str *ptr);
-void send_gauge32(uint8_t gauge, int32_t val, port_str *ptr);
+void send_gauge(uint8_t gauge, int16_t val, TERMINAL_HANDLE * handle);
+void send_gauge32(uint8_t gauge, int32_t val, TERMINAL_HANDLE * handle);
 
-void send_chart(uint8_t chart, int16_t val, port_str *ptr);
-void send_chart_draw(port_str *ptr);
-void send_chart_config(uint8_t chart, int16_t min, int16_t max, int16_t offset, uint8_t unit,char * text, port_str *ptr);
-void send_gauge_config(uint8_t gauge, int16_t min, int16_t max, char * text, port_str *ptr);
-void send_gauge_config32(uint8_t gauge, int32_t min, int32_t max, int32 div, char * text, port_str *ptr);
-void send_chart_text(int16_t x, int16_t y, uint8_t color, uint8_t size, char * text, port_str *ptr);
-void send_chart_text_center(int16_t x, int16_t y, uint8_t color, uint8_t size, char * text, port_str *ptr);
-void send_chart_line(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint8_t color, port_str *ptr);
-void send_chart_clear(port_str *ptr);
-void send_status(uint8_t bus_active, uint8_t transient_active, uint8_t bus_controlled,uint8_t killbit ,port_str *ptr);
-void send_config(char* param, const char* help_text, port_str *ptr);
-void send_event(ALARMS *alm, port_str *ptr);
-void send_features(const char* text, port_str *ptr);
+void send_chart(uint8_t chart, int16_t val, TERMINAL_HANDLE * handle);
+void send_chart_draw(TERMINAL_HANDLE * handle);
+void send_chart_config(uint8_t chart, int16_t min, int16_t max, int16_t offset, uint8_t unit,char * text, TERMINAL_HANDLE * handle);
+void send_gauge_config(uint8_t gauge, int16_t min, int16_t max, char * text, TERMINAL_HANDLE * handle);
+void send_gauge_config32(uint8_t gauge, int32_t min, int32_t max, int32 div, char * text, TERMINAL_HANDLE * handle);
+void send_chart_text(int16_t x, int16_t y, uint8_t color, uint8_t size, char * text, TERMINAL_HANDLE * handle);
+void send_chart_text_center(int16_t x, int16_t y, uint8_t color, uint8_t size, char * text, TERMINAL_HANDLE * handle);
+void send_chart_line(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint8_t color, TERMINAL_HANDLE * handle);
+void send_chart_clear(TERMINAL_HANDLE * handle);
+void send_status(uint8_t bus_active, uint8_t transient_active, uint8_t bus_controlled,uint8_t killbit ,TERMINAL_HANDLE * handle);
+void send_config(char* param, const char* help_text, TERMINAL_HANDLE * handle);
+void send_event(ALARMS *alm, TERMINAL_HANDLE * handle);
+void send_features(const char* text, TERMINAL_HANDLE * handle);
 
-void tt_chart_init(CHART *chart, port_str *ptr);
+void tt_chart_init(CHART *chart, TERMINAL_HANDLE * handle);
 
 #endif

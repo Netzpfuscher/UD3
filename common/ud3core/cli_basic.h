@@ -121,16 +121,16 @@ struct parameter_entry_struct {
 	const int32_t min;
 	const int32_t max;
     const uint16_t div;
-	uint8_t (*callback_function)(parameter_entry * params, uint8_t index, port_str *ptr);
+	uint8_t (*callback_function)(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 	const char *help;
 };
 
-uint8_t updateDefaultFunction(parameter_entry * params, char * newValue, uint8_t index, port_str *ptr);
-void EEPROM_check_hash(parameter_entry * params, uint8_t param_size, port_str *ptr);
-void EEPROM_write_conf(parameter_entry * params, uint8_t param_size, uint16_t eeprom_offset ,port_str *ptr);
-void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eeprom_offset ,port_str *ptr);
-void print_param_help(parameter_entry * params, uint8_t param_size, port_str *ptr);
-void print_param(parameter_entry * params, uint8_t index, port_str *ptr);
+uint8_t updateDefaultFunction(parameter_entry * params, char * newValue, uint8_t index, TERMINAL_HANDLE * handle);
+void EEPROM_check_hash(parameter_entry * params, uint8_t param_size, TERMINAL_HANDLE * handle);
+void EEPROM_write_conf(parameter_entry * params, uint8_t param_size, uint16_t eeprom_offset ,TERMINAL_HANDLE * handle);
+void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eeprom_offset ,TERMINAL_HANDLE * handle);
+void print_param_help(parameter_entry * params, uint8_t param_size, TERMINAL_HANDLE * handle);
+void print_param(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 void print_param_buffer(char * buffer, parameter_entry * params, uint8_t index);
 
 void input_interpret(port_str *ptr);

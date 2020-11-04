@@ -99,14 +99,14 @@ void qcw_ramp_line(uint16_t x0,uint8_t y0,uint16_t x1, uint8_t y1){
 }
 
 
-void qcw_ramp_visualize(CHART *chart, port_str *ptr){
+void qcw_ramp_visualize(CHART *chart, TERMINAL_HANDLE * handle){
     for(uint16_t i = 0; i<sizeof(ramp.data)-1;i++){
-        send_chart_line(chart->offset_x+i,chart->height+chart->offset_y-ramp.data[i],chart->offset_x+i+1,chart->height+chart->offset_y-ramp.data[i+1], TT_COLOR_GREEN ,ptr);
+        send_chart_line(chart->offset_x+i,chart->height+chart->offset_y-ramp.data[i],chart->offset_x+i+1,chart->height+chart->offset_y-ramp.data[i+1], TT_COLOR_GREEN ,handle);
     }
     uint16_t red_line;
     red_line = configuration.max_qcw_pw*10 / MIDI_ISR_US;
     
-    send_chart_line(chart->offset_x+red_line,chart->offset_y,chart->offset_x+red_line,chart->offset_y+chart->height, TT_COLOR_RED ,ptr);
+    send_chart_line(chart->offset_x+red_line,chart->offset_y,chart->offset_x+red_line,chart->offset_y+chart->height, TT_COLOR_RED, handle);
     
 }
 
@@ -162,8 +162,7 @@ uint8_t CMD_ramp(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         return TERM_CMD_EXIT_SUCCESS;
     } 
     
-   port_str * ptr = handle->port;
-    
+  
     if(strcmp(args[0], "point") == 0 && argCount == 3){
         int x = atoi(args[1]);
         int y = atoi(args[2]);
@@ -185,7 +184,7 @@ uint8_t CMD_ramp(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         return TERM_CMD_EXIT_SUCCESS;
     } else if(strcmp(args[0], "draw") == 0){
         tsk_overlay_chart_stop();
-        send_chart_clear(ptr);
+        send_chart_clear(handle);
         CHART temp;
         temp.height = RAMP_CHART_HEIGHT;
         temp.width = RAMP_CHART_WIDTH;
@@ -194,8 +193,8 @@ uint8_t CMD_ramp(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         temp.div_x = RAMP_CHART_DIV_X;
         temp.div_y = RAMP_CHART_DIV_Y;
         
-        tt_chart_init(&temp,ptr);
-        qcw_ramp_visualize(&temp,ptr);
+        tt_chart_init(&temp,handle);
+        qcw_ramp_visualize(&temp,handle);
         return TERM_CMD_EXIT_SUCCESS;
     }
      return TERM_CMD_EXIT_SUCCESS;

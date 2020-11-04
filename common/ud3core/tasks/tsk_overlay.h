@@ -42,9 +42,9 @@ void tsk_overlay_TaskProc(void *pvParameters);
 void tsk_overlay_chart_stop();
 void tsk_overlay_chart_start();
 void init_telemetry();
-void start_overlay_task(port_str *ptr);
-void stop_overlay_task(port_str *ptr);
-void init_tt(uint8_t with_chart, port_str *ptr);
+void start_overlay_task(TERMINAL_HANDLE * handle);
+void stop_overlay_task(TERMINAL_HANDLE * handle);
+void init_tt(uint8_t with_chart, TERMINAL_HANDLE * handle);
 void recalc_telemetry_limits();
 
 

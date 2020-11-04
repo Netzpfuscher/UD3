@@ -86,7 +86,7 @@ void i2t_set_limit(uint32_t const_current, uint32_t ovr_current, uint32_t limit_
 void i2t_set_warning(uint8_t percent);
 void i2t_reset();
 void reconfig_charge_timer();
-uint8_t callback_pid(parameter_entry * params, uint8_t index, port_str *ptr);
+uint8_t callback_pid(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 extern adc_sample_t *ADC_active_sample_buf;
 /*
  * Add user function prototypes in the below merge region to add user

@@ -62,25 +62,25 @@
 	} while (0)
         
 	
-uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, port_str *ptr);
-uint8_t callback_QCWFunction(parameter_entry * params, uint8_t index, port_str *ptr);
-uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, port_str *ptr);
-uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, port_str *ptr);
-uint8_t callback_TTupdateFunction(parameter_entry * params, uint8_t index, port_str *ptr);
-uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, port_str *ptr);
-uint8_t callback_OfftimeFunction(parameter_entry * params, uint8_t index, port_str *ptr);
-uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, port_str *ptr);
-uint8_t callback_i2tFunction(parameter_entry * params, uint8_t index, port_str *ptr);
-uint8_t callback_baudrateFunction(parameter_entry * params, uint8_t index, port_str *ptr);
-uint8_t callback_SPIspeedFunction(parameter_entry * params, uint8_t index, port_str *ptr);
-uint8_t callback_VisibleFunction(parameter_entry * params, uint8_t index, port_str *ptr);
-uint8_t callback_MchFunction(parameter_entry * params, uint8_t index, port_str *ptr);
-uint8_t callback_MchCopyFunction(parameter_entry * params, uint8_t index, port_str *ptr);
-uint8_t callback_ivoUART(parameter_entry * params, uint8_t index, port_str *ptr);
-uint8_t callback_rampFunction(parameter_entry * params, uint8_t index, port_str *ptr);
+uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+uint8_t callback_QCWFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+uint8_t callback_TTupdateFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+uint8_t callback_OfftimeFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+uint8_t callback_i2tFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+uint8_t callback_baudrateFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+uint8_t callback_SPIspeedFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+uint8_t callback_VisibleFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+uint8_t callback_MchFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+uint8_t callback_MchCopyFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+uint8_t callback_ivoUART(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+uint8_t callback_rampFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 
 void update_ivo_uart();
-void init_tt(uint8_t with_chart, port_str *ptr);
+void init_tt(uint8_t with_chart, TERMINAL_HANDLE * handle);
 
 
 
@@ -244,19 +244,19 @@ parameter_entry confparam[] = {
 };
 
    
-void eeprom_load(port_str *ptr){
-    EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,ptr);
+void eeprom_load(TERMINAL_HANDLE * handle){
+    EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,handle);
     i2t_set_limit(configuration.max_const_i,configuration.max_fault_i,10000);
     update_ivo_uart();
     update_visibilty();
     uart_baudrate(configuration.baudrate);
     spi_speed(configuration.spi_speed);
-    callback_synthFilter(NULL,0, ptr);
+    callback_synthFilter(NULL,0, handle);
     ramp.changed = pdTRUE;
     qcw_regenerate_ramp();
     init_telemetry();
-    callback_pid(confparam,0,ptr);
-    callback_ext_interrupter(confparam,0,ptr);
+    callback_pid(confparam,0,handle);
+    callback_ext_interrupter(confparam,0,handle);
 }
 
 
@@ -284,7 +284,7 @@ void update_visibilty(void){
 
 // clang-format on
 
-uint8_t callback_rampFunction(parameter_entry * params, uint8_t index, port_str *ptr){
+uint8_t callback_rampFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     ramp.changed = pdTRUE;
     if(!QCW_enable_Control){
         qcw_regenerate_ramp();
@@ -323,16 +323,16 @@ void update_ivo_uart(){
     }
 }
 
-uint8_t callback_ivoUART(parameter_entry * params, uint8_t index, port_str *ptr){
+uint8_t callback_ivoUART(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     if(configuration.ivo_uart == 0 || configuration.ivo_uart == 1 || configuration.ivo_uart == 10 || configuration.ivo_uart == 11){
         update_ivo_uart();   
         return 1;
     }else{
-        SEND_CONST_STRING("Only the folowing combinations are allowed\r\n", ptr);
-        SEND_CONST_STRING("0  = no inversion\r\n", ptr);
-        SEND_CONST_STRING("1  = rx inverted, tx not inverted\r\n", ptr);
-        SEND_CONST_STRING("10 = rx not inverted, tx inverted\r\n", ptr);
-        SEND_CONST_STRING("11 = rx and tx inverted\r\n", ptr);
+        ttprintf("Only the folowing combinations are allowed\r\n");
+        ttprintf("0  = no inversion\r\n");
+        ttprintf("1  = rx inverted, tx not inverted\r\n");
+        ttprintf("10 = rx not inverted, tx inverted\r\n");
+        ttprintf("11 = rx and tx inverted\r\n");
         return 0;
     }
 }
@@ -340,7 +340,7 @@ uint8_t callback_ivoUART(parameter_entry * params, uint8_t index, port_str *ptr)
 /*****************************************************************************
 * Callback if the MIDI channel is changed
 ******************************************************************************/
-uint8_t callback_MchFunction(parameter_entry * params, uint8_t index, port_str *ptr){
+uint8_t callback_MchFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     if(param.mch<16){
         params[index+1].value = &midich[param.mch].attack;
         params[index+2].value = &midich[param.mch].decay;
@@ -356,7 +356,7 @@ uint8_t callback_MchFunction(parameter_entry * params, uint8_t index, port_str *
 /*****************************************************************************
 * Callback for mch==16
 ******************************************************************************/
-uint8_t callback_MchCopyFunction(parameter_entry * params, uint8_t index, port_str *ptr){
+uint8_t callback_MchCopyFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     if(param.mch<16) return 1;
 
     for(uint8_t i=1;i<16;i++){
@@ -371,7 +371,7 @@ uint8_t callback_MchCopyFunction(parameter_entry * params, uint8_t index, port_s
 /*****************************************************************************
 * Callback if the offtime parameter is changed
 ******************************************************************************/
-uint8_t callback_VisibleFunction(parameter_entry * params, uint8_t index, port_str *ptr){
+uint8_t callback_VisibleFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     update_visibilty();
     return 1;
 }
@@ -380,15 +380,13 @@ uint8_t callback_VisibleFunction(parameter_entry * params, uint8_t index, port_s
 /*****************************************************************************
 * Callback if the maximum current is changed
 ******************************************************************************/
-uint8_t callback_TTupdateFunction(parameter_entry * params, uint8_t index, port_str *ptr) {
+uint8_t callback_TTupdateFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle) {
     
     uint32_t max_current_cmp = ((4080ul * configuration.ct1_ratio) / configuration.ct1_burden)/100; //Amperes
     uint32_t max_current_meas = ((5000ul * configuration.ct1_ratio) / configuration.ct1_burden)/100; //Amperes
     
     if(configuration.max_tr_current>max_current_cmp || configuration.max_qcw_current>max_current_cmp){
-        char buffer[120];
-        snprintf(buffer, sizeof(buffer),"Warning: Max CT1 current with the current setup is %uA for OCD and %uA for peak measurement\r\n",max_current_cmp,max_current_meas);
-        send_string(buffer, ptr);
+        ttprintf("Warning: Max CT1 current with the current setup is %uA for OCD and %uA for peak measurement\r\n",max_current_cmp,max_current_meas);
         if(configuration.max_tr_current>max_current_cmp) configuration.max_tr_current = max_current_cmp;
         if(configuration.max_qcw_current>max_current_cmp) configuration.max_qcw_current = max_current_cmp;
     }
@@ -399,14 +397,14 @@ uint8_t callback_TTupdateFunction(parameter_entry * params, uint8_t index, port_
     
     system_fault_Control = sfflag;
     
-    if (ptr->term_mode!=PORT_TERM_VT100) {
+    if (portM->term_mode!=PORT_TERM_VT100) {
         uint8_t include_chart;
-        if (ptr->term_mode==PORT_TERM_TT) {
+        if (portM->term_mode==PORT_TERM_TT) {
             include_chart = pdTRUE;
         } else {
             include_chart = pdFALSE;
         }
-        init_tt(include_chart,ptr);
+        init_tt(include_chart,handle);
     }
 	return 1;
 }
@@ -414,9 +412,9 @@ uint8_t callback_TTupdateFunction(parameter_entry * params, uint8_t index, port_
 /*****************************************************************************
 * Callback if a autotune parameter is changed
 ******************************************************************************/
-uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, port_str *ptr) {
+uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle) {
     if(param.tune_start >= param.tune_end){
-        SEND_CONST_STRING("ERROR: tune_start > tune_end", ptr);
+        ttprintf("ERROR: tune_start > tune_end");
 		return 0;
 	} else
 		return 1;
@@ -447,7 +445,7 @@ void spi_speed(uint32_t speed){
     
 }
 
-uint8_t callback_SPIspeedFunction(parameter_entry * params, uint8_t index, port_str *ptr){
+uint8_t callback_SPIspeedFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     spi_speed(configuration.spi_speed);
  
     return 1;
@@ -487,7 +485,7 @@ void uart_baudrate(uint32_t baudrate){
     
 }
 
-uint8_t callback_baudrateFunction(parameter_entry * params, uint8_t index, port_str *ptr){
+uint8_t callback_baudrateFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     uart_baudrate(configuration.baudrate);
  
     return 1;
@@ -500,7 +498,7 @@ uint8_t callback_baudrateFunction(parameter_entry * params, uint8_t index, port_
 * Callback if a transient mode parameter is changed
 * Updates the interrupter hardware
 ******************************************************************************/
-uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, port_str *ptr) {
+uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle) {
 
 	interrupter.pw = param.pw;
 	interrupter.prd = param.pwd;
@@ -548,18 +546,18 @@ void vBurst_Timer_Callback(TimerHandle_t xTimer){
 /*****************************************************************************
 * Callback if a burst mode parameter is changed
 ******************************************************************************/
-uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, port_str *ptr) {
+uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle) {
     if(tr_running){
         if(xBurst_Timer==NULL && param.burst_on > 0){
             burst_state = BURST_ON;
             xBurst_Timer = xTimerCreate("Bust-Tmr", param.burst_on / portTICK_PERIOD_MS, pdFALSE,(void * ) 0, vBurst_Timer_Callback);
             if(xBurst_Timer != NULL){
                 xTimerStart(xBurst_Timer, 0);
-                SEND_CONST_STRING("Burst Enabled\r\n", ptr);
+                ttprintf("Burst Enabled\r\n");
                 tr_running=2;
             }else{
                 interrupter.pw = 0;
-                SEND_CONST_STRING("Cannot create burst Timer\r\n", ptr);
+                ttprintf("Cannot create burst Timer\r\n");
                 tr_running=0;
             }
         }else if(xBurst_Timer!=NULL && !param.burst_on){
@@ -570,9 +568,9 @@ uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, port_str
                     interrupter.pw =0;
                     update_interrupter();
                     tr_running=1;
-                    SEND_CONST_STRING("\r\nBurst Disabled\r\n", ptr);
+                    ttprintf("\r\nBurst Disabled\r\n");
                 }else{
-                    SEND_CONST_STRING("Cannot delete burst Timer\r\n", ptr);
+                    ttprintf("Cannot delete burst Timer\r\n");
                     burst_state = BURST_ON;
                 }
             }
@@ -584,9 +582,9 @@ uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, port_str
                     interrupter.pw =param.pw;
                     update_interrupter();
                     tr_running=1;
-                    SEND_CONST_STRING("\r\nBurst Disabled\r\n", ptr);
+                    ttprintf("\r\nBurst Disabled\r\n");
                 }else{
-                    SEND_CONST_STRING("Cannot delete burst Timer\r\n", ptr);
+                    ttprintf("Cannot delete burst Timer\r\n");
                     burst_state = BURST_ON;
                 }
             }
@@ -599,7 +597,7 @@ uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, port_str
 /*****************************************************************************
 * Callback if a configuration relevant parameter is changed
 ******************************************************************************/
-uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, port_str *ptr){
+uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     uint8 sfflag = system_fault_Read();
     system_fault_Control = 0; //halt tesla coil operation during updates!
     WD_enable(configuration.watchdog);
@@ -618,7 +616,7 @@ uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, port_st
 /*****************************************************************************
 * Default function if a parameter is changes (not used)
 ******************************************************************************/
-uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, port_str *ptr){
+uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     
     return 1;
 }
@@ -626,7 +624,7 @@ uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, port_s
 /*****************************************************************************
 * Callback for overcurrent module
 ******************************************************************************/
-uint8_t callback_i2tFunction(parameter_entry * params, uint8_t index, port_str *ptr){
+uint8_t callback_i2tFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     i2t_set_limit(configuration.max_const_i,configuration.max_fault_i,10000);
     return 1;
 }
@@ -638,40 +636,35 @@ static const uint8_t c_A = 9;
 static const uint8_t c_B = 15;
 static const uint8_t c_C = 35;
 
-void print_alarm(ALARMS *temp,port_str *ptr){
-    uint16_t ret;
-    char buffer[80];
-    Term_Move_Cursor_right(c_A,ptr);
-    ret = snprintf(buffer, sizeof(buffer),"%u",temp->num);
-    send_buffer(buffer,ret,ptr); 
+void print_alarm(ALARMS *temp,TERMINAL_HANDLE * handle){
+    Term_Move_Cursor_right(c_A,portM);
+    ttprintf("%u",temp->num);
     
-    Term_Move_Cursor_right(c_B,ptr);
-    ret = snprintf(buffer, sizeof(buffer),"| %u ms",temp->timestamp);
-    send_buffer(buffer,ret,ptr); 
+    Term_Move_Cursor_right(c_B,portM);
+    ttprintf("| %u ms",temp->timestamp);
     
-    Term_Move_Cursor_right(c_C,ptr);
-    send_char('|',ptr);
+    Term_Move_Cursor_right(c_C,portM);
+    ttprintf("|");
     switch(temp->alarm_level){
         case ALM_PRIO_INFO:
-            Term_Color_Green(ptr);
+            Term_Color_Green(portM);
         break;
         case ALM_PRIO_WARN:
-            Term_Color_White(ptr);
+            Term_Color_White(portM);
         break;
         case ALM_PRIO_ALARM:
-            Term_Color_Cyan(ptr);
+            Term_Color_Cyan(portM);
         break;
         case ALM_PRIO_CRITICAL:
-            Term_Color_Red(ptr);
+            Term_Color_Red(portM);
         break;
     }
     if(temp->value==ALM_NO_VALUE){
-        ret = snprintf(buffer, sizeof(buffer)," %s\r\n",temp->message);
+        ttprintf(" %s\r\n",temp->message);
     }else{
-        ret = snprintf(buffer, sizeof(buffer)," %s | Value: %i\r\n",temp->message ,temp->value);
-    }
-    send_buffer(buffer,ret,ptr); 
-    Term_Color_White(ptr);
+        ttprintf(" %s | Value: %i\r\n",temp->message ,temp->value);
+    } 
+    Term_Color_White(portM);
 }
 
 
@@ -694,7 +687,7 @@ uint8_t CMD_alarms(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         
         for(uint16_t i=0;i<alarm_get_num();i++){
             if(alarm_get(i,&temp)==pdPASS){
-                print_alarm(&temp,ptr);
+                print_alarm(&temp,handle);
             }
         }
     	return TERM_CMD_EXIT_SUCCESS;
@@ -709,14 +702,14 @@ uint8_t CMD_alarms(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         uint32_t old_num=0;
         for(uint16_t i=0;i<alarm_get_num();i++){
             if(alarm_get(i,&temp)==pdPASS){
-                print_alarm(&temp,ptr);
+                print_alarm(&temp,handle);
             }
             old_num=temp.num;
         }
         while(Term_check_break(handle,50)){
            if(alarm_get(alarm_get_num()-1,&temp)==pdPASS){
                 if(temp.num>old_num){
-                    print_alarm(&temp,ptr);
+                    print_alarm(&temp,handle);
                 }
                 old_num=temp.num;
             } 
@@ -856,9 +849,8 @@ uint8_t CMD_calib(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
 * Sends the features to teslaterm
 ******************************************************************************/
 uint8_t CMD_features(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
-    port_str * ptr = handle->port;
 	for (uint8_t i = 0; i < sizeof(version)/sizeof(char*); i++) {
-       send_features(version[i],ptr); 
+       send_features(version[i],handle); 
     }
     return TERM_CMD_EXIT_SUCCESS; 
 }
@@ -867,15 +859,14 @@ uint8_t CMD_features(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
 * Sends the configuration to teslaterm
 ******************************************************************************/
 uint8_t CMD_config_get(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
-    port_str * ptr = handle->port;
     char buffer[80];
 	for (uint8_t current_parameter = 0; current_parameter < sizeof(confparam) / sizeof(parameter_entry); current_parameter++) {
         if(confparam[current_parameter].parameter_type == PARAM_CONFIG  && confparam[current_parameter].visible){
             print_param_buffer(buffer, confparam, current_parameter);
-            send_config(buffer,confparam[current_parameter].help, ptr);
+            send_config(buffer,confparam[current_parameter].help, handle);
         }
     }
-    send_config("NULL","NULL", ptr);
+    send_config("NULL","NULL", handle);
     return TERM_CMD_EXIT_SUCCESS; 
 }
 
@@ -908,7 +899,7 @@ uint8_t CMD_tr(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
 
 		tr_running = 1;
         
-        callback_BurstFunction(NULL, 0, portM);
+        callback_BurstFunction(NULL, 0, handle);
         
 		ttprintf("Transient Enabled\r\n");
        
@@ -1050,7 +1041,7 @@ uint8_t CMD_get(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     port_str * ptr = handle->port;
     
     if(argCount==0){
-        print_param_help(confparam, PARAM_SIZE(confparam), ptr);
+        print_param_help(confparam, PARAM_SIZE(confparam), handle);
         return TERM_CMD_EXIT_SUCCESS;
     }
     
@@ -1062,7 +1053,7 @@ uint8_t CMD_get(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
 	for (uint8_t current_parameter = 0; current_parameter < sizeof(confparam) / sizeof(parameter_entry); current_parameter++) {
 		if (strcmp(args[0], confparam[current_parameter].name) == 0) {
 			//Parameter found:
-			print_param(confparam,current_parameter,ptr);
+			print_param(confparam,current_parameter,handle);
 			return TERM_CMD_EXIT_SUCCESS;
 		}
 	}
@@ -1087,9 +1078,9 @@ uint8_t CMD_set(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
 		if (strcmp(args[0], confparam[current_parameter].name) == 0) {
 			//parameter name found:
 
-			if (updateDefaultFunction(confparam, args[1],current_parameter, ptr)){
+			if (updateDefaultFunction(confparam, args[1],current_parameter, handle)){
                 if(confparam[current_parameter].callback_function){
-                    if (confparam[current_parameter].callback_function(confparam, current_parameter, ptr)){
+                    if (confparam[current_parameter].callback_function(confparam, current_parameter, handle)){
                         Term_Color_Green(ptr);
                         ttprintf("OK\r\n");
                         Term_Color_White(ptr);
@@ -1129,13 +1120,12 @@ uint8_t CMD_eeprom(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
         ttprintf("Usage: eprom [load|save]\r\n");
         return TERM_CMD_EXIT_SUCCESS;
     }
-    port_str * ptr = handle->port;
     EEPROM_1_UpdateTemperature();
 	uint8 sfflag = system_fault_Read();
 	system_fault_Control = 0; //halt tesla coil operation during updates!
 	if(strcmp(args[0], "save") == 0){
-        EEPROM_check_hash(confparam,PARAM_SIZE(confparam),ptr);
-	    EEPROM_write_conf(confparam, PARAM_SIZE(confparam),0, ptr);
+        EEPROM_check_hash(confparam,PARAM_SIZE(confparam),handle);
+	    EEPROM_write_conf(confparam, PARAM_SIZE(confparam),0, handle);
 
 		system_fault_Control = sfflag;
 		return TERM_CMD_EXIT_SUCCESS;
@@ -1143,7 +1133,7 @@ uint8_t CMD_eeprom(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
 	if(strcmp(args[0], "load") == 0){
         uint8 sfflag = system_fault_Read();
         system_fault_Control = 0; //halt tesla coil operation during updates!
-		EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,ptr);
+		EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,handle);
         
         initialize_interrupter();
 	    initialize_charging();
@@ -1232,28 +1222,28 @@ uint8_t CMD_relay(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
 * Signal debugging
 ******************************************************************************/
 
-void send_signal_state(uint8_t signal, uint8_t inverted, port_str *ptr){
+void send_signal_state(uint8_t signal, uint8_t inverted, TERMINAL_HANDLE * handle){
     if(inverted) signal = !signal; 
     if(signal){
-        Term_Color_Red(ptr);
-        SEND_CONST_STRING("true \r\n",ptr);
-        Term_Color_White(ptr);  
+        Term_Color_Red(portM);
+        ttprintf("true \r\n");
+        Term_Color_White(portM);  
     }else{
-        Term_Color_Green(ptr);
-        SEND_CONST_STRING("false\r\n",ptr);
-        Term_Color_White(ptr);
+        Term_Color_Green(portM);
+        ttprintf("false\r\n");
+        Term_Color_White(portM);
     }
 }
-void send_signal_state_wo(uint8_t signal, uint8_t inverted, port_str *ptr){
+void send_signal_state_wo(uint8_t signal, uint8_t inverted, TERMINAL_HANDLE * handle){
     if(inverted) signal = !signal; 
     if(signal){
-        Term_Color_Red(ptr);
-        SEND_CONST_STRING("true ",ptr);
-        Term_Color_White(ptr);  
+        Term_Color_Red(portM);
+        ttprintf("true ");
+        Term_Color_White(portM);  
     }else{
-        Term_Color_Green(ptr);
-        SEND_CONST_STRING("false",ptr);
-        Term_Color_White(ptr);
+        Term_Color_Green(portM);
+        ttprintf("false");
+        Term_Color_White(portM);
     }
 }
 

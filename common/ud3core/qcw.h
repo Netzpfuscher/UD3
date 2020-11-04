@@ -57,7 +57,7 @@ void qcw_regenerate_ramp();
 void qcw_handle();   
 void qcw_handle_synth();
 
-void qcw_ramp_visualize(CHART *chart, port_str *ptr);
+void qcw_ramp_visualize(CHART *chart, TERMINAL_HANDLE * handle);
 void qcw_ramp_line(uint16_t x0,uint8_t y0,uint16_t x1, uint8_t y1);
 void qcw_ramp_point(uint16_t x,uint8_t y);
     

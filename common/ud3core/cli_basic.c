@@ -26,11 +26,13 @@
 #include "helper/printf.h"
 #include <stdlib.h>
 #include <device.h>
+#include "TTerm.h"
 #ifndef BOOT
 #include "tasks/tsk_uart.h"
 #include "tasks/tsk_usb.h"
 #include "tasks/tsk_eth_common.h"
 #include "alarmevent.h"
+
 #endif
 
 uint8_t EEPROM_Read_Row(uint8_t row, uint8_t * buffer);
@@ -70,9 +72,7 @@ uint8_t n_number(uint32_t n){
     return 10;   
 }
 
-uint8_t updateDefaultFunction(parameter_entry * params, char * newValue, uint8_t index, port_str *ptr) {
-    char buffer[60];
-    int ret=0;
+uint8_t updateDefaultFunction(parameter_entry * params, char * newValue, uint8_t index, TERMINAL_HANDLE * handle) {
     int32_t value;
     float fvalue;
     char* ch_ptr;
@@ -151,42 +151,37 @@ uint8_t updateDefaultFunction(parameter_entry * params, char * newValue, uint8_t
     return 0;
     error:
         if(params[index].div){
-            ret = snprintf(buffer, sizeof(buffer),
-                    "E:Range %i.%u-%i.%u\r\n",
-                    params[index].min/params[index].div,
-                    params[index].min%params[index].div,                
-                    params[index].max/params[index].div,
-                    params[index].max%params[index].div);
+            ttprintf("E:Range %i.%u-%i.%u\r\n",
+                     params[index].min/params[index].div,
+                     params[index].min%params[index].div,                
+                     params[index].max/params[index].div,
+                     params[index].max%params[index].div);
         }else{
-            ret = snprintf(buffer, sizeof(buffer), "E:Range %i-%i\r\n", params[index].min, params[index].max);
+            ttprintf("E:Range %i-%i\r\n", params[index].min, params[index].max);
         }
-        send_buffer(buffer,ret,ptr);
 
     return 0;
 }
 
 
 
-void print_param_helperfunc(parameter_entry * params, uint8_t param_size, port_str *ptr, uint8_t param_type){
-    char buffer[100];
-    int ret=0;
+void print_param_helperfunc(parameter_entry * params, uint8_t param_size, TERMINAL_HANDLE * handle, uint8_t param_type){
     #define COL_A 9
     #define COL_B 33
     #define COL_C 64
     uint8_t current_parameter;
     uint32_t u_temp_buffer=0;
     int32_t i_temp_buffer=0;
-    Term_Move_Cursor_right(COL_A,ptr);
-    SEND_CONST_STRING("Parameter", ptr);
-    Term_Move_Cursor_right(COL_B,ptr);
-    SEND_CONST_STRING("| Value", ptr);
-    Term_Move_Cursor_right(COL_C,ptr);
-    SEND_CONST_STRING("| Text\r\n", ptr);
+    Term_Move_Cursor_right(COL_A,portM);
+    ttprintf("Parameter");
+    Term_Move_Cursor_right(COL_B,portM);
+    ttprintf("| Value");
+    Term_Move_Cursor_right(COL_C,portM);
+    ttprintf("| Text\r\n");
     for (current_parameter = 0; current_parameter < param_size; current_parameter++) {
         if(params[current_parameter].parameter_type==param_type && params[current_parameter].visible){
-            Term_Move_Cursor_right(COL_A,ptr);
-            ret = snprintf(buffer,sizeof(buffer), "\033[36m%s", params[current_parameter].name);
-            send_buffer(buffer,ret,ptr);
+            Term_Move_Cursor_right(COL_A,portM);
+            ttprintf("\033[36m%s", params[current_parameter].name);
 
             switch (params[current_parameter].type){
             case TYPE_UNSIGNED:
@@ -202,17 +197,15 @@ void print_param_helperfunc(parameter_entry * params, uint8_t param_size, port_s
                     break;
                 }
 
-                Term_Move_Cursor_right(COL_B,ptr);
+                Term_Move_Cursor_right(COL_B,portM);
                 if(params[current_parameter].div){
-                    ret = snprintf(buffer, sizeof(buffer), "\033[37m| \033[32m%u.%0*u", 
+                    ttprintf("\033[37m| \033[32m%u.%0*u", 
                         (u_temp_buffer/params[current_parameter].div),
                         n_number(params[current_parameter].div)-1,
                         (u_temp_buffer%params[current_parameter].div));
                 }else{
-                    ret = snprintf(buffer, sizeof(buffer), "\033[37m| \033[32m%u", u_temp_buffer);
+                    ttprintf("\033[37m| \033[32m%u", u_temp_buffer);
                 }
-                send_buffer(buffer,ret,ptr);
-
                 break;
             case TYPE_SIGNED:
                 switch (params[current_parameter].size){
@@ -227,7 +220,7 @@ void print_param_helperfunc(parameter_entry * params, uint8_t param_size, port_s
                     break;
                 }
 
-                Term_Move_Cursor_right(COL_B,ptr);
+                Term_Move_Cursor_right(COL_B,portM);
                 if(params[current_parameter].div){
                     uint32_t mod;
                     if(i_temp_buffer<0){
@@ -236,56 +229,49 @@ void print_param_helperfunc(parameter_entry * params, uint8_t param_size, port_s
                         mod=i_temp_buffer%params[current_parameter].div;
                     }
                     
-                    ret = snprintf(buffer, sizeof(buffer), "\033[37m| \033[32m%i.%0*u",
+                    ttprintf("\033[37m| \033[32m%i.%0*u",
                     (i_temp_buffer/params[current_parameter].div),
                     n_number(params[current_parameter].div)-1,
                     mod);
                 }else{
-                    ret = snprintf(buffer, sizeof(buffer), "\033[37m| \033[32m%i", i_temp_buffer);
+                    ttprintf("\033[37m| \033[32m%i", i_temp_buffer);
                 }
-                send_buffer(buffer,ret,ptr);
 
                 break;
             case TYPE_FLOAT:
 
-                Term_Move_Cursor_right(COL_B,ptr);
-                ret = snprintf(buffer, sizeof(buffer), "\033[37m| \033[32m%f", *(float*)params[current_parameter].value);
-                send_buffer(buffer,ret,ptr);
+                Term_Move_Cursor_right(COL_B,portM);
+                ttprintf("\033[37m| \033[32m%f", *(float*)params[current_parameter].value);
 
                 break;
             case TYPE_CHAR:
 
-                Term_Move_Cursor_right(COL_B,ptr);
-                ret = snprintf(buffer, sizeof(buffer), "\033[37m| \033[32m%c", *(char*)params[current_parameter].value);
-                send_buffer(buffer,ret,ptr);
+                Term_Move_Cursor_right(COL_B,portM);
+                ttprintf("\033[37m| \033[32m%c", *(char*)params[current_parameter].value);
 
                 break;
             case TYPE_STRING:
 
-                Term_Move_Cursor_right(COL_B,ptr);
-                ret = snprintf(buffer, sizeof(buffer), "\033[37m| \033[32m%s", (char*)params[current_parameter].value);
-                send_buffer((uint8_t*)buffer,ret,ptr);
-
+                Term_Move_Cursor_right(COL_B,portM);
+                ttprintf("\033[37m| \033[32m%s", (char*)params[current_parameter].value);
+               
                 break;
 
             }
-            Term_Move_Cursor_right(COL_C,ptr);
-            ret = snprintf(buffer, sizeof(buffer), "\033[37m| %s\r\n", params[current_parameter].help);
-            send_buffer(buffer,ret,ptr);
+            Term_Move_Cursor_right(COL_C,portM);
+            ttprintf("\033[37m| %s\r\n", params[current_parameter].help);
         }
     }
 }
 
-void print_param_help(parameter_entry * params, uint8_t param_size, port_str *ptr){
-    SEND_CONST_STRING("Parameters:\r\n", ptr);
-    print_param_helperfunc(params, param_size, ptr,PARAM_DEFAULT);
-    SEND_CONST_STRING("\r\nConfiguration:\r\n", ptr);
-    print_param_helperfunc(params, param_size, ptr,PARAM_CONFIG);
+void print_param_help(parameter_entry * params, uint8_t param_size, TERMINAL_HANDLE * handle){
+    ttprintf("Parameters:\r\n");
+    print_param_helperfunc(params, param_size, handle,PARAM_DEFAULT);
+    ttprintf("\r\nConfiguration:\r\n");
+    print_param_helperfunc(params, param_size, handle,PARAM_CONFIG);
 }
 
-void print_param(parameter_entry * params, uint8_t index, port_str *ptr){
-    char buffer[100];
-    int ret=0;
+void print_param(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     uint32_t u_temp_buffer=0;
     int32_t i_temp_buffer=0;
     float f_temp_buffer=0.0;
@@ -303,14 +289,13 @@ void print_param(parameter_entry * params, uint8_t index, port_str *ptr){
                     break;
             }
             if(params[index].div){
-                ret = snprintf(buffer, sizeof(buffer), "\t%s=%u.%0*u\r\n",
+                ttprintf("\t%s=%u.%0*u\r\n",
                                 params[index].name,(u_temp_buffer/params[index].div),
                                 n_number(params[index].div)-1,
-                (u_temp_buffer%params[index].div));
+                                (u_temp_buffer%params[index].div));
             }else{
-                ret = snprintf(buffer, sizeof(buffer), "\t%s=%u\r\n", params[index].name,u_temp_buffer);
+                ttprintf("\t%s=%u\r\n", params[index].name,u_temp_buffer);
             }
-            send_buffer(buffer,ret,ptr);
             break;
         case TYPE_SIGNED:
             switch (params[index].size){
@@ -331,27 +316,23 @@ void print_param(parameter_entry * params, uint8_t index, port_str *ptr){
                 }else{
                     mod=i_temp_buffer%params[index].div;
                 }
-                ret = snprintf(buffer, sizeof(buffer), "\t%s=%i.%0*u\r\n",
+                ttprintf("\t%s=%i.%0*u\r\n",
                                 params[index].name,(i_temp_buffer/params[index].div),
                                 n_number(params[index].div)-1,
                                 mod);
             }else{
-                ret = snprintf(buffer, sizeof(buffer), "\t%s=%i\r\n", params[index].name,i_temp_buffer);
+                ttprintf("\t%s=%i\r\n", params[index].name,i_temp_buffer);
             }
-	        send_buffer(buffer,ret,ptr);
             break;
         case TYPE_FLOAT:
             f_temp_buffer = *(float*)params[index].value;
-            ret = snprintf(buffer, sizeof(buffer), "\t%s=%f\r\n", params[index].name,f_temp_buffer);
-            send_buffer(buffer,ret,ptr);
+            ttprintf("\t%s=%f\r\n", params[index].name,f_temp_buffer);
             break;
         case TYPE_CHAR:
-            ret = snprintf(buffer, sizeof(buffer), "\t%s=%c\r\n", params[index].name,*(char*)params[index].value);
-            send_buffer(buffer,ret,ptr);
+            ttprintf("\t%s=%c\r\n", params[index].name,*(char*)params[index].value);
             break;
         case TYPE_STRING:
-            ret = snprintf(buffer, sizeof(buffer), "\t%s=%s\r\n", params[index].name,(char*)params[index].value);
-            send_buffer(buffer,ret,ptr);
+            ttprintf("\t%s=%s\r\n", params[index].name,(char*)params[index].value);
             break;
         }
 }
@@ -540,12 +521,10 @@ uint32_t djb_hash(const char* cp)
     return hash;
 }
 
-void EEPROM_check_hash(parameter_entry * params, uint8_t param_size, port_str *ptr){
+void EEPROM_check_hash(parameter_entry * params, uint8_t param_size, TERMINAL_HANDLE * handle){
     uint32_t temp_hash1;
     uint32_t temp_hash2;
     uint32_t collision=0;
-    char buffer[70];
-    uint8_t ret;
     for (uint8_t  current_parameter = 0; current_parameter < param_size; current_parameter++) {
         if(params[current_parameter].parameter_type == PARAM_CONFIG){
             temp_hash1=djb_hash(params[current_parameter].name);
@@ -553,8 +532,7 @@ void EEPROM_check_hash(parameter_entry * params, uint8_t param_size, port_str *p
                 if(params[n].parameter_type == PARAM_CONFIG){
                     temp_hash2=djb_hash(params[n].name);
                     if(temp_hash1==temp_hash2){
-                        ret = snprintf(buffer, sizeof(buffer),"Found collision %s <-> %s\r\n", params[current_parameter].name, params[n].name);
-                        send_buffer(buffer, ret, ptr); 
+                        ttprintf("Found collision %s <-> %s\r\n", params[current_parameter].name, params[n].name);
                         collision=1;
                     }
                 }
@@ -563,8 +541,7 @@ void EEPROM_check_hash(parameter_entry * params, uint8_t param_size, port_str *p
                 if(params[n].parameter_type == PARAM_CONFIG){
                     temp_hash2=djb_hash(params[n].name);
                     if(temp_hash1==temp_hash2){
-                        ret = snprintf(buffer, sizeof(buffer),"Found collision %s <-> %s\r\n", params[current_parameter].name, params[n].name);
-                        send_buffer(buffer, ret, ptr); 
+                        ttprintf("Found collision %s <-> %s\r\n", params[current_parameter].name, params[n].name);
                         collision=1;
                     }
                 }
@@ -572,19 +549,17 @@ void EEPROM_check_hash(parameter_entry * params, uint8_t param_size, port_str *p
         }
     }
     if(collision==0){
-        SEND_CONST_STRING("Check for hash collision done.\r\n",ptr);   
+        ttprintf("Check for hash collision done.\r\n");   
     }
 }
 
-void EEPROM_write_conf(parameter_entry * params, uint8_t param_size, uint16_t eeprom_offset ,port_str *ptr){
+void EEPROM_write_conf(parameter_entry * params, uint8_t param_size, uint16_t eeprom_offset ,TERMINAL_HANDLE * handle){
     byte_cnt=0;
 	uint16_t count = eeprom_offset;
 	uint8_t change_flag = 0;
 	uint16_t change_count = 0;
 	uint32_t temp_hash=0;
 	uint16_t param_count=0;
-	char buffer[70];
-    int ret=0;
         EEPROM_buffer_write(0x00, count,0);
 		count++;
 		EEPROM_buffer_write(0xC0, count,0);
@@ -629,13 +604,10 @@ void EEPROM_write_conf(parameter_entry * params, uint8_t param_size, uint16_t ee
         count++;
 		EEPROM_buffer_write(0x00, count,1);
         alarm_push(ALM_PRIO_INFO,warn_eeprom_written, change_count);
-		ret = snprintf(buffer, sizeof(buffer),"%i / %i new config params written. %i bytes from 2048 used.\r\n", change_count, param_count, byte_cnt);
-        send_buffer(buffer, ret, ptr);
+		ttprintf("%i / %i new config params written. %i bytes from 2048 used.\r\n", change_count, param_count, byte_cnt);
 }
 
-void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eeprom_offset ,port_str *ptr){
-    char buffer[60];
-    int ret=0;
+void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eeprom_offset ,TERMINAL_HANDLE * handle){
     uint16_t addr=eeprom_offset;
     uint32_t temp_hash=0;
     uint8_t data[DATASET_BYTES];
@@ -649,7 +621,7 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
         if(!(data[0]== 0x00 && data[1] == 0xC0 && data[2] == 0xFF && data[3] == 0xEE)) {
             #ifndef BOOT
             alarm_push(ALM_PRIO_WARN,warn_eeprom_no_dataset, ALM_NO_VALUE);
-            SEND_CONST_STRING("WARNING: No or old EEPROM dataset found\r\n",ptr);
+            ttprintf("WARNING: No or old EEPROM dataset found\r\n");
             #endif
             return;
         }
@@ -681,8 +653,7 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
         if(current_parameter == param_size){
             #ifndef BOOT
             alarm_push(ALM_PRIO_WARN,warn_eeprom_unknown_id, data[0]);
-            ret = snprintf(buffer, sizeof(buffer), "WARNING: Unknown param ID %i found in EEPROM\r\n", data[0]);
-            send_buffer(buffer, ret, ptr);
+            ttprintf("WARNING: Unknown param ID %i found in EEPROM\r\n", data[0]);
             #endif
         }
     }
@@ -706,15 +677,13 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
             }
             if(!found_param){
                 alarm_push(ALM_PRIO_WARN,warn_eeprom_unknown_param, current_parameter);
-                ret = snprintf(buffer, sizeof(buffer), "WARNING: Param [%s] not found in EEPROM\r\n",params[current_parameter].name);
-                send_buffer(buffer, ret, ptr);
+                ttprintf("WARNING: Param [%s] not found in EEPROM\r\n",params[current_parameter].name);
             }
         }
     }
     #ifndef BOOT
     alarm_push(ALM_PRIO_INFO,warn_eeprom_loaded, ALM_NO_VALUE);
-    ret = snprintf(buffer, sizeof(buffer), "%i / %i config params loaded\r\n", change_count, param_count);
-    send_buffer(buffer, ret, ptr);
+    ttprintf("%i / %i config params loaded\r\n", change_count, param_count);
     #endif
 }
 

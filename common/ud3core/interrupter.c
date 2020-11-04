@@ -137,7 +137,7 @@ void interrupter_enable_ext() {
     CyGlobalIntEnable;
 }
 
-uint8_t callback_ext_interrupter(parameter_entry * params, uint8_t index, port_str *ptr){
+uint8_t callback_ext_interrupter(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     if(configuration.ext_interrupter){
         alarm_push(ALM_PRIO_WARN,warn_interrupter_ext, configuration.ext_interrupter);
         interrupter_enable_ext();

@@ -30,33 +30,33 @@ const char *units[]={
     
 };
 
-void send_gauge(uint8_t gauge, int16_t val, port_str *ptr){
+void send_gauge(uint8_t gauge, int16_t val, TERMINAL_HANDLE * handle){
     gaugebuf[3]=gauge;
     gaugebuf[4]=(uint8_t)val;
     gaugebuf[5]=(uint8_t)(val>>8);
-    send_buffer(gaugebuf,sizeof(gaugebuf),ptr);
+    ttprintb(gaugebuf,sizeof(gaugebuf));
 }
 
-void send_gauge32(uint8_t gauge, int32_t val, port_str *ptr){
+void send_gauge32(uint8_t gauge, int32_t val, TERMINAL_HANDLE * handle){
     gaugebuf32[3]=gauge;
     gaugebuf32[4]=(uint8_t)val;
     gaugebuf32[5]=(uint8_t)(val>>8);
     gaugebuf32[6]=(uint8_t)(val>>16);
     gaugebuf32[7]=(uint8_t)(val>>24);
-    send_buffer(gaugebuf32,sizeof(gaugebuf32),ptr);
+    ttprintb(gaugebuf32,sizeof(gaugebuf32));
 }
 
-void send_chart(uint8_t chart, int16_t val, port_str *ptr){
+void send_chart(uint8_t chart, int16_t val, TERMINAL_HANDLE * handle){
     chartbuf[3]=chart;
     chartbuf[4]=(uint8_t)val;
     chartbuf[5]=(uint8_t)(val>>8);
-    send_buffer(chartbuf,sizeof(chartbuf),ptr);
+    ttprintb(chartbuf,sizeof(chartbuf));
 }
-void send_chart_draw(port_str *ptr){
-    send_buffer(chartdraw,sizeof(chartdraw),ptr);
+void send_chart_draw(TERMINAL_HANDLE * handle){
+    ttprintb(chartdraw,sizeof(chartdraw));
 }
 
-void send_chart_config(uint8_t chart, int16_t min, int16_t max, int16_t offset,uint8_t unit, char * text, port_str *ptr){
+void send_chart_config(uint8_t chart, int16_t min, int16_t max, int16_t offset,uint8_t unit, char * text, TERMINAL_HANDLE * handle){
     uint8_t bytes = strlen(text);
     uint8_t buf[11];
     buf[0] = 0xFF;
@@ -70,11 +70,11 @@ void send_chart_config(uint8_t chart, int16_t min, int16_t max, int16_t offset,u
     buf[8] = offset;
     buf[9] = (offset>>8);
     buf[10] = unit;
-    send_buffer(buf,sizeof(buf),ptr);
-    send_buffer(text,bytes, ptr);
+    ttprintb(buf,sizeof(buf));
+    ttprintb(text,bytes);
 }
 
-void send_gauge_config(uint8_t gauge, int16_t min, int16_t max, char * text, port_str *ptr){
+void send_gauge_config(uint8_t gauge, int16_t min, int16_t max, char * text, TERMINAL_HANDLE * handle){
     uint8_t bytes = strlen(text);
     uint8_t buf[8];
     buf[0] = 0xFF;
@@ -85,11 +85,11 @@ void send_gauge_config(uint8_t gauge, int16_t min, int16_t max, char * text, por
     buf[5] = (min>>8);
     buf[6] = max;
     buf[7] = (max>>8);
-    send_buffer(buf,sizeof(buf),ptr);
-    send_buffer(text,bytes, ptr);
+    ttprintb(buf,sizeof(buf));
+    ttprintb(text,bytes);
 }
 
-void send_gauge_config32(uint8_t gauge, int32_t min, int32_t max, int32 div ,char * text, port_str *ptr){
+void send_gauge_config32(uint8_t gauge, int32_t min, int32_t max, int32 div ,char * text, TERMINAL_HANDLE * handle){
     uint8_t bytes = strlen(text);
     uint8_t buf[16];
     buf[0] = 0xFF;
@@ -108,15 +108,15 @@ void send_gauge_config32(uint8_t gauge, int32_t min, int32_t max, int32 div ,cha
     buf[13] = (div>>8);
     buf[14] = (div>>16);
     buf[15] = (div>>24);
-    send_buffer(buf,sizeof(buf),ptr);
-    send_buffer(text,bytes, ptr);
+    ttprintb(buf,sizeof(buf));
+    ttprintb(text,bytes);
 }
 
-void send_chart_clear(port_str *ptr){
-    send_buffer(chartclear,sizeof(chartclear),ptr); 
+void send_chart_clear(TERMINAL_HANDLE * handle){
+    ttprintb(chartclear,sizeof(chartclear)); 
 }
 
-void send_chart_line(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint8_t color, port_str *ptr){
+void send_chart_line(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint8_t color, TERMINAL_HANDLE * handle){
     uint8_t buf[12];
     buf[0] = 0xFF;
     buf[1] = sizeof(buf)-2;
@@ -130,10 +130,10 @@ void send_chart_line(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint8_t
     buf[9] = y2;
     buf[10] = (y2>>8);
     buf[11] = color;
-    send_buffer(buf,sizeof(buf),ptr); 
+    ttprintb(buf,sizeof(buf)); 
 }
 
-void send_chart_text(int16_t x, int16_t y, uint8_t color, uint8_t size, char * text, port_str *ptr){
+void send_chart_text(int16_t x, int16_t y, uint8_t color, uint8_t size, char * text, TERMINAL_HANDLE * handle){
     uint8_t bytes = strlen(text);
     uint8_t buf[9];
     buf[0] = 0xFF;
@@ -145,11 +145,11 @@ void send_chart_text(int16_t x, int16_t y, uint8_t color, uint8_t size, char * t
     buf[6] = (y>>8);
     buf[7] = color;
     buf[8] = size;
-    send_buffer(buf,sizeof(buf),ptr);
-    send_string(text, ptr);
+    ttprintb(buf,sizeof(buf));
+    ttprintf("%s",text);
 }
 
-void send_config(char* param,const char* help_text, port_str *ptr){
+void send_config(char* param,const char* help_text, TERMINAL_HANDLE * handle){
     uint8_t len = strlen(param);
     len += strlen(help_text);
     len++;
@@ -157,23 +157,21 @@ void send_config(char* param,const char* help_text, port_str *ptr){
     buf[0] = 0xFF;
     buf[1] = len+sizeof(buf)-2;
     buf[2] = TT_CONFIG_GET;
-    send_buffer(buf,sizeof(buf),ptr);
-    send_string(param, ptr);
-    send_char(';', ptr);
-    send_string((char*)help_text, ptr);
+    ttprintb(buf,sizeof(buf));
+    ttprintf("%s;%s",param,(char*)help_text);
 }
 
-void send_features(const char* text, port_str *ptr){
+void send_features(const char* text, TERMINAL_HANDLE * handle){
     uint8_t len = strlen(text);
     uint8_t buf[3];
     buf[0] = 0xFF;
     buf[1] = len+sizeof(buf)-2;
     buf[2] = TT_FEATURE_GET;
-    send_buffer(buf,sizeof(buf),ptr);
-    send_string(text, ptr);
+    ttprintb(buf,sizeof(buf));
+    ttprintf("%s",text);
 }
 
-void send_event(ALARMS *alm, port_str *ptr){
+void send_event(ALARMS *alm, TERMINAL_HANDLE * handle){
     uint8_t buf[100];
     buf[0] = 0xFF;
     buf[2] = TT_EVENT;
@@ -182,10 +180,10 @@ void send_event(ALARMS *alm, port_str *ptr){
     }else{
         buf[1] = snprintf((char*)&buf[3],sizeof(buf)-3,"%u;%u;%s;%u",alm->alarm_level,alm->timestamp,alm->message,alm->value)+1;
     }
-    send_buffer(buf,buf[1]+2,ptr);
+    ttprintb(buf,buf[1]+2);
 }
 
-void send_chart_text_center(int16_t x, int16_t y, uint8_t color, uint8_t size, char * text, port_str *ptr){
+void send_chart_text_center(int16_t x, int16_t y, uint8_t color, uint8_t size, char * text, TERMINAL_HANDLE * handle){
     uint8_t bytes = strlen(text);
     uint8_t buf[9];
     buf[0] = 0xFF;
@@ -197,39 +195,39 @@ void send_chart_text_center(int16_t x, int16_t y, uint8_t color, uint8_t size, c
     buf[6] = (y>>8);
     buf[7] = color;
     buf[8] = size;
-    send_buffer(buf,sizeof(buf),ptr);
-    send_string(text, ptr);
+    ttprintb(buf,sizeof(buf));
+    ttprintf("%s",text);
 }
 
-void send_status(uint8_t bus_active, uint8_t transient_active, uint8_t bus_controlled,uint8_t killbit ,port_str *ptr) {
+void send_status(uint8_t bus_active, uint8_t transient_active, uint8_t bus_controlled,uint8_t killbit ,TERMINAL_HANDLE * handle) {
     statusbuf[2] = TT_STATUS;
 	statusbuf[3] = bus_active|(transient_active<<1)|(bus_controlled<<2)|(killbit<<3);
-    send_buffer(statusbuf, sizeof(statusbuf), ptr);
+    ttprintb(statusbuf, sizeof(statusbuf));
 }
 
-void tt_chart_init(CHART *chart, port_str *ptr){
+void tt_chart_init(CHART *chart, TERMINAL_HANDLE * handle){
     
     int16_t f;
     char buffer[10];
-    send_chart_line(chart->offset_x, chart->height+chart->offset_y, chart->width+chart->offset_x, chart->height+chart->offset_y, TT_COLOR_WHITE, ptr);
-    send_chart_line(chart->offset_x, chart->offset_y, chart->offset_x, chart->height+chart->offset_y, TT_COLOR_WHITE, ptr);
+    send_chart_line(chart->offset_x, chart->height+chart->offset_y, chart->width+chart->offset_x, chart->height+chart->offset_y, TT_COLOR_WHITE,handle);
+    send_chart_line(chart->offset_x, chart->offset_y, chart->offset_x, chart->height+chart->offset_y, TT_COLOR_WHITE, handle);
 
     //Y grid
 	for (f = chart->height; f >= 0; f -= chart->div_y) {
-		send_chart_line(chart->offset_x, f+chart->offset_y, chart->offset_x-10, f+chart->offset_y, TT_COLOR_WHITE, ptr);
-        send_chart_line(chart->offset_x, f+chart->offset_y, chart->width+chart->offset_x, f+chart->offset_y, TT_COLOR_GRAY, ptr);
+		send_chart_line(chart->offset_x, f+chart->offset_y, chart->offset_x-10, f+chart->offset_y, TT_COLOR_WHITE, handle);
+        send_chart_line(chart->offset_x, f+chart->offset_y, chart->width+chart->offset_x, f+chart->offset_y, TT_COLOR_GRAY, handle);
         
         snprintf(buffer, sizeof(buffer), "%i", chart->height-f);
-    	send_chart_text_center(chart->offset_x-20,f+chart->offset_y+4,TT_COLOR_WHITE,8,buffer,ptr);
+    	send_chart_text_center(chart->offset_x-20,f+chart->offset_y+4,TT_COLOR_WHITE,8,buffer, handle);
 	}
     
     //X grid
 	for (f = 0; f <= chart->width; f += chart->div_x) {
-		send_chart_line(f+chart->offset_x, chart->height+chart->offset_y, f+chart->offset_x, chart->height+chart->offset_y+10, TT_COLOR_WHITE, ptr);
-        send_chart_line(f+chart->offset_x, chart->offset_y, f+chart->offset_x, chart->offset_y+chart->height, TT_COLOR_GRAY, ptr);
+		send_chart_line(f+chart->offset_x, chart->height+chart->offset_y, f+chart->offset_x, chart->height+chart->offset_y+10, TT_COLOR_WHITE, handle);
+        send_chart_line(f+chart->offset_x, chart->offset_y, f+chart->offset_x, chart->offset_y+chart->height, TT_COLOR_GRAY, handle);
         
         snprintf(buffer, sizeof(buffer), "%i", f);
-    	send_chart_text_center(f+chart->offset_x,chart->offset_y+chart->height+20,TT_COLOR_WHITE,8,buffer,ptr);
+    	send_chart_text_center(f+chart->offset_x,chart->offset_y+chart->height+20,TT_COLOR_WHITE,8,buffer, handle);
 	}
    
     

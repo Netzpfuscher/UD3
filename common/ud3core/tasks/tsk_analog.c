@@ -464,12 +464,12 @@ void reconfig_charge_timer(){
     }
 }
 
-uint8_t callback_pid(parameter_entry * params, uint8_t index, port_str *ptr){
+uint8_t callback_pid(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     pid_new(&pid_current,configuration.pid_curr_p,configuration.pid_curr_i,0,CURRENT_PID_HZ,10,false);
     pid_set_anti_windup(&pid_current,0,configuration.max_tr_duty);
     pid_set_limits(&pid_current,0,configuration.max_tr_duty);
     if(pid_current._cfg_err==true){
-        SEND_CONST_STRING("PID value error\r\n",ptr);   
+        ttprintf("PID value error\r\n");   
     }
     return pdPASS;
 }

@@ -765,16 +765,8 @@ void send_stream(char character, void* arg){
     xStreamBufferSend(((port_str*)arg)->tx,&character, 1,portMAX_DELAY);
 }
 
-void stream_printf(void * port, char* format, ...){
-    va_list va;
-    va_start(va, format);
-    const out_fct_wrap_type out_fct_wrap = { &send_stream, port };
-    _vsnprintf(_out_fct, (char*)&out_fct_wrap, (size_t)-1, format, va);
-    va_end(va);
-    return;
-}
-
 void stream_buffer(void * port, uint8_t * buffer, uint32_t len){
+    if(((port_str*)port)->tx==NULL) return;
     while(len){
 		uint16_t space = xStreamBufferSpacesAvailable(((port_str*)port)->tx);
 		uint16_t len_t = len;
@@ -785,4 +777,21 @@ void stream_buffer(void * port, uint8_t * buffer, uint32_t len){
 		if(!count) vTaskDelay(2);
     }
 }
+
+void stream_printf(void * port, char* format, ...){
+    va_list va;
+    va_start(va, format);
+    if(format==NULL){
+        stream_buffer(port,va_arg(va,uint8_t*),va_arg(va,uint32_t));
+    }else{
+        if(((port_str*)port)->tx!=NULL){;
+            const out_fct_wrap_type out_fct_wrap = { &send_stream, port };
+            _vsnprintf(_out_fct, (char*)&out_fct_wrap, (size_t)-1, format, va);
+        }
+    }
+    va_end(va);
+    return;
+}
+
+
 

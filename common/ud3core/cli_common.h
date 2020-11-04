@@ -38,7 +38,7 @@
 
 
 void init_config();
-void eeprom_load(port_str *ptr);
+void eeprom_load(TERMINAL_HANDLE * handle);
 
 uint8_t command_cls(char *commandline, port_str *ptr);
 

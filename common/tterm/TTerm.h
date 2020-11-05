@@ -2,6 +2,7 @@
  * TTerm
  *
  * Copyright (c) 2020 Thorben Zethoff
+ * Copyright (c) 2020 Jens Kerrinnes
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -69,6 +70,7 @@ enum vt100{
     _VT100_CURSOR_RESTORE_POSITION,
     _VT100_CURSOR_ENABLE,
     _VT100_CURSOR_DISABLE,
+    _VT100_CURSOR_SET_COLUMN,
     _VT100_CLS
 };
 
@@ -134,10 +136,8 @@ typedef uint8_t (* TermCommandInputHandler)(TERMINAL_HANDLE * handle, uint16_t c
 
 #if EXTENDED_PRINTF == 1
 typedef void (* TermPrintHandler)(void * port, char * format, ...);
-//typedef void (* TermPrintBufferHandler)(void * port, uint8_t * buffer, uint32_t len);
 #else
 typedef void (* TermPrintHandler)(char * format, ...);
-typedef void (* TermPrintBufferHandler)(uint8_t buffer, uint32_t len);
 #endif
 typedef uint8_t (* TermAutoCompHandler)(TERMINAL_HANDLE * handle, void * params);
 
@@ -169,7 +169,6 @@ struct __TERMINAL_HANDLE__{
     uint32_t autocompleteBufferLength;
     uint32_t autocompleteStart;    
     TermPrintHandler print;
-//    TermPrintBufferHandler printBuffer;
     char * currUserName;
     char * historyBuffer[TERM_HISTORYSIZE];
     uint32_t currHistoryWritePosition;
@@ -210,11 +209,12 @@ void TERM_addCommandAC(TermCommandDescriptor * cmd, TermAutoCompHandler ACH, voi
 unsigned TERM_isSorted(TermCommandDescriptor * a, TermCommandDescriptor * b);
 char toLowerCase(char c);
 void TERM_setCursorPos(TERMINAL_HANDLE * handle, uint16_t x, uint16_t y);
+void TERM_Box(TERMINAL_HANDLE * handle, uint8_t row1, uint8_t col1, uint8_t row2, uint8_t col2);
 void TERM_sendVT100Code(TERMINAL_HANDLE * handle, uint16_t cmd, uint8_t var);
 const char * TERM_getVT100Code(uint16_t cmd, uint8_t var);
 uint16_t TERM_countArgs(const char * data, uint16_t dataLength);
 uint8_t TERM_interpretCMD(char * data, uint16_t dataLength, TERMINAL_HANDLE * handle);
-uint8_t TERM_seperateArgs(char * data, uint16_t dataLength, char ** buff);
+uint16_t TERM_seperateArgs(char * data, uint16_t dataLength, char ** buff);
 void TERM_checkForCopy(TERMINAL_HANDLE * handle, COPYCHECK_MODE mode);
 void TERM_printDebug(TERMINAL_HANDLE * handle, char * format, ...);
 void TERM_removeProgramm(TERMINAL_HANDLE * handle);

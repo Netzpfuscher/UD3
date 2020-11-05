@@ -49,7 +49,7 @@ struct __ACL_HEAD__{
 };
 
 AC_LIST_HEAD * ACL_create();
-AC_LIST_HEAD * ACL_createConst(char ** strings, uint32_t count);
+AC_LIST_HEAD * ACL_createConst(const char ** strings, uint32_t count);
 AC_LIST_ELEMENT * ACL_getNext(AC_LIST_ELEMENT * currElement);
 void ACL_add(AC_LIST_HEAD * head, char * string);
 void ACL_remove(AC_LIST_HEAD * head, char * string);

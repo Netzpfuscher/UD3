@@ -2,6 +2,7 @@
  * TTerm
  *
  * Copyright (c) 2020 Thorben Zethoff
+ * Copyright (c) 2020 Jens Kerrinnes
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -39,6 +40,8 @@
 TermCommandDescriptor ** TERM_cmdList;
 uint8_t TERM_cmdCount = 0;
 unsigned TERM_baseCMDsAdded = 0;
+
+#define ESC_STR "\x1b"
 
 #if EXTENDED_PRINTF == 1
 TERMINAL_HANDLE * TERM_createNewHandle(TermPrintHandler printFunction, void * port, const char * usr){
@@ -504,7 +507,7 @@ void strsft(char * src, int32_t startByte, int32_t offset){
     if(offset == 0) return;
     
     if(offset > 0){     //shift forward
-        uint32_t currPos = strlen(src) + offset;
+        int32_t currPos = strlen(src) + offset;
         src[currPos--] = 0;
         for(; currPos >= startByte; currPos--){
             if(currPos == 0){
@@ -569,7 +572,7 @@ uint8_t TERM_interpretCMD(char * data, uint16_t dataLength, TERMINAL_HANDLE * ha
     return TERM_CMD_EXIT_NOT_FOUND;
 }
 
-uint8_t TERM_seperateArgs(char * data, uint16_t dataLength, char ** buff){
+uint16_t TERM_seperateArgs(char * data, uint16_t dataLength, char ** buff){
     uint8_t count = 0;
     uint8_t currPos = 0;
     unsigned quoteMark = 0;
@@ -607,7 +610,7 @@ uint8_t TERM_seperateArgs(char * data, uint16_t dataLength, char ** buff){
                 break;
         }
     }
-    if(quoteMark) TERM_ARGS_ERROR_STRING_LITERAL;
+    if(quoteMark) return TERM_ARGS_ERROR_STRING_LITERAL;
     return count;
 }
 
@@ -647,7 +650,7 @@ uint16_t TERM_countArgs(const char * data, uint16_t dataLength){
                 break;
         }
     }
-    if(quoteMark) TERM_ARGS_ERROR_STRING_LITERAL;
+    if(quoteMark) return TERM_ARGS_ERROR_STRING_LITERAL;
     return count;
 }
 
@@ -745,8 +748,32 @@ char toLowerCase(char c){
     }
 }
 
-void TERM_setCursorPos(TERMINAL_HANDLE * handle, uint16_t x, uint16_t y){
-    
+void TERM_Box(TERMINAL_HANDLE * handle, uint8_t row1, uint8_t col1, uint8_t row2, uint8_t col2) {
+	TERM_setCursorPos(handle, row1, col1);
+	TERM_sendVT100Code(handle, _VT100_BACKGROUND_COLOR, _VT100_BLUE);
+	ttprintf("\xE2\x95\x94"); //edge upper left
+	int i = 0;
+	for (i = 1; i < (col2 - col1); i++) {
+		ttprintf("\xE2\x95\x90"); //=
+	}
+	ttprintf("\xE2\x95\x97"); //edge upper right
+	for (i = 1; i < (row2 - row1); i++) {
+		TERM_setCursorPos(handle, row1 + i, col1);
+		ttprintf("\xE2\x95\x91"); //left ||
+		TERM_setCursorPos(handle, row1 + i, col2);
+		ttprintf("\xE2\x95\x91"); //right ||
+	}
+	TERM_setCursorPos(handle, row2, col1);
+	ttprintf("\xE2\x95\x9A"); //edge lower left
+	for (i = 1; i < (col2 - col1); i++) {
+		ttprintf("\xE2\x95\x90"); //=
+	}
+	ttprintf("\xE2\x95\x9D"); //edge lower right
+	TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
+}
+
+void TERM_setCursorPos(TERMINAL_HANDLE * handle, uint16_t row, uint16_t column){
+    ttprintf(ESC_STR "[%i;%iH", row, column);
 }
 
 void TERM_sendVT100Code(TERMINAL_HANDLE * handle, uint16_t cmd, uint8_t var){
@@ -831,6 +858,9 @@ void TERM_sendVT100Code(TERMINAL_HANDLE * handle, uint16_t cmd, uint8_t var){
             break;
         case _VT100_CURSOR_DISABLE:
             ttprintf("\x1b[?25l");
+            break;
+        case _VT100_CURSOR_SET_COLUMN:
+            ttprintf(ESC_STR "[%i`", var);
             break;
         case _VT100_CLS:
             ttprintf("\x1b[2J\033[1;1H");
@@ -948,6 +978,9 @@ const char * TERM_getVT100Code(uint16_t cmd, uint8_t var){
             break;
         case _VT100_CURSOR_DISABLE:
             return "\x1b[?25l";
+            break;
+        case _VT100_CURSOR_SET_COLUMN:
+            return ESC_STR "[%i`";
             break;
         case _VT100_CLS:
             return "\x1b[2J\033[1;1H";

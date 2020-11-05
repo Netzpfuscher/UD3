@@ -637,26 +637,26 @@ static const uint8_t c_B = 15;
 static const uint8_t c_C = 35;
 
 void print_alarm(ALARMS *temp,TERMINAL_HANDLE * handle){
-    Term_Move_Cursor_right(c_A,portM);
+    TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, c_A);
     ttprintf("%u",temp->num);
     
-    Term_Move_Cursor_right(c_B,portM);
+    TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, c_B);
     ttprintf("| %u ms",temp->timestamp);
     
-    Term_Move_Cursor_right(c_C,portM);
+    TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, c_C);
     ttprintf("|");
     switch(temp->alarm_level){
         case ALM_PRIO_INFO:
-            Term_Color_Green(portM);
+            TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_GREEN);
         break;
         case ALM_PRIO_WARN:
-            Term_Color_White(portM);
+            TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
         break;
         case ALM_PRIO_ALARM:
-            Term_Color_Cyan(portM);
+            TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_CYAN);
         break;
         case ALM_PRIO_CRITICAL:
-            Term_Color_Red(portM);
+            TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_RED);
         break;
     }
     if(temp->value==ALM_NO_VALUE){
@@ -664,7 +664,7 @@ void print_alarm(ALARMS *temp,TERMINAL_HANDLE * handle){
     }else{
         ttprintf(" %s | Value: %i\r\n",temp->message ,temp->value);
     } 
-    Term_Color_White(portM);
+    TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
 }
 
 
@@ -674,16 +674,15 @@ uint8_t CMD_alarms(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         return TERM_CMD_EXIT_SUCCESS;
     }
     ALARMS temp;
-    port_str * ptr = handle->port;
     
     if(strcmp(args[0], "get") == 0){
 
-        Term_Move_Cursor_right(c_A,ptr);
-        SEND_CONST_STRING("Number", ptr);
-        Term_Move_Cursor_right(c_B,ptr);
-        SEND_CONST_STRING("| Timestamp", ptr);
-        Term_Move_Cursor_right(c_C,ptr);
-        SEND_CONST_STRING("| Message\r\n", ptr);
+        TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, c_A);
+        ttprintf("Number");
+        TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, c_B);
+        ttprintf("| Timestamp");
+        TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, c_C);
+        ttprintf("| Message\r\n");
         
         for(uint16_t i=0;i<alarm_get_num();i++){
             if(alarm_get(i,&temp)==pdPASS){
@@ -693,12 +692,12 @@ uint8_t CMD_alarms(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     	return TERM_CMD_EXIT_SUCCESS;
     }
     if(strcmp(args[0], "roll") == 0){
-        Term_Move_Cursor_right(c_A,ptr);
-        SEND_CONST_STRING("Number", ptr);
-        Term_Move_Cursor_right(c_B,ptr);
-        SEND_CONST_STRING("| Timestamp", ptr);
-        Term_Move_Cursor_right(c_C,ptr);
-        SEND_CONST_STRING("| Message\r\n", ptr);
+        TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, c_A);
+        ttprintf("Number");
+        TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, c_B);
+        ttprintf("| Timestamp");
+        TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, c_C);
+        ttprintf("| Message\r\n");
         uint32_t old_num=0;
         for(uint16_t i=0;i<alarm_get_num();i++){
             if(alarm_get(i,&temp)==pdPASS){
@@ -718,7 +717,7 @@ uint8_t CMD_alarms(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     }
     if(strcmp(args[0], "reset") == 0){
         alarm_clear();
-        SEND_CONST_STRING("Alarms reset...\r\n", ptr);
+        ttprintf("Alarms reset...\r\n");
         return TERM_CMD_EXIT_SUCCESS;
     }
     return TERM_CMD_EXIT_SUCCESS;
@@ -729,16 +728,16 @@ void con_info(TERMINAL_HANDLE * handle){
     #define COL_A 9
     #define COL_B 15
     ttprintf("\r\nConnected clients:\r\n");
-    Term_Move_Cursor_right(COL_A,portM);
+    TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, COL_A);
     ttprintf("Num");
-    Term_Move_Cursor_right(COL_B,portM);
+    TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, COL_B);
     ttprintf("| Remote IP\r\n");
     
     for(uint8_t i=0;i<NUM_MIN_CON;i++){
         if(socket_info[i].socket==SOCKET_CONNECTED){
-            Term_Move_Cursor_right(COL_A,portM);
+            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, COL_A);
             ttprintf("\033[36m%d", i);
-            Term_Move_Cursor_right(COL_B,portM);
+            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, COL_B);
             ttprintf("\033[32m%s\r\n", socket_info[i].info);
         }
     }
@@ -993,7 +992,6 @@ uint8_t CMD_udkill(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
         ttprintf("Usage: kill [set|reset|get]\r\n");
         return TERM_CMD_EXIT_SUCCESS;
     }
-    port_str * ptr = handle->port;
     
     if(strcmp(args[0], "set") == 0){
         interrupter_kill();
@@ -1008,26 +1006,24 @@ uint8_t CMD_udkill(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
         
     	interrupter1_control_Control = 0;
     	QCW_enable_Control = 0;
-    	Term_Color_Green(ptr);
-    	SEND_CONST_STRING("Killbit set\r\n", ptr);
+    	TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_GREEN);
+    	ttprintf("Killbit set\r\n");
         alarm_push(ALM_PRIO_CRITICAL,warn_kill_set, ALM_NO_VALUE);
-    	Term_Color_White(ptr);
+    	TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
         return TERM_CMD_EXIT_SUCCESS;
     }else if(strcmp(args[0], "reset") == 0){
         interrupter_unkill();
         reset_fault();
         system_fault_Control = 0xFF;
-        Term_Color_Green(ptr);
-    	SEND_CONST_STRING("Killbit reset\r\n", ptr);
+        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_GREEN);
+    	ttprintf("Killbit reset\r\n");
         alarm_push(ALM_PRIO_INFO,warn_kill_reset, ALM_NO_VALUE);
-    	Term_Color_White(ptr);
+    	TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
         return TERM_CMD_EXIT_SUCCESS;
     }else if(strcmp(args[0], "get") == 0){
-        char buf[30];
-        Term_Color_Red(ptr);
-        int ret = snprintf(buf,sizeof(buf), "Killbit: %u\r\n",sysfault.interlock);
-        send_buffer(buf,ret,ptr);
-        Term_Color_White(ptr);
+        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_RED);
+        ttprintf("Killbit: %u\r\n",sysfault.interlock);
+        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);;
         return TERM_CMD_EXIT_SUCCESS;
     }
     return TERM_CMD_EXIT_SUCCESS;
@@ -1038,7 +1034,6 @@ uint8_t CMD_udkill(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
 * Get a value from a parameter or print all parameters
 ******************************************************************************/
 uint8_t CMD_get(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
-    port_str * ptr = handle->port;
     
     if(argCount==0){
         print_param_help(confparam, PARAM_SIZE(confparam), handle);
@@ -1057,9 +1052,9 @@ uint8_t CMD_get(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
 			return TERM_CMD_EXIT_SUCCESS;
 		}
 	}
-	Term_Color_Red(ptr);
+	TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_RED);
 	ttprintf("E: unknown param\r\n");
-	Term_Color_White(ptr);
+	TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
 	return 0;
 }
 
@@ -1072,8 +1067,7 @@ uint8_t CMD_set(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
         ttprintf("Usage: set [parameter] [value]\r\n");
         return TERM_CMD_EXIT_SUCCESS;
     }
-    port_str * ptr = handle->port;
-    
+  
 	for (uint8_t current_parameter = 0; current_parameter < sizeof(confparam) / sizeof(parameter_entry); current_parameter++) {
 		if (strcmp(args[0], confparam[current_parameter].name) == 0) {
 			//parameter name found:
@@ -1081,33 +1075,33 @@ uint8_t CMD_set(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
 			if (updateDefaultFunction(confparam, args[1],current_parameter, handle)){
                 if(confparam[current_parameter].callback_function){
                     if (confparam[current_parameter].callback_function(confparam, current_parameter, handle)){
-                        Term_Color_Green(ptr);
+                        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_GREEN);
                         ttprintf("OK\r\n");
-                        Term_Color_White(ptr);
+                        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
                         return 1;
                     }else{
-                        Term_Color_Red(ptr);
+                        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_RED);
                         ttprintf("ERROR: Callback\r\n");
-                        Term_Color_White(ptr);
+                        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
                         return 1;
                     }
                 }else{
-                    Term_Color_Green(ptr);
+                    TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_GREEN);
                     ttprintf("OK\r\n");
-                    Term_Color_White(ptr);
+                    TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
                     return 1;
                 }
 			} else {
-				Term_Color_Red(ptr);
+				TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_RED);
 				ttprintf("NOK\r\n");
-				Term_Color_White(ptr);
+				TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
 				return 1;
 			}
 		}
 	}
-	Term_Color_Red(ptr);
+	TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_RED);
 	ttprintf("E: unknown param\r\n");
-	Term_Color_White(ptr);
+	TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
 	return 0;
 }
 
@@ -1225,25 +1219,25 @@ uint8_t CMD_relay(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
 void send_signal_state(uint8_t signal, uint8_t inverted, TERMINAL_HANDLE * handle){
     if(inverted) signal = !signal; 
     if(signal){
-        Term_Color_Red(portM);
+        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_RED);
         ttprintf("true \r\n");
-        Term_Color_White(portM);  
+        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);  
     }else{
-        Term_Color_Green(portM);
+        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_GREEN);
         ttprintf("false\r\n");
-        Term_Color_White(portM);
+        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);;
     }
 }
 void send_signal_state_wo(uint8_t signal, uint8_t inverted, TERMINAL_HANDLE * handle){
     if(inverted) signal = !signal; 
     if(signal){
-        Term_Color_Red(portM);
+        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_RED);
         ttprintf("true ");
-        Term_Color_White(portM);  
+        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE); 
     }else{
-        Term_Color_Green(portM);
+        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_GREEN);
         ttprintf("false");
-        Term_Color_White(portM);
+        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
     }
 }
 

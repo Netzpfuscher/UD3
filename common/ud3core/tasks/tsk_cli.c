@@ -44,6 +44,8 @@
 #include "queue.h"
 #include "semphr.h"
 
+#include "TTerm_AC.h"
+
 
 
 xTaskHandle UART_Terminal_TaskHandle;
@@ -61,6 +63,81 @@ TERMINAL_HANDLE * min_handle[NUM_MIN_CON];
 
 TERMINAL_HANDLE null;
 TERMINAL_HANDLE * null_handle = &null;
+
+static const char * AC_get[] = {
+    "attack"
+    "autotune_s",
+    "baudrate",
+    "boff",
+    "bon",
+    "charge_delay",
+    "ct1_burden",
+    "ct1_ratio",
+    "ct2_burden",
+    "ct2_current",
+    "ct2_offset",
+    "ct2_ratio",
+    "ct2_type",
+    "ct2_voltage",
+    "ct3_burden",
+    "ct3_ratio",
+    "d_calib",
+    "decay",
+    "display",
+    "ena_display",
+    "ena_ext_int",
+    "ivo_uart",
+    "lead_time",
+    "linecode",
+    "max_const_i",
+    "max_dc_curr",
+    "max_fault_i",
+    "max_qcw_current",
+    "max_qcw_duty",
+    "max_qcw_pw",
+    "max_tr_current",
+    "max_tr_duty",
+    "max_tr_prf",
+    "max_tr_pw",
+    "mch",
+    "min_enable",
+    "min_tr_current",
+    "offtime",
+    "pid_curr_i",
+    "pid_curr_p",
+    "ps_scheme",
+    "pw",
+    "pwd",
+    "qcw_hold",
+    "qcw_max",
+    "qcw_offset",
+    "qcw_ramp",
+    "qcw_repeat",
+    "r_bus",
+    "release",
+    "spi_speed",
+    "start_cycles",
+    "start_freq",
+    "synth",
+    "synth_filter",
+    "temp1_max",
+    "temp1_setpoint",
+    "temp2_max",
+    "transpose",
+    "tune_delay",
+    "tune_end",
+    "tune_pw",
+    "tune_start",
+    "ud_name",
+    "watchdog"
+};
+
+static const char * min_names[] = {
+    "MIN0",
+    "MIN1",
+    "MIN2",
+    "MIN3",
+};
 
 
 /* ------------------------------------------------------------------------ */
@@ -187,7 +264,11 @@ void tsk_cli_Start(void) {
         TERM_addCommand(CMD_udkill, "kill","Stops the output",0);
         TERM_addCommand(CMD_fuse, "fuse_reset","Reset the internal fuse",0);
         TERM_addCommand(CMD_load_defaults, "load_default","Loads the default parameters",0);
-        TERM_addCommand(CMD_get, "get","Usage get [param]",0);
+        
+        TermCommandDescriptor * get = TERM_addCommand(CMD_get, "get","Usage get [param]",0);
+        AC_LIST_HEAD * head = ACL_createConst(AC_get, sizeof(AC_get)/sizeof(char*));
+        TERM_addCommandAC(get, ACL_defaultCompleter, head); 
+        
         TERM_addCommand(CMD_set, "set","Usage set [param] [value]",0);
         TERM_addCommand(CMD_qcw, "qcw","QCW [start/stop]",0);
         TERM_addCommand(CMD_relay, "relay","Switch user relay 3/4",0);
@@ -210,10 +291,10 @@ void tsk_cli_Start(void) {
                 min_port[i].tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,256);
                 xSemaphoreGive(min_port[i].term_block);
                 
-                min_handle[i] = TERM_createNewHandle(stream_printf,&min_port[i],"MIN");
+                min_handle[i] = TERM_createNewHandle(stream_printf,&min_port[i],min_names[i]);
                // min_handle[i]->printBuffer = stream_buffer;
                 
-                xTaskCreate(tsk_cli_TaskProc, "MIN-CLI", STACK_TERMINAL, min_handle[i], PRIO_TERMINAL, &MIN_Terminal_TaskHandle[i]);
+                xTaskCreate(tsk_cli_TaskProc, min_names[i], STACK_TERMINAL, min_handle[i], PRIO_TERMINAL, &MIN_Terminal_TaskHandle[i]);
             }
         }else{
             min_port[0].type = PORT_TYPE_SERIAL;

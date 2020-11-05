@@ -835,48 +835,42 @@ void switch_synth(uint8_t synth){
 }
 
 uint8_t CMD_SynthMon(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
-    char buf[80];
-    uint8_t ret;
     uint32_t freq=0;
     uint8_t channels=N_CHANNEL;
-    port_str * ptr = handle->port;
     
-    Term_Disable_Cursor(ptr);
-    Term_Erase_Screen(ptr);
-    SEND_CONST_STRING("Synthesizer monitor    [CTRL+C] for quit\r\n",ptr);
-    SEND_CONST_STRING("-----------------------------------------------------------\r\n",ptr);
+    TERM_sendVT100Code(handle, _VT100_CURSOR_DISABLE,0);
+    TERM_sendVT100Code(handle, _VT100_CLS,0);
+    ttprintf("Synthesizer monitor    [CTRL+C] for quit\r\n");
+    ttprintf("-----------------------------------------------------------\r\n");
     while(Term_check_break(handle,100)){
-        Term_Move_Cursor(3,1,ptr);
+        TERM_setCursorPos(handle, 3,1);
         if(param.synth == SYNTH_SID || param.synth == SYNTH_SID_QCW) channels=SID_CHANNELS;
         if(param.synth == SYNTH_MIDI || param.synth == SYNTH_MIDI_QCW) channels=N_CHANNEL;
         
         for(uint8_t i=0;i<channels;i++){
-            ret=sprintf(buf,"Ch:   Freq:      \r");
-            send_buffer(buf,ret,ptr);   
+            ttprintf("Ch:   Freq:      \r");
             if(channel[i].volume>0){
                 freq=channel[i].freq;
             }else{
                 freq=0;
             }
-            ret=sprintf(buf,"Ch: %u Freq: %u",i+1,freq);
-            send_buffer(buf,ret,ptr);                 
-            Term_Move_Cursor_right(20,ptr);
-            ret=sprintf(buf,"Vol: ",i+1);
-            send_buffer(buf,ret,ptr);
+            ttprintf("Ch: %u Freq: %u",i+1,freq);             
+            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 20);
+            ttprintf("Vol: ",i+1);
             uint8_t cnt = channel[i].volume/12;
 
             for(uint8_t w=0;w<10;w++){
                 if(w<cnt){
-                    send_char('o',ptr);
+                    ttprintf("o");
                 }else{
-                    send_char(' ',ptr);
+                    ttprintf(" ");
                 }
             }
-            SEND_CONST_STRING("\r\n",ptr);
+            ttprintf("\r\n");
         }
     }
-    SEND_CONST_STRING("\r\n",ptr);
-    Term_Enable_Cursor(ptr);
+    ttprintf("\r\n");
+    TERM_sendVT100Code(handle, _VT100_CURSOR_DISABLE,0);
     return TERM_CMD_EXIT_SUCCESS;
 }
 

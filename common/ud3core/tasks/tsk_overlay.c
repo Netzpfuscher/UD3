@@ -269,26 +269,25 @@ void tsk_overlay_chart_start(){
 void show_overlay_100ms(TERMINAL_HANDLE * handle){
 
     if(portM->term_mode == PORT_TERM_VT100){
-    	Term_Save_Cursor(portM);
-    	Term_Disable_Cursor(portM);
+        TERM_sendVT100Code(handle, _VT100_CURSOR_SAVE_POSITION,0);
+    	TERM_sendVT100Code(handle, _VT100_CURSOR_DISABLE,0);
 
     	uint8_t row_pos = 1;
     	uint8_t col_pos = 90;
-    	//Term_Erase_Screen(ptr);
-    	Term_Box(row_pos, col_pos, row_pos + 11, col_pos + 25, portM);
-    	Term_Move_Cursor(row_pos + 1, col_pos + 1, portM);
+    	TERM_Box(handle, row_pos, col_pos, row_pos + 11, col_pos + 25);
+    	TERM_setCursorPos(handle, row_pos + 1, col_pos + 1);
     	ttprintf("Bus Voltage:       %4iV", tt.n.bus_v.value);
 
-    	Term_Move_Cursor(row_pos + 2, col_pos + 1, portM);
+    	TERM_setCursorPos(handle, row_pos + 2, col_pos + 1);
     	ttprintf("Battery Voltage:   %4iV", tt.n.batt_v.value);
 
-    	Term_Move_Cursor(row_pos + 3, col_pos + 1, portM);
+    	TERM_setCursorPos(handle, row_pos + 3, col_pos + 1);
     	ttprintf("Temp 1:          %4i *C", tt.n.temp1.value);
 
-    	Term_Move_Cursor(row_pos + 4, col_pos + 1, portM);
+    	TERM_setCursorPos(handle, row_pos + 4, col_pos + 1);
     	ttprintf("Temp 2:          %4i *C", tt.n.temp2.value);
 
-    	Term_Move_Cursor(row_pos + 5, col_pos + 1, portM);
+    	TERM_setCursorPos(handle, row_pos + 5, col_pos + 1);
         ttprintf("Bus status: ");
 
     	switch (tt.n.bus_status.value) {
@@ -309,27 +308,27 @@ void show_overlay_100ms(TERMINAL_HANDLE * handle){
     		break;
     	}
 
-    	Term_Move_Cursor(row_pos + 6, col_pos + 1, portM);
+    	TERM_setCursorPos(handle, row_pos + 6, col_pos + 1);
     	ttprintf("Average power:     %4iW", tt.n.avg_power.value);
 
-    	Term_Move_Cursor(row_pos + 7, col_pos + 1, portM);
+    	TERM_setCursorPos(handle, row_pos + 7, col_pos + 1);
     	ttprintf("Average Current: %4i.%iA", tt.n.batt_i.value / 10, tt.n.batt_i.value % 10);
 
-    	Term_Move_Cursor(row_pos + 8, col_pos + 1, portM);
+    	TERM_setCursorPos(handle, row_pos + 8, col_pos + 1);
     	ttprintf("Primary Current:   %4iA", tt.n.primary_i.value);
         
-        Term_Move_Cursor(row_pos + 9, col_pos + 1, portM);
+        TERM_setCursorPos(handle, row_pos + 9, col_pos + 1);
     	ttprintf("MIDI voices:         %1i/4", tt.n.midi_voices.value);
         
-        Term_Move_Cursor(row_pos + 10, col_pos + 1, portM);
+        TERM_setCursorPos(handle, row_pos + 10, col_pos + 1);
         if(tt.n.fres.value==-1){
             ttprintf("Fres:        no feedback");
         }else{
     	    ttprintf("Fres:          %4i.%ikHz", tt.n.fres.value / 10, tt.n.fres.value % 10);
         }
 
-    	Term_Restore_Cursor(portM);
-    	Term_Enable_Cursor(portM);
+    	TERM_sendVT100Code(handle, _VT100_CURSOR_RESTORE_POSITION,0);
+    	TERM_sendVT100Code(handle, _VT100_CURSOR_ENABLE,0);
         
     
     }else{

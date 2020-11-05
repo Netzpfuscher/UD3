@@ -172,15 +172,15 @@ void print_param_helperfunc(parameter_entry * params, uint8_t param_size, TERMIN
     uint8_t current_parameter;
     uint32_t u_temp_buffer=0;
     int32_t i_temp_buffer=0;
-    Term_Move_Cursor_right(COL_A,portM);
+    TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, COL_A);
     ttprintf("Parameter");
-    Term_Move_Cursor_right(COL_B,portM);
+    TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, COL_B);
     ttprintf("| Value");
-    Term_Move_Cursor_right(COL_C,portM);
+    TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, COL_C);
     ttprintf("| Text\r\n");
     for (current_parameter = 0; current_parameter < param_size; current_parameter++) {
         if(params[current_parameter].parameter_type==param_type && params[current_parameter].visible){
-            Term_Move_Cursor_right(COL_A,portM);
+            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, COL_A);
             ttprintf("\033[36m%s", params[current_parameter].name);
 
             switch (params[current_parameter].type){
@@ -197,7 +197,7 @@ void print_param_helperfunc(parameter_entry * params, uint8_t param_size, TERMIN
                     break;
                 }
 
-                Term_Move_Cursor_right(COL_B,portM);
+                TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, COL_B);
                 if(params[current_parameter].div){
                     ttprintf("\033[37m| \033[32m%u.%0*u", 
                         (u_temp_buffer/params[current_parameter].div),
@@ -220,7 +220,7 @@ void print_param_helperfunc(parameter_entry * params, uint8_t param_size, TERMIN
                     break;
                 }
 
-                Term_Move_Cursor_right(COL_B,portM);
+                TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, COL_B);
                 if(params[current_parameter].div){
                     uint32_t mod;
                     if(i_temp_buffer<0){
@@ -240,25 +240,25 @@ void print_param_helperfunc(parameter_entry * params, uint8_t param_size, TERMIN
                 break;
             case TYPE_FLOAT:
 
-                Term_Move_Cursor_right(COL_B,portM);
+                TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, COL_B);
                 ttprintf("\033[37m| \033[32m%f", *(float*)params[current_parameter].value);
 
                 break;
             case TYPE_CHAR:
 
-                Term_Move_Cursor_right(COL_B,portM);
+                TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, COL_B);
                 ttprintf("\033[37m| \033[32m%c", *(char*)params[current_parameter].value);
 
                 break;
             case TYPE_STRING:
 
-                Term_Move_Cursor_right(COL_B,portM);
+                TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, COL_B);
                 ttprintf("\033[37m| \033[32m%s", (char*)params[current_parameter].value);
                
                 break;
 
             }
-            Term_Move_Cursor_right(COL_C,portM);
+            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, COL_C);
             ttprintf("\033[37m| %s\r\n", params[current_parameter].help);
         }
     }
@@ -687,86 +687,7 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
     #endif
 }
 
-void Term_Reset(port_str *ptr) {
-	SEND_CONST_STRING(ESC_STR "c", ptr);
-}
 
-void Term_Erase_Screen(port_str *ptr) {
-	SEND_CONST_STRING(ESC_STR "[2J\033[1;1H", ptr);
-}
-
-void Term_Color_Green(port_str *ptr) {
-	SEND_CONST_STRING(ESC_STR "[32m", ptr);
-}
-void Term_Color_Red(port_str *ptr) {
-	SEND_CONST_STRING(ESC_STR "[31m", ptr);
-}
-void Term_Color_White(port_str *ptr) {
-	SEND_CONST_STRING(ESC_STR "[37m", ptr);
-}
-void Term_Color_Cyan(port_str *ptr) {
-	SEND_CONST_STRING(ESC_STR "[36m", ptr);
-}
-void Term_BGColor_Blue(port_str *ptr) {
-	SEND_CONST_STRING(ESC_STR "[44m", ptr);
-}
-
-void Term_Move_Cursor_right(uint8_t column, port_str *ptr) {
-	char buffer[10];
-    int ret=0;
-	ret = snprintf(buffer, sizeof(buffer), ESC_STR "[%i`", column);
-	send_buffer(buffer, ret, ptr);
-}
-void Term_Move_Cursor_left(uint8_t column, port_str *ptr) {
-	char buffer[10];
-    int ret=0;
-	ret = snprintf(buffer, sizeof(buffer), ESC_STR "[%iD", column);
-	send_buffer(buffer, ret, ptr);
-}
-
-void Term_Move_Cursor(uint8_t row, uint8_t column, port_str *ptr) {
-	char buffer[20];
-    int ret=0;
-	ret = snprintf(buffer, sizeof(buffer), ESC_STR "[%i;%iH", row, column);
-	send_buffer(buffer, ret, ptr);
-}
-
-void Term_Box(uint8_t row1, uint8_t col1, uint8_t row2, uint8_t col2, port_str *ptr) {
-	Term_Move_Cursor(row1, col1, ptr);
-	Term_BGColor_Blue(ptr);
-	SEND_CONST_STRING("\xE2\x95\x94", ptr); //edge upper left
-	int i = 0;
-	for (i = 1; i < (col2 - col1); i++) {
-		SEND_CONST_STRING("\xE2\x95\x90", ptr); //=
-	}
-	SEND_CONST_STRING("\xE2\x95\x97", ptr); //edge upper right
-	for (i = 1; i < (row2 - row1); i++) {
-		Term_Move_Cursor(row1 + i, col1, ptr);
-		SEND_CONST_STRING("\xE2\x95\x91", ptr); //left ||
-		Term_Move_Cursor(row1 + i, col2, ptr);
-		SEND_CONST_STRING("\xE2\x95\x91", ptr); //right ||
-	}
-	Term_Move_Cursor(row2, col1, ptr);
-	SEND_CONST_STRING("\xE2\x95\x9A", ptr); //edge lower left
-	for (i = 1; i < (col2 - col1); i++) {
-		SEND_CONST_STRING("\xE2\x95\x90", ptr); //=
-	}
-	SEND_CONST_STRING("\xE2\x95\x9D", ptr); //edge lower right
-	Term_Color_White(ptr);
-}
-
-void Term_Save_Cursor(port_str *ptr) {
-	SEND_CONST_STRING(ESC_STR "[s", ptr);
-}
-void Term_Restore_Cursor(port_str *ptr) {
-	SEND_CONST_STRING(ESC_STR "[u", ptr);
-}
-void Term_Disable_Cursor(port_str *ptr) {
-	SEND_CONST_STRING(ESC_STR "[?25l", ptr);
-}
-void Term_Enable_Cursor(port_str *ptr) {
-	SEND_CONST_STRING(ESC_STR "[?25h", ptr);
-}
 
 
 uint8_t getch(TERMINAL_HANDLE * handle, TickType_t xTicksToWait){

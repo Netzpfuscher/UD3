@@ -36,6 +36,7 @@
 #include "TTerm.h"
 #include "TTerm_cmd.h"
 #include "TTerm_AC.h"
+#include "cli_common.h"  
 
 TermCommandDescriptor ** TERM_cmdList;
 uint8_t TERM_cmdCount = 0;

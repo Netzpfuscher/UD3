@@ -1079,31 +1079,31 @@ uint8_t CMD_set(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
                         TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_GREEN);
                         ttprintf("OK\r\n");
                         TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
-                        return 1;
+                        return TERM_CMD_EXIT_SUCCESS;
                     }else{
                         TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_RED);
                         ttprintf("ERROR: Callback\r\n");
                         TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
-                        return 1;
+                        return TERM_CMD_EXIT_SUCCESS;
                     }
                 }else{
                     TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_GREEN);
                     ttprintf("OK\r\n");
                     TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
-                    return 1;
+                    return TERM_CMD_EXIT_SUCCESS;
                 }
 			} else {
 				TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_RED);
 				ttprintf("NOK\r\n");
 				TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
-				return 1;
+				return TERM_CMD_EXIT_SUCCESS;
 			}
 		}
 	}
 	TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_RED);
 	ttprintf("E: unknown param\r\n");
 	TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
-	return 0;
+	return TERM_CMD_EXIT_SUCCESS;
 }
 
 

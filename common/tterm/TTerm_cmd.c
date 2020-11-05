@@ -35,7 +35,7 @@
 #include "TTerm_cmd.h"
 #include "semphr.h"
 #include "system.h"
-
+#include "tasks/tsk_overlay.h"
 
 uint8_t CMD_help(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     uint8_t currArg = 0;
@@ -62,7 +62,7 @@ uint8_t CMD_cls(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
             return TERM_CMD_EXIT_SUCCESS;
         }
     }
-    
+    tsk_overlay_chart_start();
     TERM_sendVT100Code(handle, _VT100_RESET, 0); TERM_sendVT100Code(handle, _VT100_CURSOR_POS1, 0);
     TERM_printBootMessage(handle);
     

@@ -68,7 +68,7 @@ uint8_t print_debug(TERMINAL_HANDLE * handle, uint8_t id, uint8_t fibernet){
 uint8_t print_min_debug(TERMINAL_HANDLE * handle){
     TERM_sendVT100Code(handle, _VT100_CLS, 0);
     ttprintf("Entering min debug [CTRL+C] for exit\r\n");
-    debug_port = portM;
+    debug_port = handle;
     min_debug = pdTRUE;
     while(Term_check_break(handle,250));
     min_debug = pdFALSE;

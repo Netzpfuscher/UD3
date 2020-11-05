@@ -29,12 +29,13 @@
 
 #include "FreeRTOS.h"
 #include "task.h"
+  
 #if PIC32 == 1    
 #include "ff.h"
 #endif    
 
 #define EXTENDED_PRINTF 1
-#define TERM_DEVICE_NAME "UD3"
+#define TERM_DEVICE_NAME configuration.ud_name
 #define TERM_VERSION_STRING "V1.0"
 
 #if PIC32 == 1 

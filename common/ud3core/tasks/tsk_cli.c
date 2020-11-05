@@ -265,11 +265,15 @@ void tsk_cli_Start(void) {
         TERM_addCommand(CMD_fuse, "fuse_reset","Reset the internal fuse",0);
         TERM_addCommand(CMD_load_defaults, "load_default","Loads the default parameters",0);
         
-        TermCommandDescriptor * get = TERM_addCommand(CMD_get, "get","Usage get [param]",0);
+        TermCommandDescriptor * temp = TERM_addCommand(CMD_get, "get","Usage get [param]",0);
         AC_LIST_HEAD * head = ACL_createConst(AC_get, sizeof(AC_get)/sizeof(char*));
-        TERM_addCommandAC(get, ACL_defaultCompleter, head); 
+        TERM_addCommandAC(temp, ACL_defaultCompleter, head); 
         
-        TERM_addCommand(CMD_set, "set","Usage set [param] [value]",0);
+        temp = TERM_addCommand(CMD_set, "set","Usage set [param] [value]",0);
+        head = ACL_createConst(AC_get, sizeof(AC_get)/sizeof(char*));
+        TERM_addCommandAC(temp, ACL_defaultCompleter, head); 
+        
+        
         TERM_addCommand(CMD_qcw, "qcw","QCW [start/stop]",0);
         TERM_addCommand(CMD_relay, "relay","Switch user relay 3/4",0);
         TERM_addCommand(CMD_reset, "relay","Resets UD3",0);

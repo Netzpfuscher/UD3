@@ -762,6 +762,7 @@ uint8_t con_minstat(TERMINAL_HANDLE * handle){
     TERM_sendVT100Code(handle, _VT100_CURSOR_DISABLE,0);
   
     while(Term_check_break(handle,200)){
+        TERM_sendVT100Code(handle, _VT100_CURSOR_POS1,0);
         ttprintf("MIN monitor    (press [CTRL+C] for quit)\r\n");
         ttprintf("%sDropped frames        : %lu\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0), min_ctx.transport_fifo.dropped_frames);
         ttprintf("%sSpurious acks         : %lu\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0),min_ctx.transport_fifo.spurious_acks);
@@ -905,7 +906,7 @@ uint8_t CMD_tr(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
         return TERM_CMD_EXIT_SUCCESS;
     }
 
-	if(strcmp(args[0], "start") == 0){
+	if(strcmp(args[0], "stop") == 0){
         isr_interrupter_Enable();
         if (xBurst_Timer != NULL) {
 			if(xTimerDelete(xBurst_Timer, 100 / portTICK_PERIOD_MS) != pdFALSE){

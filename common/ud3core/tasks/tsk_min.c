@@ -148,15 +148,6 @@ void time_cb(uint32_t remote_time){
     }   
 }
 
-void min_debug_prt(const char *fmt, ...){
-    if(debug_port == NULL) return;
-    char buf[100];
-    va_list args;
-    va_start (args, fmt );
-    uint8_t len = vsnprintf(buf, sizeof(buf), fmt, args);
-    va_end (args);
-    send_buffer(buf,len,debug_port);
-}
 
 uint8_t flow_ctl=1;
 static const uint8_t min_stop = 'x';
@@ -234,9 +225,9 @@ void min_event(uint8_t command, uint8_t *min_payload, uint8_t len_payload){
 void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_payload, uint8_t port)
 {
     if(min_id==debug_id && debug_port!=NULL){
-        xSemaphoreTake(debug_port->term_block, 100);
-        send_buffer(min_payload,len_payload,debug_port);
-        xSemaphoreGive(debug_port->term_block);
+        xSemaphoreTake(((port_str*)debug_port)->term_block, 100);
+        (*debug_port->print)(debug_port->port, NULL, min_payload, len_payload);
+        xSemaphoreGive(((port_str*)debug_port)->term_block);
     }
     
     switch(min_id){

@@ -735,7 +735,7 @@ uint8_t Term_check_break(TERMINAL_HANDLE * handle, uint32_t ms_to_wait){
         return pdTRUE;
     } 
 }
-
+/*
 uint8_t split(char *ptr, char *ret[], uint8_t size_ret, char split_char){
     uint8_t n = 0;
     if(*ptr != '\0'){
@@ -758,22 +758,22 @@ uint8_t split(char *ptr, char *ret[], uint8_t size_ret, char split_char){
     }
     
     return n;
-}
+}*/
 
 /********************************************
 * Sends char to transmit queue
 *********************************************/
-void send_char(uint8 c, port_str *ptr) {
+/*void send_char(uint8 c, port_str *ptr) {
 #ifndef BOOT
     if (ptr->tx != NULL)
         xStreamBufferSend(ptr->tx,&c, 1,portMAX_DELAY);
 #endif
-}
+}*/
 
 /********************************************
 * Sends string to transmit queue
 *********************************************/
-void send_string(char *data, port_str *ptr) {
+/*void send_string(char *data, port_str *ptr) {
     uint16_t len = strlen(data);
     if (ptr->tx != NULL) {
     	while(len){
@@ -786,11 +786,11 @@ void send_string(char *data, port_str *ptr) {
 			if(!count) vTaskDelay(5);
     	}
     }
-}
+}*/
 /********************************************
 * Sends buffer to transmit queue
 *********************************************/
-void send_buffer_u8(uint8_t *data, uint16_t len, port_str *ptr) {
+/*void send_buffer_u8(uint8_t *data, uint16_t len, port_str *ptr) {
     if (ptr->tx != NULL) {
     	while(len){
 			uint16_t space = xStreamBufferSpacesAvailable(ptr->tx);
@@ -802,8 +802,8 @@ void send_buffer_u8(uint8_t *data, uint16_t len, port_str *ptr) {
 			if(!count) vTaskDelay(5);
     	}
 	}
-}
-
+}*/
+/*
 void send_buffer_c(char *data, uint16_t len, port_str *ptr) {
     if (ptr->tx != NULL) {
     	while(len){
@@ -817,3 +817,4 @@ void send_buffer_c(char *data, uint16_t len, port_str *ptr) {
     	}
 	}
 }
+*/

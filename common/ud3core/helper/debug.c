@@ -31,14 +31,14 @@
 #include "tasks/tsk_min.h"
 #include "tasks/tsk_cli.h"
 
-port_str *debug_port;
+TERMINAL_HANDLE * debug_port;
 uint8_t debug_id=0xFF;
 
 #define CTRL_C        0x03
 #define DEBUG_LOOP_MS 10
 
 uint8_t print_debug(TERMINAL_HANDLE * handle, uint8_t id, uint8_t fibernet){
-    debug_port = portM;
+    debug_port = handle;
     debug_id = id;
     TERM_sendVT100Code(handle, _VT100_CLS, 0);
     char buffer[80];

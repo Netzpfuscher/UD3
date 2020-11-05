@@ -36,8 +36,8 @@ uint8_t *pix;
 
 #define pix_select(x,y)  pix[x*PIX_HEIGHT+y]
 
-void raise_mermory_error(port_str *ptr){
-    SEND_CONST_STRING("WARNING: NULL pointer; malloc failed\r\n", ptr);
+void raise_mermory_error(TERMINAL_HANDLE * handle){
+    ttprintf("WARNING: NULL pointer; malloc failed\r\n");
 }
 
 static void set_bytes(char *pbuffer, const unsigned char c) {
@@ -55,14 +55,14 @@ static void set_bytes(char *pbuffer, const unsigned char c) {
 	pbuffer[2] = (char)((0xBF & c) | 0x80);
 }
 
-void braille_malloc(port_str *ptr){
+void braille_malloc(TERMINAL_HANDLE * handle){
     pix = pvPortMalloc(sizeof(uint8_t)*PIX_HEIGHT*(PIX_WIDTH / 8));
     if(pix==NULL)
-        raise_mermory_error(ptr);
+        raise_mermory_error(handle);
 }
-void braille_free(port_str *ptr){
+void braille_free(TERMINAL_HANDLE * handle){
     if(pix==NULL){
-        raise_mermory_error(ptr);
+        raise_mermory_error(handle);
     }else{
         vPortFree(pix);
     }
@@ -113,10 +113,10 @@ void braille_clear(void) {
 	
 }
 
-void braille_draw(port_str *ptr) {
+void braille_draw(TERMINAL_HANDLE * handle) {
 	unsigned char byte;
     if(pix==NULL){
-        raise_mermory_error(ptr);
+        raise_mermory_error(handle);
         return;
     }
 	for (uint16_t y = 0; y < PIX_HEIGHT; y += 4) {
@@ -146,9 +146,9 @@ void braille_draw(port_str *ptr) {
                 
                 char out_buffer[3];
 				set_bytes(out_buffer, byte);
-				send_buffer(out_buffer, sizeof(out_buffer),ptr);
+				ttprintb(out_buffer, sizeof(out_buffer));
 			}
 		}
-		SEND_CONST_STRING("\r\n", ptr);
+		ttprintf("\r\n");
 	}
 }

@@ -65,13 +65,6 @@ TERMINAL_HANDLE * TERM_createNewHandle(TermPrintHandler printFunction ,const cha
         TERM_addCommand(CMD_help, "help", "Displays this help message", 0);
         TERM_addCommand(CMD_cls, "cls", "Clears the screen", 0);
         TERM_addCommand(CMD_top, "top", "shows performance stats", 0);
-        
-        TermCommandDescriptor * test = TERM_addCommand(CMD_testCommandHandler, "test", "tests stuff", 0);
-        head = ACL_create();
-        ACL_add(head, "-ra");
-        ACL_add(head, "-r");
-        ACL_add(head, "-aa");
-        TERM_addCommandAC(test, ACL_defaultCompleter, head);  
     }
     
 #ifdef TERM_ENABLE_STARTUP_TEXT
@@ -207,13 +200,6 @@ void TERM_printBootMessage(TERMINAL_HANDLE * handle){
     ttprintf("\r\n\n\n%s\r\n", TERM_startupText1);
     ttprintf("%s\r\n", TERM_startupText2);
     ttprintf("%s\r\n", TERM_startupText3);
-    
-    if(handle->currBufferLength == 0){
-        ttprintf("\r\n\r\n%s@%s>", handle->currUserName, TERM_DEVICE_NAME);
-    }else{
-        ttprintf("\r\n\r\n%s@%s>%s", handle->currUserName, TERM_DEVICE_NAME, handle->inputBuffer);
-        if(handle->inputBuffer[handle->currBufferPosition] != 0) TERM_sendVT100Code(handle, _VT100_CURSOR_BACK_BY, handle->currBufferLength - handle->currBufferPosition);
-    }
 }
 
 BaseType_t ptr_is_in_ram(void* ptr){

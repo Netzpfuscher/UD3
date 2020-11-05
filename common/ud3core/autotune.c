@@ -185,7 +185,7 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 
     if(portM->term_mode == PORT_TERM_VT100){
         
-        braille_malloc(portM);
+        braille_malloc(handle);
         braille_clear();
 	    braille_line(0, 63, 127, 63);
 	    braille_line(0, 0, 0, 63);
@@ -200,7 +200,7 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
     	for (f = 1; f < ROWS; f++) {
     		braille_line(f - 1, ((PIX_HEIGHT - 1) - ((PIX_HEIGHT - 1) * freq_resp->curr[f-1]) / max_curr), f, ((PIX_HEIGHT - 1) - ((PIX_HEIGHT - 1) * freq_resp->curr[f]) / max_curr));
     	}
-    	braille_draw(portM);
+    	braille_draw(handle);
     	for (f = 0; f < PIX_WIDTH / 2; f += 4) {
     		if (!f) {
     			ttprintf("%i", freq_resp->freq[f*2]);
@@ -208,7 +208,7 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
     			ttprintf("%4i", freq_resp->freq[f*2]);
     		}
     	}
-        braille_free(portM);
+        braille_free(handle);
     }else{
 
         float step_w = (float)TTERM_WIDTH/128;

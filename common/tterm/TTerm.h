@@ -96,6 +96,8 @@ enum color{
     _VT100_WHITE
 };
 
+#define TERM_addCommandConstAC(CMDhandler, command, helptext, ACList) TERM_addCommandAC(TERM_addCommand(CMDhandler, command,helptext,0) \
+                                                                                , ACL_defaultCompleter, ACL_createConst(ACList, sizeof(ACList)/sizeof(char*)))
 
 
 #define _VT100_POS_IGNORE 0xffff

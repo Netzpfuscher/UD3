@@ -64,7 +64,31 @@ TERMINAL_HANDLE * min_handle[NUM_MIN_CON];
 TERMINAL_HANDLE null;
 TERMINAL_HANDLE * null_handle = &null;
 
-static const char * AC_get[] = {
+static const char * AC_start_stop[] = {
+    "start",
+    "stop"
+};
+
+static const char * AC_on_off[] = {
+    "off",
+    "on"
+    
+};
+
+static const char * AC_con[] = {
+    "info",
+    "min",
+    "numcon"
+};
+
+static const char * AC_ramp[] = {
+    "clear",
+    "draw",
+    "line",
+    "point"
+};
+
+static const char * AC_set_get[] = {
     "attack"
     "autotune_s",
     "baudrate",
@@ -251,12 +275,12 @@ void tsk_cli_Start(void) {
         //usb_handle->printBuffer = stream_buffer;
         
         TERM_addCommand(CMD_signals, "signals","For debugging",0);
-        TERM_addCommand(CMD_tr, "tr","Transient [start/stop]",0);
-        TERM_addCommand(CMD_con, "con","Prints the connections",0);
+        TERM_addCommandConstAC(CMD_tr, "tr", "Transient [start/stop]", AC_start_stop);
+        TERM_addCommandConstAC(CMD_con, "con","Prints the connections",AC_con);
         TERM_addCommand(CMD_alarms, "alarms","Alarms [get/roll/reset]",0);
         TERM_addCommand(CMD_SynthMon, "synthmon","Synthesizer status",0);
         TERM_addCommand(CMD_bootloader, "bootloader","Enters the bootloader",0);
-        TERM_addCommand(CMD_bus, "bus","bus [on/off]",0);
+        TERM_addCommandConstAC(CMD_bus, "bus","bus [on/off]",AC_on_off);
         TERM_addCommand(CMD_calib, "calib","Calibrate Vdriver",0);
         TERM_addCommand(CMD_config_get, "config_get","Internal use",0);
         TERM_addCommand(CMD_features, "features","Get supported features",0);
@@ -265,23 +289,17 @@ void tsk_cli_Start(void) {
         TERM_addCommand(CMD_fuse, "fuse_reset","Reset the internal fuse",0);
         TERM_addCommand(CMD_load_defaults, "load_default","Loads the default parameters",0);
         
-        TermCommandDescriptor * temp = TERM_addCommand(CMD_get, "get","Usage get [param]",0);
-        AC_LIST_HEAD * head = ACL_createConst(AC_get, sizeof(AC_get)/sizeof(char*));
-        TERM_addCommandAC(temp, ACL_defaultCompleter, head); 
-        
-        temp = TERM_addCommand(CMD_set, "set","Usage set [param] [value]",0);
-        head = ACL_createConst(AC_get, sizeof(AC_get)/sizeof(char*));
-        TERM_addCommandAC(temp, ACL_defaultCompleter, head); 
-        
-        
-        TERM_addCommand(CMD_qcw, "qcw","QCW [start/stop]",0);
+        TERM_addCommandConstAC(CMD_get, "get", "Usage get [param]", AC_set_get);     
+        TERM_addCommandConstAC(CMD_set, "set","Usage set [param] [value]",AC_set_get);
+     
+        TERM_addCommandConstAC(CMD_qcw, "qcw","QCW [start/stop]",AC_start_stop);
         TERM_addCommand(CMD_relay, "relay","Switch user relay 3/4",0);
-        TERM_addCommand(CMD_reset, "relay","Resets UD3",0);
+        TERM_addCommand(CMD_reset, "reset","Resets UD3",0);
         TERM_addCommand(CMD_status, "status","Displays coil status",0);
         TERM_addCommand(CMD_tterm, "tterm","Changes terminal mode",0);
         TERM_addCommand(CMD_tune, "tune","Autotune [prim/sec]",0);
         TERM_addCommand(CMD_telemetry, "telemetry","Telemetry options",0);
-        TERM_addCommand(CMD_ramp, "ramp","Write QCW ramp",0);
+        TERM_addCommandConstAC(CMD_ramp, "ramp","Write QCW ramp",AC_ramp);
         TERM_addCommand(CMD_debug, "debug","Debug mode",0);
 
      

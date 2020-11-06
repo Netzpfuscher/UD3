@@ -88,6 +88,22 @@ static const char * AC_ramp[] = {
     "point"
 };
 
+static const char * AC_alarms[] = {
+    "get",
+    "reset",
+    "roll"
+};
+
+static const char * AC_eeprom[] = {
+    "load",
+    "save"
+};
+
+static const char * AC_tune[] = {
+    "prim",
+    "sec"
+};
+
 static const char * AC_set_get[] = {
     "attack"
     "autotune_s",
@@ -277,14 +293,14 @@ void tsk_cli_Start(void) {
         TERM_addCommand(CMD_signals, "signals","For debugging",0);
         TERM_addCommandConstAC(CMD_tr, "tr", "Transient [start/stop]", AC_start_stop);
         TERM_addCommandConstAC(CMD_con, "con","Prints the connections",AC_con);
-        TERM_addCommand(CMD_alarms, "alarms","Alarms [get/roll/reset]",0);
+        TERM_addCommandConstAC(CMD_alarms, "alarms","Alarms [get/roll/reset]",AC_alarms);
         TERM_addCommand(CMD_SynthMon, "synthmon","Synthesizer status",0);
         TERM_addCommand(CMD_bootloader, "bootloader","Enters the bootloader",0);
         TERM_addCommandConstAC(CMD_bus, "bus","bus [on/off]",AC_on_off);
         TERM_addCommand(CMD_calib, "calib","Calibrate Vdriver",0);
         TERM_addCommand(CMD_config_get, "config_get","Internal use",0);
         TERM_addCommand(CMD_features, "features","Get supported features",0);
-        TERM_addCommand(CMD_eeprom, "eeprom","Save/Load config [load/save]",0);
+        TERM_addCommandConstAC(CMD_eeprom, "eeprom","Save/Load config [load/save]",AC_eeprom);
         TERM_addCommand(CMD_udkill, "kill","Stops the output",0);
         TERM_addCommand(CMD_fuse, "fuse_reset","Reset the internal fuse",0);
         TERM_addCommand(CMD_load_defaults, "load_default","Loads the default parameters",0);
@@ -297,7 +313,7 @@ void tsk_cli_Start(void) {
         TERM_addCommand(CMD_reset, "reset","Resets UD3",0);
         TERM_addCommand(CMD_status, "status","Displays coil status",0);
         TERM_addCommand(CMD_tterm, "tterm","Changes terminal mode",0);
-        TERM_addCommand(CMD_tune, "tune","Autotune [prim/sec]",0);
+        TERM_addCommandConstAC(CMD_tune, "tune","Autotune [prim/sec]",AC_tune);
         TERM_addCommand(CMD_telemetry, "telemetry","Telemetry options",0);
         TERM_addCommandConstAC(CMD_ramp, "ramp","Write QCW ramp",AC_ramp);
         TERM_addCommand(CMD_debug, "debug","Debug mode",0);
@@ -314,7 +330,6 @@ void tsk_cli_Start(void) {
                 xSemaphoreGive(min_port[i].term_block);
                 
                 min_handle[i] = TERM_createNewHandle(stream_printf,&min_port[i],min_names[i]);
-               // min_handle[i]->printBuffer = stream_buffer;
                 
                 xTaskCreate(tsk_cli_TaskProc, min_names[i], STACK_TERMINAL, min_handle[i], PRIO_TERMINAL, &MIN_Terminal_TaskHandle[i]);
             }
@@ -328,7 +343,6 @@ void tsk_cli_Start(void) {
             xSemaphoreGive(min_port[0].term_block);
             
             min_handle[0] = TERM_createNewHandle(stream_printf,&min_port[0],"Serial");
-          //  min_handle[0]->printBuffer = stream_buffer;
             
             xTaskCreate(tsk_cli_TaskProc, "UART-CLI", STACK_TERMINAL, min_handle[0], PRIO_TERMINAL, &UART_Terminal_TaskHandle);
         }

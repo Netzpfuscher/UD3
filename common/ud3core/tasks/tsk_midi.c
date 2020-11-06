@@ -870,7 +870,7 @@ uint8_t CMD_SynthMon(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         }
     }
     ttprintf("\r\n");
-    TERM_sendVT100Code(handle, _VT100_CURSOR_DISABLE,0);
+    TERM_sendVT100Code(handle, _VT100_CURSOR_ENABLE,0);
     return TERM_CMD_EXIT_SUCCESS;
 }
 

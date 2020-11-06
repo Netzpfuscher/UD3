@@ -414,8 +414,8 @@ uint8_t callback_TTupdateFunction(parameter_entry * params, uint8_t index, TERMI
 ******************************************************************************/
 uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle) {
     if(param.tune_start >= param.tune_end){
-        ttprintf("ERROR: tune_start > tune_end");
-		return 0;
+        ttprintf("ERROR: tune_start > tune_end\r\n");
+		return 1;
 	} else
 		return 1;
 }
@@ -758,7 +758,7 @@ void con_numcon(TERMINAL_HANDLE * handle){
 * Displays the statistics of the min protocol
 ******************************************************************************/
 uint8_t con_minstat(TERMINAL_HANDLE * handle){
-    
+    TERM_sendVT100Code(handle, _VT100_CLS,0);
     TERM_sendVT100Code(handle, _VT100_CURSOR_DISABLE,0);
   
     while(Term_check_break(handle,200)){

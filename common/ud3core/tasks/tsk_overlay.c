@@ -471,6 +471,8 @@ void tsk_overlay_TaskProc(void *pvParameters) {
 * Helper function for spawning the overlay task
 ******************************************************************************/
 void start_overlay_task(TERMINAL_HANDLE * handle){
+    
+
     if (portM->telemetry_handle == NULL) {
         switch(portM->type){
         case PORT_TYPE_SERIAL:

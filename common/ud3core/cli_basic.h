@@ -57,14 +57,6 @@ enum port{
     char:       TYPE_CHAR, \
     char*:      TYPE_STRING)
 
-/*
-#define send_buffer(data,len,ptr) _Generic((data), \
-                uint8_t*        : send_buffer_u8, \
-                char*           : send_buffer_c,  \
-                const char*     : send_buffer_c,  \
-                const uint8_t*  : send_buffer_u8  \
-)(data,len,ptr)*/
-
 #define SIZEP(x) ((char*)(&(x) + 1) - (char*)&(x))
 #define ADD_PARAM(para_type, visible,text, value_var, min, max, div, update_func, help_text) {para_type, visible,text, &value_var, SIZEP(value_var), typename(value_var),min, max, div, update_func, help_text},
 #define ADD_COMMAND(command, command_func, help_text) {command, command_func, help_text},
@@ -81,23 +73,11 @@ enum port{
 
 #define CYDEV_EE_SIZE 0x00000800u
 #define CY_EEPROM_SIZE              (CYDEV_EE_SIZE)
-    
-//#define SEND_CONST_STRING(string,port) send_buffer(string,strlen(string),port);
 
    
 #define CT2_TYPE_CURRENT      0
 #define CT2_TYPE_VOLTAGE      1
     
-/*    
-#define SKIP_SPACE(ptr) 	if (*ptr == 0x20 && ptr != 0) ptr++ //skip space
-#define CHECK_NULL(ptr)     if (*ptr == 0 || ptr == 0) goto helptext;
-#define HELP_TEXT(text)        \
-	helptext:;                  \
-	Term_Color_Red(ptr);       \
-	send_string(text, ptr);  \
-	Term_Color_White(ptr);     \
-	return 1;                  \
-   */
 typedef struct port_struct port_str;
 struct port_struct {
     uint8_t type;
@@ -133,20 +113,10 @@ void print_param_help(parameter_entry * params, uint8_t param_size, TERMINAL_HAN
 void print_param(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 void print_param_buffer(char * buffer, parameter_entry * params, uint8_t index);
 
-void input_interpret(port_str *ptr);
-void input_restart(void);
-//void Term_Move_Cursor_right(uint8_t column, TERMINAL_HANDLE * handle);
-//void Term_Move_Cursor_left(uint8_t column, TERMINAL_HANDLE * handle);
-void Term_Box(uint8_t row1, uint8_t col1, uint8_t row2, uint8_t col2, TERMINAL_HANDLE * handle);
 uint8_t getch(TERMINAL_HANDLE * handle, TickType_t xTicksToWait);
 uint8_t getche(TERMINAL_HANDLE * handle, TickType_t xTicksToWait);
 uint8_t kbhit(TERMINAL_HANDLE * handle);
 uint8_t Term_check_break(TERMINAL_HANDLE * handle, uint32_t ms_to_wait);
-/*void send_char(uint8_t c, port_str *ptr);
-void send_string(char *data, port_str *ptr);
-void send_buffer_u8(uint8_t *data, uint16_t len, port_str *ptr);
-void send_buffer_c(char *data, uint16_t len, port_str *ptr);
-uint8_t split(char *ptr, char *ret[], uint8_t size_ret, char split_char);*/
 
 uint8_t term_config_changed(void);
 uint32_t djb_hash(const char* cp);

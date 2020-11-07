@@ -31,6 +31,9 @@
 #include "ZCDtoPWM.h"
 #include "helper/teslaterm.h"
 #include "tasks/tsk_overlay.h"
+#include "tasks/tsk_midi.h"
+
+TimerHandle_t xQCW_Timer;
 
 void qcw_handle(){
     if(SG_Timer_ReadCounter() < timer.time_stop){
@@ -153,6 +156,17 @@ void qcw_stop(){
     QCW_enable_Control = 0;
 }
 
+uint8_t callback_rampFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
+    ramp.changed = pdTRUE;
+    if(!QCW_enable_Control){
+        qcw_regenerate_ramp();
+    }
+    
+    return pdPASS;
+}
+
+
+
 uint8_t CMD_ramp(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     if(argCount==0 || strcmp(args[0], "-?") == 0){
         ttprintf(   "Usage: ramp line x1 y1 x2 y2\r\n"
@@ -198,4 +212,72 @@ uint8_t CMD_ramp(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         return TERM_CMD_EXIT_SUCCESS;
     }
      return TERM_CMD_EXIT_SUCCESS;
+}
+
+/*****************************************************************************
+* Timer callback for the QCW autofire
+******************************************************************************/
+void vQCW_Timer_Callback(TimerHandle_t xTimer){
+    qcw_regenerate_ramp();
+    qcw_start();
+    qcw_reg = 1;
+    if(param.qcw_repeat<100) param.qcw_repeat = 100;
+    xTimerChangePeriod( xTimer, param.qcw_repeat / portTICK_PERIOD_MS, 0 );
+}
+
+BaseType_t QCW_delete_timer(void){
+    if (xQCW_Timer != NULL) {
+    	if(xTimerDelete(xQCW_Timer, 200 / portTICK_PERIOD_MS) != pdFALSE){
+            xQCW_Timer = NULL;
+            return pdPASS;
+        }else{
+            return pdFAIL;
+        }
+    }else{
+        return pdFAIL;
+    }
+}
+
+/*****************************************************************************
+* starts the QCW mode. Spawns a timer for the automatic QCW pulses.
+******************************************************************************/
+uint8_t CMD_qcw(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+    if(argCount==0 || strcmp(args[0], "-?") == 0){
+        ttprintf("Usage: qcw [start|stop]\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+        
+	if(strcmp(args[0], "start") == 0){
+        
+        switch_synth(SYNTH_MIDI);
+        if(param.qcw_repeat>99){
+            if(xQCW_Timer==NULL){
+                xQCW_Timer = xTimerCreate("QCW-Tmr", param.qcw_repeat / portTICK_PERIOD_MS, pdFALSE,(void * ) 0, vQCW_Timer_Callback);
+                if(xQCW_Timer != NULL){
+                    xTimerStart(xQCW_Timer, 0);
+                    ttprintf("QCW Enabled\r\n");
+                }else{
+                    ttprintf("Cannot create QCW Timer\r\n");
+                }
+            }
+        }else{
+            qcw_regenerate_ramp();
+		    qcw_start();
+            ttprintf("QCW single shot\r\n");
+        }
+		
+		return TERM_CMD_EXIT_SUCCESS;
+	}
+	if(strcmp(args[0], "stop") == 0){
+        if (xQCW_Timer != NULL) {
+				if(!QCW_delete_timer()){
+                    ttprintf("Cannot delete QCW Timer\r\n");
+                }
+		}
+        qcw_stop();
+		ttprintf("QCW Disabled\r\n");
+        switch_synth(param.synth);
+		return TERM_CMD_EXIT_SUCCESS;
+	}
+	return TERM_CMD_EXIT_SUCCESS;
 }

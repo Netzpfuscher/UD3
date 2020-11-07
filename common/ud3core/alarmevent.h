@@ -27,6 +27,7 @@
     
 #include <device.h>
 #include "FreeRTOS.h"
+#include "TTerm.h"
     
 typedef struct __alarms__ {
 uint16 num;
@@ -47,6 +48,7 @@ uint32_t alarm_get(uint32_t index, ALARMS * alm);
 void alarm_clear();
 uint32_t alarm_pop(ALARMS * alm);
 uint32_t alarm_free(ALARMS * alm);
+uint8_t CMD_alarms(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 
 #define ALM_PRIO_INFO       0
 #define ALM_PRIO_WARN       1

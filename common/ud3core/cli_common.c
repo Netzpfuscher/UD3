@@ -63,7 +63,6 @@
         
 	
 uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
-uint8_t callback_QCWFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_TTupdateFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
@@ -77,16 +76,13 @@ uint8_t callback_VisibleFunction(parameter_entry * params, uint8_t index, TERMIN
 uint8_t callback_MchFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_MchCopyFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_ivoUART(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
-uint8_t callback_rampFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 
 void update_ivo_uart();
 void init_tt(uint8_t with_chart, TERMINAL_HANDLE * handle);
 
-
-
 uint8_t burst_state = 0;
 
-TimerHandle_t xQCW_Timer;
+
 TimerHandle_t xBurst_Timer;
 
 cli_config configuration;
@@ -283,16 +279,6 @@ void update_visibilty(void){
 }
 
 // clang-format on
-
-uint8_t callback_rampFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
-    ramp.changed = pdTRUE;
-    if(!QCW_enable_Control){
-        qcw_regenerate_ramp();
-    }
-    
-    return pdPASS;
-}
-
 
 
 /*****************************************************************************
@@ -491,8 +477,10 @@ uint8_t callback_baudrateFunction(parameter_entry * params, uint8_t index, TERMI
     return 1;
 }
 
-#define BURST_ON 0
-#define BURST_OFF 1
+enum burst_state{
+    BURST_ON,
+    BURST_OFF
+};
 
 /*****************************************************************************
 * Callback if a transient mode parameter is changed
@@ -627,100 +615,6 @@ uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, TERMIN
 uint8_t callback_i2tFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     i2t_set_limit(configuration.max_const_i,configuration.max_fault_i,10000);
     return 1;
-}
-
-/*****************************************************************************
-* Clears the terminal screen and displays the logo
-******************************************************************************/
-static const uint8_t c_A = 9;
-static const uint8_t c_B = 15;
-static const uint8_t c_C = 35;
-
-void print_alarm(ALARMS *temp,TERMINAL_HANDLE * handle){
-    TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, c_A);
-    ttprintf("%u",temp->num);
-    
-    TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, c_B);
-    ttprintf("| %u ms",temp->timestamp);
-    
-    TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, c_C);
-    ttprintf("|");
-    switch(temp->alarm_level){
-        case ALM_PRIO_INFO:
-            TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_GREEN);
-        break;
-        case ALM_PRIO_WARN:
-            TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
-        break;
-        case ALM_PRIO_ALARM:
-            TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_CYAN);
-        break;
-        case ALM_PRIO_CRITICAL:
-            TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_RED);
-        break;
-    }
-    if(temp->value==ALM_NO_VALUE){
-        ttprintf(" %s\r\n",temp->message);
-    }else{
-        ttprintf(" %s | Value: %i\r\n",temp->message ,temp->value);
-    } 
-    TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
-}
-
-
-uint8_t CMD_alarms(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
-    if(argCount==0 || strcmp(args[0], "-?") == 0){
-        ttprintf("alarms [get|roll|reset]\r\n");
-        return TERM_CMD_EXIT_SUCCESS;
-    }
-    ALARMS temp;
-    
-    if(strcmp(args[0], "get") == 0){
-
-        TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, c_A);
-        ttprintf("Number");
-        TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, c_B);
-        ttprintf("| Timestamp");
-        TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, c_C);
-        ttprintf("| Message\r\n");
-        
-        for(uint16_t i=0;i<alarm_get_num();i++){
-            if(alarm_get(i,&temp)==pdPASS){
-                print_alarm(&temp,handle);
-            }
-        }
-    	return TERM_CMD_EXIT_SUCCESS;
-    }
-    if(strcmp(args[0], "roll") == 0){
-        TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, c_A);
-        ttprintf("Number");
-        TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, c_B);
-        ttprintf("| Timestamp");
-        TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, c_C);
-        ttprintf("| Message\r\n");
-        uint32_t old_num=0;
-        for(uint16_t i=0;i<alarm_get_num();i++){
-            if(alarm_get(i,&temp)==pdPASS){
-                print_alarm(&temp,handle);
-            }
-            old_num=temp.num;
-        }
-        while(Term_check_break(handle,50)){
-           if(alarm_get(alarm_get_num()-1,&temp)==pdPASS){
-                if(temp.num>old_num){
-                    print_alarm(&temp,handle);
-                }
-                old_num=temp.num;
-            } 
-        }
-        return TERM_CMD_EXIT_SUCCESS;
-    }
-    if(strcmp(args[0], "reset") == 0){
-        alarm_clear();
-        ttprintf("Alarms reset...\r\n");
-        return TERM_CMD_EXIT_SUCCESS;
-    }
-    return TERM_CMD_EXIT_SUCCESS;
 }
 
 
@@ -926,62 +820,7 @@ uint8_t CMD_tr(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     return TERM_CMD_EXIT_SUCCESS;
 }
 
-/*****************************************************************************
-* Timer callback for the QCW autofire
-******************************************************************************/
-void vQCW_Timer_Callback(TimerHandle_t xTimer){
-    qcw_regenerate_ramp();
-    qcw_start();
-    qcw_reg = 1;
-    if(param.qcw_repeat<100) param.qcw_repeat = 100;
-    xTimerChangePeriod( xTimer, param.qcw_repeat / portTICK_PERIOD_MS, 0 );
-}
 
-/*****************************************************************************
-* starts the QCW mode. Spawns a timer for the automatic QCW pulses.
-******************************************************************************/
-uint8_t CMD_qcw(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
-    if(argCount==0 || strcmp(args[0], "-?") == 0){
-        ttprintf("Usage: qcw [start|stop]\r\n");
-        return TERM_CMD_EXIT_SUCCESS;
-    }
-        
-	if(strcmp(args[0], "start") == 0){
-        
-        switch_synth(SYNTH_MIDI);
-        if(param.qcw_repeat>99){
-            if(xQCW_Timer==NULL){
-                xQCW_Timer = xTimerCreate("QCW-Tmr", param.qcw_repeat / portTICK_PERIOD_MS, pdFALSE,(void * ) 0, vQCW_Timer_Callback);
-                if(xQCW_Timer != NULL){
-                    xTimerStart(xQCW_Timer, 0);
-                    ttprintf("QCW Enabled\r\n");
-                }else{
-                    ttprintf("Cannot create QCW Timer\r\n");
-                }
-            }
-        }else{
-            qcw_regenerate_ramp();
-		    qcw_start();
-            ttprintf("QCW single shot\r\n");
-        }
-		
-		return TERM_CMD_EXIT_SUCCESS;
-	}
-	if(strcmp(args[0], "stop") == 0){
-        if (xQCW_Timer != NULL) {
-				if(xTimerDelete(xQCW_Timer, 200 / portTICK_PERIOD_MS) != pdFALSE){
-				    xQCW_Timer = NULL;
-                } else {
-                    ttprintf("Cannot delete QCW Timer\r\n");
-                }
-		}
-        qcw_stop();
-		ttprintf("QCW Disabled\r\n");
-        switch_synth(param.synth);
-		return TERM_CMD_EXIT_SUCCESS;
-	}
-	return TERM_CMD_EXIT_SUCCESS;
-}
 
 
 /*****************************************************************************
@@ -999,11 +838,7 @@ uint8_t CMD_udkill(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     	USBMIDI_1_callbackLocalMidiEvent(0, (uint8_t*)kill_msg);
     	bus_command = BUS_COMMAND_OFF;
         
-        if (xQCW_Timer != NULL) {
-    		if(xTimerDelete(xQCW_Timer, 200 / portTICK_PERIOD_MS) != pdFALSE){
-    	        xQCW_Timer = NULL;
-            }
-    	}
+        QCW_delete_timer();
         
     	interrupter1_control_Control = 0;
     	QCW_enable_Control = 0;

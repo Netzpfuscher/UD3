@@ -195,12 +195,6 @@ static const char * min_names[] = {
 #include <project.h>
 #include "tsk_eth_common.h"
 
-#define UNUSED_VARIABLE(N) \
-	do {                   \
-		(void)(N);         \
-	} while (0)
-void *extobjt = 0;
-
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */
@@ -240,7 +234,7 @@ void tsk_cli_TaskProc(void *pvParameters) {
      * in the task.
 	 */
 	/* `#START TASK_INIT_CODE` */
-    
+
     switch(portM->type) {
         case PORT_TYPE_SERIAL:
             alarm_push(ALM_PRIO_INFO,warn_task_serial_cli, ALM_NO_VALUE);

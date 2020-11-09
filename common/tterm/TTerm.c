@@ -38,16 +38,15 @@
 #include "TTerm_AC.h"
 #include "cli_common.h"  
 
-TermCommandDescriptor ** TERM_cmdList;
-uint8_t TERM_cmdCount = 0;
+TermCommandDescriptor TERM_cmdListHead = {.nextCmd = 0, .commandLength = 0};
 unsigned TERM_baseCMDsAdded = 0;
 
 #define ESC_STR "\x1b"
 
 #if EXTENDED_PRINTF == 1
-TERMINAL_HANDLE * TERM_createNewHandle(TermPrintHandler printFunction, void * port, const char * usr){
+TERMINAL_HANDLE * TERM_createNewHandle(TermPrintHandler printFunction, void * port, unsigned echoEnabled, TermCommandDescriptor * cmdListHead, TermErrorPrinter errorPrinter, const char * usr){
 #else
-TERMINAL_HANDLE * TERM_createNewHandle(TermPrintHandler printFunction ,const char * usr){    
+TERMINAL_HANDLE * TERM_createNewHandle(TermPrintHandler printFunction, unsigned echoEnabled, TermCommandDescriptor * cmdListHead, TermErrorPrinter errorPrinter, const char * usr){    
 #endif    
     TERMINAL_HANDLE * ret = pvPortMalloc(sizeof(TERMINAL_HANDLE));
     memset(ret, 0, sizeof(TERMINAL_HANDLE));
@@ -56,16 +55,32 @@ TERMINAL_HANDLE * TERM_createNewHandle(TermPrintHandler printFunction ,const cha
     #if EXTENDED_PRINTF == 1
     ret->port = port;
     #endif    
+    ret->echoEnabled = echoEnabled;
+    ret->cmdListHead = cmdListHead;
     ret->currUserName = pvPortMalloc(strlen(usr) + 1 + strlen(TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_YELLOW)) + strlen(TERM_getVT100Code(_VT100_RESET_ATTRIB, 0)));
     sprintf(ret->currUserName, "%s%s%s", TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_BLUE), usr, TERM_getVT100Code(_VT100_RESET_ATTRIB, 0));
     ret->currEscSeqPos = 0xff;
+    
+    if(errorPrinter == 0){
+        ret->errorPrinter = TERM_defaultErrorPrinter;
+    }else{
+        ret->errorPrinter = errorPrinter;
+    }
 
     //if this is the first console we initialize we need to add the static commands
-    if(TERM_baseCMDsAdded == 0){
+    if(!TERM_baseCMDsAdded){
         TERM_baseCMDsAdded = 1;
-        TERM_addCommand(CMD_help, "help", "Displays this help message", 0);
-        TERM_addCommand(CMD_cls, "cls", "Clears the screen", 0);
-        TERM_addCommand(CMD_top, "top", "shows performance stats", 0);
+        
+        TERM_addCommand(CMD_help, "help", "Displays this help message", 0, &TERM_cmdListHead);
+        TERM_addCommand(CMD_cls, "cls", "Clears the screen", 0, &TERM_cmdListHead);
+        TERM_addCommand(CMD_top, "top", "shows performance stats", 0, &TERM_cmdListHead);
+        
+        TermCommandDescriptor * test = TERM_addCommand(CMD_testCommandHandler, "test", "tests stuff", 0, &TERM_cmdListHead);
+        head = ACL_create();
+        ACL_add(head, "-ra");
+        ACL_add(head, "-r");
+        ACL_add(head, "-aa");
+        TERM_addCommandAC(test, ACL_defaultCompleter, head);  
     }
     
 #ifdef TERM_ENABLE_STARTUP_TEXT
@@ -78,7 +93,25 @@ TERMINAL_HANDLE * TERM_createNewHandle(TermPrintHandler printFunction ,const cha
 }
 
 void TERM_destroyHandle(TERMINAL_HANDLE * handle){
+    if(handle->currProgram != NULL){
+        //try to gracefully shutdown the running program
+        (*handle->currProgram->inputHandler)(handle, 0x03);
+    }
     
+    vPortFree(handle->inputBuffer);
+    vPortFree(handle->currUserName);
+    
+    uint8_t currHistoryPos = 0;
+    for(;currHistoryPos < TERM_HISTORYSIZE; currHistoryPos++){
+        if(handle->historyBuffer[currHistoryPos] != 0){
+            vPortFree(handle->historyBuffer[currHistoryPos]);
+            handle->historyBuffer[currHistoryPos] = 0;
+        }
+    }
+    
+    vPortFree(handle->autocompleteBuffer);
+    handle->autocompleteBuffer = NULL;
+    vPortFree(handle);
 }
 
 void TERM_printDebug(TERMINAL_HANDLE * handle, char * format, ...){
@@ -90,12 +123,12 @@ void TERM_printDebug(TERMINAL_HANDLE * handle, char * format, ...){
     char * buff = (char*) pvPortMalloc(256);
     vsnprintf(buff, 256,format, arg);
     
-    ttprintf("\r\n%s", buff);
+    ttprintfEcho("\r\n%s", buff);
     
     if(handle->currBufferLength == 0){
-        ttprintf("%s@%s>", handle->currUserName, TERM_DEVICE_NAME);
+        ttprintfEcho("%s@%s>", handle->currUserName, TERM_DEVICE_NAME);
     }else{
-        ttprintf("%s@%s>%s", handle->currUserName, TERM_DEVICE_NAME, handle->inputBuffer);
+        ttprintfEcho("%s@%s>%s", handle->currUserName, TERM_DEVICE_NAME, handle->inputBuffer);
         if(handle->inputBuffer[handle->currBufferPosition] != 0) TERM_sendVT100Code(handle, _VT100_CURSOR_BACK_BY, handle->currBufferLength - handle->currBufferPosition);
     }
     
@@ -107,7 +140,7 @@ void TERM_printDebug(TERMINAL_HANDLE * handle, char * format, ...){
 uint8_t TERM_processBuffer(uint8_t * data, uint16_t length, TERMINAL_HANDLE * handle){
     uint16_t currPos = 0;
     for(;currPos < length; currPos++){
-        //ttprintf("checking 0x%02x\r\n", data[currPos]);
+        //ttprintfEcho("checking 0x%02x\r\n", data[currPos]);
         if(handle->currEscSeqPos != 0xff){
             if(handle->currEscSeqPos == 0){
                 if(data[currPos] == '['){
@@ -198,9 +231,9 @@ unsigned isACIILetter(char c){
 
 void TERM_printBootMessage(TERMINAL_HANDLE * handle){
     TERM_sendVT100Code(handle, _VT100_RESET, 0); TERM_sendVT100Code(handle, _VT100_CURSOR_POS1, 0); TERM_sendVT100Code(handle, _VT100_WRAP_OFF, 0);
-    ttprintf("\r\n\n\n%s\r\n", TERM_startupText1);
-    ttprintf("%s\r\n", TERM_startupText2);
-    ttprintf("%s\r\n", TERM_startupText3);
+    ttprintfEcho("\r\n\n\n%s\r\n", TERM_startupText1);
+    ttprintfEcho("%s\r\n", TERM_startupText2);
+    ttprintfEcho("%s\r\n", TERM_startupText3);
 }
 
 BaseType_t ptr_is_in_ram(void* ptr){
@@ -210,28 +243,32 @@ BaseType_t ptr_is_in_ram(void* ptr){
     return pdTRUE;
 }
 
+void TERM_defaultErrorPrinter(TERMINAL_HANDLE * handle, uint32_t retCode){
+    switch(retCode){
+        case TERM_CMD_EXIT_SUCCESS:
+            ttprintfEcho("\r\n%s@%s>", handle->currUserName, TERM_DEVICE_NAME);
+            break;
+
+        case TERM_CMD_EXIT_ERROR:
+            ttprintfEcho("\r\nTask returned with error code %d\r\n%s@%s>", retCode, handle->currUserName, TERM_DEVICE_NAME);
+            break;
+
+        case TERM_CMD_EXIT_NOT_FOUND:
+            ttprintfEcho("\"%s\" is not a valid command. Type \"help\" to see a list of available ones\r\n%s@%s>", handle->inputBuffer, handle->currUserName, TERM_DEVICE_NAME);
+            break;
+    }
+}
+
 uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle){
-    //ttprintf("received 0x%04x\r\n", c);
+    //ttprintfEcho("received 0x%04x\r\n", c);
     if(handle->currProgram != NULL){
         //call the handler of the current override
         uint8_t currRetCode = (*handle->currProgram->inputHandler)(handle, c);
         
-        switch(currRetCode){
-            case TERM_CMD_EXIT_SUCCESS:
-                ttprintf("\r\n%s@%s>", handle->currUserName, TERM_DEVICE_NAME);
-                break;
-
-            case TERM_CMD_EXIT_ERROR:
-                ttprintf("\r\nTask returned with error code %d\r\n%s@%s>", currRetCode, handle->currUserName, TERM_DEVICE_NAME);
-                break;
-
-            case TERM_CMD_EXIT_NOT_FOUND:
-                ttprintf("\"%s\" is not a valid command. Type \"help\" to see a list of available ones\r\n%s@%s>", handle->inputBuffer, handle->currUserName, TERM_DEVICE_NAME);
-                break;
-        }
+        (*handle->errorPrinter)(handle, TERM_CMD_EXIT_NOT_FOUND);
         
         if(c == 0x03){
-            ttprintf("^C");
+            ttprintfEcho("^C");
         }
         return 1;
     }
@@ -241,7 +278,7 @@ uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle){
             TERM_checkForCopy(handle, TERM_CHECK_COMP_AND_HIST);
             
             if(handle->currBufferLength != 0){
-                ttprintf("\r\n", handle->inputBuffer);
+                ttprintfEcho("\r\n", handle->inputBuffer);
 
                 if(handle->historyBuffer[handle->currHistoryWritePosition] != 0){
                     vPortFree(handle->historyBuffer[handle->currHistoryWritePosition]);
@@ -256,37 +293,19 @@ uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle){
                 handle->currHistoryReadPosition = handle->currHistoryWritePosition;
 
                 uint8_t retCode = TERM_interpretCMD(handle->inputBuffer, handle->currBufferLength, handle);
-                switch(retCode){
-                    case TERM_CMD_EXIT_SUCCESS:
-                        ttprintf("\r\n%s@%s>", handle->currUserName, TERM_DEVICE_NAME);
-                        break;
-
-                    case TERM_CMD_EXIT_ERROR:
-                        ttprintf("\r\nTask returned with error code %d\r\n%s@%s>", retCode, handle->currUserName, TERM_DEVICE_NAME);
-                        break;
-
-                    case TERM_CMD_EXIT_NOT_FOUND:
-                        ttprintf("\"%s\" is not a valid command. Type \"help\" to see a list of available ones\r\n%s@%s>", handle->inputBuffer, handle->currUserName, TERM_DEVICE_NAME);
-                        break;
-
-                    case TERM_CMD_EXIT_PROC_STARTED:
-                        break;
-
-                    default:
-                        ttprintf("\r\nTask returned with an unknown return code (%d)\r\n%s@%s>", retCode, handle->currUserName, TERM_DEVICE_NAME);
-                        break;
-                }
+                (*handle->errorPrinter)(handle, retCode);
+                
                 handle->currBufferPosition = 0;
                 handle->currBufferLength = 0;
                 handle->inputBuffer[handle->currBufferPosition] = 0;
             }else{
-                ttprintf("\r\n%s@%s>", handle->currUserName, TERM_DEVICE_NAME);
+                ttprintfEcho("\r\n%s@%s>", handle->currUserName, TERM_DEVICE_NAME);
             }       
             break;
             
         case 0x03:      //CTRL+c
             //TODO reset current buffer
-            ttprintf("^C");
+            ttprintfEcho("^C");
             break;
             
         case 0x08:      //backspace (used by xTerm)
@@ -297,16 +316,16 @@ uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle){
             if(handle->inputBuffer[handle->currBufferPosition] != 0){      //check if we are at the end of our command
                 //we are somewhere in the middle -> move back existing characters
                 strsft(handle->inputBuffer, handle->currBufferPosition - 1, -1);    
-                ttprintf("\x08");   
+                ttprintfEcho("\x08");   
                 TERM_sendVT100Code(handle, _VT100_ERASE_LINE_END, 0);
-                ttprintf("%s", &handle->inputBuffer[handle->currBufferPosition - 1]);
+                ttprintfEcho("%s", &handle->inputBuffer[handle->currBufferPosition - 1]);
                 TERM_sendVT100Code(handle, _VT100_CURSOR_BACK_BY, handle->currBufferLength - handle->currBufferPosition);
                 handle->currBufferPosition --;
                 handle->currBufferLength --;
             }else{
                 //we are somewhere at the end -> just delete the current one
                 handle->inputBuffer[--handle->currBufferPosition] = 0;
-                ttprintf("\x08 \x08");           
+                ttprintfEcho("\x08 \x08");           
                 handle->currBufferLength --;
             }
             break;
@@ -352,12 +371,12 @@ uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle){
             
             //print out the command at the current history read position
             if(handle->currHistoryReadPosition == handle->currHistoryWritePosition){
-                ttprintf("\x07");   //rings a bell doesn't it?                                                      
+                ttprintfEcho("\x07");   //rings a bell doesn't it?                                                      
                 TERM_sendVT100Code(handle, _VT100_ERASE_LINE, 0);
-                ttprintf("\r%s@%s>%s", handle->currUserName, TERM_DEVICE_NAME, handle->inputBuffer);
+                ttprintfEcho("\r%s@%s>%s", handle->currUserName, TERM_DEVICE_NAME, handle->inputBuffer);
             }else{
                 TERM_sendVT100Code(handle, _VT100_ERASE_LINE, 0);
-                ttprintf("\r%s@%s>%s", handle->currUserName, TERM_DEVICE_NAME, handle->historyBuffer[handle->currHistoryReadPosition]);
+                ttprintfEcho("\r%s@%s>%s", handle->currUserName, TERM_DEVICE_NAME, handle->historyBuffer[handle->currHistoryReadPosition]);
             }
             break;
             
@@ -374,12 +393,12 @@ uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle){
             
             //print out the command at the current history read position
             if(handle->currHistoryReadPosition == handle->currHistoryWritePosition){
-                ttprintf("\x07");   //rings a bell doesn't it?                                                      
+                ttprintfEcho("\x07");   //rings a bell doesn't it?                                                      
                 TERM_sendVT100Code(handle, _VT100_ERASE_LINE, 0);
-                ttprintf("\r%s@%s>%s", handle->currUserName, TERM_DEVICE_NAME, handle->inputBuffer);
+                ttprintfEcho("\r%s@%s>%s", handle->currUserName, TERM_DEVICE_NAME, handle->inputBuffer);
             }else{
                 TERM_sendVT100Code(handle, _VT100_ERASE_LINE, 0);
-                ttprintf("\r%s@%s>%s", handle->currUserName, TERM_DEVICE_NAME, handle->historyBuffer[handle->currHistoryReadPosition]);
+                ttprintfEcho("\r%s@%s>%s", handle->currUserName, TERM_DEVICE_NAME, handle->historyBuffer[handle->currHistoryReadPosition]);
             }
             break;
             
@@ -393,13 +412,13 @@ uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle){
             if(++handle->currAutocompleteCount > handle->autocompleteBufferLength) handle->currAutocompleteCount = 0;
             
             if(handle->currAutocompleteCount == 0){
-                ttprintf("\x07");
+                ttprintfEcho("\x07");
                 TERM_sendVT100Code(handle, _VT100_ERASE_LINE, 0);
-                ttprintf("\r%s@%s>%s", handle->currUserName, TERM_DEVICE_NAME, handle->inputBuffer);
+                ttprintfEcho("\r%s@%s>%s", handle->currUserName, TERM_DEVICE_NAME, handle->inputBuffer);
             }else{
                 TERM_sendVT100Code(handle, _VT100_ERASE_LINE, 0);
                 unsigned printQuotationMarks = strchr(handle->autocompleteBuffer[handle->currAutocompleteCount - 1], ' ') != 0;
-                ttprintf(printQuotationMarks ? "\r%s@%s>%.*s\"%s\"" : "\r%s@%s>%.*s%s", handle->currUserName, TERM_DEVICE_NAME, handle->autocompleteStart, handle->inputBuffer, handle->autocompleteBuffer[handle->currAutocompleteCount - 1]);
+                ttprintfEcho(printQuotationMarks ? "\r%s@%s>%.*s\"%s\"" : "\r%s@%s>%.*s%s", handle->currUserName, TERM_DEVICE_NAME, handle->autocompleteStart, handle->inputBuffer, handle->autocompleteBuffer[handle->currAutocompleteCount - 1]);
             }
             break;
             
@@ -413,13 +432,13 @@ uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle){
             if(--handle->currAutocompleteCount > handle->autocompleteBufferLength - 1) handle->currAutocompleteCount = handle->autocompleteBufferLength - 1;
             
             if(handle->currAutocompleteCount == 0){
-                ttprintf("\x07");
+                ttprintfEcho("\x07");
                 TERM_sendVT100Code(handle, _VT100_ERASE_LINE, 0);
-                ttprintf("\r%s@%s>%s", handle->currUserName, TERM_DEVICE_NAME, handle->inputBuffer);
+                ttprintfEcho("\r%s@%s>%s", handle->currUserName, TERM_DEVICE_NAME, handle->inputBuffer);
             }else{
                 TERM_sendVT100Code(handle, _VT100_ERASE_LINE, 0);
                 unsigned printQuotationMarks = strchr(handle->autocompleteBuffer[handle->currAutocompleteCount - 1], ' ') != 0;
-                ttprintf(printQuotationMarks ? "\r%s@%s>%.*s\"%s\"" : "\r%s@%s>%.*s%s", handle->currUserName, TERM_DEVICE_NAME, handle->autocompleteStart, handle->inputBuffer, handle->autocompleteBuffer[handle->currAutocompleteCount - 1]);
+                ttprintfEcho(printQuotationMarks ? "\r%s@%s>%.*s\"%s\"" : "\r%s@%s>%.*s%s", handle->currUserName, TERM_DEVICE_NAME, handle->autocompleteStart, handle->inputBuffer, handle->autocompleteBuffer[handle->currAutocompleteCount - 1]);
             }
             break;
             
@@ -436,7 +455,7 @@ uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle){
                 strsft(handle->inputBuffer, handle->currBufferPosition, 1);   
                 handle->inputBuffer[handle->currBufferPosition] = c; 
                 TERM_sendVT100Code(handle, _VT100_ERASE_LINE_END, 0);
-                ttprintf("%s", &handle->inputBuffer[handle->currBufferPosition]);
+                ttprintfEcho("%s", &handle->inputBuffer[handle->currBufferPosition]);
                 TERM_sendVT100Code(handle, _VT100_CURSOR_BACK_BY, handle->currBufferLength - handle->currBufferPosition);
                 handle->currBufferLength ++;
                 handle->currBufferPosition ++;
@@ -446,7 +465,7 @@ uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle){
                 handle->inputBuffer[handle->currBufferPosition++] = c;
                 handle->inputBuffer[handle->currBufferPosition] = 0;
                 handle->currBufferLength ++;
-                ttprintf("%c", c);
+                ttprintfEcho("%c", c);
             }
             break;
             
@@ -494,7 +513,7 @@ void strsft(char * src, int32_t startByte, int32_t offset){
     if(offset == 0) return;
     
     if(offset > 0){     //shift forward
-        int32_t currPos = strlen(src) + offset;
+        uint32_t currPos = strlen(src) + offset;
         src[currPos--] = 0;
         for(; currPos >= startByte; currPos--){
             if(currPos == 0){
@@ -523,8 +542,10 @@ TermCommandDescriptor * TERM_findCMD(TERMINAL_HANDLE * handle){
         cmdLength = (uint16_t) ((uint32_t) firstSpace - (uint32_t) handle->inputBuffer);
     }
     
-    for(;currPos < TERM_cmdCount; currPos++){
-        if(TERM_cmdList[currPos]->commandLength == cmdLength && strncmp(handle->inputBuffer, TERM_cmdList[currPos]->command, cmdLength) == 0) return TERM_cmdList[currPos];
+    TermCommandDescriptor * currCmd = handle->cmdListHead->nextCmd;
+    for(;currPos < handle->cmdListHead->commandLength; currPos++){
+        if(currCmd->commandLength == cmdLength && strncmp(handle->inputBuffer, currCmd->command, cmdLength) == 0) return currCmd;
+        currCmd = currCmd->nextCmd;
     }
     
     return 0;
@@ -537,7 +558,7 @@ uint8_t TERM_interpretCMD(char * data, uint16_t dataLength, TERMINAL_HANDLE * ha
     if(cmd != 0){
         uint16_t argCount = TERM_countArgs(data, dataLength);
         if(argCount == TERM_ARGS_ERROR_STRING_LITERAL){
-            ttprintf("\r\nError: unclosed string literal in command\r\n");
+            ttprintfEcho("\r\nError: unclosed string literal in command\r\n");
             return TERM_CMD_EXIT_ERROR;
         }
 
@@ -549,6 +570,7 @@ uint8_t TERM_interpretCMD(char * data, uint16_t dataLength, TERMINAL_HANDLE * ha
 
         uint8_t retCode = TERM_CMD_EXIT_ERROR;
         if(cmd->function != 0){
+            configASSERT((cmd->function > 0x9d000000) && (cmd->function < 0x9d040000));
             retCode = (*cmd->function)(handle, argCount, args);
         }
 
@@ -559,7 +581,7 @@ uint8_t TERM_interpretCMD(char * data, uint16_t dataLength, TERMINAL_HANDLE * ha
     return TERM_CMD_EXIT_NOT_FOUND;
 }
 
-uint16_t TERM_seperateArgs(char * data, uint16_t dataLength, char ** buff){
+uint8_t TERM_seperateArgs(char * data, uint16_t dataLength, char ** buff){
     uint8_t count = 0;
     uint8_t currPos = 0;
     unsigned quoteMark = 0;
@@ -597,7 +619,7 @@ uint16_t TERM_seperateArgs(char * data, uint16_t dataLength, char ** buff){
                 break;
         }
     }
-    if(quoteMark) return TERM_ARGS_ERROR_STRING_LITERAL;
+    if(quoteMark) TERM_ARGS_ERROR_STRING_LITERAL;
     return count;
 }
 
@@ -637,7 +659,7 @@ uint16_t TERM_countArgs(const char * data, uint16_t dataLength){
                 break;
         }
     }
-    if(quoteMark) return TERM_ARGS_ERROR_STRING_LITERAL;
+    if(quoteMark) TERM_ARGS_ERROR_STRING_LITERAL;
     return count;
 }
 
@@ -649,47 +671,75 @@ void TERM_freeCommandList(TermCommandDescriptor ** cl, uint16_t length){
     vPortFree(cl);
 }
 
-uint8_t TERM_buildCMDList(){
-    uint16_t currPos = 1;
-    while(currPos < TERM_cmdCount){
-        TermCommandDescriptor * currCMD = TERM_cmdList[currPos];
-        TermCommandDescriptor * lastCMD = TERM_cmdList[currPos - 1];
-        
-        if(!TERM_isSorted(currCMD, lastCMD)){
-            TERM_cmdList[currPos] = lastCMD;
-            TERM_cmdList[currPos - 1] = currCMD;
-            currPos = 1;
-        }else{
-            currPos ++;
-        }
-    }
-    return TERM_CMD_EXIT_SUCCESS;
-}
-
-TermCommandDescriptor * TERM_addCommand(TermCommandFunction function, const char * command, const char * description, uint8_t minPermissionLevel){
-    if(TERM_cmdCount == 0xff) return 0;
+TermCommandDescriptor * TERM_addCommand(TermCommandFunction function, const char * command, const char * description, uint8_t minPermissionLevel, TermCommandDescriptor * head){
+    if(head->commandLength == 0xff) return 0;
     
     TermCommandDescriptor * newCMD = pvPortMalloc(sizeof(TermCommandDescriptor));
-    TermCommandDescriptor ** newCMDList = pvPortMalloc((TERM_cmdCount + 1) * sizeof(TermCommandDescriptor *));
     
     newCMD->command = command;
     newCMD->commandDescription = description;
-    //UART_print("added %s", command);
     newCMD->commandLength = strlen(command);
     newCMD->function = function;
     newCMD->minPermissionLevel = minPermissionLevel;
     newCMD->ACHandler = 0;
     
-    if(TERM_cmdCount > 0){
-        memcpy(newCMDList, TERM_cmdList, TERM_cmdCount * sizeof(TermCommandDescriptor *));
-        vPortFree(TERM_cmdList);
-    }
-    
-    TERM_cmdList = newCMDList;
-    TERM_cmdList[TERM_cmdCount++] = newCMD;
-    TERM_buildCMDList();
+    TERM_LIST_add(newCMD, head);
     return newCMD;
 }
+
+void TERM_LIST_add(TermCommandDescriptor * item, TermCommandDescriptor * head){
+    uint32_t currPos = 0;
+    TermCommandDescriptor ** lastComp = &head->nextCmd;
+    TermCommandDescriptor * currComp = head->nextCmd;
+    
+    while(currPos < head->commandLength){
+        if(TERM_isSorted(currComp, item)){
+            *lastComp = item;
+            item->nextCmd = currComp;
+            head->commandLength ++;
+            
+            return;
+        }
+        if(currComp->nextCmd == 0){
+            item->nextCmd = currComp->nextCmd;
+            currComp->nextCmd = item;
+            head->commandLength ++;
+            return;
+        }
+        lastComp = &currComp->nextCmd;
+        currComp = currComp->nextCmd;
+    }
+    
+    item->nextCmd = 0;
+    *lastComp = item;
+    head->commandLength ++;
+}
+/*
+void ACL_remove(AC_LIST_HEAD * head, char * string){
+    if(head->isConst || head->elementCount == 0) return;
+    uint32_t currPos = 0;
+    AC_LIST_ELEMENT ** lastComp = &head->first;
+    AC_LIST_ELEMENT * currComp = head->first;
+    
+    for(;currPos < head->elementCount; currPos++){
+        if((strlen(currComp->string) == strlen(string)) && (strcmp(currComp->string, string) == 0)){
+            *lastComp = currComp->next;
+            
+            //TODO make this portable
+            if(ptr_is_in_ram(currComp->string)){
+                vPortFree(currComp->string);
+            }
+            
+            vPortFree(currComp);
+            head->elementCount --;
+            return;
+        }
+        if(currComp->next == 0) break;
+        lastComp = &currComp->next;
+        currComp = currComp->next;
+    }
+}
+*/
 
 unsigned TERM_isSorted(TermCommandDescriptor * a, TermCommandDescriptor * b){
     uint8_t currPos = 0;
@@ -766,91 +816,94 @@ void TERM_setCursorPos(TERMINAL_HANDLE * handle, uint16_t row, uint16_t column){
 void TERM_sendVT100Code(TERMINAL_HANDLE * handle, uint16_t cmd, uint8_t var){
     switch(cmd){
         case _VT100_RESET:
-            ttprintf("%cc", 0x1b);
+            ttprintfEcho("%cc", 0x1b);
             break;
         case _VT100_CURSOR_BACK:
-            ttprintf("\x1b[D");
+            ttprintfEcho("\x1b[D");
             break;
         case _VT100_CURSOR_FORWARD:
-            ttprintf("\x1b[C");
+            ttprintfEcho("\x1b[C");
             break;
         case _VT100_CURSOR_POS1:
-            ttprintf("\x1b[H");
+            ttprintfEcho("\x1b[H");
             break;
         case _VT100_CURSOR_END:
-            ttprintf("\x1b[F");
+            ttprintfEcho("\x1b[F");
             break;
         case _VT100_FOREGROUND_COLOR:
-            ttprintf("\x1b[%dm", var+30);
+            ttprintfEcho("\x1b[%dm", var+30);
             break;
         case _VT100_BACKGROUND_COLOR:
-            ttprintf("\x1b[%dm", var+40);
+            ttprintfEcho("\x1b[%dm", var+40);
             break;
         case _VT100_RESET_ATTRIB:
-            ttprintf("\x1b[0m");
+            ttprintfEcho("\x1b[0m");
             break;
         case _VT100_BRIGHT:
-            ttprintf("\x1b[1m");
+            ttprintfEcho("\x1b[1m");
             break;
         case _VT100_DIM:
-            ttprintf("\x1b[2m");
+            ttprintfEcho("\x1b[2m");
             break;
         case _VT100_UNDERSCORE:
-            ttprintf("\x1b[4m");
+            ttprintfEcho("\x1b[4m");
             break;
         case _VT100_BLINK:
-            ttprintf("\x1b[5m");
+            ttprintfEcho("\x1b[5m");
             break;
         case _VT100_REVERSE:
-            ttprintf("\x1b[7m");
+            ttprintfEcho("\x1b[7m");
             break;
         case _VT100_HIDDEN:
-            ttprintf("\x1b[8m");
+            ttprintfEcho("\x1b[8m");
             break;
         case _VT100_ERASE_SCREEN:
-            ttprintf("\x1b[2J");
+            ttprintfEcho("\x1b[2J");
             break;
         case _VT100_ERASE_LINE:
-            ttprintf("\x1b[2K");
+            ttprintfEcho("\x1b[2K");
             break;
         case _VT100_FONT_G0:
-            ttprintf("\x1b(");
+            ttprintfEcho("\x1b(");
             break;
         case _VT100_FONT_G1:
-            ttprintf("\x1b)");
+            ttprintfEcho("\x1b)");
             break;
         case _VT100_WRAP_ON:
-            ttprintf("\x1b[7h");
+            ttprintfEcho("\x1b[7h");
             break;
         case _VT100_WRAP_OFF:
-            ttprintf("\x1b[7l");
+            ttprintfEcho("\x1b[7l");
             break;
         case _VT100_ERASE_LINE_END:
-            ttprintf("\x1b[K");
+            ttprintfEcho("\x1b[K");
             break;
         case _VT100_CURSOR_BACK_BY:
-            ttprintf("\x1b[%dD", var);
+            ttprintfEcho("\x1b[%dD", var);
             break;
         case _VT100_CURSOR_FORWARD_BY:
-            ttprintf("\x1b[%dC", var);
+            ttprintfEcho("\x1b[%dC", var);
             break;
         case _VT100_CURSOR_SAVE_POSITION:
-            ttprintf("\x1b" "7");
+            ttprintfEcho("\x1b" "7");
             break;
         case _VT100_CURSOR_RESTORE_POSITION:
-            ttprintf("\x1b" "8");
+            ttprintfEcho("\x1b" "8");
             break;
         case _VT100_CURSOR_ENABLE:
-            ttprintf("\x1b[?25h");
+            ttprintfEcho("\x1b[?25h");
             break;
         case _VT100_CURSOR_DISABLE:
-            ttprintf("\x1b[?25l");
+            ttprintfEcho("\x1b[?25l");
             break;
         case _VT100_CURSOR_SET_COLUMN:
-            ttprintf(ESC_STR "[%i`", var);
+            ttprintfEcho(ESC_STR "[%i`", var);
             break;
         case _VT100_CLS:
-            ttprintf("\x1b[2J\033[1;1H");
+            ttprintfEcho("\x1b[2J\033[1;1H");
+            break;
+        case _VT100_CURSOR_DOWN_BY:
+            ttprintfEcho("\x1b[%dB", var);
             break;
             
     }

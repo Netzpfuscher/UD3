@@ -67,6 +67,8 @@ enum vt100{
     _VT100_ERASE_LINE_END,
     _VT100_CURSOR_BACK_BY,
     _VT100_CURSOR_FORWARD_BY,
+    _VT100_CURSOR_DOWN_BY,
+    _VT100_CURSOR_UP_BY,
     _VT100_CURSOR_SAVE_POSITION,
     _VT100_CURSOR_RESTORE_POSITION,
     _VT100_CURSOR_ENABLE,
@@ -96,7 +98,7 @@ enum color{
     _VT100_WHITE
 };
 
-#define TERM_addCommandConstAC(CMDhandler, command, helptext, ACList) TERM_addCommandAC(TERM_addCommand(CMDhandler, command,helptext,0) \
+#define TERM_addCommandConstAC(CMDhandler, command, helptext, ACList, CmdDesc) TERM_addCommandAC(TERM_addCommand(CMDhandler, command,helptext,0,CmdDesc) \
                                                                                 , ACL_defaultCompleter, ACL_createConst(ACList, sizeof(ACList)/sizeof(char*)))
 
 
@@ -123,6 +125,13 @@ const extern char TERM_startupText2[];
 const extern char TERM_startupText3[];
 #endif
 
+
+#if EXTENDED_PRINTF == 1
+#define ttprintfEcho(format, ...) if(handle->echoEnabled) (*handle->print)(handle->port, format, ##__VA_ARGS__)
+#else
+#define ttprintfEcho(format, ...) if(echoEnabled) (*handle->print)(format, ##__VA_ARGS__)
+#endif
+
 #if EXTENDED_PRINTF == 1
 #define ttprintf(format, ...) (*handle->print)(handle->port, format, ##__VA_ARGS__)
 #define ttprintb(buffer, len) (*handle->print)(handle->port, NULL, (uint8_t*)buffer, (uint32_t)len)
@@ -136,6 +145,7 @@ typedef struct __TermCommandDescriptor__ TermCommandDescriptor;
 
 typedef uint8_t (* TermCommandFunction)(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 typedef uint8_t (* TermCommandInputHandler)(TERMINAL_HANDLE * handle, uint16_t c);
+typedef uint8_t (* TermErrorPrinter)(TERMINAL_HANDLE * handle, uint32_t retCode);
 
 #if EXTENDED_PRINTF == 1
 typedef void (* TermPrintHandler)(void * port, char * format, ...);
@@ -153,10 +163,12 @@ struct __TermCommandDescriptor__{
     TermCommandFunction function;
     const char * command;
     const char * commandDescription;
-    uint8_t commandLength;
+    uint32_t commandLength;
     uint8_t minPermissionLevel;
     TermAutoCompHandler ACHandler;
     void * ACParams;
+    
+    TermCommandDescriptor * nextCmd;
 };
 
 struct __TERMINAL_HANDLE__{
@@ -178,7 +190,9 @@ struct __TERMINAL_HANDLE__{
     uint32_t currHistoryReadPosition;
     uint8_t currEscSeqPos;
     uint8_t escSeqBuff[16];
-    
+    unsigned echoEnabled;
+    TermCommandDescriptor * cmdListHead;
+    TermErrorPrinter errorPrinter;
 //TODO actually finish implementing this...
 #ifdef TERM_SUPPORT_CWD
     DIR cwd;
@@ -189,13 +203,12 @@ typedef enum{
     TERM_CHECK_COMP_AND_HIST = 0b11, TERM_CHECK_COMP = 0b01, TERM_CHECK_HIST = 0b10, 
 } COPYCHECK_MODE;
 
-extern TermCommandDescriptor ** TERM_cmdList;
-extern uint8_t TERM_cmdCount;
+extern TermCommandDescriptor TERM_cmdListHead;
 
 #if EXTENDED_PRINTF == 1
-TERMINAL_HANDLE * TERM_createNewHandle(TermPrintHandler printFunction, void * port, const char * usr);
+TERMINAL_HANDLE * TERM_createNewHandle(TermPrintHandler printFunction, void * port, unsigned echoEnabled, TermCommandDescriptor * cmdListHead, TermErrorPrinter errorPrinter, const char * usr);
 #else
-TERMINAL_HANDLE * TERM_createNewHandle(TermPrintHandler printFunction, const char * usr);    
+TERMINAL_HANDLE * TERM_createNewHandle(TermPrintHandler printFunction, unsigned echoEnabled, TermCommandDescriptor * cmdListHead, TermErrorPrinter errorPrinter, const char * usr);    
 #endif    
 void TERM_destroyHandle(TERMINAL_HANDLE * handle);
 uint8_t TERM_processBuffer(uint8_t * data, uint16_t length, TERMINAL_HANDLE * handle);
@@ -204,10 +217,9 @@ uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle);
 char * strnchr(char * str, char c, uint32_t length);
 void strsft(char * src, int32_t startByte, int32_t offset);
 void TERM_printBootMessage(TERMINAL_HANDLE * handle);
-uint8_t TERM_findMatchingCMDs(char * currInput, uint8_t length, char ** buff);
 void TERM_freeCommandList(TermCommandDescriptor ** cl, uint16_t length);
 uint8_t TERM_buildCMDList();
-TermCommandDescriptor * TERM_addCommand(TermCommandFunction function, const char * command, const char * description, uint8_t minPermissionLevel);
+TermCommandDescriptor * TERM_addCommand(TermCommandFunction function, const char * command, const char * description, uint8_t minPermissionLevel, TermCommandDescriptor * head);
 void TERM_addCommandAC(TermCommandDescriptor * cmd, TermAutoCompHandler ACH, void * ACParams);
 unsigned TERM_isSorted(TermCommandDescriptor * a, TermCommandDescriptor * b);
 char toLowerCase(char c);
@@ -217,15 +229,17 @@ void TERM_sendVT100Code(TERMINAL_HANDLE * handle, uint16_t cmd, uint8_t var);
 const char * TERM_getVT100Code(uint16_t cmd, uint8_t var);
 uint16_t TERM_countArgs(const char * data, uint16_t dataLength);
 uint8_t TERM_interpretCMD(char * data, uint16_t dataLength, TERMINAL_HANDLE * handle);
-uint16_t TERM_seperateArgs(char * data, uint16_t dataLength, char ** buff);
+uint8_t TERM_seperateArgs(char * data, uint16_t dataLength, char ** buff);
 void TERM_checkForCopy(TERMINAL_HANDLE * handle, COPYCHECK_MODE mode);
 void TERM_printDebug(TERMINAL_HANDLE * handle, char * format, ...);
 void TERM_removeProgramm(TERMINAL_HANDLE * handle);
 void TERM_attachProgramm(TERMINAL_HANDLE * handle, TermProgram * prog);
 uint8_t TERM_doAutoComplete(TERMINAL_HANDLE * handle);
-TermCommandDescriptor * TERM_findCMD(TERMINAL_HANDLE * handle);
+uint8_t TERM_findMatchingCMDs(char * currInput, uint8_t length, char ** buff, TermCommandDescriptor * cmdListHead);
 uint8_t TERM_findLastArg(TERMINAL_HANDLE * handle, char * buff, uint8_t * lenBuff);
 BaseType_t ptr_is_in_ram(void* ptr);
+void TERM_defaultErrorPrinter(TERMINAL_HANDLE * handle, uint32_t retCode);
+void TERM_LIST_add(TermCommandDescriptor * item, TermCommandDescriptor * head);
 
 #endif
 #endif

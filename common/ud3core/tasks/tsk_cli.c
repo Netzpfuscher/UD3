@@ -281,36 +281,35 @@ void tsk_cli_Start(void) {
         usb_port.tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,64);
         xSemaphoreGive(usb_port.term_block);
         
-        usb_handle = TERM_createNewHandle(stream_printf,&usb_port,"usb");
-        //usb_handle->printBuffer = stream_buffer;
+        usb_handle = TERM_createNewHandle(stream_printf,&usb_port,pdTRUE,&TERM_cmdListHead,NULL,"usb");
+
+        TERM_addCommand(CMD_signals, "signals","For debugging",0,&TERM_cmdListHead);
+        TERM_addCommandConstAC(CMD_tr, "tr", "Transient [start/stop]", AC_start_stop,&TERM_cmdListHead);
+        TERM_addCommandConstAC(CMD_con, "con","Prints the connections",AC_con,&TERM_cmdListHead);
+        TERM_addCommandConstAC(CMD_alarms, "alarms","Alarms [get/roll/reset]",AC_alarms,&TERM_cmdListHead);
+        TERM_addCommand(CMD_SynthMon, "synthmon","Synthesizer status",0,&TERM_cmdListHead);
+        TERM_addCommand(CMD_bootloader, "bootloader","Enters the bootloader",0,&TERM_cmdListHead);
+        TERM_addCommandConstAC(CMD_bus, "bus","bus [on/off]",AC_on_off,&TERM_cmdListHead);
+        TERM_addCommand(CMD_calib, "calib","Calibrate Vdriver",0,&TERM_cmdListHead);
+        TERM_addCommand(CMD_config_get, "config_get","Internal use",0,&TERM_cmdListHead);
+        TERM_addCommand(CMD_features, "features","Get supported features",0,&TERM_cmdListHead);
+        TERM_addCommandConstAC(CMD_eeprom, "eeprom","Save/Load config [load/save]",AC_eeprom,&TERM_cmdListHead);
+        TERM_addCommand(CMD_udkill, "kill","Stops the output",0,&TERM_cmdListHead);
+        TERM_addCommand(CMD_fuse, "fuse_reset","Reset the internal fuse",0,&TERM_cmdListHead);
+        TERM_addCommand(CMD_load_defaults, "load_default","Loads the default parameters",0,&TERM_cmdListHead);
         
-        TERM_addCommand(CMD_signals, "signals","For debugging",0);
-        TERM_addCommandConstAC(CMD_tr, "tr", "Transient [start/stop]", AC_start_stop);
-        TERM_addCommandConstAC(CMD_con, "con","Prints the connections",AC_con);
-        TERM_addCommandConstAC(CMD_alarms, "alarms","Alarms [get/roll/reset]",AC_alarms);
-        TERM_addCommand(CMD_SynthMon, "synthmon","Synthesizer status",0);
-        TERM_addCommand(CMD_bootloader, "bootloader","Enters the bootloader",0);
-        TERM_addCommandConstAC(CMD_bus, "bus","bus [on/off]",AC_on_off);
-        TERM_addCommand(CMD_calib, "calib","Calibrate Vdriver",0);
-        TERM_addCommand(CMD_config_get, "config_get","Internal use",0);
-        TERM_addCommand(CMD_features, "features","Get supported features",0);
-        TERM_addCommandConstAC(CMD_eeprom, "eeprom","Save/Load config [load/save]",AC_eeprom);
-        TERM_addCommand(CMD_udkill, "kill","Stops the output",0);
-        TERM_addCommand(CMD_fuse, "fuse_reset","Reset the internal fuse",0);
-        TERM_addCommand(CMD_load_defaults, "load_default","Loads the default parameters",0);
-        
-        TERM_addCommandConstAC(CMD_get, "get", "Usage get [param]", AC_set_get);     
-        TERM_addCommandConstAC(CMD_set, "set","Usage set [param] [value]",AC_set_get);
+        TERM_addCommandConstAC(CMD_get, "get", "Usage get [param]", AC_set_get,&TERM_cmdListHead);     
+        TERM_addCommandConstAC(CMD_set, "set","Usage set [param] [value]",AC_set_get,&TERM_cmdListHead);
      
-        TERM_addCommandConstAC(CMD_qcw, "qcw","QCW [start/stop]",AC_start_stop);
-        TERM_addCommand(CMD_relay, "relay","Switch user relay 3/4",0);
-        TERM_addCommand(CMD_reset, "reset","Resets UD3",0);
-        TERM_addCommand(CMD_status, "status","Displays coil status",0);
-        TERM_addCommand(CMD_tterm, "tterm","Changes terminal mode",0);
-        TERM_addCommandConstAC(CMD_tune, "tune","Autotune [prim/sec]",AC_tune);
-        TERM_addCommand(CMD_telemetry, "telemetry","Telemetry options",0);
-        TERM_addCommandConstAC(CMD_ramp, "ramp","Write QCW ramp",AC_ramp);
-        TERM_addCommand(CMD_debug, "debug","Debug mode",0);
+        TERM_addCommandConstAC(CMD_qcw, "qcw","QCW [start/stop]",AC_start_stop,&TERM_cmdListHead);
+        TERM_addCommand(CMD_relay, "relay","Switch user relay 3/4",0,&TERM_cmdListHead);
+        TERM_addCommand(CMD_reset, "reset","Resets UD3",0,&TERM_cmdListHead);
+        TERM_addCommand(CMD_status, "status","Displays coil status",0,&TERM_cmdListHead);
+        TERM_addCommand(CMD_tterm, "tterm","Changes terminal mode",0,&TERM_cmdListHead);
+        TERM_addCommandConstAC(CMD_tune, "tune","Autotune [prim/sec]",AC_tune,&TERM_cmdListHead);
+        TERM_addCommand(CMD_telemetry, "telemetry","Telemetry options",0,&TERM_cmdListHead);
+        TERM_addCommandConstAC(CMD_ramp, "ramp","Write QCW ramp",AC_ramp,&TERM_cmdListHead);
+        TERM_addCommand(CMD_debug, "debug","Debug mode",0,&TERM_cmdListHead);
 
      
         if(configuration.minprot==pdTRUE){
@@ -323,7 +322,7 @@ void tsk_cli_Start(void) {
                 min_port[i].tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,256);
                 xSemaphoreGive(min_port[i].term_block);
                 
-                min_handle[i] = TERM_createNewHandle(stream_printf,&min_port[i],min_names[i]);
+                min_handle[i] = TERM_createNewHandle(stream_printf,&min_port[i],pdTRUE,&TERM_cmdListHead,NULL,min_names[i]);
                 
                 xTaskCreate(tsk_cli_TaskProc, min_names[i], STACK_TERMINAL, min_handle[i], PRIO_TERMINAL, &MIN_Terminal_TaskHandle[i]);
             }
@@ -336,7 +335,7 @@ void tsk_cli_Start(void) {
             min_port[0].tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,1);
             xSemaphoreGive(min_port[0].term_block);
             
-            min_handle[0] = TERM_createNewHandle(stream_printf,&min_port[0],"Serial");
+            min_handle[0] = TERM_createNewHandle(stream_printf,&min_port[0],pdTRUE,&TERM_cmdListHead,NULL,"Serial");
             
             xTaskCreate(tsk_cli_TaskProc, "UART-CLI", STACK_TERMINAL, min_handle[0], PRIO_TERMINAL, &UART_Terminal_TaskHandle);
         }

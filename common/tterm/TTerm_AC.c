@@ -60,15 +60,15 @@ uint8_t TERM_doAutoComplete(TERMINAL_HANDLE * handle){
         handle->autocompleteBufferLength = 0;
         return 0;
     }else{
-        handle->autocompleteBuffer = pvPortMalloc(TERM_cmdCount * sizeof(char *));
+        handle->autocompleteBuffer = pvPortMalloc(handle->cmdListHead->commandLength * sizeof(char *));
         handle->currAutocompleteCount = 0;
-        handle->autocompleteBufferLength = TERM_findMatchingCMDs(handle->inputBuffer, handle->currBufferLength, handle->autocompleteBuffer);
+        handle->autocompleteBufferLength = TERM_findMatchingCMDs(handle->inputBuffer, handle->currBufferLength, handle->autocompleteBuffer, handle->cmdListHead);
         handle->autocompleteStart = 0;
         return handle->autocompleteBufferLength;
     }
 }
 
-uint8_t TERM_findMatchingCMDs(char * currInput, uint8_t length, char ** buff){
+uint8_t TERM_findMatchingCMDs(char * currInput, uint8_t length, char ** buff, TermCommandDescriptor * cmdListHead){
     
     //TODO handle auto complete of parameters, for now we return if this is attempted
     if(strnchr(currInput, ' ', length) != NULL) return 0;
@@ -76,16 +76,19 @@ uint8_t TERM_findMatchingCMDs(char * currInput, uint8_t length, char ** buff){
     
     uint8_t currPos = 0;
     uint8_t commandsFound = 0;
-    for(;currPos < TERM_cmdCount; currPos++){
-        if(strncmp(currInput, TERM_cmdList[currPos]->command, length) == 0){
-            if(TERM_cmdList[currPos]->commandLength >= length){
-                buff[commandsFound] = TERM_cmdList[currPos]->command;
+    TermCommandDescriptor * currCMD = cmdListHead->nextCmd;
+    
+    for(;currPos < cmdListHead->commandLength; currPos++){
+        if(strncmp(currInput, currCMD->command, length) == 0){
+            if(currCMD->commandLength >= length){
+                buff[commandsFound] = currCMD->command;
                 commandsFound ++;
                 //UART_print("found %s (count is now %d)\r\n", TERM_cmdList[currPos]->command, commandsFound);
             }
         }else{
             if(commandsFound > 0) return commandsFound;
         }
+        currCMD = currCMD->nextCmd;
     }
     return commandsFound;
 }

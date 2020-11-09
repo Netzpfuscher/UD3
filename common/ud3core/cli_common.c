@@ -42,7 +42,6 @@
 #include "tasks/tsk_overlay.h"
 #include "tasks/tsk_priority.h"
 #include "tasks/tsk_uart.h"
-#include "tasks/tsk_usb.h"
 #include "tasks/tsk_midi.h"
 #include "tasks/tsk_cli.h"
 #include "tasks/tsk_min.h"
@@ -78,7 +77,6 @@ uint8_t callback_MchCopyFunction(parameter_entry * params, uint8_t index, TERMIN
 uint8_t callback_ivoUART(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 
 void update_ivo_uart();
-void init_tt(uint8_t with_chart, TERMINAL_HANDLE * handle);
 
 uint8_t burst_state = 0;
 

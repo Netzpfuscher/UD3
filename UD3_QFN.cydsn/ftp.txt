@@ -1,0 +1,6 @@
+open 192.168.50.51
+root
+root
+put CortexM3\ARM_GCC_541\Release\UD3_QFN.cyacd image.cyacd
+quote FLASH image.cyacd
+quit

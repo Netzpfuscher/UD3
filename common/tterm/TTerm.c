@@ -74,13 +74,7 @@ TERMINAL_HANDLE * TERM_createNewHandle(TermPrintHandler printFunction, unsigned 
         TERM_addCommand(CMD_help, "help", "Displays this help message", 0, &TERM_cmdListHead);
         TERM_addCommand(CMD_cls, "cls", "Clears the screen", 0, &TERM_cmdListHead);
         TERM_addCommand(CMD_top, "top", "shows performance stats", 0, &TERM_cmdListHead);
-        
-        TermCommandDescriptor * test = TERM_addCommand(CMD_testCommandHandler, "test", "tests stuff", 0, &TERM_cmdListHead);
-        head = ACL_create();
-        ACL_add(head, "-ra");
-        ACL_add(head, "-r");
-        ACL_add(head, "-aa");
-        TERM_addCommandAC(test, ACL_defaultCompleter, head);  
+
     }
     
 #ifdef TERM_ENABLE_STARTUP_TEXT

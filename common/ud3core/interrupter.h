@@ -55,7 +55,8 @@ extern uint8_t blocked;
 void initialize_interrupter(void);
 void update_interrupter();
 void ramp_control(void);
-void interrupter_oneshot(uint16_t pw, uint8_t vol);
+void interrupter_oneshot(uint32_t pw, uint8_t vol);
+void interrupter_update_ext();
 
 uint8_t callback_ext_interrupter(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 

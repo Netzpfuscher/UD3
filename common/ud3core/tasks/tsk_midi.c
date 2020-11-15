@@ -450,7 +450,7 @@ static inline void synthcode_SID(uint32_t r){
 			}
 		}
 		if (flag[ch] > old_flag[ch]) {
-            if(!(sid_frm.wave[ch] && (random & SID_NOISE_WEIGHT))){
+            if(!(sid_frm.wave[ch] && (random & configuration.noise_w))){
                 pulse.volume = channel[ch].volume;
                 pulse.pw = sid_frm.master_pw;
 #if USE_DEBUG_PW

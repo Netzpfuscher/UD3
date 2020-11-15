@@ -97,10 +97,10 @@ void initialize_interrupter(void) {
 
 
 
-void interrupter_oneshot(uint16_t pw, uint8_t vol) {
+void interrupter_oneshot(uint32_t pw, uint8_t vol) {
     if(sysfault.interlock) return;
     
-	if (vol < 127) {
+	if (vol < 128) {
 		ct1_dac_val[0] = params.min_tr_cl_dac_val + ((vol * params.diff_tr_cl_dac_val) >> 7);
 	} else {
 		ct1_dac_val[0] = params.max_tr_cl_dac_val;
@@ -120,19 +120,25 @@ void interrupter_oneshot(uint16_t pw, uint8_t vol) {
 }
 
 
-void interrupter_enable_ext() {
+void interrupter_update_ext() {
 
 	ct1_dac_val[0] = params.max_tr_cl_dac_val;
+    uint32_t pw = param.pw;
+    
+    if (pw > configuration.max_tr_pw) {
+		pw = configuration.max_tr_pw;
+	}
 
-    uint16_t prd = param.offtime + configuration.max_tr_pw;
+    uint16_t prd = param.offtime + pw;
 	/* Update Interrupter PWMs with new period/pw */
 	CyGlobalIntDisable;
 	int1_prd = prd - 3;
-	int1_cmp = prd - configuration.max_tr_pw - 3;
+	int1_cmp = prd - pw - 3;
+    
     if(configuration.ext_interrupter==1){
-	    interrupter1_control_Control = 0b0100;
+	    interrupter1_control_Control = 0b1100;
     }else{
-        interrupter1_control_Control = 0b1100;
+        interrupter1_control_Control = 0b0100;
     }
     CyGlobalIntEnable;
 }
@@ -140,7 +146,7 @@ void interrupter_enable_ext() {
 uint8_t callback_ext_interrupter(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     if(configuration.ext_interrupter){
         alarm_push(ALM_PRIO_WARN,warn_interrupter_ext, configuration.ext_interrupter);
-        interrupter_enable_ext();
+        interrupter_update_ext();
     }else{
         interrupter1_control_Control = 0b0000;
     }

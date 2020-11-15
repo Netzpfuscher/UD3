@@ -155,6 +155,7 @@ static const char * AC_set_get[] = {
     "qcw_repeat",
     "r_bus",
     "release",
+    "sid_noise",
     "spi_speed",
     "start_cycles",
     "start_freq",

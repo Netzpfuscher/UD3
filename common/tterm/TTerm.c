@@ -43,6 +43,7 @@ unsigned TERM_baseCMDsAdded = 0;
 
 #define ESC_STR "\x1b"
 
+
 #if EXTENDED_PRINTF == 1
 TERMINAL_HANDLE * TERM_createNewHandle(TermPrintHandler printFunction, void * port, unsigned echoEnabled, TermCommandDescriptor * cmdListHead, TermErrorPrinter errorPrinter, const char * usr){
 #else
@@ -237,7 +238,7 @@ BaseType_t ptr_is_in_ram(void* ptr){
     return pdTRUE;
 }
 
-void TERM_defaultErrorPrinter(TERMINAL_HANDLE * handle, uint32_t retCode){
+uint8_t TERM_defaultErrorPrinter(TERMINAL_HANDLE * handle, uint32_t retCode){
     switch(retCode){
         case TERM_CMD_EXIT_SUCCESS:
             ttprintfEcho("\r\n%s@%s>", handle->currUserName, TERM_DEVICE_NAME);
@@ -251,6 +252,7 @@ void TERM_defaultErrorPrinter(TERMINAL_HANDLE * handle, uint32_t retCode){
             ttprintfEcho("\"%s\" is not a valid command. Type \"help\" to see a list of available ones\r\n%s@%s>", handle->inputBuffer, handle->currUserName, TERM_DEVICE_NAME);
             break;
     }
+    return TERM_CMD_EXIT_SUCCESS;
 }
 
 uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle){
@@ -575,7 +577,7 @@ uint8_t TERM_interpretCMD(char * data, uint16_t dataLength, TERMINAL_HANDLE * ha
     return TERM_CMD_EXIT_NOT_FOUND;
 }
 
-uint8_t TERM_seperateArgs(char * data, uint16_t dataLength, char ** buff){
+uint16_t TERM_seperateArgs(char * data, uint16_t dataLength, char ** buff){
     uint8_t count = 0;
     uint8_t currPos = 0;
     unsigned quoteMark = 0;
@@ -613,7 +615,7 @@ uint8_t TERM_seperateArgs(char * data, uint16_t dataLength, char ** buff){
                 break;
         }
     }
-    if(quoteMark) TERM_ARGS_ERROR_STRING_LITERAL;
+    if(quoteMark) return TERM_ARGS_ERROR_STRING_LITERAL;
     return count;
 }
 
@@ -653,7 +655,7 @@ uint16_t TERM_countArgs(const char * data, uint16_t dataLength){
                 break;
         }
     }
-    if(quoteMark) TERM_ARGS_ERROR_STRING_LITERAL;
+    if(quoteMark) return TERM_ARGS_ERROR_STRING_LITERAL;
     return count;
 }
 

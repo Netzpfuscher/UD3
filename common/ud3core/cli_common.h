@@ -118,6 +118,7 @@ typedef struct config_struct cli_config;
 
 struct parameter_struct{
     uint16_t    pw;
+    uint16_t    pwp;
 	uint16_t    pwd;
     uint16_t    tune_start;
     uint16_t    tune_end;

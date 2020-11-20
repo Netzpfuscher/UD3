@@ -66,6 +66,7 @@ uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, TERMIN
 uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_TTupdateFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+uint8_t callback_TRPFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_OfftimeFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_i2tFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
@@ -137,6 +138,7 @@ void init_config(){
     configuration.noise_w = SID_NOISE_WEIGHT;
     
     param.pw = 0;
+    param.pwp = 0;
     param.pwd = 50000;
     param.burst_on = 0;
     param.burst_off = 500;
@@ -171,7 +173,8 @@ void init_config(){
 
 parameter_entry confparam[] = {
     //       Parameter Type ,Visible,"Text   "         , Value ptr                     ,Min     ,Max    ,Div    ,Callback Function           ,Help text
-    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"pw"              , param.pw                      , 0      ,800    ,0      ,callback_TRFunction         ,"Pulsewidth")
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"pw"              , param.pw                      , 0      ,800    ,0      ,callback_TRFunction         ,"Pulsewidth [us]")
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"pwp"             , param.pwp                     , 0      ,8000   ,10     ,callback_TRPFunction        ,"Pulsewidth [%]")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"pwd"             , param.pwd                     , 0      ,60000  ,0      ,callback_TRFunction         ,"Pulsewidthdelay")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"bon"             , param.burst_on                , 0      ,1000   ,0      ,callback_BurstFunction      ,"Burst mode ontime [ms] 0=off")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"boff"            , param.burst_off               , 0      ,1000   ,0      ,callback_BurstFunction      ,"Burst mode offtime [ms]")
@@ -487,6 +490,10 @@ enum burst_state{
 * Updates the interrupter hardware
 ******************************************************************************/
 uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle) {
+    
+    uint32_t temp;
+    temp = (1000 * param.pw) / configuration.max_tr_pw;
+    param.pwd = temp;
 
 	interrupter.pw = param.pw;
 	interrupter.prd = param.pwd;
@@ -499,9 +506,32 @@ uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, TERMINAL_HA
     if(configuration.ext_interrupter){
         interrupter_update_ext();
     }
-	return 1;
+	return pdPASS;
 }
 
+/*****************************************************************************
+* Callback if a transient mode parameter is changed (percent ontime)
+* Updates the interrupter hardware
+******************************************************************************/
+uint8_t callback_TRPFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle) {
+    
+    uint32_t temp;
+    temp = (configuration.max_tr_pw * param.pwp) / 1000;
+    param.pw = temp;
+    
+    interrupter.pw = param.pw;
+    
+    update_midi_duty();
+    
+	if (tr_running==1) {
+		update_interrupter();
+	}
+    if(configuration.ext_interrupter){
+        interrupter_update_ext();
+    }
+    
+	return pdPASS;
+}
 
 
 /*****************************************************************************
@@ -582,7 +612,7 @@ uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, TERMINAL
 
         }
     }
-	return 1;
+	return pdPASS;
 }
 
 /*****************************************************************************

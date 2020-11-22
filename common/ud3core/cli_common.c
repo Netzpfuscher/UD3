@@ -493,7 +493,7 @@ uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, TERMINAL_HA
     
     uint32_t temp;
     temp = (1000 * param.pw) / configuration.max_tr_pw;
-    param.pwd = temp;
+    param.pwp = temp;
 
 	interrupter.pw = param.pw;
 	interrupter.prd = param.pwd;

@@ -792,6 +792,7 @@ void reflect() {
                 channel[ch].freq = Q16n16_mtof((channel[ch].miditone<<16)+pb);
                 channel[ch].halfcount = (SG_CLOCK_HALFCOUNT<<14) / (channel[ch].freq>>2);
                 channel[ch].freq = channel[ch].freq >>16;
+                
                 if(channel[ch].adsr_state==ADSR_PENDING) channel[ch].adsr_state = ADSR_ATTACK;
                 if(filter.channel[ch]==0 || channel[ch].freq < filter.min || channel[ch].freq > filter.max){
                     channel[ch].adsr_state = ADSR_IDLE;   
@@ -813,6 +814,22 @@ void reflect() {
         interrupter.pw = (param.pw * (configuration.max_tr_duty-param.temp_duty)) / dutycycle;
     }else{
         interrupter.pw = param.pw;
+    }
+    
+    DDS32_1_SetFrequency(channel[0].freq);
+    DDS32_2_SetFrequency(channel[1].freq);
+    if(channel[0].adsr_state==ADSR_PENDING){
+        DDS32_1_Enable();
+    }
+    if(channel[0].adsr_state==ADSR_IDLE){
+        DDS32_1_Stop();
+    }
+    
+    if(channel[1].adsr_state==ADSR_PENDING){
+        DDS32_2_Enable();
+    }
+    if(channel[1].adsr_state==ADSR_IDLE){
+        DDS32_2_Stop();
     }
      
 }

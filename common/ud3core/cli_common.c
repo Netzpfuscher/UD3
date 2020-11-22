@@ -493,12 +493,14 @@ uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, TERMINAL_HA
     
     uint32_t temp;
     temp = (1000 * param.pw) / configuration.max_tr_pw;
-    param.pwd = temp;
+    param.pwp = temp;
 
 	interrupter.pw = param.pw;
 	interrupter.prd = param.pwd;
     
     update_midi_duty();
+    
+    //update_interrupter_new(param.pw,param.pw);
     
 	if (tr_running==1) {
 		update_interrupter();

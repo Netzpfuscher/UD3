@@ -6,7 +6,7 @@
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
- * the Software without restriction, including without limitation the rights to
+ * the Software withoutrestriction, including without limitation the rights to
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
  * the Software, and to permit persons to whom the Software is furnished to do so,
  * subject to the following conditions:
@@ -368,38 +368,52 @@ static inline void compute_adsr_sid(uint8_t ch){
         }
 }
 
+
+
 static inline void synthcode_MIDI(uint32_t r){
-    PULSE pulse;
-	uint8_t flag[N_CHANNEL];
     tt.n.midi_voices.value=0;
     
 	for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
 
         compute_adsr_midi(ch);
         
-        flag[ch] = 0;
-		if (channel[ch].volume > 0) {
+        if(channel[ch].volume>0){
             tt.n.midi_voices.value++;
-			if ((r / channel[ch].halfcount) % 2 > 0) {
-				flag[ch] = 1;
-			}
-		}
-		if (flag[ch] > old_flag[ch]) {
-            pulse.volume = channel[ch].volume;
-            pulse.pw = interrupter.pw;
-#if USE_DEBUG_PW           
-            pulse.pw = channel[ch].volume;
-#endif
-            xQueueSendFromISR(qPulse,&pulse,0);
-		}
-		old_flag[ch] = flag[ch];
-   
-	}
-    if(itr_end_Read()==0){
-        if(xQueueReceiveFromISR(qPulse,&pulse,0)){
-            interrupter_oneshot(pulse.pw, pulse.volume);
-        }  
-    }
+            uint16_t prd = param.offtime + channel[ch].volume;
+            ch_prd[ch] = prd - 3;
+            ch_cmp[ch] = prd - channel[ch].volume - 3;
+            switch(ch){
+            case 0:
+                DDS32_1_Enable_ch(0);
+                break;
+            case 1:
+                DDS32_1_Enable_ch(1);
+                break;
+            case 2:
+                DDS32_2_Enable_ch(0);
+                break;
+            case 3:
+                DDS32_2_Enable_ch(1);
+                break;
+            }
+        }else{
+            switch(ch){
+                case 0:
+                    DDS32_1_Disable_ch(0);
+                    break;
+                case 1:
+                    DDS32_1_Disable_ch(1);
+                    break;
+                case 2:
+                    DDS32_2_Disable_ch(0);
+                    break;
+                case 3:
+                    DDS32_2_Disable_ch(1);
+                    break;
+            }  
+            
+        }
+    }    
 }
 
 uint32_t volatile next_frame=4294967295;
@@ -816,22 +830,25 @@ void reflect() {
         interrupter.pw = param.pw;
     }
     
-    DDS32_1_SetFrequency(channel[0].freq);
-    DDS32_2_SetFrequency(channel[1].freq);
-    if(channel[0].adsr_state==ADSR_PENDING){
+    DDS32_1_SetFrequency(0, channel[0].freq);
+    DDS32_1_SetFrequency(1, channel[1].freq);
+    DDS32_2_SetFrequency(0, channel[2].freq);
+    DDS32_2_SetFrequency(1, channel[3].freq);
+    /*
+    if(channel[0].adsr_state==ADSR_ATTACK){
         DDS32_1_Enable();
     }
-    if(channel[0].adsr_state==ADSR_IDLE){
+    if(channel[0].adsr_state==ADSR_DECAY){
         DDS32_1_Stop();
     }
     
-    if(channel[1].adsr_state==ADSR_PENDING){
+    if(channel[1].adsr_state==ADSR_ATTACK){
         DDS32_2_Enable();
     }
-    if(channel[1].adsr_state==ADSR_IDLE){
+    if(channel[1].adsr_state==ADSR_DECAY){
         DDS32_2_Stop();
     }
-     
+     */
 }
 
 void kill_accu(){

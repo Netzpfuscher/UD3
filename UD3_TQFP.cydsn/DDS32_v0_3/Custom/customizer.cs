@@ -23,11 +23,11 @@ using CyDesigner.Extensions.Common;
 using CyDesigner.Extensions.Gde;
 
 // The namespace is required to have the same name as the component for a customizer.
-namespace DDS32_v0_0
+namespace DDS32_v0_3
 {
 class CyCustomizer : ICyShapeCustomize_v1
     {
-        const string OUTPUT_TERM_NAME_1 = "outp"; //outp terminal
+        const string OUTPUT_TERM_NAME_1 = "outp0"; //outp terminal
         const string OUTPUT_TERM_NAME_2 = "drq";  //drq terminal
 
 
@@ -43,18 +43,18 @@ class CyCustomizer : ICyShapeCustomize_v1
 
             
             // Read Parameters
-            CyCompDevParam outWidthParam1 = instQuery.GetCommittedParam("outp_width");
-            byte outWidth1 = byte.Parse(outWidthParam1.Value);
-            byte maxOutBitIndex1 = (byte)(outWidth1 - 1);
-            string outTermName1 = termEdit.GetTermName(OUTPUT_TERM_NAME_1);
+            //CyCompDevParam outWidthParam1 = instQuery.GetCommittedParam("outp_width");
+           // byte outWidth1 = byte.Parse(outWidthParam1.Value);
+           // byte maxOutBitIndex1 = (byte)(outWidth1 - 1);
+           // string outTermName1 = termEdit.GetTermName(OUTPUT_TERM_NAME_1);
             
-            if (maxOutBitIndex1 != 0)
+           // if (maxOutBitIndex1 != 0)
                 //err = termEdit.TerminalRename(outTermName1, string.Format("{0}[0:{1}]", OUTPUT_TERM_NAME_1, maxOutBitIndex1.ToString())); // [0:3]
-                err = termEdit.TerminalRename(outTermName1, string.Format("{0}[{1}:0]", OUTPUT_TERM_NAME_1, maxOutBitIndex1.ToString())); // [3:0]
-            else
-                err = termEdit.TerminalRename(outTermName1, string.Format("{0}", OUTPUT_TERM_NAME_1 ));   
+                //err = termEdit.TerminalRename(outTermName1, string.Format("{0}[{1}:0]", OUTPUT_TERM_NAME_1, maxOutBitIndex1.ToString())); // [3:0]
+           /// else
+                //err = termEdit.TerminalRename(outTermName1, string.Format("{0}", OUTPUT_TERM_NAME_1 ));   
      
-            if (err.IsNotOK) return err; 
+            //if (err.IsNotOK) return err; 
             
             
 

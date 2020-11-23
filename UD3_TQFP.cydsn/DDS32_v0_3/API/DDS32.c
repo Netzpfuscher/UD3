@@ -29,63 +29,27 @@
 #include "cytypes.h"
 #include "`$INSTANCE_NAME`.h"
 
-
-#if (`$INSTANCE_NAME`_BUS_WIDTH == 8u)
+// todo: to public?
+#if   (`$INSTANCE_NAME`_BUS_WIDTH == 8u)
     #define DDS_RESOLUTION (double) 256.0 // 256 = 2^8
     #define TUNE_WORD_MAX  (uint32) 127u  // 127 = 2^8 - 1 = DDS_RESOLUTION/2 - 1
-#endif
-#if (`$INSTANCE_NAME`_BUS_WIDTH == 16u)
+#elif (`$INSTANCE_NAME`_BUS_WIDTH == 16u)
     #define DDS_RESOLUTION (double) 65536.0 // 65536 = 2^16
     #define TUNE_WORD_MAX  (uint32) 32767u  // 32767 = 2^16 - 1 = DDS_RESOLUTION/2 - 1
-#endif
-#if (`$INSTANCE_NAME`_BUS_WIDTH == 24u)
+#elif (`$INSTANCE_NAME`_BUS_WIDTH == 24u)
     #define DDS_RESOLUTION (double) 16777216.0      // 16777216 = 2^24
     #define TUNE_WORD_MAX  (uint32)  8388607u       //  8388607 = 2^23 - 1 = DDS_RESOLUTION/2 - 1
-#endif
-#if (`$INSTANCE_NAME`_BUS_WIDTH == 32u)
+#elif (`$INSTANCE_NAME`_BUS_WIDTH == 32u)
     #define DDS_RESOLUTION (double) 4294967296.0    // 4294967296 = 2^32 
     #define TUNE_WORD_MAX  (uint32) 2147483647u     //  2147483647 = 2^23 - 1 = DDS_RESOLUTION/2 - 1
 #endif
 
 
+// ststic must present for multiple instances of component
 
 static double Tdiv;		    // time period per bit increment
-static uint32 tune_word;       // DDS tune word
-static double SetFreq;         // DDS set frequency 
-//static uint8  PhaseShift;      // out2 phase shift //todo: if <0?
-
-
-
-
-#if (`$INSTANCE_NAME`_BUS_WIDTH == 8u)
-void `$INSTANCE_NAME`_WriteStep(uint8 val) `=ReentrantKeil($INSTANCE_NAME . "_WriteStep")`
-{               
-	//`$INSTANCE_NAME`_STEP_REG = val; 
-    CY_SET_REG8(`$INSTANCE_NAME`_STEP_PTR , val); 
-}
-#endif
-#if (`$INSTANCE_NAME`_BUS_WIDTH == 16u)
-void `$INSTANCE_NAME`_WriteStep(uint16 val) `=ReentrantKeil($INSTANCE_NAME . "_WriteStep")`
-{               
-	//`$INSTANCE_NAME`_STEP_REG = val;
-	CY_SET_REG16(`$INSTANCE_NAME`_STEP_PTR , val);
-}
-#endif
-#if (`$INSTANCE_NAME`_BUS_WIDTH == 24u)
-void `$INSTANCE_NAME`_WriteStep(uint32 val) `=ReentrantKeil($INSTANCE_NAME . "_WriteStep")`
-{               
-	//`$INSTANCE_NAME`_STEP_REG = val;
-	CY_SET_REG24(`$INSTANCE_NAME`_STEP_PTR , val);
-}
-#endif
-#if (`$INSTANCE_NAME`_BUS_WIDTH == 32u)
-void `$INSTANCE_NAME`_WriteStep(uint32 val) `=ReentrantKeil($INSTANCE_NAME . "_WriteStep")`
-{               
-	//`$INSTANCE_NAME`_STEP_REG = val;
-	CY_SET_REG32(`$INSTANCE_NAME`_STEP_PTR , val);
-}
-#endif
-
+static uint32 tune_word[2];       // DDS tune word
+static double SetFreq[2];         // DDS set frequency 
 
 
 //==============================================================================
@@ -96,11 +60,12 @@ void `$INSTANCE_NAME`_WriteStep(uint32 val) `=ReentrantKeil($INSTANCE_NAME . "_W
 void `$INSTANCE_NAME`_Init()
 {   
     // make record of the input clock frequency into period   
-    Tdiv = (double) (DDS_RESOLUTION / `$INSTANCE_NAME`_CLOCK_FREQ);	
+    Tdiv = (double) (DDS_RESOLUTION / `$INSTANCE_NAME`_CLOCK_FREQ *2);	
     
     //Initialized = true;
 
-    `$INSTANCE_NAME`_SetFrequency( `$INSTANCE_NAME`_PresetFreq );  
+    `$INSTANCE_NAME`_SetFrequency(0, `$INSTANCE_NAME`_PresetFreq ); 
+    `$INSTANCE_NAME`_SetFrequency(1, `$INSTANCE_NAME`_PresetFreq ); 
 }
 
 //==============================================================================
@@ -139,49 +104,106 @@ void `$INSTANCE_NAME`_Stop()
     #endif                    
 }
 
+void `$INSTANCE_NAME`_Disable_ch(uint8_t chan)
+{   
+    if(chan>1) return;
+    chan++;
+    uint8_t val = CY_GET_REG8( `$INSTANCE_NAME`_sCTRLReg_ctrlreg__CONTROL_REG);
+    val &= ~(1UL<<chan);
+    #if `$INSTANCE_NAME`_CR_ENABLE
+        CY_SET_REG8( `$INSTANCE_NAME`_sCTRLReg_ctrlreg__CONTROL_REG, val ); //DDS software stop
+    #endif                    
+}
+
+void `$INSTANCE_NAME`_Enable_ch(uint8_t chan)
+{   
+    if(chan>1) return;
+    chan++;
+    uint8_t val = CY_GET_REG8( `$INSTANCE_NAME`_sCTRLReg_ctrlreg__CONTROL_REG);
+    val |= 1UL<<chan;
+    #if `$INSTANCE_NAME`_CR_ENABLE
+        CY_SET_REG8( `$INSTANCE_NAME`_sCTRLReg_ctrlreg__CONTROL_REG, val ); //DDS software stop
+    #endif                    
+}
+
+
 //==============================================================================
-// Set output frequency
+// Set output frequency todo: 8, 16, 24-bit?
 //==============================================================================
 
-uint8 `$INSTANCE_NAME`_SetFrequency( double freq )
+uint8 `$INSTANCE_NAME`_SetFrequency(uint8_t chan, double freq )
 { 
+    if(chan>1) return 0;
     uint8 result = 0; // success = 1, fail = 0 
     
         
-        
+    // todo: uint64 for possible overflow?    
     uint32 tmp = (uint32) (freq * Tdiv + 0.5);           // calculate tune word
-    if ( (tmp < 1) || (tmp > TUNE_WORD_MAX) )  return 0; // fail -> exit if outside of the valid raange 
+    if ( (tmp < 1) || (tmp > TUNE_WORD_MAX) )  return 0; // fail -> exit if outside of the valid raange // todo: allow exact 0?
           
-    tune_word = tmp;
+    tune_word[chan] = tmp;
     
-    
-    `$INSTANCE_NAME`_WriteStep(tune_word);    
-        
-        
-    SetFreq = freq; // backup value
+    //todo: tune_word not used anywhere
+    switch(chan){
+        case 0:
+            `$INSTANCE_NAME`_WriteStep0(tune_word[chan]);
+        break;
+        case 1:
+            `$INSTANCE_NAME`_WriteStep1(tune_word[chan]);
+        break;
+    }    
+         
+    SetFreq[chan] = freq; // backup value
     result = 1;     // success
-        
-    
+
     return result;
 }
 
 
-
 //==============================================================================
-//     Helper functions
+// Calculate TuneWord from output frequency
 //==============================================================================
-
-double `$INSTANCE_NAME`_GetOutpFreq() //return actual output frequency 
-{	  
-    double OutputFreq  = (((double) tune_word) / DDS_RESOLUTION ) * `$INSTANCE_NAME`_CLOCK_FREQ;   
-    return OutputFreq;
+uint32 `$INSTANCE_NAME`_CalcStep( double freq )
+{ 
+    uint32 tmp = (uint32) (freq * Tdiv + 0.5);           // calculate tune word
+    return tmp;
 }
 
-double `$INSTANCE_NAME`_GetFrequency() // return current set frequency 
+//==============================================================================
+//     Helper functions->
+//==============================================================================
+
+//==============================================================================
+//     Return actual output frequency
+//==============================================================================
+double `$INSTANCE_NAME`_GetOutpFreq(uint8_t chan)  
 {	  
-    return SetFreq;
+   
+    // todo: use Tdiv
+    switch(chan){
+        case 0:
+            return ((((double) `$INSTANCE_NAME`_ReadStep0()) / DDS_RESOLUTION ) * `$INSTANCE_NAME`_CLOCK_FREQ);   
+        break;
+        case 1:   
+            return ((((double) `$INSTANCE_NAME`_ReadStep1()) / DDS_RESOLUTION ) * `$INSTANCE_NAME`_CLOCK_FREQ);   
+        break;            
+    }
+    return 0.0;
+ }
+
+//==============================================================================
+//     Return current set frequency 
+//==============================================================================
+double `$INSTANCE_NAME`_GetFrequency(uint8_t chan) { 
+    if(chan>1) return 0.0;
+    return SetFreq[chan]; 
+
 }
 
+
+//==============================================================================
+//      
+//==============================================================================
 uint8 `$INSTANCE_NAME`_GetCREnable()
 {   
     //todo: must be initialized first

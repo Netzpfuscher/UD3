@@ -52,6 +52,8 @@ interrupter_params interrupter;
 extern uint8_t tr_running;
 extern uint8_t blocked; 
 
+extern uint16 ch_prd[4], ch_cmp[4];
+
 void initialize_interrupter(void);
 void update_interrupter();
 void ramp_control(void);

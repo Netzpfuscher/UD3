@@ -43,10 +43,10 @@
 * REGISTER USAGE:
 * F0 => not used
 * F1 => not used
-* D0 => phase increment on each clock constant
-* D1 => not used
-* A0 => phase accumulator
-* A1 => not used
+* D0 => phase increment on each clock constant 0
+* D1 => phase increment on each clock constant 1
+* A0 => phase accumulator 0
+* A1 => phase accumulator 1
 *
 ********************************************************************************
 * I*O Signals:
@@ -58,24 +58,20 @@
 *    drq               output          DMA request
 *
 ********************************************************************************/
-module DDS32_v0_0 (
+module DDS32_v0_3 (
 	drq,
-	outp,
-    //drq8,
-	//outp8,
+	outp0,
+    outp1,
 	clk,
-	res,
-    en
+	en,
+    res
 );
-	//output  drq;
-	//output  outp;
     output [0:3] drq;
-	output [0:3] outp;
-    //output  drq8;
-	//output  outp8;
+	output outp0;
+    output outp1;
 	input   clk;
-	input   res;
     input   en;
+    input   res;
     
     parameter BusWidth = 8'd8;
 
@@ -93,7 +89,7 @@ module DDS32_v0_0 (
 	localparam [7:0]    DDS_24_BIT   = 8'd24;
 	localparam [7:0]    DDS_32_BIT   = 8'd32;    
 
-	
+ 
 							 
 	//wire co_msb;
 	//assign drq = co_msb;
@@ -101,18 +97,10 @@ module DDS32_v0_0 (
     //assign drq = {co_msb, co_msb1, co_msb2, co_msb3}; // [0:3]-incorrect
 	assign drq = {co_msb3, co_msb2, co_msb1, co_msb};   // [3:0]
 	
-	//wire cmsb;
-	//assign outp = cmsb;
+
 	wire cmsb, cmsb1, cmsb2, cmsb3 ;
-    //assign outp = {cmsb, cmsb1, cmsb2, cmsb3};        // [0:3]-incorrect
-    assign outp = {cmsb3, cmsb2, cmsb1, cmsb};          // [3:0]
-	
-    //wire co_msb8;
-	//assign drq8 = co_msb8; // 8-th bit drq output
-    
-	//wire cmsb8;
-	//assign outp8 = cmsb8; // 8-th bit output
-    
+
+  
     
     localparam ENMODE_AUTO   = 2'b00;
     localparam ENMODE_CRONLY = 2'b01;
@@ -140,8 +128,21 @@ module DDS32_v0_0 (
     );
     
                                                      
-    localparam CLOCK_ENABLE_BIT   = 1'd0;                   // reserve bit 0 for clock enable                                                
+    localparam CLOCK_ENABLE_BIT   = 0;                   // reserve bit 0 for clock enable    
+    localparam ENABLE0_BIT   = 1;                        // reserve bit 1 for clock enable 
+    localparam ENABLE1_BIT   = 2;                        // reserve bit 2 for clock enable 
     wire [7:0] ctrl8;                                       // Control Register bit location (bits 7-1 are unused)
+    
+    reg toggle;
+    
+    reg output0;
+    reg output1;
+    
+   
+    assign outp0 = output0;
+    assign outp1 = output1;
+    
+    
     
     generate
     if( (EnableMode == ENMODE_CRONLY) || (EnableMode == ENMODE_CR_HW) ) begin : sCTRLReg 
@@ -151,13 +152,34 @@ module DDS32_v0_0 (
     endgenerate
     
     wire control_enable; assign control_enable = ctrl8[CLOCK_ENABLE_BIT];
+    wire enable0; assign enable0 = ctrl8[ENABLE0_BIT];
+    wire enable1; assign enable1 = ctrl8[ENABLE1_BIT];
 
     assign clock_en = (EnableMode == ENMODE_AUTO)?   1'b1:                  // auto enable on startup
                       (EnableMode == ENMODE_CRONLY)? control_enable:        // software_only  
                       (EnableMode == ENMODE_CR_HW)? (control_enable & en):  // software_and_hardware
                                                      en;                    // hardware_only
     
-    
+    always @ (posedge clk)
+	begin
+        toggle <= ~toggle;
+        
+        if(toggle==0) 
+            begin
+            if(enable0)
+                output0 <= {cmsb};
+            else
+                output0 <= 0;
+            end
+        if(toggle==1)
+            begin
+            if(enable1)
+                output1 <= {cmsb};
+            else
+                output1 <= 0;
+            end
+
+    end
  
   
     
@@ -180,7 +202,9 @@ module DDS32_v0_0 (
 	localparam [2:0] ACC_CMD_SUM = 3'b0;
 	wire [2:0] cs_addr;
 	
-	assign cs_addr = ACC_CMD_SUM;
+	assign cs_addr[0] = toggle;
+    assign cs_addr[1] = 0;
+    assign cs_addr[2] = 0;
 
 //`#end` -- edit above this line, do not edit this line
     /**************************************************************************/
@@ -192,49 +216,49 @@ module DDS32_v0_0 (
     `CS_ALU_OP__ADD, `CS_SRCA_A0, `CS_SRCB_D0,
     `CS_SHFT_OP_PASS, `CS_A0_SRC__ALU, `CS_A1_SRC_NONE,
     `CS_FEEDBACK_DSBL, `CS_CI_SEL_CFGA, `CS_SI_SEL_CFGA,
-    `CS_CMP_SEL_CFGA, /*CFGRAM0:      sum*/
+    `CS_CMP_SEL_CFGA, /*CFGRAM0:        sum*/
+    `CS_ALU_OP__ADD, `CS_SRCA_A1, `CS_SRCB_D1,
+    `CS_SHFT_OP_PASS, `CS_A0_SRC_NONE, `CS_A1_SRC__ALU,
+    `CS_FEEDBACK_DSBL, `CS_CI_SEL_CFGA, `CS_SI_SEL_CFGA,
+    `CS_CMP_SEL_CFGA, /*CFGRAM1:  */
     `CS_ALU_OP_PASS, `CS_SRCA_A0, `CS_SRCB_D0,
     `CS_SHFT_OP_PASS, `CS_A0_SRC_NONE, `CS_A1_SRC_NONE,
     `CS_FEEDBACK_DSBL, `CS_CI_SEL_CFGA, `CS_SI_SEL_CFGA,
-    `CS_CMP_SEL_CFGA, /*CFGRAM1:      */
+    `CS_CMP_SEL_CFGA, /*CFGRAM2:        */
     `CS_ALU_OP_PASS, `CS_SRCA_A0, `CS_SRCB_D0,
     `CS_SHFT_OP_PASS, `CS_A0_SRC_NONE, `CS_A1_SRC_NONE,
     `CS_FEEDBACK_DSBL, `CS_CI_SEL_CFGA, `CS_SI_SEL_CFGA,
-    `CS_CMP_SEL_CFGA, /*CFGRAM2:      */
+    `CS_CMP_SEL_CFGA, /*CFGRAM3:        */
     `CS_ALU_OP_PASS, `CS_SRCA_A0, `CS_SRCB_D0,
     `CS_SHFT_OP_PASS, `CS_A0_SRC_NONE, `CS_A1_SRC_NONE,
     `CS_FEEDBACK_DSBL, `CS_CI_SEL_CFGA, `CS_SI_SEL_CFGA,
-    `CS_CMP_SEL_CFGA, /*CFGRAM3:      */
+    `CS_CMP_SEL_CFGA, /*CFGRAM4:        */
     `CS_ALU_OP_PASS, `CS_SRCA_A0, `CS_SRCB_D0,
     `CS_SHFT_OP_PASS, `CS_A0_SRC_NONE, `CS_A1_SRC_NONE,
     `CS_FEEDBACK_DSBL, `CS_CI_SEL_CFGA, `CS_SI_SEL_CFGA,
-    `CS_CMP_SEL_CFGA, /*CFGRAM4:      */
+    `CS_CMP_SEL_CFGA, /*CFGRAM5:        */
     `CS_ALU_OP_PASS, `CS_SRCA_A0, `CS_SRCB_D0,
     `CS_SHFT_OP_PASS, `CS_A0_SRC_NONE, `CS_A1_SRC_NONE,
     `CS_FEEDBACK_DSBL, `CS_CI_SEL_CFGA, `CS_SI_SEL_CFGA,
-    `CS_CMP_SEL_CFGA, /*CFGRAM5:      */
+    `CS_CMP_SEL_CFGA, /*CFGRAM6:        */
     `CS_ALU_OP_PASS, `CS_SRCA_A0, `CS_SRCB_D0,
     `CS_SHFT_OP_PASS, `CS_A0_SRC_NONE, `CS_A1_SRC_NONE,
     `CS_FEEDBACK_DSBL, `CS_CI_SEL_CFGA, `CS_SI_SEL_CFGA,
-    `CS_CMP_SEL_CFGA, /*CFGRAM6:      */
-    `CS_ALU_OP_PASS, `CS_SRCA_A0, `CS_SRCB_D0,
-    `CS_SHFT_OP_PASS, `CS_A0_SRC_NONE, `CS_A1_SRC_NONE,
-    `CS_FEEDBACK_DSBL, `CS_CI_SEL_CFGA, `CS_SI_SEL_CFGA,
-    `CS_CMP_SEL_CFGA, /*CFGRAM7:      */
-    8'hFF, 8'h00,  /*CFG9:      */
-    8'hFF, 8'hFF,  /*CFG11-10:      */
+    `CS_CMP_SEL_CFGA, /*CFGRAM7:        */
+    8'hFF, 8'h00,  /*CFG9:        */
+    8'hFF, 8'hFF,  /*CFG11-10:        */
     `SC_CMPB_A1_D1, `SC_CMPA_A1_D1, `SC_CI_B_ARITH,
     `SC_CI_A_ARITH, `SC_C1_MASK_DSBL, `SC_C0_MASK_DSBL,
     `SC_A_MASK_DSBL, `SC_DEF_SI_0, `SC_SI_B_DEFSI,
-    `SC_SI_A_DEFSI, /*CFG13-12:      */
+    `SC_SI_A_DEFSI, /*CFG13-12:        */
     `SC_A0_SRC_ACC, `SC_SHIFT_SL, 1'h0,
     1'h0, `SC_FIFO1_BUS, `SC_FIFO0_BUS,
     `SC_MSB_DSBL, `SC_MSB_BIT0, `SC_MSB_NOCHN,
     `SC_FB_NOCHN, `SC_CMP1_NOCHN,
-    `SC_CMP0_NOCHN, /*CFG15-14:      */
+    `SC_CMP0_NOCHN, /*CFG15-14:        */
     10'h00, `SC_FIFO_CLK__DP,`SC_FIFO_CAP_AX,
     `SC_FIFO_LEVEL,`SC_FIFO__SYNC,`SC_EXTCRC_DSBL,
-    `SC_WRK16CAT_DSBL /*CFG17-16:      */
+    `SC_WRK16CAT_DSBL /*CFG17-16:        */
 };
 
     parameter dpconfig1 = 
@@ -242,49 +266,49 @@ module DDS32_v0_0 (
     `CS_ALU_OP__ADD, `CS_SRCA_A0, `CS_SRCB_D0,
     `CS_SHFT_OP_PASS, `CS_A0_SRC__ALU, `CS_A1_SRC_NONE,
     `CS_FEEDBACK_DSBL, `CS_CI_SEL_CFGA, `CS_SI_SEL_CFGA,
-    `CS_CMP_SEL_CFGA, /*CFGRAM0:      sum*/
+    `CS_CMP_SEL_CFGA, /*CFGRAM0:        sum*/
+    `CS_ALU_OP__ADD, `CS_SRCA_A1, `CS_SRCB_D1,
+    `CS_SHFT_OP_PASS, `CS_A0_SRC_NONE, `CS_A1_SRC__ALU,
+    `CS_FEEDBACK_DSBL, `CS_CI_SEL_CFGA, `CS_SI_SEL_CFGA,
+    `CS_CMP_SEL_CFGA, /*CFGRAM1:        */
     `CS_ALU_OP_PASS, `CS_SRCA_A0, `CS_SRCB_D0,
     `CS_SHFT_OP_PASS, `CS_A0_SRC_NONE, `CS_A1_SRC_NONE,
     `CS_FEEDBACK_DSBL, `CS_CI_SEL_CFGA, `CS_SI_SEL_CFGA,
-    `CS_CMP_SEL_CFGA, /*CFGRAM1:      */
+    `CS_CMP_SEL_CFGA, /*CFGRAM2:        */
     `CS_ALU_OP_PASS, `CS_SRCA_A0, `CS_SRCB_D0,
     `CS_SHFT_OP_PASS, `CS_A0_SRC_NONE, `CS_A1_SRC_NONE,
     `CS_FEEDBACK_DSBL, `CS_CI_SEL_CFGA, `CS_SI_SEL_CFGA,
-    `CS_CMP_SEL_CFGA, /*CFGRAM2:      */
+    `CS_CMP_SEL_CFGA, /*CFGRAM3:        */
     `CS_ALU_OP_PASS, `CS_SRCA_A0, `CS_SRCB_D0,
     `CS_SHFT_OP_PASS, `CS_A0_SRC_NONE, `CS_A1_SRC_NONE,
     `CS_FEEDBACK_DSBL, `CS_CI_SEL_CFGA, `CS_SI_SEL_CFGA,
-    `CS_CMP_SEL_CFGA, /*CFGRAM3:      */
+    `CS_CMP_SEL_CFGA, /*CFGRAM4:        */
     `CS_ALU_OP_PASS, `CS_SRCA_A0, `CS_SRCB_D0,
     `CS_SHFT_OP_PASS, `CS_A0_SRC_NONE, `CS_A1_SRC_NONE,
     `CS_FEEDBACK_DSBL, `CS_CI_SEL_CFGA, `CS_SI_SEL_CFGA,
-    `CS_CMP_SEL_CFGA, /*CFGRAM4:      */
+    `CS_CMP_SEL_CFGA, /*CFGRAM5:        */
     `CS_ALU_OP_PASS, `CS_SRCA_A0, `CS_SRCB_D0,
     `CS_SHFT_OP_PASS, `CS_A0_SRC_NONE, `CS_A1_SRC_NONE,
     `CS_FEEDBACK_DSBL, `CS_CI_SEL_CFGA, `CS_SI_SEL_CFGA,
-    `CS_CMP_SEL_CFGA, /*CFGRAM5:      */
+    `CS_CMP_SEL_CFGA, /*CFGRAM6:        */
     `CS_ALU_OP_PASS, `CS_SRCA_A0, `CS_SRCB_D0,
     `CS_SHFT_OP_PASS, `CS_A0_SRC_NONE, `CS_A1_SRC_NONE,
     `CS_FEEDBACK_DSBL, `CS_CI_SEL_CFGA, `CS_SI_SEL_CFGA,
-    `CS_CMP_SEL_CFGA, /*CFGRAM6:      */
-    `CS_ALU_OP_PASS, `CS_SRCA_A0, `CS_SRCB_D0,
-    `CS_SHFT_OP_PASS, `CS_A0_SRC_NONE, `CS_A1_SRC_NONE,
-    `CS_FEEDBACK_DSBL, `CS_CI_SEL_CFGA, `CS_SI_SEL_CFGA,
-    `CS_CMP_SEL_CFGA, /*CFGRAM7:      */
-    8'hFF, 8'h00,  /*CFG9:      */
-    8'hFF, 8'hFF,  /*CFG11-10:      */
+    `CS_CMP_SEL_CFGA, /*CFGRAM7:        */
+    8'hFF, 8'h00,  /*CFG9:        */
+    8'hFF, 8'hFF,  /*CFG11-10:        */
     `SC_CMPB_A1_D1, `SC_CMPA_A1_D1, `SC_CI_B_CHAIN,
     `SC_CI_A_CHAIN, `SC_C1_MASK_DSBL, `SC_C0_MASK_DSBL,
     `SC_A_MASK_DSBL, `SC_DEF_SI_0, `SC_SI_B_DEFSI,
-    `SC_SI_A_DEFSI, /*CFG13-12:      */
+    `SC_SI_A_DEFSI, /*CFG13-12:        */
     `SC_A0_SRC_ACC, `SC_SHIFT_SL, 1'h0,
     1'h0, `SC_FIFO1_BUS, `SC_FIFO0_BUS,
     `SC_MSB_DSBL, `SC_MSB_BIT7, `SC_MSB_NOCHN,
     `SC_FB_NOCHN, `SC_CMP1_NOCHN,
-    `SC_CMP0_NOCHN, /*CFG15-14:      */
+    `SC_CMP0_NOCHN, /*CFG15-14:        */
     10'h00, `SC_FIFO_CLK__DP,`SC_FIFO_CAP_AX,
     `SC_FIFO_LEVEL,`SC_FIFO__SYNC,`SC_EXTCRC_DSBL,
-    `SC_WRK16CAT_DSBL /*CFG17-16:      */
+    `SC_WRK16CAT_DSBL /*CFG17-16:        */
 };
 
 	generate 
@@ -421,5 +445,7 @@ endmodule
 //`#start footer` -- edit after this line, do not edit this line
 `endif /* DDS_v1_0_V_ALREADY_INCLUDED */
 //`#end` -- edit above this line, do not edit this line
+
+
 
 

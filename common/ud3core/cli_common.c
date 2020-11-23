@@ -500,7 +500,7 @@ uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, TERMINAL_HA
     
     update_midi_duty();
     
-    //update_interrupter_new(param.pw,param.pw);
+    update_interrupter_new(param.pw,param.pw);
     
 	if (tr_running==1) {
 		update_interrupter();

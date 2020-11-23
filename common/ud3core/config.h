@@ -48,7 +48,7 @@
 #define N_QUEUE_SID     64          //Size of the SID frame buffer
 #define N_QUEUE_MIDI    256         //Size of the midi event buffer
 #define N_QUEUE_PULSE   16          //Size of the oneshot buffer
-#define N_CHANNEL 8                 //Number of parallel voices
+#define N_CHANNEL 4                 //Number of parallel voices
 
     
 #endif

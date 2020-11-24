@@ -44,7 +44,8 @@
 #define `$INSTANCE_NAME`_BUS_WIDTH           (`$BusWidth`u)             // DDS accumulator bit width
 #define `$INSTANCE_NAME`_CLOCK_FREQ (double) `=$ClockFreq`              // input clock frequency
 #define `$INSTANCE_NAME`_CR_ENABLE           `=($EnableMode == CR_only || $EnableMode == HW_and_CR)`  // enable mode = SW or SW_&_HW
-#define `$INSTANCE_NAME`_PresetFreq (double) `=$Frequency`              // preset startup frequency 
+#define `$INSTANCE_NAME`_PresetFreq0 (double) `=$Frequency0`              // preset startup frequency 
+#define `$INSTANCE_NAME`_PresetFreq1 (double) `=$Frequency1`              // preset startup frequency 
  
     
     

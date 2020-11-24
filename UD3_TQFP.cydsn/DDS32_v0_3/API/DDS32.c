@@ -64,8 +64,8 @@ void `$INSTANCE_NAME`_Init()
     
     //Initialized = true;
 
-    `$INSTANCE_NAME`_SetFrequency(0, `$INSTANCE_NAME`_PresetFreq ); 
-    `$INSTANCE_NAME`_SetFrequency(1, `$INSTANCE_NAME`_PresetFreq ); 
+    `$INSTANCE_NAME`_SetFrequency(0, `$INSTANCE_NAME`_PresetFreq0 ); 
+    `$INSTANCE_NAME`_SetFrequency(1, `$INSTANCE_NAME`_PresetFreq1 ); 
 }
 
 //==============================================================================
@@ -154,6 +154,35 @@ uint8 `$INSTANCE_NAME`_SetFrequency(uint8_t chan, double freq )
     }    
          
     SetFreq[chan] = freq; // backup value
+    result = 1;     // success
+
+    return result;
+}
+
+uint8 `$INSTANCE_NAME`_SetFrequency_FP8(uint8_t chan, uint32 freq )
+{ 
+    if(chan>1) return 0;
+    uint8 result = 0; // success = 1, fail = 0 
+    
+        
+    // todo: uint64 for possible overflow?    
+    uint32_t tmp = ((freq * (1<<15))/ `$INSTANCE_NAME`_CLOCK_FREQ );           // calculate tune word
+
+    if ( (tmp < 1) || (tmp > TUNE_WORD_MAX) )  return 0; // fail -> exit if outside of the valid raange // todo: allow exact 0?
+          
+    tune_word[chan] = tmp;
+    
+    //todo: tune_word not used anywhere
+    switch(chan){
+        case 0:
+            `$INSTANCE_NAME`_WriteStep0(tune_word[chan]);
+        break;
+        case 1:
+            `$INSTANCE_NAME`_WriteStep1(tune_word[chan]);
+        break;
+    }    
+         
+    SetFreq[chan] = freq>>8; // backup value
     result = 1;     // success
 
     return result;

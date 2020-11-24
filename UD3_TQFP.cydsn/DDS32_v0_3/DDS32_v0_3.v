@@ -59,14 +59,12 @@
 *
 ********************************************************************************/
 module DDS32_v0_3 (
-	drq,
 	outp0,
     outp1,
 	clk,
 	en,
     res
 );
-    output [0:3] drq;
 	output outp0;
     output outp1;
 	input   clk;
@@ -90,18 +88,10 @@ module DDS32_v0_3 (
 	localparam [7:0]    DDS_32_BIT   = 8'd32;    
 
  
-							 
-	//wire co_msb;
-	//assign drq = co_msb;
 	wire co_msb, co_msb1, co_msb2, co_msb3;
-    //assign drq = {co_msb, co_msb1, co_msb2, co_msb3}; // [0:3]-incorrect
-	assign drq = {co_msb3, co_msb2, co_msb1, co_msb};   // [3:0]
-	
-
+   
 	wire cmsb, cmsb1, cmsb2, cmsb3 ;
-
-  
-    
+   
     localparam ENMODE_AUTO   = 2'b00;
     localparam ENMODE_CRONLY = 2'b01;
     localparam ENMODE_HWONLY = 2'b10;
@@ -120,7 +110,6 @@ module DDS32_v0_3 (
     wire clock_en;                                          // temp 
     
     cy_psoc3_udb_clock_enable_v1_0 #(.sync_mode(`TRUE))
-    //cy_psoc3_udb_clock_enable_v1_0 #(.sync_mode(`FALSE))
     clock_enable_block (
                         .clock_in(clk),                     // input clock
                         .enable(clock_en),                  // input enable     
@@ -190,14 +179,7 @@ module DDS32_v0_3 (
 	* clock must always be synchronous and if not implement synchronizers to make
 	* it synchronous.
     */
-    //wire op_clk;    /* operational clock */
-    
-    //cy_psoc3_udb_clock_enable_v1_0 #(.sync_mode(`TRUE)) ClkSync
-    //(
-        /* input  */  //  .clock_in(clk),
-        /* input  */  //  .enable(1'b1),
-        /* output */  //  .clock_out(op_clk)
-    //);  	
+ 	
 	
 	localparam [2:0] ACC_CMD_SUM = 3'b0;
 	wire [2:0] cs_addr;

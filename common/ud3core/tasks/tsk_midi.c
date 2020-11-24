@@ -428,19 +428,20 @@ static inline void synthcode_SID(uint32_t r){
             last_frame=l_time;
             for(uint8_t i=0;i<SID_CHANNELS;i++){
                 channel[i].halfcount = sid_frm.half[i];
-                if(sid_frm.gate[i] > channel[i].old_gate) {
-                    switch(i){
+                if(sid_frm.gate[i] > channel[i].old_gate && !sid_frm.wave[i]) {
+                    
+                    channel[i].adsr_state=ADSR_ATTACK;  //Rising edge
+                }
+                switch(i){
                         case 0:
-                            DDS32_1_SetFrequency(0,sid_frm.freq[i]<<8);
+                            DDS32_1_SetFrequency(0,sid_frm.freq[i]);
                         break;
                         case 1:
-                            DDS32_1_SetFrequency(1,sid_frm.freq[i]<<8);
+                            DDS32_1_SetFrequency(1,sid_frm.freq[i]);
                         break;
                         case 2:
-                            DDS32_2_SetFrequency(0,sid_frm.freq[i]<<8);
+                            DDS32_2_SetFrequency(0,sid_frm.freq[i]);
                         break;
-                    }
-                    channel[i].adsr_state=ADSR_ATTACK;  //Rising edge
                 }
                 if(sid_frm.gate[i] < channel[i].old_gate) channel[i].adsr_state=ADSR_RELEASE;  //Falling edge
                 sid_frm.pw[i]=sid_frm.pw[i]>>4;
@@ -465,7 +466,7 @@ static inline void synthcode_SID(uint32_t r){
 
 	for (uint8_t ch = 0; ch < SID_CHANNELS; ch++) {
         compute_adsr_sid(ch);
-                if(channel[ch].volume>0){
+        if(channel[ch].volume>0){
             tt.n.midi_voices.value++;
             uint16_t prd = param.offtime + channel[ch].volume;
             ch_prd[ch] = prd - 3;
@@ -847,10 +848,10 @@ void reflect() {
         interrupter.pw = param.pw;
     }
     
-    DDS32_1_SetFrequency_FP8(0, channel[0].freq<<8);
-    DDS32_1_SetFrequency_FP8(1, channel[1].freq<<8);
-    DDS32_2_SetFrequency_FP8(0, channel[2].freq<<8);
-    DDS32_2_SetFrequency_FP8(1, channel[3].freq<<8);
+    DDS32_1_SetFrequency(0, channel[0].freq);
+    DDS32_1_SetFrequency(1, channel[1].freq);
+    DDS32_2_SetFrequency(0, channel[2].freq);
+    DDS32_2_SetFrequency(1, channel[3].freq);
     /*
     if(channel[0].adsr_state==ADSR_ATTACK){
         DDS32_1_Enable();

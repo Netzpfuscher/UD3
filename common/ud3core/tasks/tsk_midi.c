@@ -428,10 +428,22 @@ static inline void synthcode_SID(uint32_t r){
             last_frame=l_time;
             for(uint8_t i=0;i<SID_CHANNELS;i++){
                 channel[i].halfcount = sid_frm.half[i];
-                if(sid_frm.gate[i] > channel[i].old_gate) channel[i].adsr_state=ADSR_ATTACK;  //Rising edge
+                if(sid_frm.gate[i] > channel[i].old_gate) {
+                    switch(i){
+                        case 0:
+                            DDS32_1_SetFrequency(0,sid_frm.freq[i]<<8);
+                        break;
+                        case 1:
+                            DDS32_1_SetFrequency(1,sid_frm.freq[i]<<8);
+                        break;
+                        case 2:
+                            DDS32_2_SetFrequency(0,sid_frm.freq[i]<<8);
+                        break;
+                    }
+                    channel[i].adsr_state=ADSR_ATTACK;  //Rising edge
+                }
                 if(sid_frm.gate[i] < channel[i].old_gate) channel[i].adsr_state=ADSR_RELEASE;  //Falling edge
                 sid_frm.pw[i]=sid_frm.pw[i]>>4;
-                channel[i].freq = sid_frm.freq[i];
                 channel[i].old_gate = sid_frm.gate[i];
                 channel[i].freq = sid_frm.freq[i];
             }
@@ -450,37 +462,42 @@ static inline void synthcode_SID(uint32_t r){
         
     uint8_t random = rand();
 
-    PULSE pulse;
-	uint8_t flag[SID_CHANNELS];
 
 	for (uint8_t ch = 0; ch < SID_CHANNELS; ch++) {
         compute_adsr_sid(ch);
-
-		flag[ch] = 0;
-		if (channel[ch].volume > 0) {
+                if(channel[ch].volume>0){
             tt.n.midi_voices.value++;
-			if ((r / channel[ch].halfcount) % 2 > 0) {
-				flag[ch] = 1; 
-			}
-		}
-		if (flag[ch] > old_flag[ch]) {
-            if(!(sid_frm.wave[ch] && (random & configuration.noise_w))){
-                pulse.volume = channel[ch].volume;
-                pulse.pw = sid_frm.master_pw;
-#if USE_DEBUG_PW
-                pulse.pw = channel[ch].volume;   //For DEBUG with speaker
-#endif
-                xQueueSendFromISR(qPulse,&pulse,0);
+            uint16_t prd = param.offtime + channel[ch].volume;
+            ch_prd[ch] = prd - 3;
+            ch_cmp[ch] = prd - channel[ch].volume - 3;
+            switch(ch){
+            case 0:
+                DDS32_1_Enable_ch(0);
+                break;
+            case 1:
+                DDS32_1_Enable_ch(1);
+                break;
+            case 2:
+                DDS32_2_Enable_ch(0);
+                break;
             }
-		}   
-		old_flag[ch] = flag[ch];   
+        }else{
+            switch(ch){
+                case 0:
+                    DDS32_1_Disable_ch(0);
+                    break;
+                case 1:
+                    DDS32_1_Disable_ch(1);
+                    break;
+                case 2:
+                    DDS32_2_Disable_ch(0);
+                    break;
+            }  
+            
+        }
+  
 	}
-    if(itr_end_Read()==0){
-        if(xQueueReceiveFromISR(qPulse,&pulse,0)){
-            pulse_active=pdTRUE;
-            interrupter_oneshot(pulse.pw, pulse.volume);
-        } 
-    }
+
 }
 
 static inline void synthcode_QMIDI(uint32_t r){
@@ -830,10 +847,10 @@ void reflect() {
         interrupter.pw = param.pw;
     }
     
-    DDS32_1_SetFrequency(0, channel[0].freq);
-    DDS32_1_SetFrequency(1, channel[1].freq);
-    DDS32_2_SetFrequency(0, channel[2].freq);
-    DDS32_2_SetFrequency(1, channel[3].freq);
+    DDS32_1_SetFrequency_FP8(0, channel[0].freq<<8);
+    DDS32_1_SetFrequency_FP8(1, channel[1].freq<<8);
+    DDS32_2_SetFrequency_FP8(0, channel[2].freq<<8);
+    DDS32_2_SetFrequency_FP8(1, channel[3].freq<<8);
     /*
     if(channel[0].adsr_state==ADSR_ATTACK){
         DDS32_1_Enable();

@@ -115,6 +115,7 @@ void   `$INSTANCE_NAME`_Stop();                      // Stop (disable) DDS
 void   `$INSTANCE_NAME`_Init();                      // initialize DDS
 void   `$INSTANCE_NAME`_Enable();                    // Enable DDS (must init first) // todo: add _Enabled and _Initialized property
 uint8  `$INSTANCE_NAME`_SetFrequency(uint8_t chan, double Freq ); // Set desired output frequency
+uint8 `$INSTANCE_NAME`_SetFrequency_FP8(uint8_t chan, uint32 freq );
 double `$INSTANCE_NAME`_GetFrequency(uint8_t chan);              // return current set frequency 
 double `$INSTANCE_NAME`_GetOutpFreq(uint8_t chan);               // read actual output frequency
 uint8  `$INSTANCE_NAME`_GetCREnable();               // Software Enable status

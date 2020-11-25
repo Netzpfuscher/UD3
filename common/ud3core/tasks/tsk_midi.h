@@ -64,6 +64,7 @@ typedef struct __channel__ {
     uint8 adsr_count;
     uint8 sustain;
     uint8 old_gate;
+    uint8_t noise;
 } CHANNEL;
     
 #define N_MIDICHANNEL 16

@@ -65,21 +65,29 @@
     #define `$INSTANCE_NAME`_ReadStep1()     ((uint8)  CY_GET_REG8(`$INSTANCE_NAME`_STEP1_PTR))
     #define `$INSTANCE_NAME`_WriteStep0(val)           CY_SET_REG8(`$INSTANCE_NAME`_STEP0_PTR , val) 
     #define `$INSTANCE_NAME`_WriteStep1(val)           CY_SET_REG8(`$INSTANCE_NAME`_STEP0_PTR , val) 
+    #define `$INSTANCE_NAME`_WriteRand0(val)           CY_SET_REG8(`$INSTANCE_NAME`_A0_PTR , val)
+    #define `$INSTANCE_NAME`_WriteRand1(val)           CY_SET_REG8(`$INSTANCE_NAME`_A1_PTR , val)
 #elif (`$INSTANCE_NAME`_BUS_WIDTH == 16u)
     #define `$INSTANCE_NAME`_ReadStep0()     ((uint16) CY_GET_REG16(`$INSTANCE_NAME`_STEP0_PTR))
     #define `$INSTANCE_NAME`_ReadStep1()     ((uint16) CY_GET_REG16(`$INSTANCE_NAME`_STEP1_PTR))
     #define `$INSTANCE_NAME`_WriteStep0(val)          CY_SET_REG16(`$INSTANCE_NAME`_STEP0_PTR , val)
     #define `$INSTANCE_NAME`_WriteStep1(val)          CY_SET_REG16(`$INSTANCE_NAME`_STEP1_PTR , val)
+    #define `$INSTANCE_NAME`_WriteRand0(val)           CY_SET_REG16(`$INSTANCE_NAME`_A0_PTR , val)
+    #define `$INSTANCE_NAME`_WriteRand1(val)           CY_SET_REG16(`$INSTANCE_NAME`_A1_PTR , val)
 #elif (`$INSTANCE_NAME`_BUS_WIDTH == 24u)
     #define `$INSTANCE_NAME`_ReadStep0()     ((uint32) CY_GET_REG24(`$INSTANCE_NAME`_STEP0_PTR))
     #define `$INSTANCE_NAME`_ReadStep1()     ((uint32) CY_GET_REG24(`$INSTANCE_NAME`_STEP1_PTR))
     #define `$INSTANCE_NAME`_WriteStep0(val)          CY_SET_REG24(`$INSTANCE_NAME`_STEP0_PTR , val)
     #define `$INSTANCE_NAME`_WriteStep1(val)          CY_SET_REG24(`$INSTANCE_NAME`_STEP1_PTR , val)
+    #define `$INSTANCE_NAME`_WriteRand0(val)           CY_SET_REG24(`$INSTANCE_NAME`_A0_PTR , val)
+    #define `$INSTANCE_NAME`_WriteRand1(val)           CY_SET_REG24(`$INSTANCE_NAME`_A1_PTR , val)
 #elif (`$INSTANCE_NAME`_BUS_WIDTH == 32u)
     #define `$INSTANCE_NAME`_ReadStep0()     ((uint32) CY_GET_REG32(`$INSTANCE_NAME`_STEP0_PTR))
     #define `$INSTANCE_NAME`_ReadStep1()     ((uint32) CY_GET_REG32(`$INSTANCE_NAME`_STEP1_PTR))
     #define `$INSTANCE_NAME`_WriteStep0(val)          CY_SET_REG32(`$INSTANCE_NAME`_STEP0_PTR , val)
     #define `$INSTANCE_NAME`_WriteStep1(val)          CY_SET_REG32(`$INSTANCE_NAME`_STEP1_PTR , val)
+    #define `$INSTANCE_NAME`_WriteRand0(val)           CY_SET_REG32(`$INSTANCE_NAME`_A0_PTR , val)
+    #define `$INSTANCE_NAME`_WriteRand1(val)           CY_SET_REG32(`$INSTANCE_NAME`_A1_PTR , val)
 #endif  
 
 
@@ -92,14 +100,22 @@
 #if   (`$INSTANCE_NAME`_BUS_WIDTH == 8u)
 	#define `$INSTANCE_NAME`_STEP0_PTR	((reg8 *) `$INSTANCE_NAME`_sD8_DDSdp_u0__D0_REG)
     #define `$INSTANCE_NAME`_STEP1_PTR	((reg8 *) `$INSTANCE_NAME`_sD8_DDSdp_u0__D1_REG)
+    #define `$INSTANCE_NAME`_A0_PTR	((reg8 *)     `$INSTANCE_NAME`_sD8_DDSdp_u0__A0_REG)
+    #define `$INSTANCE_NAME`_A1_PTR	((reg8 *)     `$INSTANCE_NAME`_sD8_DDSdp_u0__A1_REG)
 #elif (`$INSTANCE_NAME`_BUS_WIDTH == 16u)
 	#define `$INSTANCE_NAME`_STEP0_PTR	((reg8 *) `$INSTANCE_NAME`_sD16_DDSdp_u0__D0_REG)
     #define `$INSTANCE_NAME`_STEP1_PTR	((reg8 *) `$INSTANCE_NAME`_sD16_DDSdp_u0__D1_REG)
+    #define `$INSTANCE_NAME`_A0_PTR	((reg8 *)     `$INSTANCE_NAME`_sD16_DDSdp_u0__A0_REG)
+    #define `$INSTANCE_NAME`_A1_PTR	((reg8 *)     `$INSTANCE_NAME`_sD16_DDSdp_u0__A1_REG)
 #elif (`$INSTANCE_NAME`_BUS_WIDTH == 24u)
 	#define `$INSTANCE_NAME`_STEP0_PTR	((reg8 *) `$INSTANCE_NAME`_sD24_DDSdp_u0__D0_REG)
+    #define `$INSTANCE_NAME`_A0_PTR	((reg8 *)     `$INSTANCE_NAME`_sD24_DDSdp_u0__A0_REG)
+    #define `$INSTANCE_NAME`_A1_PTR	((reg8 *)     `$INSTANCE_NAME`_sD24_DDSdp_u0__A1_REG)
     #define `$INSTANCE_NAME`_STEP1_PTR	((reg8 *) `$INSTANCE_NAME`_sD24_DDSdp_u0__D1_REG)
 #elif (`$INSTANCE_NAME`_BUS_WIDTH == 32u)
 	#define `$INSTANCE_NAME`_STEP0_PTR	((reg8 *) `$INSTANCE_NAME`_sD32_DDSdp_u0__D0_REG)
+    #define `$INSTANCE_NAME`_A0_PTR	((reg8 *)     `$INSTANCE_NAME`_sD32_DDSdp_u0__A0_REG)
+    #define `$INSTANCE_NAME`_A1_PTR	((reg8 *)     `$INSTANCE_NAME`_sD32_DDSdp_u0__A1_REG)
     #define `$INSTANCE_NAME`_STEP1_PTR	((reg8 *) `$INSTANCE_NAME`_sD32_DDSdp_u0__D1_REG)
 #endif
 
@@ -121,6 +137,7 @@ double `$INSTANCE_NAME`_GetOutpFreq(uint8_t chan);               // read actual 
 uint8  `$INSTANCE_NAME`_GetCREnable();               // Software Enable status
 uint32 `$INSTANCE_NAME`_CalcStep( double Freq );     // Calculate TuneWord from frequency
 void `$INSTANCE_NAME`_Enable_ch(uint8_t chan);
+void `$INSTANCE_NAME`_Rand(uint8_t chan);
 void `$INSTANCE_NAME`_Disable_ch(uint8_t chan);
 
 

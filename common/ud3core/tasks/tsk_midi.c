@@ -429,27 +429,30 @@ static inline void synthcode_SID(uint32_t r){
             for(uint8_t i=0;i<SID_CHANNELS;i++){
                 channel[i].halfcount = sid_frm.half[i];
                 if(sid_frm.gate[i] > channel[i].old_gate) {
-                    switch(i){
-                        case 0:
-                            DDS32_1_SetFrequency(0,sid_frm.freq[i]<<8);
-                        break;
-                        case 1:
-                            DDS32_1_SetFrequency(1,sid_frm.freq[i]<<8);
-                        break;
-                        case 2:
-                            DDS32_2_SetFrequency(0,sid_frm.freq[i]<<8);
-                        break;
-                    }
                     channel[i].adsr_state=ADSR_ATTACK;  //Rising edge
                 }
                 if(sid_frm.gate[i] < channel[i].old_gate) channel[i].adsr_state=ADSR_RELEASE;  //Falling edge
                 sid_frm.pw[i]=sid_frm.pw[i]>>4;
                 channel[i].old_gate = sid_frm.gate[i];
                 channel[i].freq = sid_frm.freq[i];
+                
+                switch(i){
+                        case 0:
+                            DDS32_1_SetFrequency_FP8(0,sid_frm.freq[i]<<8);
+                        break;
+                        case 1:
+                            DDS32_1_SetFrequency_FP8(1,sid_frm.freq[i]<<8);
+                        break;
+                        case 2:
+                            DDS32_2_SetFrequency_FP8(0,sid_frm.freq[i]<<8);
+                        break;
+                }
+                          
             }
             next_frame = sid_frm.next_frame;
         }
     }
+    
     if((l_time - last_frame)>200){
      next_frame = l_time;
      last_frame = l_time;
@@ -460,9 +463,6 @@ static inline void synthcode_SID(uint32_t r){
         }   
     }
         
-    uint8_t random = rand();
-
-
 	for (uint8_t ch = 0; ch < SID_CHANNELS; ch++) {
         compute_adsr_sid(ch);
                 if(channel[ch].volume>0){
@@ -473,12 +473,15 @@ static inline void synthcode_SID(uint32_t r){
             switch(ch){
             case 0:
                 DDS32_1_Enable_ch(0);
+                if(sid_frm.wave[ch]) DDS32_1_Rand(0);
                 break;
             case 1:
                 DDS32_1_Enable_ch(1);
+                if(sid_frm.wave[ch]) DDS32_1_Rand(1);
                 break;
             case 2:
                 DDS32_2_Enable_ch(0);
+                if(sid_frm.wave[ch]) DDS32_2_Rand(0);
                 break;
             }
         }else{
@@ -613,10 +616,8 @@ CY_ISR(isr_synth) {
 
 
 CY_ISR(isr_interrupter) { 
-    PULSE pulse;
-    if(xQueueReceiveFromISR(qPulse,&pulse,0)){
-        interrupter_oneshot(pulse.pw, pulse.volume);
-    }
+    
+    
 }
 
 void USBMIDI_1_callbackLocalMidiEvent(uint8 cable, uint8 *midiMsg) {
@@ -847,10 +848,10 @@ void reflect() {
         interrupter.pw = param.pw;
     }
     
-    DDS32_1_SetFrequency_FP8(0, channel[0].freq<<8);
-    DDS32_1_SetFrequency_FP8(1, channel[1].freq<<8);
-    DDS32_2_SetFrequency_FP8(0, channel[2].freq<<8);
-    DDS32_2_SetFrequency_FP8(1, channel[3].freq<<8);
+    DDS32_1_SetFrequency(0, channel[0].freq);
+    DDS32_1_SetFrequency(1, channel[1].freq);
+    DDS32_2_SetFrequency(0, channel[2].freq);
+    DDS32_2_SetFrequency(1, channel[3].freq);
     /*
     if(channel[0].adsr_state==ADSR_ATTACK){
         DDS32_1_Enable();

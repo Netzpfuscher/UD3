@@ -27,6 +27,7 @@
 
 
 #include "cytypes.h"
+#include <stdlib.h>
 #include "`$INSTANCE_NAME`.h"
 
 // todo: to public?
@@ -166,7 +167,7 @@ uint8 `$INSTANCE_NAME`_SetFrequency_FP8(uint8_t chan, uint32 freq )
     
         
     // todo: uint64 for possible overflow?    
-    uint32_t tmp = ((freq * (1<<15))/ `$INSTANCE_NAME`_CLOCK_FREQ );           // calculate tune word
+    uint32_t tmp = (((uint64_t)freq * (1<<16))/ (`$INSTANCE_NAME`_CLOCK_FREQ /2) );           // calculate tune word
 
     if ( (tmp < 1) || (tmp > TUNE_WORD_MAX) )  return 0; // fail -> exit if outside of the valid raange // todo: allow exact 0?
           
@@ -186,6 +187,18 @@ uint8 `$INSTANCE_NAME`_SetFrequency_FP8(uint8_t chan, uint32 freq )
     result = 1;     // success
 
     return result;
+}
+
+void `$INSTANCE_NAME`_Rand(uint8_t chan){
+    switch(chan){
+        case 0:
+            `$INSTANCE_NAME`_WriteRand0(rand());
+        break;
+        case 1:
+            `$INSTANCE_NAME`_WriteRand1(rand());
+        break;
+    }
+    
 }
 
 

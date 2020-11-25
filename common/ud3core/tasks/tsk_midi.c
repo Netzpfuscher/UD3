@@ -465,7 +465,7 @@ static inline void synthcode_SID(uint32_t r){
         
 	for (uint8_t ch = 0; ch < SID_CHANNELS; ch++) {
         compute_adsr_sid(ch);
-                if(channel[ch].volume>0){
+        if(channel[ch].volume>0){
             tt.n.midi_voices.value++;
             uint16_t prd = param.offtime + channel[ch].volume;
             ch_prd[ch] = prd - 3;
@@ -852,21 +852,6 @@ void reflect() {
     DDS32_1_SetFrequency(1, channel[1].freq);
     DDS32_2_SetFrequency(0, channel[2].freq);
     DDS32_2_SetFrequency(1, channel[3].freq);
-    /*
-    if(channel[0].adsr_state==ADSR_ATTACK){
-        DDS32_1_Enable();
-    }
-    if(channel[0].adsr_state==ADSR_DECAY){
-        DDS32_1_Stop();
-    }
-    
-    if(channel[1].adsr_state==ADSR_ATTACK){
-        DDS32_2_Enable();
-    }
-    if(channel[1].adsr_state==ADSR_DECAY){
-        DDS32_2_Stop();
-    }
-     */
 }
 
 void kill_accu(){

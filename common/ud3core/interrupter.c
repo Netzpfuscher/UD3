@@ -183,7 +183,11 @@ void initialize_interrupter(void) {
     
 }
 
-
+void interrupter_set_pw(uint8_t ch, uint16_t pw){
+    uint16_t prd = param.offtime + pw;
+    ch_prd[ch] = prd - 3;
+    ch_cmp[ch] = prd - pw - 3; 
+}
 
 
 

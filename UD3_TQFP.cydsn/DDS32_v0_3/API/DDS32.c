@@ -50,7 +50,6 @@
 
 static double Tdiv;		    // time period per bit increment
 static uint32 tune_word[2];       // DDS tune word
-static double SetFreq[2];         // DDS set frequency 
 
 
 //==============================================================================
@@ -154,17 +153,14 @@ uint8 `$INSTANCE_NAME`_SetFrequency(uint8_t chan, double freq )
         break;
     }    
          
-    SetFreq[chan] = freq; // backup value
     result = 1;     // success
 
     return result;
 }
 
-uint8 `$INSTANCE_NAME`_SetFrequency_FP8(uint8_t chan, uint32 freq )
+uint32 `$INSTANCE_NAME`_SetFrequency_FP8(uint8_t chan, uint32 freq )
 { 
     if(chan>1) return 0;
-    uint8 result = 0; // success = 1, fail = 0 
-    
         
     // todo: uint64 for possible overflow?    
     uint32_t tmp = (((uint64_t)freq * (1<<16))/ (`$INSTANCE_NAME`_CLOCK_FREQ /2) );           // calculate tune word
@@ -183,10 +179,8 @@ uint8 `$INSTANCE_NAME`_SetFrequency_FP8(uint8_t chan, uint32 freq )
         break;
     }    
          
-    SetFreq[chan] = freq>>8; // backup value
-    result = 1;     // success
+    return freq>>8;
 
-    return result;
 }
 
 void `$INSTANCE_NAME`_Rand(uint8_t chan){
@@ -233,14 +227,6 @@ double `$INSTANCE_NAME`_GetOutpFreq(uint8_t chan)
     return 0.0;
  }
 
-//==============================================================================
-//     Return current set frequency 
-//==============================================================================
-double `$INSTANCE_NAME`_GetFrequency(uint8_t chan) { 
-    if(chan>1) return 0.0;
-    return SetFreq[chan]; 
-
-}
 
 
 //==============================================================================

@@ -93,8 +93,7 @@ extern const uint8_t kill_msg[3];
 extern volatile uint32_t next_frame;
 
 struct sid_f{
-    uint16_t freq[SID_CHANNELS];
-    uint16_t half[SID_CHANNELS];
+    uint32_t freq_fp8[SID_CHANNELS];
     uint16_t pw[SID_CHANNELS];
     uint8_t gate[SID_CHANNELS];
     uint8_t wave[SID_CHANNELS];

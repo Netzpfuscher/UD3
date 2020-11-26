@@ -60,6 +60,7 @@ void ramp_control(void);
 void interrupter_oneshot(uint32_t pw, uint8_t vol);
 void interrupter_update_ext();
 void update_interrupter_new(uint16_t pw1, uint16_t pw2);
+void interrupter_set_pw(uint8_t ch, uint16_t pw);
 
 uint8_t callback_ext_interrupter(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 

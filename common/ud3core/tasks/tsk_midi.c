@@ -397,7 +397,7 @@ uint16_t synthcode_channel_freq_fp8(uint8_t ch, uint32_t freq){
             return DDS32_2_SetFrequency_FP8(0,freq);
         break;
         case 3:
-            return DDS32_2_SetFrequency_FP8(0,freq);
+            return DDS32_2_SetFrequency_FP8(1,freq);
         break;
     }
     return 0;
@@ -428,7 +428,11 @@ static inline void synthcode_MIDI(){
         compute_adsr_midi(ch);
         if(channel[ch].volume>0){
             tt.n.midi_voices.value++;
-            interrupter_set_pw(ch, channel[ch].volume);
+            #if DEBUG_PW==1
+                interrupter_set_pw(ch, channel[ch].volume);
+            #else
+                interrupter_set_pw_vol(ch,interrupter.pw,channel[ch].volume);
+            #endif
             synthcode_channel_enable(ch,1);
         }else{
             synthcode_channel_enable(ch,0); 
@@ -461,7 +465,7 @@ static inline void synthcode_SID(){
         }
     }
     
-    if((l_time - last_frame)>200){
+    if((l_time - last_frame)>100){
      next_frame = l_time;
      last_frame = l_time;
         for (uint8_t i = 0;i<SID_CHANNELS;++i) {
@@ -477,7 +481,11 @@ static inline void synthcode_SID(){
         compute_adsr_sid(ch);
         if(channel[ch].volume>0){
             tt.n.midi_voices.value++;
-            interrupter_set_pw(ch, channel[ch].volume);
+            #if DEBUG_PW==1
+                interrupter_set_pw(ch, channel[ch].volume);
+            #else
+                interrupter_set_pw_vol(ch,sid_frm.master_pw,channel[ch].volume);
+            #endif
             synthcode_channel_enable(ch,1);
             synthcode_noise(ch, sid_frm.wave[ch],rnd);
         }else{

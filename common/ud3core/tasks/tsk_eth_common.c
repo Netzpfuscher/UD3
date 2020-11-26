@@ -97,7 +97,7 @@ void process_sid(uint8_t* ptr, uint16_t len) {
     static uint8_t SID_register=0;
     static struct sid_f SID_frame;
     static uint8_t start_frame=0;
-    uint32_t freq_temp;
+    uint32_t freq_temp=0;
     while(len){
         if(start_frame){
             switch(SID_register){

@@ -500,7 +500,6 @@ uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, TERMINAL_HA
     
     update_midi_duty();
     
-    update_interrupter_new(param.pw,param.pw);
     
 	if (tr_running==1) {
 		update_interrupter();
@@ -821,7 +820,8 @@ uint8_t CMD_tr(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     }
     
     if(strcmp(args[0], "start") == 0){
-        isr_interrupter_Disable();
+        interrupter_DMA_mode(INTR_DMA_TR);
+        
         interrupter.pw = param.pw;
 		interrupter.prd = param.pwd;
         update_interrupter();
@@ -836,7 +836,7 @@ uint8_t CMD_tr(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     }
 
 	if(strcmp(args[0], "stop") == 0){
-        isr_interrupter_Enable();
+        interrupter_DMA_mode(INTR_DMA_DDS);
         if (xBurst_Timer != NULL) {
 			if(xTimerDelete(xBurst_Timer, 100 / portTICK_PERIOD_MS) != pdFALSE){
 			    xBurst_Timer = NULL;

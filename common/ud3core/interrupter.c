@@ -41,11 +41,6 @@ uint16 ch_prd[4], ch_cmp[4];
 uint8_t tr_running = 0;
 
 
-//CY_ISR(OCD_ISR)
-//{
-//    //QCW_enable_Control = 0;
-//}
-
 
 void interrupter_kill(void){
     sysfault.interlock = 1;
@@ -58,6 +53,12 @@ void interrupter_kill(void){
 void interrupter_unkill(void){
     sysfault.interlock=0;
 }
+
+uint8 int1_dma_Chan;
+uint8 ch1_dma_Chan;
+uint8 ch2_dma_Chan;
+uint8 ch3_dma_Chan;
+uint8 ch4_dma_Chan;
 
 void initialize_interrupter(void) {
 
@@ -76,8 +77,9 @@ void initialize_interrupter(void) {
 	interrupter1_Start();
 
 	params.min_tr_prd = INTERRUPTER_CLK_FREQ / configuration.max_tr_prf;
+    
 	/* Variable declarations for int1_dma */
-/*	uint8 int1_dma_Chan;
+	
 	uint8 int1_dma_TD[4];
 	int1_dma_Chan = int1_dma_DmaInitialize(int1_dma_BYTES_PER_BURST, int1_dma_REQUEST_PER_BURST,
 										   HI16(int1_dma_SRC_BASE), HI16(int1_dma_DST_BASE));
@@ -94,10 +96,8 @@ void initialize_interrupter(void) {
 	CyDmaTdSetAddress(int1_dma_TD[2], LO16((uint32)&int1_prd), LO16((uint32)interrupter1_COMPARE2_LSB_PTR));
 	CyDmaTdSetAddress(int1_dma_TD[3], LO16((uint32)&int1_prd), LO16((uint32)interrupter1_COUNTER_LSB_PTR));
 	CyDmaChSetInitialTd(int1_dma_Chan, int1_dma_TD[0]);
-	CyDmaChEnable(int1_dma_Chan, 1);
     
-   */
-    uint8 ch1_dma_Chan;
+    
 	uint8 ch1_dma_TD[4];
 	ch1_dma_Chan = Ch1_DMA_DmaInitialize(int1_dma_BYTES_PER_BURST, int1_dma_REQUEST_PER_BURST,
 										   HI16(int1_dma_SRC_BASE), HI16(int1_dma_DST_BASE));
@@ -114,10 +114,9 @@ void initialize_interrupter(void) {
 	CyDmaTdSetAddress(ch1_dma_TD[2], LO16((uint32)&ch_prd[0]), LO16((uint32)interrupter1_COMPARE2_LSB_PTR));
 	CyDmaTdSetAddress(ch1_dma_TD[3], LO16((uint32)&ch_prd[0]), LO16((uint32)interrupter1_COUNTER_LSB_PTR));
 	CyDmaChSetInitialTd(ch1_dma_Chan, ch1_dma_TD[0]);
-	CyDmaChEnable(ch1_dma_Chan, 1);
+	
     
-    uint8 ch2_dma_Chan;
-	uint8 ch2_dma_TD[4];
+    uint8 ch2_dma_TD[4];
 	ch2_dma_Chan = Ch2_DMA_DmaInitialize(int1_dma_BYTES_PER_BURST, int1_dma_REQUEST_PER_BURST,
 										   HI16(int1_dma_SRC_BASE), HI16(int1_dma_DST_BASE));
 	ch2_dma_TD[0] = CyDmaTdAllocate();
@@ -133,9 +132,7 @@ void initialize_interrupter(void) {
 	CyDmaTdSetAddress(ch2_dma_TD[2], LO16((uint32)&ch_prd[1]), LO16((uint32)interrupter1_COMPARE2_LSB_PTR));
 	CyDmaTdSetAddress(ch2_dma_TD[3], LO16((uint32)&ch_prd[1]), LO16((uint32)interrupter1_COUNTER_LSB_PTR));
 	CyDmaChSetInitialTd(ch2_dma_Chan, ch2_dma_TD[0]);
-	CyDmaChEnable(ch2_dma_Chan, 1);
     
-    uint8 ch3_dma_Chan;
 	uint8 ch3_dma_TD[4];
 	ch3_dma_Chan = Ch3_DMA_DmaInitialize(int1_dma_BYTES_PER_BURST, int1_dma_REQUEST_PER_BURST,
 										   HI16(int1_dma_SRC_BASE), HI16(int1_dma_DST_BASE));
@@ -152,9 +149,7 @@ void initialize_interrupter(void) {
 	CyDmaTdSetAddress(ch3_dma_TD[2], LO16((uint32)&ch_prd[2]), LO16((uint32)interrupter1_COMPARE2_LSB_PTR));
 	CyDmaTdSetAddress(ch3_dma_TD[3], LO16((uint32)&ch_prd[2]), LO16((uint32)interrupter1_COUNTER_LSB_PTR));
 	CyDmaChSetInitialTd(ch3_dma_Chan, ch3_dma_TD[0]);
-	CyDmaChEnable(ch3_dma_Chan, 1);
     
-    uint8 ch4_dma_Chan;
 	uint8 ch4_dma_TD[4];
 	ch4_dma_Chan = Ch4_DMA_DmaInitialize(int1_dma_BYTES_PER_BURST, int1_dma_REQUEST_PER_BURST,
 										   HI16(int1_dma_SRC_BASE), HI16(int1_dma_DST_BASE));
@@ -171,7 +166,6 @@ void initialize_interrupter(void) {
 	CyDmaTdSetAddress(ch4_dma_TD[2], LO16((uint32)&ch_prd[3]), LO16((uint32)interrupter1_COMPARE2_LSB_PTR));
 	CyDmaTdSetAddress(ch4_dma_TD[3], LO16((uint32)&ch_prd[3]), LO16((uint32)interrupter1_COUNTER_LSB_PTR));
 	CyDmaChSetInitialTd(ch4_dma_Chan, ch4_dma_TD[0]);
-	CyDmaChEnable(ch4_dma_Chan, 1);
 
    
     DDS32_1_Start();
@@ -181,12 +175,45 @@ void initialize_interrupter(void) {
     DDS32_2_Disable_ch(0);
     DDS32_2_Disable_ch(1);
     
+    interrupter_DMA_mode(INTR_DMA_DDS);
+    
+}
+
+
+void interrupter_DMA_mode(uint8_t mode){
+    switch(mode){
+        case INTR_DMA_TR:
+            CyDmaChDisable(ch1_dma_Chan);
+            CyDmaChDisable(ch2_dma_Chan);
+            CyDmaChDisable(ch3_dma_Chan);
+            CyDmaChDisable(ch4_dma_Chan);
+            CyDmaChEnable(int1_dma_Chan, 1);
+        break;
+        case INTR_DMA_DDS:
+            CyDmaChDisable(int1_dma_Chan);
+            CyDmaChEnable(ch1_dma_Chan, 1);
+            CyDmaChEnable(ch2_dma_Chan, 1);
+            CyDmaChEnable(ch3_dma_Chan, 1);
+            CyDmaChEnable(ch4_dma_Chan, 1);
+        break;
+        
+        
+    }
 }
 
 void interrupter_set_pw(uint8_t ch, uint16_t pw){
     uint16_t prd = param.offtime + pw;
     ch_prd[ch] = prd - 3;
     ch_cmp[ch] = prd - pw - 3; 
+}
+
+void interrupter_set_pw_vol(uint8_t ch, uint16_t pw, uint8_t vol){
+    if(vol>127)vol=127;
+    if(pw>configuration.max_tr_pw) pw = configuration.max_tr_pw;
+    uint32_t temp = (uint32_t)pw*vol/127;
+    uint16_t prd = param.offtime + temp;
+    ch_prd[ch] = prd - 3;
+    ch_cmp[ch] = prd - temp - 3; 
 }
 
 
@@ -287,27 +314,3 @@ void update_interrupter() {
 	CyGlobalIntEnable;
 }
 
-void update_interrupter_new(uint16_t pw1, uint16_t pw2) {
-    
-    //if(sysfault.interlock) return;
-    interrupter1_control_Control = 0b0000;
-
-	if (pw1 > configuration.max_tr_pw) {
-		pw1 = configuration.max_tr_pw;
-	}
-    if (pw2 > configuration.max_tr_pw) {
-		pw2 = configuration.max_tr_pw;
-	}
-    uint16_t prd1 = param.offtime + pw1;
-    uint16_t prd2 = param.offtime + pw2;
-	/* Update Interrupter PWMs with new period/pw */
-	CyGlobalIntDisable;
-//	ch1_prd = prd1 - 3;
-//	ch1_cmp = prd1 - pw1 - 3;
-    
- //   ch2_prd = prd2 - 3;
-//	ch2_cmp = prd2 - pw2 - 3;
-	//interrupter1_control_Control = 0b0001;
-	//interrupter1_control_Control = 0b0000;
-    CyGlobalIntEnable;
-}

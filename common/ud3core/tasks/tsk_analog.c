@@ -390,7 +390,7 @@ void ac_precharge_bus_scheme(){
                 alarm_push(ALM_PRIO_INFO,warn_bus_charging, ALM_NO_VALUE);
             }
             sysfault.charge=1;
-			relay_Write(RELAY_CHARGE);
+			relay_write_bus(1);
 			tt.n.bus_status.value = BUS_CHARGING;
 		}
 		charging_counter = 0;
@@ -401,11 +401,11 @@ void ac_dual_meas_scheme(){
 }
 
 void ac_precharge_fixed_delay(){
-    if(relay_Read()==RELAY_OFF){
+    if(relay_read_bus() && relay_read_charge_end()){
         alarm_push(ALM_PRIO_INFO,warn_bus_charging, ALM_NO_VALUE);
         sysfault.charge=1;
         xTimerStart(xCharge_Timer,0);
-        relay_Write(RELAY_CHARGE);
+        relay_write_bus(1);
         tt.n.bus_status.value = BUS_CHARGING;
     }    
 }
@@ -413,15 +413,16 @@ void ac_precharge_fixed_delay(){
 void vCharge_Timer_Callback(TimerHandle_t xTimer){
     timer_triggerd=0;
     if(bus_command== BUS_COMMAND_ON){
-        if(relay_Read()==RELAY_CHARGE){
+        if(relay_read_bus()){
             alarm_push(ALM_PRIO_INFO,warn_bus_ready, ALM_NO_VALUE);
-            relay_Write(RELAY_ON);
+            relay_read_charge_end(1);
             tt.n.bus_status.value = BUS_READY;
             sysfault.charge=0;
             sysfault.bus_uv=0;
         }
     }else{
-        relay_Write(RELAY_OFF);
+        relay_write_bus(0);
+        relay_read_charge_end(0);
         sysfault.charge=0;
         alarm_push(ALM_PRIO_INFO,warn_bus_off, ALM_NO_VALUE);
         tt.n.bus_status.value = BUS_OFF;
@@ -449,9 +450,10 @@ void control_precharge(void) { //this gets called from tsk_analogs.c when the AD
             break;
         } 
 	} else {
-		if ((relay_Read()==RELAY_ON || relay_Read()==RELAY_CHARGE) && timer_triggerd==0){
+		if ((relay_read_charge_end() || relay_read_bus()) && timer_triggerd==0){
             sysfault.charge=1;
-			relay_Write(RELAY_CHARGE);
+			relay_write_bus(1);
+            relay_write_charge_end(0);
             timer_triggerd=1;
             xTimerStart(xCharge_Timer,0);
 		}

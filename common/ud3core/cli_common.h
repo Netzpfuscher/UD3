@@ -106,7 +106,6 @@ struct config_struct{
     uint16_t chargedelay;
     uint8_t ivo_uart;
     uint8_t enable_display;
-    uint8_t line_code;
     float pid_curr_p;
     float pid_curr_i;
     uint16_t max_dc_curr;

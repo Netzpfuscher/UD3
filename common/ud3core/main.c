@@ -60,7 +60,6 @@ int main() {
 	system_fault_Control = 0; //this should suppress any start-up sparking until the system is ready
 	init_config();
     EEPROM_1_Start();
-    Mantmr_Start();
 	SG_Timer_Start();
     
     null_port.type = PORT_TYPE_NULL;
@@ -83,9 +82,9 @@ int main() {
 
 	//calls that must always happen after updating the configuration/settings
 	configure_ZCD_to_PWM();
-
-	rx_blink_Control = 1;
-
+    
+    LED4_Write(1);
+	
 
 	//Starting Tasks
     if(configuration.minprot){

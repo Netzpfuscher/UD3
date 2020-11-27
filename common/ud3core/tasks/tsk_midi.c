@@ -608,10 +608,6 @@ CY_ISR(isr_synth) {
 }
 
 
-CY_ISR(isr_interrupter) { 
-    
-    
-}
 
 void USBMIDI_1_callbackLocalMidiEvent(uint8 cable, uint8 *midiMsg) {
 	
@@ -943,10 +939,6 @@ void tsk_midi_TaskProc(void *pvParameters) {
 
 
 	isr_midi_StartEx(isr_synth);
-    //isr_midi_StartEx(isr_sid);
-    
-	isr_interrupter_StartEx(isr_interrupter);
-    isr_interrupter_Enable();
 
 	/* `#END` */
     alarm_push(ALM_PRIO_INFO,warn_task_midi, ALM_NO_VALUE);

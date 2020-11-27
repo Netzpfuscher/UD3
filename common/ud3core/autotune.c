@@ -114,6 +114,8 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
         ttprintf("Malloc failed\r\n");
         return 0;
     }
+    
+    interrupter_DMA_mode(INTR_DMA_TR);
 
 	CT_MUX_Select(channel);
 	//units for frequency are 0.1kHz (so 1000 = 100khz).  Pulsewidth in uS
@@ -253,6 +255,7 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 	ttprintf("\r\nFound Peak at: %i00Hz\r\n", freq_resp->freq[max_curr_num]);
     uint16_t temp = freq_resp->freq[max_curr_num];
     vPortFree(freq_resp);
+    interrupter_DMA_mode(INTR_DMA_DDS);
     return temp;
 }
 

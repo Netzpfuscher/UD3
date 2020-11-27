@@ -129,7 +129,6 @@ void init_config(){
     configuration.ct2_current = 0;
     configuration.chargedelay = 1000;
     configuration.ivo_uart = 0;  //Nothing inverted
-    configuration.line_code = 0; //UART
     configuration.enable_display = 0;
     configuration.pid_curr_p = 50;
     configuration.pid_curr_i = 5;
@@ -229,7 +228,6 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_fault_i"     , configuration.max_fault_i     , 0      ,2000   ,10     ,callback_i2tFunction        ,"Maximum fault current for 10s [A]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"baudrate"        , configuration.baudrate        , 1200   ,4000000,0      ,callback_baudrateFunction   ,"Serial baudrate")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ivo_uart"        , configuration.ivo_uart        , 0      ,11     ,0      ,callback_ivoUART            ,"[RX][TX] 0=not inverted 1=inverted")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"linecode"        , configuration.line_code       , 0      ,1      ,0      ,callback_ivoUART            ,"0=UART 1=Manchester")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"spi_speed"       , configuration.spi_speed       , 10     ,160    ,10     ,callback_SPIspeedFunction   ,"SPI speed [MHz]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"r_bus"           , configuration.r_top           , 100    ,1000000,1000   ,callback_TTupdateFunction   ,"Series resistor of voltage input [kOhm]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ena_display"     , configuration.enable_display  , 0      ,6      ,0      ,NULL                        ,"Enables the WS2812 display")
@@ -303,12 +301,6 @@ void update_ivo_uart(){
         set_bit(IVO_UART_Control,0);
         set_bit(IVO_UART_Control,1);
         break;
-    }
-    
-    if(configuration.line_code==1){
-        set_bit(IVO_UART_Control,2);
-        set_bit(IVO_UART_Control,3);
-        toggle_bit(IVO_UART_Control,0);
     }
 }
 
@@ -461,10 +453,7 @@ void uart_baudrate(uint32_t baudrate){
         //selected round up divider
         divider_selected = ceil(divider);
     }
-    uint32_t uart_frequency = BCLK__BUS_CLK__HZ / divider_selected;
-    uint32_t delay_tmr = ((BCLK__BUS_CLK__HZ / uart_frequency)*3)/4;
 
-    Mantmr_WritePeriod(delay_tmr-3);
     UART_CLK_SetDividerValue(divider_selected);
     
     tt.n.rx_datarate.max = baudrate / 8;
@@ -1173,9 +1162,9 @@ uint8_t CMD_signals(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         send_signal_state_new(system_fault_Read(),pdTRUE,handle);
         
         ttprintf("Relay 1: ");
-        send_signal_state_wo_new((relay_Read()&0b1),pdFALSE,handle);
+        send_signal_state_wo_new(relay_read_bus(),pdFALSE,handle);
         ttprintf(" Relay 2: ");
-        send_signal_state_wo_new((relay_Read()&0b10),pdFALSE,handle);
+        send_signal_state_wo_new(relay_read_charge_end(),pdFALSE,handle);
         ttprintf(" Relay 3: ");
         send_signal_state_wo_new(Relay3_Read(),pdFALSE,handle);
         ttprintf(" Relay 4: ");

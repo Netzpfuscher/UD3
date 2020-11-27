@@ -415,7 +415,7 @@ void vCharge_Timer_Callback(TimerHandle_t xTimer){
     if(bus_command== BUS_COMMAND_ON){
         if(relay_read_bus()){
             alarm_push(ALM_PRIO_INFO,warn_bus_ready, ALM_NO_VALUE);
-            relay_read_charge_end(1);
+            relay_write_charge_end(1);
             tt.n.bus_status.value = BUS_READY;
             sysfault.charge=0;
             sysfault.bus_uv=0;

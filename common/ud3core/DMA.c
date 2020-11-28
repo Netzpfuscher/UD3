@@ -152,4 +152,5 @@ void initialize_DMA(void) {
 	CyDmaTdSetAddress(TR1_CL_DMA_TD[1], LO16((uint32)&ct1_dac_val[0]), LO16((uint32)CT1_dac_Data_PTR));
 	CyDmaChSetInitialTd(TR1_CL_DMA_Chan, TR1_CL_DMA_TD[0]);
 	CyDmaChEnable(TR1_CL_DMA_Chan, 1);
+    
 }

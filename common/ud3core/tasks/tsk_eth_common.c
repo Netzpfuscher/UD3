@@ -211,7 +211,7 @@ void process_sid(uint8_t* ptr, uint16_t len) {
                 for(uint8_t i=0;i<3;i++){
                     if (SID_frame.gate[i]){
                         if(SID_frame.wave[i]){
-                            dutycycle+= (((uint32)127*(uint32)param.pw)/(127000ul/freq_temp)/2); //Noise
+                            dutycycle+= (((uint32)127*(uint32)param.pw)/(127000ul/freq_temp)); //Noise
                         }else{
                             dutycycle+= ((uint32)127*(uint32)param.pw)/(127000ul/freq_temp); //Normal wave
                         }
@@ -298,7 +298,7 @@ void process_min_sid(uint8_t* ptr, uint16_t len) {
             //Calculate dutycycle
             if (SID_frame.gate[i]){
                 if(SID_frame.wave[i]){
-                    dutycycle+= (((uint32)127*(uint32)param.pw)/(127000ul/freq_temp)/2); //Noise
+                    dutycycle+= (((uint32)127*(uint32)param.pw)/(127000ul/freq_temp)); //Noise
                 }else{
                     dutycycle+= ((uint32)127*(uint32)param.pw)/(127000ul/freq_temp); //Normal wave
                 }

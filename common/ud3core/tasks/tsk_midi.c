@@ -443,7 +443,7 @@ static inline void synthcode_MIDI(){
 uint32_t volatile next_frame=4294967295;
 uint32_t last_frame=4294967295;
 
-static inline void synthcode_SID(){
+static inline void synthcode_SID(uint32_t r){
   
     tt.n.midi_voices.value=0;
     
@@ -457,9 +457,9 @@ static inline void synthcode_SID(){
                 if(sid_frm.gate[i] < channel[i].old_gate) channel[i].adsr_state=ADSR_RELEASE;  //Falling edge
                 sid_frm.pw[i]=sid_frm.pw[i]>>4;
                 channel[i].old_gate = sid_frm.gate[i];
-                
+                channel[i].halfcount = (uint32_t)(SG_CLOCK_HALFCOUNT<<8)/sid_frm.freq_fp8[i];
                 channel[i].freq = synthcode_channel_freq_fp8(i,sid_frm.freq_fp8[i]);
-                   
+                if(channel[i].freq>3000)sid_frm.wave[i]=1;     
             }
             next_frame = sid_frm.next_frame;
         }
@@ -476,8 +476,10 @@ static inline void synthcode_SID(){
     }
     
     uint32_t rnd = rand();
-        
+    uint8_t flag[SID_CHANNELS];
+    static uint8_t old_flag[SID_CHANNELS];
 	for (uint8_t ch = 0; ch < SID_CHANNELS; ch++) {
+        flag[ch]=0;
         compute_adsr_sid(ch);
         if(channel[ch].volume>0){
             tt.n.midi_voices.value++;
@@ -488,6 +490,10 @@ static inline void synthcode_SID(){
             #endif
             synthcode_channel_enable(ch,1);
             synthcode_noise(ch, sid_frm.wave[ch],rnd);
+            //if (sid_frm.wave[ch] && (r / channel[ch].halfcount) % 2 > 0) {
+            //    flag[ch]=1;
+			//}  
+            //if(flag[ch] > old_flag[ch]) synthcode_noise(ch, sid_frm.wave[ch],rnd);
         }else{
             synthcode_channel_enable(ch,0); 
         }
@@ -594,7 +600,7 @@ CY_ISR(isr_synth) {
             synthcode_MIDI();
             break;
         case SYNTH_SID:
-            synthcode_SID();
+            synthcode_SID(r);
             break;
         case SYNTH_MIDI_QCW:
             synthcode_QMIDI(r);

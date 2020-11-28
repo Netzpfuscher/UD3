@@ -221,7 +221,7 @@ void interrupter_set_pw_vol(uint8_t ch, uint16_t pw, uint8_t vol){
 void interrupter_oneshot(uint32_t pw, uint8_t vol) {
     if(sysfault.interlock) return;
     
-	if (vol < 128) {
+	if (vol < 127) {
 		ct1_dac_val[0] = params.min_tr_cl_dac_val + ((vol * params.diff_tr_cl_dac_val) >> 7);
 	} else {
 		ct1_dac_val[0] = params.max_tr_cl_dac_val;

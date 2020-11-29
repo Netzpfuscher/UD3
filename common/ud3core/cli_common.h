@@ -106,12 +106,11 @@ struct config_struct{
     uint16_t chargedelay;
     uint8_t ivo_uart;
     uint8_t enable_display;
-    uint8_t line_code;
     float pid_curr_p;
     float pid_curr_i;
     uint16_t max_dc_curr;
     uint8_t ext_interrupter;
-    uint8_t noise_w;
+    uint8_t is_qcw;
     char synth_filter[32];
 };
 typedef struct config_struct cli_config;

@@ -64,6 +64,7 @@ typedef struct __channel__ {
     uint8 adsr_count;
     uint8 sustain;
     uint8 old_gate;
+    uint8_t noise;
 } CHANNEL;
     
 #define N_MIDICHANNEL 16
@@ -92,8 +93,7 @@ extern const uint8_t kill_msg[3];
 extern volatile uint32_t next_frame;
 
 struct sid_f{
-    uint16_t freq[SID_CHANNELS];
-    uint16_t half[SID_CHANNELS];
+    uint32_t freq_fp8[SID_CHANNELS];
     uint16_t pw[SID_CHANNELS];
     uint8_t gate[SID_CHANNELS];
     uint8_t wave[SID_CHANNELS];
@@ -107,10 +107,10 @@ struct sid_f{
 
 enum SYNTH{
     SYNTH_OFF=0,
-    SYNTH_MIDI,
-    SYNTH_SID,
-    SYNTH_MIDI_QCW,
-    SYNTH_SID_QCW
+    SYNTH_MIDI=1,
+    SYNTH_SID=2,
+    SYNTH_MIDI_QCW=3,
+    SYNTH_SID_QCW=4
 };
 
 struct _filter{

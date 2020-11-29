@@ -105,7 +105,7 @@ static const char * AC_tune[] = {
 };
 
 static const char * AC_set_get[] = {
-    "attack"
+    "attack",
     "autotune_s",
     "baudrate",
     "boff",
@@ -128,7 +128,6 @@ static const char * AC_set_get[] = {
     "ena_ext_int",
     "ivo_uart",
     "lead_time",
-    "linecode",
     "max_const_i",
     "max_dc_curr",
     "max_fault_i",

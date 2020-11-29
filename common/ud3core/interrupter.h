@@ -40,6 +40,11 @@ Its a 16 bit PWM clocked at 1MHz, so thats 1uS per count.
 #define int1_dma_REQUEST_PER_BURST 1
 #define int1_dma_SRC_BASE (CYDEV_SRAM_BASE)
 #define int1_dma_DST_BASE (CYDEV_PERIPH_BASE)
+    
+enum interrupter_DMA{
+    INTR_DMA_TR,
+    INTR_DMA_DDS
+};
 
 typedef struct
 {
@@ -52,11 +57,16 @@ interrupter_params interrupter;
 extern uint8_t tr_running;
 extern uint8_t blocked; 
 
+extern uint16 ch_prd[4], ch_cmp[4];
+
 void initialize_interrupter(void);
 void update_interrupter();
 void ramp_control(void);
 void interrupter_oneshot(uint32_t pw, uint8_t vol);
 void interrupter_update_ext();
+void interrupter_set_pw(uint8_t ch, uint16_t pw);
+void interrupter_set_pw_vol(uint8_t ch, uint16_t pw, uint8_t vol);
+void interrupter_DMA_mode(uint8_t mode);
 
 uint8_t callback_ext_interrupter(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 

@@ -168,7 +168,7 @@ void tsk_fault_TaskProc(void *pvParameters) {
 		/* `#START TASK_LOOP_CODE` */
 		handle_UVLO();
         handle_FAULT();
-        rx_blink_Write(0);
+        LED4_Write(0);
         handle_no_fb();
 		/* `#END` */
 

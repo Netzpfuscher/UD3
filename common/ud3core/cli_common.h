@@ -110,7 +110,7 @@ struct config_struct{
     float pid_curr_i;
     uint16_t max_dc_curr;
     uint8_t ext_interrupter;
-    uint8_t noise_w;
+    uint8_t is_qcw;
     char synth_filter[32];
 };
 typedef struct config_struct cli_config;

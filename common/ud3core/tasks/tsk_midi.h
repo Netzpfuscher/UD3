@@ -107,10 +107,10 @@ struct sid_f{
 
 enum SYNTH{
     SYNTH_OFF=0,
-    SYNTH_MIDI,
-    SYNTH_SID,
-    SYNTH_MIDI_QCW,
-    SYNTH_SID_QCW
+    SYNTH_MIDI=1,
+    SYNTH_SID=2,
+    SYNTH_MIDI_QCW=3,
+    SYNTH_SID_QCW=4
 };
 
 struct _filter{

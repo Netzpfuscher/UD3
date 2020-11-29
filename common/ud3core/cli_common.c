@@ -134,7 +134,6 @@ void init_config(){
     configuration.pid_curr_i = 5;
     configuration.max_dc_curr = 0;
     configuration.ext_interrupter = 0;
-    configuration.noise_w = SID_NOISE_WEIGHT;
     
     param.pw = 0;
     param.pwp = 0;
@@ -236,7 +235,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"pid_curr_i"      , configuration.pid_curr_i      , 0      ,200    ,0      ,callback_pid                ,"Current PI")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_dc_curr"     , configuration.max_dc_curr     , 0      ,2000   ,10     ,callback_pid                ,"Maximum DC-Bus current [A] 0=off")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ena_ext_int"     , configuration.ext_interrupter , 0      ,2      ,0      ,callback_ext_interrupter    ,"Enable external interrupter 2=inverted")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"sid_noise"       , configuration.noise_w         , 0     , 8      ,0      ,NULL                        ,"SID noise weight")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"qcw_coil"        , configuration.is_qcw          , 0      ,1      ,0      ,NULL                        ,"Is QCW 1=true 0=false")
     ADD_PARAM(PARAM_CONFIG  ,pdFALSE,"d_calib"         , vdriver_lut                   , 0      ,0      ,0      ,NULL                        ,"For voltage measurement")
 };
 

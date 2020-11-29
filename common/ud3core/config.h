@@ -19,10 +19,6 @@
 #define RAMP_CHART_DIV_Y 25
 
 
-//Synth constants
-#define SID_NOISE_WEIGHT 0x03
-    
-    
 //FreeRTOS
 #define ACTIVATE_TASK_INFO 1
 #define HEAP_SIZE 50    //kb

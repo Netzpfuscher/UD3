@@ -847,14 +847,19 @@ void reflect() {
 
 void kill_accu(){
     for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
-                channel[ch].volume=0;
-                channel[ch].freq=0;
-                channel[ch].halfcount=0;
+        channel[ch].volume=0;
+        channel[ch].freq=0;
+        channel[ch].halfcount=0;
+        synthcode_channel_enable(ch,0);
 
 	}
 }
 
 void switch_synth(uint8_t synth){
+    if(configuration.is_qcw){
+        if(param.synth==SYNTH_MIDI) param.synth = SYNTH_MIDI_QCW;
+        if(param.synth==SYNTH_SID) param.synth = SYNTH_SID_QCW;
+    }
     skip_flag=0;
     tt.n.midi_voices.value=0;
     xQueueReset(qMIDI_rx);

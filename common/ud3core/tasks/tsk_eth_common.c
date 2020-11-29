@@ -279,12 +279,12 @@ void process_min_sid(uint8_t* ptr, uint16_t len) {
             SID_frame.pw[i] = (SID_frame.pw[i] & 0xff) + ((uint16_t)*ptr << 8);
             ptr++;
             //SID_CR1
+            SID_frame.wave[i] = *ptr & 0x80;
             if(filter.channel[i]==0 || freq_temp > filter.max || freq_temp < filter.min){
                 SID_frame.gate[i]=0;
             }else{
                 SID_frame.gate[i] = *ptr & 0x01;
             }
-            SID_frame.wave[i] = *ptr & 0x80;
             ptr++;
             //SID_AD1
             SID_frame.attack[i] = (*ptr >> 4) & 0x0F;

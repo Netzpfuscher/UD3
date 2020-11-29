@@ -413,7 +413,7 @@ void synthcode_noise(uint8_t ch, uint8_t ena, uint32_t rnd){
             DDS32_1_WriteRand1(rnd);
             break;
         case 2:
-            DDS32_2_WriteRand1(rnd);
+            DDS32_2_WriteRand0(rnd);
             break;
         case 3:
             DDS32_2_WriteRand1(rnd);
@@ -458,8 +458,7 @@ static inline void synthcode_SID(uint32_t r){
                 sid_frm.pw[i]=sid_frm.pw[i]>>4;
                 channel[i].old_gate = sid_frm.gate[i];
                 channel[i].halfcount = (uint32_t)(SG_CLOCK_HALFCOUNT<<8)/sid_frm.freq_fp8[i];
-                channel[i].freq = synthcode_channel_freq_fp8(i,sid_frm.freq_fp8[i]);
-                if(channel[i].freq>3000)sid_frm.wave[i]=1;     
+                channel[i].freq = synthcode_channel_freq_fp8(i,sid_frm.freq_fp8[i]); 
             }
             next_frame = sid_frm.next_frame;
         }
@@ -489,11 +488,11 @@ static inline void synthcode_SID(uint32_t r){
                 interrupter_set_pw_vol(ch,sid_frm.master_pw,channel[ch].volume);
             #endif
             synthcode_channel_enable(ch,1);
-            synthcode_noise(ch, sid_frm.wave[ch],rnd);
-            //if (sid_frm.wave[ch] && (r / channel[ch].halfcount) % 2 > 0) {
-            //    flag[ch]=1;
-			//}  
-            //if(flag[ch] > old_flag[ch]) synthcode_noise(ch, sid_frm.wave[ch],rnd);
+            //synthcode_noise(ch, sid_frm.wave[ch],rnd);
+            if (sid_frm.wave[ch] && (r / channel[ch].halfcount) % 2 > 0) {
+                flag[ch]=1;
+			}  
+            if(flag[ch] > old_flag[ch]) synthcode_noise(ch, sid_frm.wave[ch],rnd);
         }else{
             synthcode_channel_enable(ch,0); 
         }

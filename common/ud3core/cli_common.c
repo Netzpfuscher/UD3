@@ -488,11 +488,9 @@ uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, TERMINAL_HA
     
     update_midi_duty();
     
-    
 	if (tr_running==1) {
 		update_interrupter();
-	}
-    if(configuration.ext_interrupter){
+	}else if(configuration.ext_interrupter  && param.synth == SYNTH_OFF){
         interrupter_update_ext();
     }
 	return pdPASS;
@@ -809,6 +807,7 @@ uint8_t CMD_tr(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     
     if(strcmp(args[0], "start") == 0){
         interrupter_DMA_mode(INTR_DMA_TR);
+        interrupter1_control_Control = 0b0000;
         
         interrupter.pw = param.pw;
 		interrupter.prd = param.pwd;
@@ -824,7 +823,7 @@ uint8_t CMD_tr(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     }
 
 	if(strcmp(args[0], "stop") == 0){
-        interrupter_DMA_mode(INTR_DMA_DDS);
+        switch_synth(param.synth);
         if (xBurst_Timer != NULL) {
 			if(xTimerDelete(xBurst_Timer, 100 / portTICK_PERIOD_MS) != pdFALSE){
 			    xBurst_Timer = NULL;
@@ -836,6 +835,7 @@ uint8_t CMD_tr(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
  
 		interrupter.pw = 0;
 		update_interrupter();
+        if(configuration.ext_interrupter) interrupter_update_ext();
 		tr_running = 0;
 		
 		return TERM_CMD_EXIT_SUCCESS;

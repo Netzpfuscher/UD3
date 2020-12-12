@@ -269,7 +269,12 @@ uint8_t callback_ext_interrupter(parameter_entry * params, uint8_t index, TERMIN
         alarm_push(ALM_PRIO_WARN,warn_interrupter_ext, configuration.ext_interrupter);
         interrupter_update_ext();
     }else{
+        uint8 sfflag = system_fault_Read();
+        system_fault_Control = 0; //halt tesla coil operation during updates!
+        
         interrupter1_control_Control = 0b0000;
+        vTaskDelay(2);
+        system_fault_Control = sfflag;
     }
     return pdPASS;
 }

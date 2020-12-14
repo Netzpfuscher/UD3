@@ -344,10 +344,9 @@ void show_overlay_100ms(TERMINAL_HANDLE * handle){
                 if(tt.a[i].chart!=TT_NO_TELEMETRY && chart){
                     if(tt.a[i].divider>1){
                         send_chart(tt.a[i].chart, tt.a[i].value / tt.a[i].divider, handle);
-                    } else {
+                    }else{
                         send_chart(tt.a[i].chart, tt.a[i].value, handle);
                     }
-                        
                 }
             }
         }
@@ -523,7 +522,11 @@ void init_tt(uint8_t with_chart, TERMINAL_HANDLE * handle){
             }
         }
         if(tt.a[i].chart!=TT_NO_TELEMETRY && with_chart){
-            send_chart_config(tt.a[i].chart, tt.a[i].min, tt.a[i].max, tt.a[i].offset, tt.a[i].unit, tt.a[i].name, handle);
+            if(tt.a[i].high_res){
+                send_chart_config(tt.a[i].chart, tt.a[i].min / tt.a[i].divider, tt.a[i].max / tt.a[i].divider, tt.a[i].offset / tt.a[i].divider, tt.a[i].unit, tt.a[i].name, handle);
+            }else{
+                send_chart_config(tt.a[i].chart, tt.a[i].min, tt.a[i].max, tt.a[i].offset, tt.a[i].unit, tt.a[i].name, handle);
+            }
         }
     }
 

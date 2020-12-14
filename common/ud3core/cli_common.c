@@ -662,7 +662,6 @@ uint8_t CMD_bootloader(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args)
 }
 
 
-
 /*****************************************************************************
 * sets the kill bit, stops the interrupter and switches the bus off
 ******************************************************************************/

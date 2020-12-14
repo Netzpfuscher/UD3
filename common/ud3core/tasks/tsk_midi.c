@@ -860,6 +860,12 @@ void switch_synth(uint8_t synth){
         if(param.synth==SYNTH_MIDI) param.synth = SYNTH_MIDI_QCW;
         if(param.synth==SYNTH_SID) param.synth = SYNTH_SID_QCW;
     }
+    if(synth==SYNTH_OFF){
+        interrupter_DMA_mode(INTR_DMA_TR);
+        if(configuration.ext_interrupter) interrupter_update_ext();
+    }else if(synth==SYNTH_MIDI || synth==SYNTH_SID){
+        interrupter_DMA_mode(INTR_DMA_DDS);       
+    }
     skip_flag=0;
     tt.n.midi_voices.value=0;
     xQueueReset(qMIDI_rx);

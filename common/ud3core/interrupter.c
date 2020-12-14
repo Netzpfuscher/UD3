@@ -271,7 +271,12 @@ uint8_t callback_ext_interrupter(parameter_entry * params, uint8_t index, TERMIN
         alarm_push(ALM_PRIO_WARN,warn_interrupter_ext, configuration.ext_interrupter);
         interrupter_update_ext();
     }else{
+        uint8 sfflag = system_fault_Read();
+        system_fault_Control = 0; //halt tesla coil operation during updates!
+        
         interrupter1_control_Control = 0b0000;
+        vTaskDelay(2);
+        system_fault_Control = sfflag;
     }
     return pdPASS;
 }
@@ -334,8 +339,7 @@ uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, TERMINAL_HA
     
 	if (interrupter.mode!=INTR_MODE_OFF) {
 		update_interrupter();
-	}
-    if(configuration.ext_interrupter){
+	}else if(configuration.ext_interrupter  && param.synth == SYNTH_OFF){
         interrupter_update_ext();
     }
 	return pdPASS;
@@ -474,7 +478,7 @@ uint8_t CMD_tr(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     }
 
 	if(strcmp(args[0], "stop") == 0){
-        interrupter_DMA_mode(INTR_DMA_DDS);
+        switch_synth(param.synth);
         if (interrupter.xBurst_Timer != NULL) {
 			if(xTimerDelete(interrupter.xBurst_Timer, 100 / portTICK_PERIOD_MS) != pdFALSE){
 			    interrupter.xBurst_Timer = NULL;
@@ -486,6 +490,7 @@ uint8_t CMD_tr(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
  
 		interrupter.pw = 0;
 		update_interrupter();
+        if(configuration.ext_interrupter) interrupter_update_ext();
 		interrupter.mode=INTR_MODE_OFF;
 		
 		return TERM_CMD_EXIT_SUCCESS;

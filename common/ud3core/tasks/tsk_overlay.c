@@ -213,8 +213,8 @@ void init_telemetry(){
     tt.n.avg_power.value = 0;
     tt.n.avg_power.min = 0;
     tt.n.avg_power.offset = 0;
-    tt.n.avg_power.unit = TT_UNIT_W;
-    tt.n.avg_power.divider = 1;
+    tt.n.avg_power.unit = TT_UNIT_kW;
+    tt.n.avg_power.divider = 1000;
     tt.n.avg_power.high_res = pdTRUE;
     tt.n.avg_power.resend_time = TT_FAST;
     tt.n.avg_power.chart = 3;
@@ -342,7 +342,12 @@ void show_overlay_100ms(TERMINAL_HANDLE * handle){
                     }
                 }
                 if(tt.a[i].chart!=TT_NO_TELEMETRY && chart){
-                    send_chart(tt.a[i].chart, tt.a[i].value, handle);
+                    if(tt.a[i].divider>1){
+                        send_chart(tt.a[i].chart, tt.a[i].value / tt.a[i].divider, handle);
+                    } else {
+                        send_chart(tt.a[i].chart, tt.a[i].value, handle);
+                    }
+                        
                 }
             }
         }
@@ -375,14 +380,18 @@ void show_overlay_400ms(TERMINAL_HANDLE * handle) {
                     }
                 }
                 if(tt.a[i].chart!=TT_NO_TELEMETRY && chart){
-                    send_chart(tt.a[i].chart, tt.a[i].value, handle);
+                    if(tt.a[i].divider>1){
+                        send_chart(tt.a[i].chart, tt.a[i].value / tt.a[i].divider, handle);
+                    } else {
+                        send_chart(tt.a[i].chart, tt.a[i].value, handle);
+                    }
                 }
             }
         }
 
         if(portM->term_mode!=PORT_TERM_MQTT){
             send_status(tt.n.bus_status.value!=BUS_OFF,
-                        tr_running!=0,
+                        interrupter.mode!=INTR_MODE_OFF,
                         configuration.ps_scheme!=AC_NO_RELAY_BUS_SCHEME,
                         sysfault.interlock,
                         handle);

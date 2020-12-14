@@ -274,7 +274,7 @@ void calculate_rms(void) {
     if(configuration.max_dc_curr){
         param.temp_duty = configuration.max_tr_duty-pid_step(&pid_current,configuration.max_dc_curr,tt.n.batt_i.value);
         if(param.temp_duty != old_curr_setpoint){
-            if(tr_running==1){
+            if(interrupter.mode == INTR_MODE_TR){
                 update_interrupter();
             }else{
                 update_midi_duty();

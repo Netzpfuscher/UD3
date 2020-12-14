@@ -29,22 +29,18 @@
 #include "cli_common.h"
 #include "qcw.h"
 #include "tasks/tsk_fault.h"
+#include "tasks/tsk_midi.h"
 
 #include <device.h>
 #include <math.h>
 
 uint16 int1_prd, int1_cmp;
-
-
-uint16 ch_prd[4], ch_cmp[4];
-
-uint8_t tr_running = 0;
-
+uint16 ch_prd[N_CHANNEL], ch_cmp[N_CHANNEL];
 
 
 void interrupter_kill(void){
     sysfault.interlock = 1;
-    tr_running=0;
+    interrupter.mode = INTR_MODE_OFF;
     interrupter.pw =0;
     param.pw=0;
     update_interrupter();
@@ -77,6 +73,8 @@ void initialize_interrupter(void) {
 	interrupter1_Start();
 
 	params.min_tr_prd = INTERRUPTER_CLK_FREQ / configuration.max_tr_prf;
+    
+    interrupter.mode = INTR_MODE_OFF;
     
 	/* Variable declarations for int1_dma */
 	
@@ -202,18 +200,22 @@ void interrupter_DMA_mode(uint8_t mode){
 }
 
 void interrupter_set_pw(uint8_t ch, uint16_t pw){
-    uint16_t prd = param.offtime + pw;
-    ch_prd[ch] = prd - 3;
-    ch_cmp[ch] = prd - pw - 3; 
+    if(ch<N_CHANNEL){
+        uint16_t prd = param.offtime + pw;
+        ch_prd[ch] = prd - 3;
+        ch_cmp[ch] = prd - pw - 3; 
+    }
 }
 
 void interrupter_set_pw_vol(uint8_t ch, uint16_t pw, uint8_t vol){
-    if(vol>127)vol=127;
-    if(pw>configuration.max_tr_pw) pw = configuration.max_tr_pw;
-    uint32_t temp = (uint32_t)pw*vol/127;
-    uint16_t prd = param.offtime + temp;
-    ch_prd[ch] = prd - 3;
-    ch_cmp[ch] = prd - temp - 3; 
+    if(ch<N_CHANNEL){
+        if(vol>127)vol=127;
+        if(pw>configuration.max_tr_pw) pw = configuration.max_tr_pw;
+        uint32_t temp = (uint32_t)pw*vol/127;
+        uint16_t prd = param.offtime + temp;
+        ch_prd[ch] = prd - 3;
+        ch_cmp[ch] = prd - temp - 3; 
+    }
 }
 
 
@@ -312,5 +314,182 @@ void update_interrupter() {
 		}
 	}
 	CyGlobalIntEnable;
+}
+
+/*****************************************************************************
+* Callback if a transient mode parameter is changed
+* Updates the interrupter hardware
+******************************************************************************/
+uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle) {
+    
+    uint32_t temp;
+    temp = (1000 * param.pw) / configuration.max_tr_pw;
+    param.pwp = temp;
+
+	interrupter.pw = param.pw;
+	interrupter.prd = param.pwd;
+    
+    update_midi_duty();
+    
+    
+	if (interrupter.mode!=INTR_MODE_OFF) {
+		update_interrupter();
+	}
+    if(configuration.ext_interrupter){
+        interrupter_update_ext();
+    }
+	return pdPASS;
+}
+
+/*****************************************************************************
+* Callback if a transient mode parameter is changed (percent ontime)
+* Updates the interrupter hardware
+******************************************************************************/
+uint8_t callback_TRPFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle) {
+    
+    uint32_t temp;
+    temp = (configuration.max_tr_pw * param.pwp) / 1000;
+    param.pw = temp;
+    
+    interrupter.pw = param.pw;
+    
+    update_midi_duty();
+    
+	if (interrupter.mode!=INTR_MODE_OFF) {
+		update_interrupter();
+	}
+    if(configuration.ext_interrupter){
+        interrupter_update_ext();
+    }
+    
+	return pdPASS;
+}
+
+/*****************************************************************************
+* Timer callback for burst mode
+******************************************************************************/
+void vBurst_Timer_Callback(TimerHandle_t xTimer){
+    uint16_t bon_lim;
+    uint16_t boff_lim;
+    if(interrupter.burst_state == BURST_ON){
+        interrupter.pw = 0;
+        update_interrupter();
+        interrupter.burst_state = BURST_OFF;
+        if(!param.burst_off){
+            boff_lim=2;
+        }else{
+            boff_lim=param.burst_off;
+        }
+        xTimerChangePeriod( xTimer, boff_lim / portTICK_PERIOD_MS, 0 );
+    }else{
+        interrupter.pw = param.pw;
+        update_interrupter();
+        interrupter.burst_state = BURST_ON;
+        if(!param.burst_on){
+            bon_lim=2;
+        }else{
+            bon_lim=param.burst_on;
+        }
+        xTimerChangePeriod( xTimer, bon_lim / portTICK_PERIOD_MS, 0 );
+    }
+}
+
+/*****************************************************************************
+* Callback if a burst mode parameter is changed
+******************************************************************************/
+uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle) {
+    if(interrupter.mode!=INTR_MODE_OFF){
+        if(interrupter.xBurst_Timer==NULL && param.burst_on > 0){
+            interrupter.burst_state = BURST_ON;
+            interrupter.xBurst_Timer = xTimerCreate("Bust-Tmr", param.burst_on / portTICK_PERIOD_MS, pdFALSE,(void * ) 0, vBurst_Timer_Callback);
+            if(interrupter.xBurst_Timer != NULL){
+                xTimerStart(interrupter.xBurst_Timer, 0);
+                ttprintf("Burst Enabled\r\n");
+                interrupter.mode=INTR_MODE_BURST;
+            }else{
+                interrupter.pw = 0;
+                ttprintf("Cannot create burst Timer\r\n");
+                interrupter.mode=INTR_MODE_OFF;
+            }
+        }else if(interrupter.xBurst_Timer!=NULL && !param.burst_on){
+            if (interrupter.xBurst_Timer != NULL) {
+    			if(xTimerDelete(interrupter.xBurst_Timer, 200 / portTICK_PERIOD_MS) != pdFALSE){
+    			    interrupter.xBurst_Timer = NULL;
+                    interrupter.burst_state = BURST_ON;
+                    interrupter.pw =0;
+                    update_interrupter();
+                    interrupter.mode=INTR_MODE_TR;
+                    ttprintf("\r\nBurst Disabled\r\n");
+                }else{
+                    ttprintf("Cannot delete burst Timer\r\n");
+                    interrupter.burst_state = BURST_ON;
+                }
+            }
+        }else if(interrupter.xBurst_Timer!=NULL && !param.burst_off){
+            if (interrupter.xBurst_Timer != NULL) {
+    			if(xTimerDelete(interrupter.xBurst_Timer, 200 / portTICK_PERIOD_MS) != pdFALSE){
+    			    interrupter.xBurst_Timer = NULL;
+                    interrupter.burst_state = BURST_ON;
+                    interrupter.pw =param.pw;
+                    update_interrupter();
+                    interrupter.mode=INTR_MODE_TR;
+                    ttprintf("\r\nBurst Disabled\r\n");
+                }else{
+                    ttprintf("Cannot delete burst Timer\r\n");
+                    interrupter.burst_state = BURST_ON;
+                }
+            }
+
+        }
+    }
+	return pdPASS;
+}
+
+
+/*****************************************************************************
+* starts or stops the transient mode (classic mode)
+* also spawns a timer for the burst mode.
+******************************************************************************/
+uint8_t CMD_tr(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
+    
+    if(argCount==0 || strcmp(args[0], "-?") == 0){
+        ttprintf("Transient [start/stop]");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    
+    if(strcmp(args[0], "start") == 0){
+        interrupter_DMA_mode(INTR_DMA_TR);
+        
+        interrupter.pw = param.pw;
+		interrupter.prd = param.pwd;
+        update_interrupter();
+
+		interrupter.mode=INTR_MODE_TR;
+        
+        callback_BurstFunction(NULL, 0, handle);
+        
+		ttprintf("Transient Enabled\r\n");
+       
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+
+	if(strcmp(args[0], "stop") == 0){
+        interrupter_DMA_mode(INTR_DMA_DDS);
+        if (interrupter.xBurst_Timer != NULL) {
+			if(xTimerDelete(interrupter.xBurst_Timer, 100 / portTICK_PERIOD_MS) != pdFALSE){
+			    interrupter.xBurst_Timer = NULL;
+                interrupter.burst_state = BURST_ON;
+            }
+        }
+
+        ttprintf("Transient Disabled\r\n");    
+ 
+		interrupter.pw = 0;
+		update_interrupter();
+		interrupter.mode=INTR_MODE_OFF;
+		
+		return TERM_CMD_EXIT_SUCCESS;
+	}
+    return TERM_CMD_EXIT_SUCCESS;
 }
 

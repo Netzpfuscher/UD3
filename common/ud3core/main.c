@@ -78,7 +78,7 @@ int main() {
     
 	initialize_charging();
 
-	CyGlobalIntEnable; //enables interrupts
+	
 
 	//calls that must always happen after updating the configuration/settings
 	configure_ZCD_to_PWM();
@@ -107,7 +107,7 @@ int main() {
         tsk_display_Start();
     }
     
-    
+    //CyGlobalIntEnable; //enables interrupts
     alarm_push(ALM_PRIO_INFO, warn_general_startup, ALM_NO_VALUE);
 	vTaskStartScheduler();
     

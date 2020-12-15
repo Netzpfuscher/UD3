@@ -65,10 +65,7 @@ uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, TERMINA
 uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_TTupdateFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
-uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
-uint8_t callback_TRPFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_OfftimeFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
-uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_i2tFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_baudrateFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_SPIspeedFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
@@ -79,13 +76,15 @@ uint8_t callback_ivoUART(parameter_entry * params, uint8_t index, TERMINAL_HANDL
 
 void update_ivo_uart();
 
-uint8_t burst_state = 0;
-
-
-TimerHandle_t xBurst_Timer;
-
 cli_config configuration;
 cli_parameter param;
+
+enum uart_ivo{
+    UART_IVO_NONE=0,
+    UART_IVO_TX=1,
+    UART_IVO_RX=10,
+    UART_IVO_RX_TX=11
+};
 
 
 /*****************************************************************************
@@ -128,12 +127,14 @@ void init_config(){
     configuration.ct2_offset = 0;
     configuration.ct2_current = 0;
     configuration.chargedelay = 1000;
-    configuration.ivo_uart = 0;  //Nothing inverted
+    configuration.ivo_uart = UART_IVO_NONE;
     configuration.enable_display = 0;
     configuration.pid_curr_p = 50;
     configuration.pid_curr_i = 5;
     configuration.max_dc_curr = 0;
     configuration.ext_interrupter = 0;
+    
+    interrupter.mod = INTR_MOD_PW;
     
     param.pw = 0;
     param.pwp = 0;
@@ -236,8 +237,10 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_dc_curr"     , configuration.max_dc_curr     , 0      ,2000   ,10     ,callback_pid                ,"Maximum DC-Bus current [A] 0=off")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ena_ext_int"     , configuration.ext_interrupter , 0      ,2      ,0      ,callback_ext_interrupter    ,"Enable external interrupter 2=inverted")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"qcw_coil"        , configuration.is_qcw          , 0      ,1      ,0      ,NULL                        ,"Is QCW 1=true 0=false")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"vol_mod"         , interrupter.mod               , 0      ,1      ,0      ,callback_interrupter_mod    ,"0=pw 1=current modulation")
     ADD_PARAM(PARAM_CONFIG  ,pdFALSE,"d_calib"         , vdriver_lut                   , 0      ,0      ,0      ,NULL                        ,"For voltage measurement")
 };
+
 
    
 void eeprom_load(TERMINAL_HANDLE * handle){
@@ -286,17 +289,17 @@ void update_visibilty(void){
 ******************************************************************************/
 
 void update_ivo_uart(){
-    IVO_UART_Control=0;
+    IVO_UART_Control=UART_IVO_NONE;
     switch(configuration.ivo_uart){
-    case 0:
+    case UART_IVO_NONE:
         break;
-    case 1:
+    case UART_IVO_TX:
         set_bit(IVO_UART_Control,1);
         break;
-    case 10:
+    case UART_IVO_RX:
         set_bit(IVO_UART_Control,0);
         break;
-    case 11:
+    case UART_IVO_RX_TX:
         set_bit(IVO_UART_Control,0);
         set_bit(IVO_UART_Control,1);
         break;
@@ -304,7 +307,7 @@ void update_ivo_uart(){
 }
 
 uint8_t callback_ivoUART(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
-    if(configuration.ivo_uart == 0 || configuration.ivo_uart == 1 || configuration.ivo_uart == 10 || configuration.ivo_uart == 11){
+    if(configuration.ivo_uart == UART_IVO_NONE || configuration.ivo_uart == UART_IVO_TX || configuration.ivo_uart == UART_IVO_RX || configuration.ivo_uart == UART_IVO_RX_TX){
         update_ivo_uart();   
         return 1;
     }else{
@@ -468,139 +471,6 @@ uint8_t callback_baudrateFunction(parameter_entry * params, uint8_t index, TERMI
     return 1;
 }
 
-enum burst_state{
-    BURST_ON,
-    BURST_OFF
-};
-
-/*****************************************************************************
-* Callback if a transient mode parameter is changed
-* Updates the interrupter hardware
-******************************************************************************/
-uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle) {
-    
-    uint32_t temp;
-    temp = (1000 * param.pw) / configuration.max_tr_pw;
-    param.pwp = temp;
-
-	interrupter.pw = param.pw;
-	interrupter.prd = param.pwd;
-    
-    update_midi_duty();
-    
-	if (tr_running==1) {
-		update_interrupter();
-	}else if(configuration.ext_interrupter  && param.synth == SYNTH_OFF){
-        interrupter_update_ext();
-    }
-	return pdPASS;
-}
-
-/*****************************************************************************
-* Callback if a transient mode parameter is changed (percent ontime)
-* Updates the interrupter hardware
-******************************************************************************/
-uint8_t callback_TRPFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle) {
-    
-    uint32_t temp;
-    temp = (configuration.max_tr_pw * param.pwp) / 1000;
-    param.pw = temp;
-    
-    interrupter.pw = param.pw;
-    
-    update_midi_duty();
-    
-	if (tr_running==1) {
-		update_interrupter();
-	}
-    if(configuration.ext_interrupter){
-        interrupter_update_ext();
-    }
-    
-	return pdPASS;
-}
-
-
-/*****************************************************************************
-* Timer callback for burst mode
-******************************************************************************/
-void vBurst_Timer_Callback(TimerHandle_t xTimer){
-    uint16_t bon_lim;
-    uint16_t boff_lim;
-    if(burst_state == BURST_ON){
-        interrupter.pw = 0;
-        update_interrupter();
-        burst_state = BURST_OFF;
-        if(!param.burst_off){
-            boff_lim=2;
-        }else{
-            boff_lim=param.burst_off;
-        }
-        xTimerChangePeriod( xTimer, boff_lim / portTICK_PERIOD_MS, 0 );
-    }else{
-        interrupter.pw = param.pw;
-        update_interrupter();
-        burst_state = BURST_ON;
-        if(!param.burst_on){
-            bon_lim=2;
-        }else{
-            bon_lim=param.burst_on;
-        }
-        xTimerChangePeriod( xTimer, bon_lim / portTICK_PERIOD_MS, 0 );
-    }
-}
-
-
-/*****************************************************************************
-* Callback if a burst mode parameter is changed
-******************************************************************************/
-uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle) {
-    if(tr_running){
-        if(xBurst_Timer==NULL && param.burst_on > 0){
-            burst_state = BURST_ON;
-            xBurst_Timer = xTimerCreate("Bust-Tmr", param.burst_on / portTICK_PERIOD_MS, pdFALSE,(void * ) 0, vBurst_Timer_Callback);
-            if(xBurst_Timer != NULL){
-                xTimerStart(xBurst_Timer, 0);
-                ttprintf("Burst Enabled\r\n");
-                tr_running=2;
-            }else{
-                interrupter.pw = 0;
-                ttprintf("Cannot create burst Timer\r\n");
-                tr_running=0;
-            }
-        }else if(xBurst_Timer!=NULL && !param.burst_on){
-            if (xBurst_Timer != NULL) {
-    			if(xTimerDelete(xBurst_Timer, 200 / portTICK_PERIOD_MS) != pdFALSE){
-    			    xBurst_Timer = NULL;
-                    burst_state = BURST_ON;
-                    interrupter.pw =0;
-                    update_interrupter();
-                    tr_running=1;
-                    ttprintf("\r\nBurst Disabled\r\n");
-                }else{
-                    ttprintf("Cannot delete burst Timer\r\n");
-                    burst_state = BURST_ON;
-                }
-            }
-        }else if(xBurst_Timer!=NULL && !param.burst_off){
-            if (xBurst_Timer != NULL) {
-    			if(xTimerDelete(xBurst_Timer, 200 / portTICK_PERIOD_MS) != pdFALSE){
-    			    xBurst_Timer = NULL;
-                    burst_state = BURST_ON;
-                    interrupter.pw =param.pw;
-                    update_interrupter();
-                    tr_running=1;
-                    ttprintf("\r\nBurst Disabled\r\n");
-                }else{
-                    ttprintf("Cannot delete burst Timer\r\n");
-                    burst_state = BURST_ON;
-                }
-            }
-
-        }
-    }
-	return pdPASS;
-}
 
 /*****************************************************************************
 * Callback if a configuration relevant parameter is changed
@@ -793,57 +663,6 @@ uint8_t CMD_bootloader(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args)
 #endif
 	return TERM_CMD_EXIT_SUCCESS;
 }
-
-/*****************************************************************************
-* starts or stops the transient mode (classic mode)
-* also spawns a timer for the burst mode.
-******************************************************************************/
-uint8_t CMD_tr(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
-    
-    if(argCount==0 || strcmp(args[0], "-?") == 0){
-        ttprintf("Transient [start/stop]");
-        return TERM_CMD_EXIT_SUCCESS;
-    }
-    
-    if(strcmp(args[0], "start") == 0){
-        interrupter_DMA_mode(INTR_DMA_TR);
-        interrupter1_control_Control = 0b0000;
-        
-        interrupter.pw = param.pw;
-		interrupter.prd = param.pwd;
-        update_interrupter();
-
-		tr_running = 1;
-        
-        callback_BurstFunction(NULL, 0, handle);
-        
-		ttprintf("Transient Enabled\r\n");
-       
-        return TERM_CMD_EXIT_SUCCESS;
-    }
-
-	if(strcmp(args[0], "stop") == 0){
-        switch_synth(param.synth);
-        if (xBurst_Timer != NULL) {
-			if(xTimerDelete(xBurst_Timer, 100 / portTICK_PERIOD_MS) != pdFALSE){
-			    xBurst_Timer = NULL;
-                burst_state = BURST_ON;
-            }
-        }
-
-        ttprintf("Transient Disabled\r\n");    
- 
-		interrupter.pw = 0;
-		update_interrupter();
-        if(configuration.ext_interrupter) interrupter_update_ext();
-		tr_running = 0;
-		
-		return TERM_CMD_EXIT_SUCCESS;
-	}
-    return TERM_CMD_EXIT_SUCCESS;
-}
-
-
 
 
 /*****************************************************************************

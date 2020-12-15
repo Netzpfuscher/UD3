@@ -59,11 +59,11 @@ enum interrupter_burst{
     BURST_OFF
 };
 
+
 enum interrupter_modulation{
     INTR_MOD_PW=0,
     INTR_MOD_CUR=1
 };
-
 
 typedef struct
 {
@@ -73,7 +73,6 @@ typedef struct
     enum interrupter_burst burst_state;
     enum interrupter_modulation mod;
     TimerHandle_t xBurst_Timer;
-    
 } interrupter_params;
 
 interrupter_params interrupter;
@@ -94,6 +93,7 @@ uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, TERMINAL
 uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_TRPFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_interrupter_mod(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+
 
 void interrupter_kill(void);
 

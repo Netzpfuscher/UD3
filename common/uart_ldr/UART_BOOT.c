@@ -63,7 +63,7 @@ void UART_CyBtldrCommStart(void) CYSMALL
             CyDelay(1);
             timeoutMs--;
         }
-   if(timeoutMs>0) com_type = USB;
+   //if(timeoutMs>0) com_type = USB;
     
     /* Start UART component and clear the Tx,Rx buffers */
     UART_Start();

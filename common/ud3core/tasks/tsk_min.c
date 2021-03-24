@@ -24,7 +24,6 @@
 
 #include "cyapicallbacks.h"
 #include <cytypes.h>
-#include <stdarg.h>
 
 #include "tsk_min.h"
 #include "tsk_midi.h"
@@ -38,6 +37,10 @@
 #include "version.h"
 
 #include "helper/printf.h"
+#include "helper/debug.h"
+
+#include "TTerm.h"
+#include "cli_basic.h"
 
 xTaskHandle tsk_min_TaskHandle;
 uint8 tsk_min_initVar = 0u;
@@ -57,10 +60,13 @@ SemaphoreHandle_t min_Semaphore;
 #include "min_id.h"
 #include "telemetry.h"
 #include "stream_buffer.h" 
-#include "ntlibc.h" 
+#include "helper/printf.h" 
 
 struct min_context min_ctx;
 struct _time time;
+
+uint32_t uart_bytes_received=0;
+uint32_t uart_bytes_transmitted=0;
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */
@@ -84,6 +90,7 @@ typedef struct {
 } average_buff;
 
 average_buff sample;
+
 
 /*******************************************************************************************
 Makes avaraging of given values
@@ -110,6 +117,7 @@ uint32_t min_rx_space(uint8_t port){
 }
 
 void min_tx_byte(uint8_t port, uint8_t byte){
+    uart_bytes_transmitted++;
     UART_PutChar(byte);
 }
 
@@ -140,6 +148,7 @@ void time_cb(uint32_t remote_time){
     }   
 }
 
+
 uint8_t flow_ctl=1;
 static const uint8_t min_stop = 'x';
 static const uint8_t min_start = 'o';
@@ -153,6 +162,7 @@ void process_synth(uint8_t *min_payload, uint8_t len_payload){
         case SYNTH_CMD_FLUSH:
             if(qSID!=NULL){
                 xQueueReset(qSID);
+                kill_accu();
             }
             break;
         case SYNTH_CMD_SID:
@@ -181,14 +191,52 @@ void send_command(struct min_context *ctx, uint8_t cmd, char *str){
 }
 uint8_t transmit_features=0;
 
+void min_command(uint8_t command, uint8_t *min_payload, uint8_t len_payload){
+    switch(command){
+        case CMD_LINK:
+            sysfault.link_state = *min_payload ? pdTRUE : pdFALSE;
+            break;
+        default:
+            alarm_push(ALM_PRIO_INFO, warn_min_command, command);
+            break;      
+    }
+}
+
+struct __event_response {
+    uint8 id;
+    uint8 struct_version;
+    uint32 unique_id[2];
+    char udname[16];   
+};
+typedef struct __event_response event_resonse;
+
+void min_event(uint8_t command, uint8_t *min_payload, uint8_t len_payload){
+    if(command==EVENT_GET_INFO){
+        event_resonse response;
+        response.id = EVENT_GET_INFO;
+        response.struct_version = 1;
+        CyGetUniqueId(response.unique_id);
+        strncpy(response.udname, configuration.ud_name, sizeof(configuration.ud_name));
+        min_send_frame(&min_ctx,MIN_ID_EVENT,(uint8_t*)&response,sizeof(response));
+    }else{
+        alarm_push(ALM_PRIO_INFO, warn_min_command, command);
+    }    
+}
+
 void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_payload, uint8_t port)
 {
+    if(min_id==debug_id && debug_port!=NULL){
+        xSemaphoreTake(((port_str*)debug_port)->term_block, 100);
+        (*debug_port->print)(debug_port->port, NULL, min_payload, len_payload);
+        xSemaphoreGive(((port_str*)debug_port)->term_block);
+    }
+    
     switch(min_id){
         case 0 ... 9:
             if(min_id>(NUM_MIN_CON-1)) return;
             if(socket_info[min_id].socket==SOCKET_DISCONNECTED) return;
             xStreamBufferSend(min_port[min_id].rx,min_payload, len_payload,1);
-            break;
+            return;
         case MIN_ID_MIDI:
             switch(param.synth){
                 case SYNTH_OFF:
@@ -207,7 +255,10 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
                     process_sid(min_payload, len_payload);
                     break;
             }
-            break;
+            return;
+        case MIN_ID_SID:
+            process_min_sid(min_payload, len_payload);
+            return;
         case MIN_ID_WD:
                 if(len_payload==4){
                 	time.remote  = ((uint32_t)min_payload[0]<<24);
@@ -217,34 +268,47 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
                     time_cb(time.remote);
                 }
                 WD_reset();
-            break;
+            return;
         case MIN_ID_SOCKET:
             if(*min_payload>(NUM_MIN_CON-1)) return;
             socket_info[*min_payload].socket = *(min_payload+1);
             strncpy(socket_info[*min_payload].info,(char*)min_payload+2,sizeof(socket_info[0].info));
             if(socket_info[*min_payload].socket==SOCKET_CONNECTED){
-                command_cls("",&min_port[*min_payload]);
-                send_string(":>", &min_port[*min_payload]);
                 if(!transmit_features){
                     transmit_features=sizeof(version)/sizeof(char*);
                 }
             }else{
                 min_port[*min_payload].term_mode = PORT_TERM_VT100;    
-                stop_overlay_task(&min_port[*min_payload]);   
+                stop_overlay_task(min_handle[*min_payload]);   
             }
-            break;
+            return;
         case MIN_ID_SYNTH:
             process_synth(min_payload,len_payload);
-            break;
+            return;
+        case MIN_ID_COMMAND:
+            if(len_payload<1) return;
+            min_command(min_payload[0], &min_payload[1],--len_payload);
+            return;
+        case MIN_ID_EVENT:
+            min_event(min_payload[0], &min_payload[1],--len_payload);
+            return;
+        case MIN_ID_ALARM:
+            alarm_push_c(min_payload[0],(char*)&min_payload[5],len_payload-5,min_payload[1] | (min_payload[2] << 2) | (min_payload[3] << 16) | (min_payload[4] << 24));
+            return;
+        default:
+            break; 
+    }
+    if(min_id!=debug_id){
+        alarm_push(ALM_PRIO_INFO, warn_min_id, min_id);
     }
 }
 
 
 void poll_UART(){
-        
     uint16_t bytes = UART_GetRxBufferSize();
     if(bytes){
-        rx_blink_Write(1);
+        LED4_Write(1);
+        uart_bytes_received+=bytes;
         while(bytes){
             min_rx_byte(&min_ctx, UART_GetByte());
             bytes--;
@@ -262,8 +326,6 @@ uint8_t assemble_command(uint8_t cmd, char *str, uint8_t *buf){
     memcpy(buf,str,len);
     return len+1;
 }
-
-
 
 void send_command_wq(struct min_context *ctx, uint8_t cmd, char *str){
     uint8_t len=0;
@@ -288,8 +350,17 @@ uint8_t min_queue(uint8_t id, uint8_t *data, uint8_t len, TickType_t ticks){
         return ret;   
     }else{
         return pdFAIL;
-    }
-        
+    }      
+}
+
+uint8_t min_send(uint8_t id, uint8_t *data, uint8_t len, TickType_t ticks){
+    if(xSemaphoreTake(min_Semaphore,ticks)){
+        min_send_frame(&min_ctx,id,data,len);      
+        xSemaphoreGive(min_Semaphore);
+        return pdTRUE;   
+    }else{
+        return pdFAIL;
+    }      
 }
 
 
@@ -380,6 +451,7 @@ void tsk_min_TaskProc(void *pvParameters) {
                         }
                     }
                 }
+
                 uint16_t eth_bytes=xStreamBufferBytesAvailable(min_port[i].tx);
                 if(eth_bytes){
                     bytes_waiting+=eth_bytes;

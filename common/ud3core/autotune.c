@@ -33,6 +33,8 @@
 #include "cli_common.h"
 #include "interrupter.h"
 #include "tasks/tsk_analog.h"
+#include "tasks/tsk_overlay.h"
+#include "tasks/tsk_cli.h"
 
 #define FREQ 0
 #define CURR 1
@@ -43,14 +45,55 @@
 #define OFFSET_X 20
 #define OFFSET_Y 20
 
-void autotune_draw_d(port_str *ptr){
+uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint8_t channel, uint8_t delay, TERMINAL_HANDLE * handle);
+
+
+/*****************************************************************************
+* commands a frequency sweep for the primary coil. It searches for a peak
+* and makes a second run with +-6kHz around the peak
+******************************************************************************/
+uint8_t CMD_tune(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+    if(argCount==0 || strcmp(args[0], "-?") == 0){
+        ttprintf("Usage: tune [prim|sec]\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    
+    
+    ttprintf("Warning: The bridge will switch hard, make sure that the bus voltage is appropriate\r\n");
+    ttprintf("Press [y] to proceed\r\n");
+    port_str * ptr = handle->port;
+    
+    if(getch(handle, portMAX_DELAY) != 'y'){
+        ttprintf("Tune aborted\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    if(ptr->term_mode == PORT_TERM_TT){
+        tsk_overlay_chart_stop();
+        send_chart_clear(handle);
+        
+    }
+    ttprintf("Start sweep:\r\n");
+    if(strcmp(args[0], "prim") == 0){
+    	run_adc_sweep(param.tune_start, param.tune_end, param.tune_pw, CT_PRIMARY, param.tune_delay, handle);
+        ttprintf("Type cls to go back to normal telemtry chart\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    if(strcmp(args[0], "sec") == 0){
+        run_adc_sweep(param.tune_start, param.tune_end, param.tune_pw, CT_SECONDARY, param.tune_delay, handle);
+        ttprintf("Type cls to go back to normal telemetry chart\r\n");
+        return TERM_CMD_EXIT_SUCCESS;;
+    }
+    return TERM_CMD_EXIT_SUCCESS;
+}
+
+void autotune_draw_d(TERMINAL_HANDLE * handle){
     uint16_t f;
-    send_chart_line(OFFSET_X, TTERM_HEIGHT+OFFSET_Y, TTERM_WIDTH+OFFSET_X, TTERM_HEIGHT+OFFSET_Y, TT_COLOR_WHITE, ptr);
-    send_chart_line(OFFSET_X, OFFSET_Y, OFFSET_X, TTERM_HEIGHT+OFFSET_Y, TT_COLOR_WHITE, ptr);
+    send_chart_line(OFFSET_X, TTERM_HEIGHT+OFFSET_Y, TTERM_WIDTH+OFFSET_X, TTERM_HEIGHT+OFFSET_Y, TT_COLOR_WHITE, handle);
+    send_chart_line(OFFSET_X, OFFSET_Y, OFFSET_X, TTERM_HEIGHT+OFFSET_Y, TT_COLOR_WHITE, handle);
 
 	for (f = 0; f <= TTERM_HEIGHT; f += 25) {
-		send_chart_line(OFFSET_X, f+OFFSET_Y, OFFSET_X-10, f+OFFSET_Y, TT_COLOR_WHITE, ptr);
-        send_chart_line(OFFSET_X, f+OFFSET_Y, TTERM_WIDTH+OFFSET_X, f+OFFSET_Y, TT_COLOR_GRAY, ptr);
+		send_chart_line(OFFSET_X, f+OFFSET_Y, OFFSET_X-10, f+OFFSET_Y, TT_COLOR_WHITE, handle);
+        send_chart_line(OFFSET_X, f+OFFSET_Y, TTERM_WIDTH+OFFSET_X, f+OFFSET_Y, TT_COLOR_GRAY, handle);
 	}
 
 }
@@ -63,14 +106,16 @@ struct freq_struct {
     uint16_t freq[ROWS];
 };
 
-uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint8_t channel, uint8_t delay, port_str *ptr) {
+uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint8_t channel, uint8_t delay, TERMINAL_HANDLE * handle) {
 
     freq_str *freq_resp;
     freq_resp = pvPortMalloc(sizeof(freq_str));
     if(freq_resp==NULL){
-        SEND_CONST_STRING("Malloc failed\r\n", ptr);
+        ttprintf("Malloc failed\r\n");
         return 0;
     }
+    
+    interrupter_DMA_mode(INTR_DMA_TR);
 
 	CT_MUX_Select(channel);
 	//units for frequency are 0.1kHz (so 1000 = 100khz).  Pulsewidth in uS
@@ -78,8 +123,7 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 	uint8 n;
 	uint16 original_freq;
 	uint8 original_lock_cycles;
-	char buffer[100];
-    int ret=0;
+	char buffer[60];
 	float current_buffer = 0;
 
 	
@@ -118,10 +162,9 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 			current_buffer += CT1_Get_Current_f(channel);
 		}
 		freq_resp->curr[f] = round(current_buffer / (float)configuration.autotune_s * 10);
-		ret = snprintf(buffer, sizeof(buffer), "Frequency: %i00Hz Current: %4i,%iA     \r", freq_resp->freq[f], freq_resp->curr[f] / 10, freq_resp->curr[f] % 10);
-		send_buffer((uint8_t*)buffer, ret, ptr);
+		ttprintf("Frequency: %i00Hz Current: %4i,%iA     \r", freq_resp->freq[f], freq_resp->curr[f] / 10, freq_resp->curr[f] % 10);
 	}
-	SEND_CONST_STRING("\r\n", ptr);
+	ttprintf("\r\n");
 
 	//restore original frequency
 	configuration.start_freq = original_freq;
@@ -142,8 +185,9 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 
 	//Draw Diagram
 
-    if(ptr->term_mode == PORT_TERM_VT100){
-        braille_malloc(ptr);
+    if(portM->term_mode == PORT_TERM_VT100){
+        
+        braille_malloc(handle);
         braille_clear();
 	    braille_line(0, 63, 127, 63);
 	    braille_line(0, 0, 0, 63);
@@ -158,62 +202,60 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
     	for (f = 1; f < ROWS; f++) {
     		braille_line(f - 1, ((PIX_HEIGHT - 1) - ((PIX_HEIGHT - 1) * freq_resp->curr[f-1]) / max_curr), f, ((PIX_HEIGHT - 1) - ((PIX_HEIGHT - 1) * freq_resp->curr[f]) / max_curr));
     	}
-    	braille_draw(ptr);
+    	braille_draw(handle);
     	for (f = 0; f < PIX_WIDTH / 2; f += 4) {
     		if (!f) {
-    			ret = snprintf(buffer, sizeof(buffer), "%i", freq_resp->freq[f*2]);
-    			send_buffer((uint8_t*)buffer, ret, ptr);
+    			ttprintf("%i", freq_resp->freq[f*2]);
     		} else {
-    			ret = snprintf(buffer, sizeof(buffer), "%4i", freq_resp->freq[f*2]);
-    			send_buffer((uint8_t*)buffer, ret, ptr);
+    			ttprintf("%4i", freq_resp->freq[f*2]);
     		}
     	}
-        braille_free(ptr);
+        braille_free(handle);
     }else{
 
         float step_w = (float)TTERM_WIDTH/128;
         
         float x_val_1;
         float x_val_2;
-        autotune_draw_d(ptr);
+        autotune_draw_d(handle);
         
         //Draw x grid
         for (f = 0; f < ROWS; f+=8) {
             x_val_1 = f*step_w;
-            send_chart_line(x_val_1+OFFSET_X, OFFSET_Y, x_val_1+OFFSET_X, TTERM_HEIGHT+OFFSET_Y, TT_COLOR_GRAY, ptr);
+            send_chart_line(x_val_1+OFFSET_X, OFFSET_Y, x_val_1+OFFSET_X, TTERM_HEIGHT+OFFSET_Y, TT_COLOR_GRAY, handle);
     	}
         f=ROWS-1;
         x_val_1 = f*step_w;
-        send_chart_line(x_val_1+OFFSET_X, OFFSET_Y, x_val_1+OFFSET_X, TTERM_HEIGHT+OFFSET_Y, TT_COLOR_GRAY, ptr);
+        send_chart_line(x_val_1+OFFSET_X, OFFSET_Y, x_val_1+OFFSET_X, TTERM_HEIGHT+OFFSET_Y, TT_COLOR_GRAY, handle);
         
         //Draw line
     	for (f = 0; f < ROWS-1; f++) {
             x_val_1 = f*step_w;
             x_val_2 = (f+1)*step_w;
-    		send_chart_line(x_val_1+OFFSET_X, ((TTERM_HEIGHT - 1) - ((TTERM_HEIGHT - 1) * freq_resp->curr[f]) / max_curr)+OFFSET_Y, x_val_2+OFFSET_X, ((TTERM_HEIGHT - 1) - ((TTERM_HEIGHT - 1) * freq_resp->curr[f+1]) / max_curr)+OFFSET_Y, TT_COLOR_GREEN, ptr);
+    		send_chart_line(x_val_1+OFFSET_X, ((TTERM_HEIGHT - 1) - ((TTERM_HEIGHT - 1) * freq_resp->curr[f]) / max_curr)+OFFSET_Y, x_val_2+OFFSET_X, ((TTERM_HEIGHT - 1) - ((TTERM_HEIGHT - 1) * freq_resp->curr[f+1]) / max_curr)+OFFSET_Y, TT_COLOR_GREEN, handle);
     	}
         
         //Draw text
     	for (f = 0; f < ROWS; f+=8) {
             x_val_1 = f*step_w;
             snprintf(buffer, sizeof(buffer), "%i,%i", freq_resp->freq[f]/10,freq_resp->freq[f]%10);
-    		send_chart_text_center(x_val_1+OFFSET_X,OFFSET_Y+TTERM_HEIGHT+20,TT_COLOR_WHITE,8,buffer,ptr);
-            send_chart_line(x_val_1+OFFSET_X, TTERM_HEIGHT+OFFSET_Y, x_val_1+OFFSET_X, TTERM_HEIGHT +10+OFFSET_Y, TT_COLOR_WHITE, ptr);
+    		send_chart_text_center(x_val_1+OFFSET_X,OFFSET_Y+TTERM_HEIGHT+20,TT_COLOR_WHITE,8,buffer,handle);
+            send_chart_line(x_val_1+OFFSET_X, TTERM_HEIGHT+OFFSET_Y, x_val_1+OFFSET_X, TTERM_HEIGHT +10+OFFSET_Y, TT_COLOR_WHITE, handle);
     	}
         f=127;
         x_val_1 = f*step_w;
         snprintf(buffer, sizeof(buffer), "%i,%i", freq_resp->freq[f]/10,freq_resp->freq[f]%10);
-    	send_chart_text_center(x_val_1+OFFSET_X,OFFSET_Y+TTERM_HEIGHT+20,TT_COLOR_WHITE,8,buffer,ptr);
-        send_chart_line(x_val_1+OFFSET_X, TTERM_HEIGHT+OFFSET_Y, x_val_1+OFFSET_X, TTERM_HEIGHT +10+OFFSET_Y, TT_COLOR_WHITE, ptr);
+    	send_chart_text_center(x_val_1+OFFSET_X,OFFSET_Y+TTERM_HEIGHT+20,TT_COLOR_WHITE,8,buffer,handle);
+        send_chart_line(x_val_1+OFFSET_X, TTERM_HEIGHT+OFFSET_Y, x_val_1+OFFSET_X, TTERM_HEIGHT +10+OFFSET_Y, TT_COLOR_WHITE, handle);
         x_val_1+=15;
-        send_chart_text(x_val_1+OFFSET_X,OFFSET_Y+TTERM_HEIGHT+20,TT_COLOR_WHITE,8,"khz",ptr);
+        send_chart_text(x_val_1+OFFSET_X,OFFSET_Y+TTERM_HEIGHT+20,TT_COLOR_WHITE,8,"khz",handle);
 
     }
     
-	ret = snprintf(buffer, sizeof(buffer), "\r\nFound Peak at: %i00Hz\r\n", freq_resp->freq[max_curr_num]);
-	send_buffer((uint8_t*)buffer, ret, ptr);
+	ttprintf("\r\nFound Peak at: %i00Hz\r\n", freq_resp->freq[max_curr_num]);
     uint16_t temp = freq_resp->freq[max_curr_num];
     vPortFree(freq_resp);
+    interrupter_DMA_mode(INTR_DMA_DDS);
     return temp;
 }
 

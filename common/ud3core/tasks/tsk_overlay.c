@@ -24,6 +24,7 @@
 
 #include "cyapicallbacks.h"
 #include <cytypes.h>
+#include <stdlib.h>
 
 #include "tsk_overlay.h"
 #include "tsk_fault.h"
@@ -36,6 +37,8 @@
 #include "semphr.h"
 #include "helper/teslaterm.h"
 #include "tasks/tsk_priority.h"
+#include "tasks/tsk_cli.h"
+#include "tsk_min.h"
 
 /* ------------------------------------------------------------------------ */
 /*
@@ -47,11 +50,10 @@
 #include "telemetry.h"
 #include "tsk_analog.h"
 #include "tsk_uart.h"
+#include "tsk_cli.h"
 #include <project.h>
 #include "helper/printf.h"
 #include "ZCDtoPWM.h"
-
-#include "ntlibc.h"
 
 
 
@@ -211,12 +213,36 @@ void init_telemetry(){
     tt.n.avg_power.value = 0;
     tt.n.avg_power.min = 0;
     tt.n.avg_power.offset = 0;
-    tt.n.avg_power.unit = TT_UNIT_W;
-    tt.n.avg_power.divider = 1;
+    tt.n.avg_power.unit = TT_UNIT_kW;
+    tt.n.avg_power.divider = 1000;
     tt.n.avg_power.high_res = pdTRUE;
     tt.n.avg_power.resend_time = TT_FAST;
     tt.n.avg_power.chart = 3;
     tt.n.avg_power.gauge = 2;
+    
+    tt.n.tx_datarate.name = "TX_Datarate";
+    tt.n.tx_datarate.value = 0;
+    tt.n.tx_datarate.min = 0;
+    tt.n.tx_datarate.max = 57600;
+    tt.n.tx_datarate.offset = 0;
+    tt.n.tx_datarate.unit = TT_UNIT_PERCENT;
+    tt.n.tx_datarate.divider = 1;
+    tt.n.tx_datarate.high_res = pdTRUE;
+    tt.n.tx_datarate.resend_time = TT_FAST;
+    tt.n.tx_datarate.chart = TT_NO_TELEMETRY;
+    tt.n.tx_datarate.gauge = TT_NO_TELEMETRY;
+    
+    tt.n.rx_datarate.name = "RX_Datarate";
+    tt.n.rx_datarate.value = 0;
+    tt.n.rx_datarate.min = 0;
+    tt.n.rx_datarate.max = 57600;
+    tt.n.rx_datarate.offset = 0;
+    tt.n.rx_datarate.unit = TT_UNIT_W;
+    tt.n.rx_datarate.divider = 1;
+    tt.n.rx_datarate.high_res = pdTRUE;
+    tt.n.rx_datarate.resend_time = TT_FAST;
+    tt.n.rx_datarate.chart = TT_NO_TELEMETRY;
+    tt.n.rx_datarate.gauge = TT_NO_TELEMETRY;
     
     recalc_telemetry_limits();
     
@@ -240,81 +266,69 @@ void tsk_overlay_chart_start(){
     chart=1;
 }
 
-void show_overlay_100ms(port_str *ptr){
+void show_overlay_100ms(TERMINAL_HANDLE * handle){
 
-    if(ptr->term_mode == PORT_TERM_VT100){
-        char buffer[50];
-        int ret=0;
-    	Term_Save_Cursor(ptr);
-    	Term_Disable_Cursor(ptr);
+    if(portM->term_mode == PORT_TERM_VT100){
+        TERM_sendVT100Code(handle, _VT100_CURSOR_SAVE_POSITION,0);
+    	TERM_sendVT100Code(handle, _VT100_CURSOR_DISABLE,0);
 
     	uint8_t row_pos = 1;
     	uint8_t col_pos = 90;
-    	//Term_Erase_Screen(ptr);
-    	Term_Box(row_pos, col_pos, row_pos + 11, col_pos + 25, ptr);
-    	Term_Move_Cursor(row_pos + 1, col_pos + 1, ptr);
-    	ret = snprintf(buffer, sizeof(buffer), "Bus Voltage:       %4iV", tt.n.bus_v.value);
-        send_buffer((uint8_t*)buffer,ret,ptr);
+    	TERM_Box(handle, row_pos, col_pos, row_pos + 11, col_pos + 25);
+    	TERM_setCursorPos(handle, row_pos + 1, col_pos + 1);
+    	ttprintf("Bus Voltage:       %4iV", tt.n.bus_v.value);
 
-    	Term_Move_Cursor(row_pos + 2, col_pos + 1, ptr);
-    	ret = snprintf(buffer, sizeof(buffer), "Battery Voltage:   %4iV", tt.n.batt_v.value);
-        send_buffer((uint8_t*)buffer,ret,ptr);
+    	TERM_setCursorPos(handle, row_pos + 2, col_pos + 1);
+    	ttprintf("Battery Voltage:   %4iV", tt.n.batt_v.value);
 
-    	Term_Move_Cursor(row_pos + 3, col_pos + 1, ptr);
-    	ret = snprintf(buffer, sizeof(buffer), "Temp 1:          %4i *C", tt.n.temp1.value);
-        send_buffer((uint8_t*)buffer,ret,ptr);
+    	TERM_setCursorPos(handle, row_pos + 3, col_pos + 1);
+    	ttprintf("Temp 1:          %4i *C", tt.n.temp1.value);
 
-    	Term_Move_Cursor(row_pos + 4, col_pos + 1, ptr);
-    	ret = snprintf(buffer, sizeof(buffer), "Temp 2:          %4i *C", tt.n.temp2.value);
-        send_buffer((uint8_t*)buffer,ret,ptr);
+    	TERM_setCursorPos(handle, row_pos + 4, col_pos + 1);
+    	ttprintf("Temp 2:          %4i *C", tt.n.temp2.value);
 
-    	Term_Move_Cursor(row_pos + 5, col_pos + 1, ptr);
-        SEND_CONST_STRING("Bus status: ", ptr);
+    	TERM_setCursorPos(handle, row_pos + 5, col_pos + 1);
+        ttprintf("Bus status: ");
 
     	switch (tt.n.bus_status.value) {
     	case BUS_READY:
-            SEND_CONST_STRING("       Ready", ptr);
+            ttprintf("       Ready");
     		break;
     	case BUS_CHARGING:
-            SEND_CONST_STRING("    Charging", ptr);
+            ttprintf("    Charging");
     		break;
     	case BUS_OFF:
-            SEND_CONST_STRING("         OFF", ptr);
+            ttprintf("         OFF");
     		break;
         case BUS_BATT_UV_FLT:
-            SEND_CONST_STRING("  Battery UV", ptr);
+            ttprintf("  Battery UV");
     		break;
         case BUS_TEMP1_FAULT:
-            SEND_CONST_STRING("  Temp fault", ptr);
+            ttprintf("  Temp fault");
     		break;
     	}
 
-    	Term_Move_Cursor(row_pos + 6, col_pos + 1, ptr);
-    	ret = snprintf(buffer, sizeof(buffer), "Average power:     %4iW", tt.n.avg_power.value);
-        send_buffer((uint8_t*)buffer,ret,ptr);
+    	TERM_setCursorPos(handle, row_pos + 6, col_pos + 1);
+    	ttprintf("Average power:     %4iW", tt.n.avg_power.value);
 
-    	Term_Move_Cursor(row_pos + 7, col_pos + 1, ptr);
-    	ret = snprintf(buffer, sizeof(buffer), "Average Current: %4i.%iA", tt.n.batt_i.value / 10, tt.n.batt_i.value % 10);
-        send_buffer((uint8_t*)buffer,ret,ptr);
+    	TERM_setCursorPos(handle, row_pos + 7, col_pos + 1);
+    	ttprintf("Average Current: %4i.%iA", tt.n.batt_i.value / 10, tt.n.batt_i.value % 10);
 
-    	Term_Move_Cursor(row_pos + 8, col_pos + 1, ptr);
-    	ret = snprintf(buffer, sizeof(buffer), "Primary Current:   %4iA", tt.n.primary_i.value);
-        send_buffer((uint8_t*)buffer,ret,ptr);
+    	TERM_setCursorPos(handle, row_pos + 8, col_pos + 1);
+    	ttprintf("Primary Current:   %4iA", tt.n.primary_i.value);
         
-        Term_Move_Cursor(row_pos + 9, col_pos + 1, ptr);
-    	ret = snprintf(buffer, sizeof(buffer), "MIDI voices:         %1i/4", tt.n.midi_voices.value);
-        send_buffer((uint8_t*)buffer,ret,ptr);
+        TERM_setCursorPos(handle, row_pos + 9, col_pos + 1);
+    	ttprintf("MIDI voices:         %1i/4", tt.n.midi_voices.value);
         
-        Term_Move_Cursor(row_pos + 10, col_pos + 1, ptr);
+        TERM_setCursorPos(handle, row_pos + 10, col_pos + 1);
         if(tt.n.fres.value==-1){
-            ret = snprintf(buffer, sizeof(buffer), "Fres:        no feedback");
+            ttprintf("Fres:        no feedback");
         }else{
-    	    ret = snprintf(buffer, sizeof(buffer), "Fres:          %4i.%ikHz", tt.n.fres.value / 10, tt.n.fres.value % 10);
+    	    ttprintf("Fres:          %4i.%ikHz", tt.n.fres.value / 10, tt.n.fres.value % 10);
         }
-        send_buffer((uint8_t*)buffer,ret,ptr);
 
-    	Term_Restore_Cursor(ptr);
-    	Term_Enable_Cursor(ptr);
+    	TERM_sendVT100Code(handle, _VT100_CURSOR_RESTORE_POSITION,0);
+    	TERM_sendVT100Code(handle, _VT100_CURSOR_ENABLE,0);
         
     
     }else{
@@ -322,59 +336,78 @@ void show_overlay_100ms(port_str *ptr){
             if(tt.a[i].resend_time == TT_FAST){
                 if(tt.a[i].gauge!=TT_NO_TELEMETRY){
                     if(tt.a[i].high_res){
-                        send_gauge32(tt.a[i].gauge, tt.a[i].value, ptr);
+                        send_gauge32(tt.a[i].gauge, tt.a[i].value, handle);
                     }else{
-                        send_gauge(tt.a[i].gauge, tt.a[i].value, ptr);
+                        send_gauge(tt.a[i].gauge, tt.a[i].value, handle);
                     }
                 }
                 if(tt.a[i].chart!=TT_NO_TELEMETRY && chart){
-                    send_chart(tt.a[i].chart, tt.a[i].value, ptr);
+                    if(tt.a[i].divider>1){
+                        send_chart(tt.a[i].chart, tt.a[i].value / tt.a[i].divider, handle);
+                    }else{
+                        send_chart(tt.a[i].chart, tt.a[i].value, handle);
+                    }
                 }
             }
         }
         
 
-        if(ptr->term_mode==PORT_TERM_MQTT){
+        if(portM->term_mode==PORT_TERM_MQTT){
              ALARMS temp;
             if(alarm_pop(&temp)==pdPASS){
-                send_event(&temp,ptr);
+                send_event(&temp,handle);
+                alarm_free(&temp);
             }
         }else{
             if(chart){
-                send_chart_draw(ptr);
+                send_chart_draw(handle);
             }
         }
     }
 	
 }
 
-void show_overlay_400ms(port_str *ptr) {
-    if(ptr->term_mode == PORT_TERM_TT){
+void show_overlay_400ms(TERMINAL_HANDLE * handle) {
+    if(portM->term_mode == PORT_TERM_TT){
         for(uint32_t i = 0;i<N_TELE;i++){
-            if(tt.a[i].resend_time == TT_FAST){
+            if(tt.a[i].resend_time == TT_SLOW){
                 if(tt.a[i].gauge!=TT_NO_TELEMETRY){
                     if(tt.a[i].high_res){
-                        send_gauge32(tt.a[i].gauge, tt.a[i].value, ptr);
+                        send_gauge32(tt.a[i].gauge, tt.a[i].value, handle);
                     }else{
-                        send_gauge(tt.a[i].gauge, tt.a[i].value, ptr);
+                        send_gauge(tt.a[i].gauge, tt.a[i].value, handle);
                     }
                 }
                 if(tt.a[i].chart!=TT_NO_TELEMETRY && chart){
-                    send_chart(tt.a[i].chart, tt.a[i].value, ptr);
+                    if(tt.a[i].divider>1){
+                        send_chart(tt.a[i].chart, tt.a[i].value / tt.a[i].divider, handle);
+                    } else {
+                        send_chart(tt.a[i].chart, tt.a[i].value, handle);
+                    }
                 }
             }
         }
 
-        if(ptr->term_mode!=PORT_TERM_MQTT){
+        if(portM->term_mode!=PORT_TERM_MQTT){
             send_status(tt.n.bus_status.value!=BUS_OFF,
-                        tr_running!=0,
+                        interrupter.mode!=INTR_MODE_OFF,
                         configuration.ps_scheme!=AC_NO_RELAY_BUS_SCHEME,
-                        blocked,
-                        ptr);
+                        sysfault.interlock,
+                        handle);
         }
     }
 }
 
+void calculate_datarate(){
+    static uint32 last_rx=0;
+    static uint32 last_tx=0;
+  
+    tt.n.rx_datarate.value = ((uart_bytes_received-last_rx)*10)/4;
+    tt.n.tx_datarate.value = ((uart_bytes_transmitted-last_tx)*10)/4;
+    
+    last_rx=uart_bytes_received;
+    last_tx=uart_bytes_transmitted;
+}
 
 
 /* `#END` */
@@ -392,7 +425,8 @@ void tsk_overlay_TaskProc(void *pvParameters) {
 	/* `#START TASK_VARIABLES` */
     
     uint8_t cnt=0;
-    port_str *port = pvParameters;
+    
+    TERMINAL_HANDLE * handle = pvParameters;
 
 	/* `#END` */
 
@@ -403,12 +437,12 @@ void tsk_overlay_TaskProc(void *pvParameters) {
 	/* `#START TASK_INIT_CODE` */
 
 	/* `#END` */
-    switch(port->term_mode){
+    switch(portM->term_mode){
         case PORT_TERM_TT:
-            alarm_push(ALM_PRIO_INFO,warn_task_TT_overlay, port->num);
+            alarm_push(ALM_PRIO_INFO,warn_task_TT_overlay, portM->num);
         break;
         case PORT_TERM_MQTT:
-            alarm_push(ALM_PRIO_INFO,warn_task_MQTT_overlay, port->num);
+            alarm_push(ALM_PRIO_INFO,warn_task_MQTT_overlay, portM->num);
         break;
         case PORT_TERM_VT100:
             alarm_push(ALM_PRIO_INFO,warn_task_VT100_overlay, ALM_NO_VALUE);
@@ -418,21 +452,22 @@ void tsk_overlay_TaskProc(void *pvParameters) {
 	    
     for (;;) {
 		/* `#START TASK_LOOP_CODE` */
-        xSemaphoreTake(port->term_block, portMAX_DELAY);
-        show_overlay_100ms(pvParameters);
+        xSemaphoreTake(portM->term_block, portMAX_DELAY);
+        show_overlay_100ms(handle);
         if(cnt<3){
             cnt++;
         }else{
             cnt=0;
-            show_overlay_400ms(pvParameters);
+            calculate_datarate();
+            show_overlay_400ms(handle);
         }
         
         
         
-        xSemaphoreGive(port->term_block);
+        xSemaphoreGive(portM->term_block);
         
 		/* `#END` */
-        if(port->term_mode==PORT_TERM_VT100){
+        if(portM->term_mode==PORT_TERM_VT100){
 		    vTaskDelay(500 / portTICK_PERIOD_MS);
         }else{
             vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -443,17 +478,19 @@ void tsk_overlay_TaskProc(void *pvParameters) {
 /*****************************************************************************
 * Helper function for spawning the overlay task
 ******************************************************************************/
-void start_overlay_task(port_str *ptr){
-    if (ptr->telemetry_handle == NULL) {
-        switch(ptr->type){
+void start_overlay_task(TERMINAL_HANDLE * handle){
+    
+
+    if (portM->telemetry_handle == NULL) {
+        switch(portM->type){
         case PORT_TYPE_SERIAL:
-        	xTaskCreate(tsk_overlay_TaskProc, "Overl_S", STACK_OVERLAY, ptr, PRIO_OVERLAY, &ptr->telemetry_handle);
+        	xTaskCreate(tsk_overlay_TaskProc, "Overl_S", STACK_OVERLAY, handle, PRIO_OVERLAY, &portM->telemetry_handle);
         break;
         case PORT_TYPE_USB:
-    		xTaskCreate(tsk_overlay_TaskProc, "Overl_U", STACK_OVERLAY, ptr, PRIO_OVERLAY, &ptr->telemetry_handle);
+    		xTaskCreate(tsk_overlay_TaskProc, "Overl_U", STACK_OVERLAY, handle, PRIO_OVERLAY, &portM->telemetry_handle);
         break;
         case PORT_TYPE_MIN:
-        	xTaskCreate(tsk_overlay_TaskProc, "Overl_M", STACK_OVERLAY, ptr, PRIO_OVERLAY, &ptr->telemetry_handle);
+        	xTaskCreate(tsk_overlay_TaskProc, "Overl_M", STACK_OVERLAY, handle, PRIO_OVERLAY, &portM->telemetry_handle);
         break;
         }    
     }
@@ -463,10 +500,10 @@ void start_overlay_task(port_str *ptr){
 /*****************************************************************************
 * Helper function for killing the overlay task
 ******************************************************************************/
-void stop_overlay_task(port_str *ptr){
-    if (ptr->telemetry_handle != NULL) {
-        vTaskDelete(ptr->telemetry_handle);
-    	ptr->telemetry_handle = NULL;
+void stop_overlay_task(TERMINAL_HANDLE * handle){
+    if (portM->telemetry_handle != NULL) {
+        vTaskDelete(portM->telemetry_handle);
+    	portM->telemetry_handle = NULL;
     }
 }
 
@@ -474,85 +511,89 @@ void stop_overlay_task(port_str *ptr){
 * Initializes the teslaterm telemetry
 * Spawns the overlay task for telemetry stream generation
 ******************************************************************************/
-void init_tt(uint8_t with_chart, port_str *ptr){
+void init_tt(uint8_t with_chart, TERMINAL_HANDLE * handle){
     
     for(uint32_t i = 0;i<N_TELE;i++){
         if(tt.a[i].gauge!=TT_NO_TELEMETRY){
             if(tt.a[i].high_res){
-                send_gauge_config32(tt.a[i].gauge, tt.a[i].min, tt.a[i].max, tt.a[i].divider, tt.a[i].name, ptr);
+                send_gauge_config32(tt.a[i].gauge, tt.a[i].min, tt.a[i].max, tt.a[i].divider, tt.a[i].name, handle);
             }else{
-                send_gauge_config(tt.a[i].gauge, tt.a[i].min, tt.a[i].max, tt.a[i].name, ptr);
+                send_gauge_config(tt.a[i].gauge, tt.a[i].min, tt.a[i].max, tt.a[i].name, handle);
             }
         }
         if(tt.a[i].chart!=TT_NO_TELEMETRY && with_chart){
-            send_chart_config(tt.a[i].chart, tt.a[i].min, tt.a[i].max, tt.a[i].offset, tt.a[i].unit, tt.a[i].name, ptr);
+            if(tt.a[i].high_res){
+                send_chart_config(tt.a[i].chart, tt.a[i].min / tt.a[i].divider, tt.a[i].max / tt.a[i].divider, tt.a[i].offset / tt.a[i].divider, tt.a[i].unit, tt.a[i].name, handle);
+            }else{
+                send_chart_config(tt.a[i].chart, tt.a[i].min, tt.a[i].max, tt.a[i].offset, tt.a[i].unit, tt.a[i].name, handle);
+            }
         }
     }
 
-    start_overlay_task(ptr);
+    start_overlay_task(handle);
 }
 
 /*****************************************************************************
 * 
 ******************************************************************************/
-uint8_t command_status(char *commandline, port_str *ptr) {
-    SKIP_SPACE(commandline);
-    CHECK_NULL(commandline);
+uint8_t CMD_status(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+    if(argCount==0 || strcmp(args[0], "-?") == 0){
+        ttprintf("Usage: status [start|stop]\r\n");
+    }
 	
 
-	if (ntlibc_stricmp(commandline, "start") == 0) {
-		start_overlay_task(ptr);
-        return 1;
+	if(strcmp(args[0], "start") == 0){
+		start_overlay_task(handle);
+        return TERM_CMD_EXIT_SUCCESS;
 	}
-	if (ntlibc_stricmp(commandline, "stop") == 0) {
-		stop_overlay_task(ptr);
-        return 1;
+	if(strcmp(args[0], "stop") == 0){
+		stop_overlay_task(handle);
+        return TERM_CMD_EXIT_SUCCESS;
 	}
-
-	HELP_TEXT("Usage: status [start|stop]\r\n");
+    return TERM_CMD_EXIT_SUCCESS;
 }
 
-uint8_t command_tterm(char *commandline, port_str *ptr){
-    SKIP_SPACE(commandline);
-    CHECK_NULL(commandline);
-    
-	if (ntlibc_stricmp(commandline, "start") == 0) {
-        ptr->term_mode = PORT_TERM_TT;
-        init_tt(pdTRUE,ptr);
-        return 1;
+uint8_t CMD_tterm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+    if(argCount==0 || strcmp(args[0], "-?") == 0){
+        ttprintf("Usage: tterm [start|stop|mqtt|notelemetry]\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
     }
-    if (ntlibc_stricmp(commandline, "mqtt") == 0) {
+    port_str * ptr = handle->port;
+    
+	if(strcmp(args[0], "start") == 0){
+        ptr->term_mode = PORT_TERM_TT;
+        init_tt(pdTRUE,handle);
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    if(strcmp(args[0], "mqtt") == 0){
         ptr->term_mode = PORT_TERM_MQTT;
-        init_tt(pdFALSE,ptr);
-        return 1;
+        init_tt(pdFALSE,handle);
+        return TERM_CMD_EXIT_SUCCESS;
     }
-	if (ntlibc_stricmp(commandline, "notelemetry") == 0) {
+    if(strcmp(args[0], "notelemetry") == 0){
         ptr->term_mode = PORT_TERM_TT;
-        stop_overlay_task(ptr);
-        return 1;
+        stop_overlay_task(handle);
+        return TERM_CMD_EXIT_SUCCESS;
     }
-	if (ntlibc_stricmp(commandline, "stop") == 0) {
+	if(strcmp(args[0], "stop") == 0){
         ptr->term_mode = PORT_TERM_VT100;
-        stop_overlay_task(ptr);
-        return 1;
+        stop_overlay_task(handle);
+        return TERM_CMD_EXIT_SUCCESS;
 	} 
-    
-    HELP_TEXT("Usage: tterm [start|stop|mqtt|notelemetry]\r\n");
+    return TERM_CMD_EXIT_SUCCESS;
 }
 
 
-uint8_t telemetry_command_setup(char *commandline, port_str *ptr){
-    SKIP_SPACE(commandline);
-    CHECK_NULL(commandline); 
-    
-    char *buffer[5];
-    char temp[40];
-    uint8_t ret;
-    
-    uint8_t items = split(commandline, buffer, sizeof(buffer)/sizeof(char*), ' ');
-    
-    
-    if (ntlibc_stricmp(buffer[0], "list") == 0){
+uint8_t CMD_telemetry(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+    if(argCount==0 || strcmp(args[0], "-?") == 0){
+        ttprintf(   "Usage: telemetry list\r\n"
+                    "       telemetry ls\r\n"
+                    "       telemetry gauge n [name]\r\n"
+                    "       telemetry chart n [name]\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    } 
+            
+    if(strcmp(args[0], "list") == 0){
         for(int i=0;i<N_GAUGES;i++){
             int cnt=-1;
             for(uint8_t w=0;w<N_TELE;w++){
@@ -562,15 +603,14 @@ uint8_t telemetry_command_setup(char *commandline, port_str *ptr){
                 }
             }
             if(cnt==TT_NO_TELEMETRY){
-                ret = snprintf(temp, sizeof(temp),"Gauge %i: none\r\n",i);
+                ttprintf("Gauge %i: none\r\n",i);
             }else{
                 if(tt.a[cnt].high_res && tt.a[cnt].divider > 1){
-                    ret = snprintf(temp, sizeof(temp),"Gauge %i: %s = %.2f %s\r\n",i,tt.a[cnt].name,(float)tt.a[cnt].value/(float)tt.a[cnt].divider,units[tt.a[cnt].unit]);
+                    ttprintf("Gauge %i: %s = %.2f %s\r\n",i,tt.a[cnt].name,(float)tt.a[cnt].value/(float)tt.a[cnt].divider,units[tt.a[cnt].unit]);
                 }else{
-                    ret = snprintf(temp, sizeof(temp),"Gauge %i: %s = %i %s\r\n",i,tt.a[cnt].name,tt.a[cnt].value,units[tt.a[cnt].unit]);
+                    ttprintf("Gauge %i: %s = %i %s\r\n",i,tt.a[cnt].name,tt.a[cnt].value,units[tt.a[cnt].unit]);
                 }
             }
-            send_buffer((uint8_t*)temp,ret,ptr);
         }
         for(int i=0;i<N_CHARTS;i++){
             int cnt=-1;
@@ -581,39 +621,38 @@ uint8_t telemetry_command_setup(char *commandline, port_str *ptr){
                 }
             }
             if(cnt==TT_NO_TELEMETRY){
-                ret = snprintf(temp, sizeof(temp),"Chart %i: none\r\n",i);
+                ttprintf("Chart %i: none\r\n",i);
             }else{
                 if(tt.a[cnt].high_res && tt.a[cnt].divider > 1){
-                    ret = snprintf(temp, sizeof(temp),"Chart %i: %s = %.2f %s\r\n",i,tt.a[cnt].name,(float)tt.a[cnt].value/(float)tt.a[cnt].divider,units[tt.a[cnt].unit]);
+                    ttprintf("Chart %i: %s = %.2f %s\r\n",i,tt.a[cnt].name,(float)tt.a[cnt].value/(float)tt.a[cnt].divider,units[tt.a[cnt].unit]);
                 }else{
-                    ret = snprintf(temp, sizeof(temp),"Chart %i: %s = %i %s\r\n",i,tt.a[cnt].name,tt.a[cnt].value,units[tt.a[cnt].unit]);
+                    ttprintf("Chart %i: %s = %i %s\r\n",i,tt.a[cnt].name,tt.a[cnt].value,units[tt.a[cnt].unit]);
                 }
             }
-            send_buffer((uint8_t*)temp,ret,ptr);
         }
-        return pdPASS;
+        return TERM_CMD_EXIT_SUCCESS;
         
-    } else if (ntlibc_stricmp(buffer[0], "gauge") == 0 && items == 3) {
-        int n = ntlibc_atoi(buffer[1]);
+    } else if(strcmp(args[0], "gauge") == 0 && argCount == 3){
+        int n = atoi(args[1]);
         if(n>=N_GAUGES || n<0){
-            SEND_CONST_STRING("Gauge number must be between 0 and 6\r\n",ptr);
+            ttprintf("Gauge number must be between 0 and 6\r\n");
             return 0;
         }
-        if(ntlibc_stricmp(buffer[2],"none")==0){
+        if(strcmp(args[2],"none")==0){
             for(uint8_t w=0;w<N_TELE;w++){
                 if(n==tt.a[w].gauge){
                     tt.a[w].gauge=TT_NO_TELEMETRY;
                 }
             }
-            send_gauge_config(n,0,0,"none",ptr);
-            SEND_CONST_STRING("OK\r\n",ptr);
-            return pdPASS;
+            send_gauge_config(n,0,0,"none",handle);
+            ttprintf("OK\r\n");
+            return TERM_CMD_EXIT_SUCCESS;
         }
         
         
         int cnt=-1;
         for(uint8_t w=0;w<N_TELE;w++){
-            if(ntlibc_stricmp(buffer[2],tt.a[w].name)==0){
+            if(strcmp(args[2],tt.a[w].name)==0){
                 for(uint8_t i=0;i<N_TELE;i++){
                     if(n==tt.a[i].gauge)tt.a[i].gauge=TT_NO_TELEMETRY;
                 }
@@ -622,37 +661,37 @@ uint8_t telemetry_command_setup(char *commandline, port_str *ptr){
             }
         }
         if(cnt==TT_NO_TELEMETRY){
-            SEND_CONST_STRING("Telemetry name not found\r\n",ptr); 
+            ttprintf("Telemetry name not found\r\n"); 
         }else{
             tt.a[cnt].gauge = n;
-            SEND_CONST_STRING("OK\r\n",ptr);
+            ttprintf("OK\r\n");
             if(tt.a[cnt].high_res){
-                    send_gauge_config32(n,tt.a[cnt].min,tt.a[cnt].max,tt.a[cnt].divider,tt.a[cnt].name,ptr);
+                    send_gauge_config32(n,tt.a[cnt].min,tt.a[cnt].max,tt.a[cnt].divider,tt.a[cnt].name,handle);
             }else{
-                    send_gauge_config(n,tt.a[cnt].min,tt.a[cnt].max,tt.a[cnt].name,ptr);
+                    send_gauge_config(n,tt.a[cnt].min,tt.a[cnt].max,tt.a[cnt].name,handle);
             }
         }
-        return pdPASS;
+        return TERM_CMD_EXIT_SUCCESS;
 
-    } else if (ntlibc_stricmp(buffer[0], "chart") == 0 && items == 3) {
-        int8_t n = ntlibc_atoi(buffer[1]);
+    } else if (strcmp(args[0], "chart") == 0 && argCount == 3) {
+        int8_t n = atoi(args[1]);
         if(n>=N_CHARTS || n<0){
-            SEND_CONST_STRING("Chart number must be between 0 and 3\r\n",ptr);
-            return 0;
+            ttprintf("Chart number must be between 0 and 3\r\n");
+            return TERM_CMD_EXIT_SUCCESS;
         }
-        if(ntlibc_stricmp(buffer[2],"none")==0){
+        if(strcmp(args[2],"none")==0){
             for(uint8_t w=0;w<N_TELE;w++){
                 if(n==tt.a[w].chart){
                     tt.a[w].chart=TT_NO_TELEMETRY;
                 }
             }
-            send_chart_config(n,0,0,0,TT_UNIT_NONE,"none",ptr);
-            SEND_CONST_STRING("OK\r\n",ptr);
-            return pdPASS;
+            send_chart_config(n,0,0,0,TT_UNIT_NONE,"none",handle);
+            ttprintf("OK\r\n");
+            return TERM_CMD_EXIT_SUCCESS;
         }
         int cnt=-1;
         for(uint8_t w=0;w<N_TELE;w++){
-            if(ntlibc_stricmp(buffer[2],tt.a[w].name)==0){
+            if(strcmp(args[2],tt.a[w].name)==0){
                 for(uint8_t i=0;i<N_TELE;i++){
                     if(n==tt.a[i].chart)tt.a[i].chart=TT_NO_TELEMETRY;
                 }
@@ -661,25 +700,19 @@ uint8_t telemetry_command_setup(char *commandline, port_str *ptr){
             }
         }
         if(cnt==TT_NO_TELEMETRY){
-            SEND_CONST_STRING("Telemetry name not found\r\n",ptr);
+            ttprintf("Telemetry name not found\r\n");
         }else{
             tt.a[cnt].chart = n;
-            SEND_CONST_STRING("OK\r\n",ptr);
-            send_chart_config(n,tt.a[cnt].min,tt.a[cnt].max,tt.a[cnt].offset,tt.a[cnt].unit,tt.a[cnt].name,ptr);
+            ttprintf("OK\r\n");
+            send_chart_config(n,tt.a[cnt].min,tt.a[cnt].max,tt.a[cnt].offset,tt.a[cnt].unit,tt.a[cnt].name,handle);
         }
-        return pdPASS;
+        return TERM_CMD_EXIT_SUCCESS;
 
-    } else if (ntlibc_stricmp(buffer[0], "ls") == 0) {
+    } else if (strcmp(args[0], "ls") == 0) {
         for(uint8_t w=0;w<N_TELE;w++){
-            ret = snprintf(temp, sizeof(temp),"%i: %s\r\n", w+1, tt.a[w].name);
-            send_buffer((uint8_t*)temp,ret,ptr);
+            ttprintf("%i: %s\r\n", w+1, tt.a[w].name);
         }
-        return pdPASS;
+        return TERM_CMD_EXIT_SUCCESS;
     }
-    
-    
- 	HELP_TEXT("Usage: telemetry list\r\n"
-              "       telemetry ls\r\n"
-              "       telemetry gauge n [name]\r\n"
-              "       telemetry chart n [name]\r\n");
+    return TERM_CMD_EXIT_SUCCESS;
 }

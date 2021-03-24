@@ -30,7 +30,8 @@ static const char* version[]= {
     "build_time="__DATE__";"__TIME__,
     "timebase=1000",
     "time_count=up",
-    "notelemetry_supported=1"
+    "notelemetry_supported=1",
+    "min_sid_support=1"
 };
     
 #endif

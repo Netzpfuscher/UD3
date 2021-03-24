@@ -26,12 +26,14 @@
 #include <stdlib.h>
 #include "qcw.h"
 #include "interrupter.h"
-#include "ntlibc.h"
 #include "hardware.h"
 
 #include "ZCDtoPWM.h"
 #include "helper/teslaterm.h"
 #include "tasks/tsk_overlay.h"
+#include "tasks/tsk_midi.h"
+
+TimerHandle_t xQCW_Timer;
 
 void qcw_handle(){
     if(SG_Timer_ReadCounter() < timer.time_stop){
@@ -100,14 +102,14 @@ void qcw_ramp_line(uint16_t x0,uint8_t y0,uint16_t x1, uint8_t y1){
 }
 
 
-void qcw_ramp_visualize(CHART *chart, port_str *ptr){
+void qcw_ramp_visualize(CHART *chart, TERMINAL_HANDLE * handle){
     for(uint16_t i = 0; i<sizeof(ramp.data)-1;i++){
-        send_chart_line(chart->offset_x+i,chart->height+chart->offset_y-ramp.data[i],chart->offset_x+i+1,chart->height+chart->offset_y-ramp.data[i+1], TT_COLOR_GREEN ,ptr);
+        send_chart_line(chart->offset_x+i,chart->height+chart->offset_y-ramp.data[i],chart->offset_x+i+1,chart->height+chart->offset_y-ramp.data[i+1], TT_COLOR_GREEN ,handle);
     }
     uint16_t red_line;
     red_line = configuration.max_qcw_pw*10 / MIDI_ISR_US;
     
-    send_chart_line(chart->offset_x+red_line,chart->offset_y,chart->offset_x+red_line,chart->offset_y+chart->height, TT_COLOR_RED ,ptr);
+    send_chart_line(chart->offset_x+red_line,chart->offset_y,chart->offset_x+red_line,chart->offset_y+chart->height, TT_COLOR_RED, handle);
     
 }
 
@@ -154,36 +156,49 @@ void qcw_stop(){
     QCW_enable_Control = 0;
 }
 
-uint8_t qcw_command_ramp(char *commandline, port_str *ptr){
-    SKIP_SPACE(commandline);
-    CHECK_NULL(commandline); 
+uint8_t callback_rampFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
+    ramp.changed = pdTRUE;
+    if(!QCW_enable_Control){
+        qcw_regenerate_ramp();
+    }
     
-    char *buffer[5];
-    uint8_t items = split(commandline, buffer, sizeof(buffer)/sizeof(char*), ' ');
+    return pdPASS;
+}
+
+
+
+uint8_t CMD_ramp(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+    if(argCount==0 || strcmp(args[0], "-?") == 0){
+        ttprintf(   "Usage: ramp line x1 y1 x2 y2\r\n"
+                    "       ramp point x y\r\n"
+                    "       ramp clear\r\n"
+                    "       ramp draw\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    } 
     
-    
-    if (ntlibc_stricmp(buffer[0], "point") == 0 && items == 3){
-        int x = ntlibc_atoi(buffer[1]);
-        int y = ntlibc_atoi(buffer[2]);
+  
+    if(strcmp(args[0], "point") == 0 && argCount == 3){
+        int x = atoi(args[1]);
+        int y = atoi(args[2]);
         qcw_ramp_point(x,y);
-        return pdPASS;
+        return TERM_CMD_EXIT_SUCCESS;
         
-    } else if (ntlibc_stricmp(buffer[0], "line") == 0 && items == 5) {
-        int x0 = ntlibc_atoi(buffer[1]);
-        int y0 = ntlibc_atoi(buffer[2]);
-        int x1 = ntlibc_atoi(buffer[3]);
-        int y1 = ntlibc_atoi(buffer[4]);
+    } else if(strcmp(args[0], "line") == 0 && argCount == 5){
+        int x0 = atoi(args[1]);
+        int y0 = atoi(args[2]);
+        int x1 = atoi(args[3]);
+        int y1 = atoi(args[4]);
         qcw_ramp_line(x0,y0,x1,y1);
-        return pdPASS;
+        return TERM_CMD_EXIT_SUCCESS;
         
-    } else if (ntlibc_stricmp(buffer[0], "clear") == 0) {
+    } else if(strcmp(args[0], "clear") == 0){
         for(uint16_t i = 0; i<sizeof(ramp.data);i++){
             ramp.data[i] = 0;
         }
-        return pdPASS;
-    } else if (ntlibc_stricmp(buffer[0], "draw") == 0) {
+        return TERM_CMD_EXIT_SUCCESS;
+    } else if(strcmp(args[0], "draw") == 0){
         tsk_overlay_chart_stop();
-        send_chart_clear(ptr);
+        send_chart_clear(handle);
         CHART temp;
         temp.height = RAMP_CHART_HEIGHT;
         temp.width = RAMP_CHART_WIDTH;
@@ -192,14 +207,77 @@ uint8_t qcw_command_ramp(char *commandline, port_str *ptr){
         temp.div_x = RAMP_CHART_DIV_X;
         temp.div_y = RAMP_CHART_DIV_Y;
         
-        tt_chart_init(&temp,ptr);
-        qcw_ramp_visualize(&temp,ptr);
-        return pdPASS;
+        tt_chart_init(&temp,handle);
+        qcw_ramp_visualize(&temp,handle);
+        return TERM_CMD_EXIT_SUCCESS;
     }
-    
-    
- 	HELP_TEXT("Usage: ramp line x1 y1 x2 y2\r\n"
-              "       ramp point x y\r\n"
-              "       ramp clear\r\n"
-              "       ramp draw\r\n");   
+     return TERM_CMD_EXIT_SUCCESS;
+}
+
+/*****************************************************************************
+* Timer callback for the QCW autofire
+******************************************************************************/
+void vQCW_Timer_Callback(TimerHandle_t xTimer){
+    qcw_regenerate_ramp();
+    qcw_start();
+    qcw_reg = 1;
+    if(param.qcw_repeat<100) param.qcw_repeat = 100;
+    xTimerChangePeriod( xTimer, param.qcw_repeat / portTICK_PERIOD_MS, 0 );
+}
+
+BaseType_t QCW_delete_timer(void){
+    if (xQCW_Timer != NULL) {
+    	if(xTimerDelete(xQCW_Timer, 200 / portTICK_PERIOD_MS) != pdFALSE){
+            xQCW_Timer = NULL;
+            return pdPASS;
+        }else{
+            return pdFAIL;
+        }
+    }else{
+        return pdFAIL;
+    }
+}
+
+/*****************************************************************************
+* starts the QCW mode. Spawns a timer for the automatic QCW pulses.
+******************************************************************************/
+uint8_t CMD_qcw(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+    if(argCount==0 || strcmp(args[0], "-?") == 0){
+        ttprintf("Usage: qcw [start|stop]\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+        
+	if(strcmp(args[0], "start") == 0){
+        
+        switch_synth(SYNTH_MIDI);
+        if(param.qcw_repeat>99){
+            if(xQCW_Timer==NULL){
+                xQCW_Timer = xTimerCreate("QCW-Tmr", param.qcw_repeat / portTICK_PERIOD_MS, pdFALSE,(void * ) 0, vQCW_Timer_Callback);
+                if(xQCW_Timer != NULL){
+                    xTimerStart(xQCW_Timer, 0);
+                    ttprintf("QCW Enabled\r\n");
+                }else{
+                    ttprintf("Cannot create QCW Timer\r\n");
+                }
+            }
+        }else{
+            qcw_regenerate_ramp();
+		    qcw_start();
+            ttprintf("QCW single shot\r\n");
+        }
+		
+		return TERM_CMD_EXIT_SUCCESS;
+	}
+	if(strcmp(args[0], "stop") == 0){
+        if (xQCW_Timer != NULL) {
+				if(!QCW_delete_timer()){
+                    ttprintf("Cannot delete QCW Timer\r\n");
+                }
+		}
+        qcw_stop();
+		ttprintf("QCW Disabled\r\n");
+        switch_synth(param.synth);
+		return TERM_CMD_EXIT_SUCCESS;
+	}
+	return TERM_CMD_EXIT_SUCCESS;
 }

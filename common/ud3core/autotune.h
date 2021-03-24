@@ -25,14 +25,10 @@
 #ifndef AUTOTUNE_H
 #define AUTOTUNE_H
 
-#define AT_WD_PRD 50 //mS between test bursts in auto-tune sweep mode
-
 #include <device.h>
-#include "cli_basic.h"
+#include "TTerm.h"
 
-void autotune_draw_d(port_str *ptr);
-
-uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint8_t channel, uint8_t delay, port_str *ptr);
+uint8_t CMD_tune(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 
 #endif
 

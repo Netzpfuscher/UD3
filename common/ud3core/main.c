@@ -32,6 +32,7 @@
 #include "ZCDtoPWM.h"
 #include "interrupter.h"
 #include "telemetry.h"
+#include "helper/printf.h"
 #include <device.h>
 
 #include "cli_common.h"
@@ -59,14 +60,16 @@ int main() {
 	system_fault_Control = 0; //this should suppress any start-up sparking until the system is ready
 	init_config();
     EEPROM_1_Start();
-    Mantmr_Start();
 	SG_Timer_Start();
     
     null_port.type = PORT_TYPE_NULL;
     null_port.tx = NULL;
     null_port.rx = NULL;
     
-    eeprom_load(&null_port);
+    null_handle->port = &null_port;
+    null_handle->print = stream_printf;
+    
+    eeprom_load(null_handle);
    
     
 	initialize_DMA();		  //sets up all DMA channels
@@ -75,13 +78,13 @@ int main() {
     
 	initialize_charging();
 
-	CyGlobalIntEnable; //enables interrupts
+	
 
 	//calls that must always happen after updating the configuration/settings
 	configure_ZCD_to_PWM();
-
-	rx_blink_Control = 1;
-
+    
+    LED4_Write(1);
+	
 
 	//Starting Tasks
     if(configuration.minprot){
@@ -104,7 +107,7 @@ int main() {
         tsk_display_Start();
     }
     
-    
+    //CyGlobalIntEnable; //enables interrupts
     alarm_push(ALM_PRIO_INFO, warn_general_startup, ALM_NO_VALUE);
 	vTaskStartScheduler();
     

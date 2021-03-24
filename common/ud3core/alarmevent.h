@@ -26,6 +26,8 @@
 #define alarmevent_H
     
 #include <device.h>
+#include "FreeRTOS.h"
+#include "TTerm.h"
     
 typedef struct __alarms__ {
 uint16 num;
@@ -34,14 +36,19 @@ char* message;
 uint32_t timestamp;
 uint32_t value;
 } ALARMS;
-    
 
+
+    
+BaseType_t ptr_is_in_flash(void* ptr);
+void alarm_push_c(uint8_t level, char* message, uint16_t len, int32_t value);
 void alarm_push(uint8_t level, const char* message, int32_t value);
 uint32_t alarm_get_num();
 void alarm_init();
 uint32_t alarm_get(uint32_t index, ALARMS * alm);
 void alarm_clear();
 uint32_t alarm_pop(ALARMS * alm);
+uint32_t alarm_free(ALARMS * alm);
+uint8_t CMD_alarms(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 
 #define ALM_PRIO_INFO       0
 #define ALM_PRIO_WARN       1
@@ -97,9 +104,17 @@ static const char warn_watchdog[]= "WD: Watchdog triggerd";
 static const char warn_serial_overrun[]= "COM: Serial buffer overrun";
 static const char warn_midi_overrun[]= "COM: MIDI buffer overrun";
 
+static const char warn_min_id[]= "COM: Unknown MIN ID";
+static const char warn_min_command[]= "COM: Unknown command";
 static const char warn_min_reset[]= "COM: MIN reset";
+static const char warn_min_event[]= "COM: Unknown event";
 
 static const char warn_midi_noSpace[]= "MIDI: No Space";
+
+static const char warn_sid_malformed[]= "SID: Malformed SID frame";
+static const char warn_sid_old[]= "SID: Old SID frame received";
+
+static const char warn_interrupter_ext[]= "INT: External interrupter active";
 
     
     

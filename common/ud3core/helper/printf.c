@@ -34,6 +34,10 @@
 #include <stdint.h>
 
 #include "printf.h"
+#include "FreeRTOS.h"
+#include "queue.h"
+#include "cli_basic.h"
+#include "debug.h"
 
 
 // define this globally (e.g. gcc -DPRINTF_INCLUDE_CONFIG_H ...) to include the
@@ -758,3 +762,49 @@ int fctprintf(void (*out)(char character, void* arg), void* arg, const char* for
   va_end(va);
   return ret;
 }
+
+void send_stream(char character, void* arg){
+    xStreamBufferSend(((port_str*)arg)->tx,&character, 1,portMAX_DELAY);
+}
+
+void stream_buffer(void * port, uint8_t * buffer, uint32_t len){
+    if(((port_str*)port)->tx==NULL) return;
+    while(len){
+		uint16_t space = xStreamBufferSpacesAvailable(((port_str*)port)->tx);
+		uint16_t len_t = len;
+		if(len>space) len_t = space;
+		uint16_t count = xStreamBufferSend(((port_str*)port)->tx,buffer, len_t,0);
+		buffer+=count;
+		len-=count;
+		if(!count) vTaskDelay(2);
+    }
+}
+
+void stream_printf(void * port, char* format, ...){
+    va_list va;
+    va_start(va, format);
+    if(format==NULL){
+        stream_buffer(port,va_arg(va,uint8_t*),va_arg(va,uint32_t));
+    }else{
+        if(((port_str*)port)->tx!=NULL){;
+            const out_fct_wrap_type out_fct_wrap = { &send_stream, port };
+            _vsnprintf(_out_fct, (char*)&out_fct_wrap, (size_t)-1, format, va);
+        }
+    }
+    va_end(va);
+    return;
+}
+
+void min_debug_prt(const char *fmt, ...){
+    if(debug_port == NULL) return;
+    port_str* port = (port_str*)debug_port->port;
+    va_list args;
+    va_start (args, fmt );
+    if(port->tx!=NULL){;
+            const out_fct_wrap_type out_fct_wrap = { &send_stream, port };
+            _vsnprintf(_out_fct, (char*)&out_fct_wrap, (size_t)-1, fmt, args);
+        }
+    va_end (args);
+}
+
+

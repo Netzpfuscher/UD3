@@ -49,12 +49,7 @@ uint8 tsk_thermistor_initVar = 0u;
 #include "telemetry.h"
 #include "tsk_priority.h"
 
-#define TEMP_INC 5
-#define RES_TABLE_SIZE 32
-
-#define RES_SHORT 270 //internal resistance to DAC
 #define THERM_DAC_VAL 23
-#define THERM_DAC_STEP 8 //micro amps
 
 #define TEMP1_FAULT 0x00FF
 #define TEMP2_FAULT 0xFF00
@@ -102,7 +97,7 @@ int16_t get_temp_counts(uint8_t channel){
     vTaskDelay(20);
     ADC_therm_StartConvert();
     vTaskDelay(20);
-    return ADC_therm_GetResult16();
+    return ADC_therm_GetResult16()-80;  //compensate for 100mV Offset
 }
 
 uint16 run_temp_check(void) {

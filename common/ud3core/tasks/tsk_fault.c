@@ -113,7 +113,7 @@ void handle_FAULT(void) {
 	//UVLO feedback via system_fault (LED2)
 	uint8_t flag=1;
     for(uint8_t i=0;i<sizeof(SYSFAULT);i++){
-        if(((uint8_t*)&sysfault)[i]) flag = 0;
+        if(((uint8_t*)&sysfault)[i]) flag = 0; //Sysfault is active low
     }
     system_fault_Control = flag;
 }
@@ -168,7 +168,7 @@ void tsk_fault_TaskProc(void *pvParameters) {
 		/* `#START TASK_LOOP_CODE` */
 		handle_UVLO();
         handle_FAULT();
-        rx_blink_Write(0);
+        LED4_Write(0);
         handle_no_fb();
 		/* `#END` */
 

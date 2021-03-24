@@ -39,6 +39,7 @@
 #include "semphr.h"
     
 #include "cli_basic.h"
+#include "TTerm.h"
     
 typedef struct __midich__ {
 	//uint8 expression; // Expression: Control change (Bxh) 0 bH
@@ -55,7 +56,7 @@ typedef struct __midich__ {
 typedef struct __channel__ {
 	uint8 midich;	// Channel of midi (0 - 15)
 	uint8 miditone;  // Midi's tone number (0-127)
-	uint8 volume;	// Volume (0 - 127) Not immediately reflected in port
+	uint8 volume;	// Volume (0 - 127)
 	uint8 updated;   // Was it updated?
     uint16 halfcount;
     uint32 freq;
@@ -63,12 +64,10 @@ typedef struct __channel__ {
     uint8 adsr_count;
     uint8 sustain;
     uint8 old_gate;
+    uint8_t noise;
 } CHANNEL;
     
-#define N_CHANNEL 8
-
 #define N_MIDICHANNEL 16
-
 #define SID_CHANNELS 3
 
 xQueueHandle qMIDI_rx;
@@ -94,8 +93,7 @@ extern const uint8_t kill_msg[3];
 extern volatile uint32_t next_frame;
 
 struct sid_f{
-    uint16_t freq[SID_CHANNELS];
-    uint16_t half[SID_CHANNELS];
+    uint32_t freq_fp8[SID_CHANNELS];
     uint16_t pw[SID_CHANNELS];
     uint8_t gate[SID_CHANNELS];
     uint8_t wave[SID_CHANNELS];
@@ -107,11 +105,13 @@ struct sid_f{
     uint32_t next_frame;
 };
 
-#define SYNTH_OFF       0
-#define SYNTH_MIDI      1
-#define SYNTH_SID       2
-#define SYNTH_MIDI_QCW  3
-#define SYNTH_SID_QCW   4
+enum SYNTH{
+    SYNTH_OFF=0,
+    SYNTH_MIDI=1,
+    SYNTH_SID=2,
+    SYNTH_MIDI_QCW=3,
+    SYNTH_SID_QCW=4
+};
 
 struct _filter{
     uint16_t min;
@@ -121,7 +121,9 @@ struct _filter{
 
 extern struct _filter filter;
 
-uint8_t command_SynthMon(char *commandline, port_str *ptr);
+uint8_t CMD_SynthMon(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+uint8_t callback_synthFilter(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+uint8_t callback_SynthFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 
 /*
  * Add user function prototypes in the below merge region to add user

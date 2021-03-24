@@ -27,6 +27,7 @@
     
 #include <device.h>
 #include "cli_basic.h"
+#include "TTerm.h"    
     
 /*
  * Add user task definitions, types, includes and other things in the below
@@ -40,16 +41,17 @@ void tsk_overlay_TaskProc(void *pvParameters);
 
 void tsk_overlay_chart_stop();
 void tsk_overlay_chart_start();
-uint8_t telemetry_command_setup(char *commandline, port_str *ptr);
 void init_telemetry();
-void start_overlay_task(port_str *ptr);
-void stop_overlay_task(port_str *ptr);
-void init_tt(uint8_t with_chart, port_str *ptr);
+void start_overlay_task(TERMINAL_HANDLE * handle);
+void stop_overlay_task(TERMINAL_HANDLE * handle);
+void init_tt(uint8_t with_chart, TERMINAL_HANDLE * handle);
 void recalc_telemetry_limits();
 
-uint8_t command_status(char *commandline, port_str *ptr);
-uint8_t command_tterm(char *commandline, port_str *ptr);
 
+uint8_t CMD_tterm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+uint8_t CMD_status(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+uint8_t CMD_telemetry(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+    
 /*
  * Add user function prototypes in the below merge region to add user
  * functionality to the task definition.

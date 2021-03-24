@@ -75,6 +75,8 @@ typedef struct __tele_human__ {
     TELE midi_voices;
     TELE duty;
     TELE fres;
+    TELE tx_datarate;
+    TELE rx_datarate;
 } TELE_HUMAN;
 
 #define N_TELE sizeof(TELE_HUMAN)/sizeof(TELE)

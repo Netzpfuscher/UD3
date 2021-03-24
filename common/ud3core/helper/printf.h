@@ -34,6 +34,7 @@
 
 #include <stdarg.h>
 #include <stddef.h>
+#include <stdint.h>
 
 
 #ifdef __cplusplus
@@ -95,7 +96,8 @@ int vsnprintf_(char* buffer, size_t count, const char* format, va_list va);
  * \return The number of characters that are sent to the output function, not counting the terminating null character
  */
 int fctprintf(void (*out)(char character, void* arg), void* arg, const char* format, ...);
-
+void stream_printf(void * port, char* format, ...);
+void stream_buffer(void * port, uint8_t * buffer, uint32_t len);
 
 #ifdef __cplusplus
 }

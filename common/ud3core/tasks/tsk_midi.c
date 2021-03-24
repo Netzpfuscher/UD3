@@ -6,7 +6,7 @@
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
- * the Software without restriction, including without limitation the rights to
+ * the Software withoutrestriction, including without limitation the rights to
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
  * the Software, and to permit persons to whom the Software is furnished to do so,
  * subject to the following conditions:
@@ -54,13 +54,113 @@ uint8 tsk_midi_initVar = 0u;
 #define PITCHBEND_ZEROBIAS (0x2000)
 #define PITCHBEND_DIVIDER ((uint32_t)0x1fff)
 
-#define COMMAND_NOTEONOFF 1
-#define COMMAND_NOTEOFF 4
-#define COMMAND_CONTROLCHANGE 2
-#define COMMAND_PITCHBEND 3
+enum midi_commands{
+    COMMAND_NOTEONOFF,
+    COMMAND_NOTEOFF,
+    COMMAND_CONTROLCHANGE,
+    COMMAND_PITCHBEND
+};
 
+enum ADSR{
+    ADSR_IDLE = 0,
+    ADSR_PENDING,
+    ADSR_ATTACK,
+    ADSR_DECAY,
+    ADSR_SUSTAIN,
+    ADSR_RELEASE,
+};
 
 struct _filter filter;
+
+/*****************************************************************************
+* Switches the synthesizer
+******************************************************************************/
+uint8_t callback_SynthFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
+    switch_synth(param.synth);
+    return 1;
+}
+
+uint8_t callback_synthFilter(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
+    uint8_t cnt=0;
+    uint16_t number=0;
+    char substring[20];
+    uint8_t str_size = strlen(configuration.synth_filter);
+    uint8_t flag=0;
+    
+    filter.min=0;
+    filter.max=20000;
+    if(configuration.synth_filter[0]=='\0'){  //No filter
+        for(uint8_t i=0;i<16;i++){
+            filter.channel[i]=pdTRUE;
+        }
+        return 1;
+    }else{
+        for(uint8_t i=0;i<16;i++){
+            filter.channel[i]=pdFALSE;
+        }
+    }
+    
+    for(uint8_t i=0;i<str_size;i++){
+        if(configuration.synth_filter[i]=='\0') break;
+        
+        if(configuration.synth_filter[i]=='c'){
+            cnt=0;
+            substring[0]='\0';
+            for(uint8_t w=i+1;w<str_size;w++){
+                if(isdigit(configuration.synth_filter[w])){
+                    substring[cnt]=configuration.synth_filter[w];
+                    cnt++;
+                }else{
+                    substring[cnt]='\0';
+                    break;
+                }
+            }
+            if(substring[0]){
+                number = atoi(substring);
+                if(number<16){
+                    filter.channel[number]=pdTRUE;
+                    flag=1;
+                }
+            }  
+        }else if(configuration.synth_filter[i]=='f'){
+            if(configuration.synth_filter[i+1]=='>' || configuration.synth_filter[i+1]=='<'){
+                cnt=0;
+                for(uint8_t w=i+2;w<str_size;w++){
+                    if(isdigit(configuration.synth_filter[w])){
+                        substring[cnt]=configuration.synth_filter[w];
+                        cnt++;
+                    }else{
+                        substring[cnt]='\0';
+                        break;
+                    }
+                }
+                if(cnt){
+                    number = atoi(substring);
+                    if(number<20000){
+                        if(configuration.synth_filter[i+1]=='>') filter.max = number;
+                        if(configuration.synth_filter[i+1]=='<') filter.min = number;
+                    }
+                } 
+            }
+        }     
+    }
+    if(filter.min > filter.max){
+        ttprintf("Error: Min frequency ist greater than max\r\n");
+    }
+    if(!flag){
+        for(uint8_t i=0;i<16;i++){
+            filter.channel[i]=pdTRUE;
+        }   
+    }
+
+    for(uint8_t i=0;i<sizeof(filter.channel);i++){
+        ttprintf("Channel %u: %u\r\n",i,filter.channel[i]);
+    }
+    ttprintf("Min frequency: %u\r\n",filter.min);
+    ttprintf("Max frequency: %u\r\n",filter.max);
+
+    return 1;
+}
 
 void reflect();
 
@@ -183,12 +283,6 @@ struct sid_f sid_frm;
 
 uint8_t old_flag[N_CHANNEL];
 
-#define ADSR_IDLE    0
-#define ADSR_ATTACK  1
-#define ADSR_DECAY   2
-#define ADSR_SUSTAIN 3
-#define ADSR_RELEASE 4
-
 
 static const uint8_t envelope[16] = {0,0,1,2,3,4,5,6,8,20,41,67,83,251,255,255};
 volatile uint8_t pulse_active=pdFALSE;
@@ -222,8 +316,8 @@ static inline void compute_adsr_midi(uint8_t ch){
         case ADSR_RELEASE:
             if(channel[ch].adsr_count>=midich[channel[ch].midich].release){
                 channel[ch].volume--;
-                if(channel[ch].volume==0 || channel[ch].volume>127) {
-                    channel[ch].volume=0;
+                if(channel[ch].volume==0) {
+                    channel[ch].sustain=0;
                     channel[ch].adsr_state=ADSR_IDLE;
                 }
                 channel[ch].adsr_count=0;
@@ -263,8 +357,7 @@ static inline void compute_adsr_sid(uint8_t ch){
             case ADSR_RELEASE:
                 if(channel[ch].adsr_count>=envelope[sid_frm.release[ch]]){
                     channel[ch].volume--;
-                    if(channel[ch].volume==0 || channel[ch].volume>127) {
-                        channel[ch].volume=0;
+                    if(channel[ch].volume==0) {
                         channel[ch].adsr_state=ADSR_IDLE;
                     }
                     channel[ch].adsr_count=0;
@@ -275,37 +368,76 @@ static inline void compute_adsr_sid(uint8_t ch){
         }
 }
 
-static inline void synthcode_MIDI(uint32_t r){
-    PULSE pulse;
-	uint8_t flag[N_CHANNEL];
-    tt.n.midi_voices.value=0;
-	for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
-
-        compute_adsr_midi(ch);
-        
-        flag[ch] = 0;
-		if (channel[ch].volume > 0) {
-            tt.n.midi_voices.value++;
-			if ((r / channel[ch].halfcount) % 2 > 0) {
-				flag[ch] = 1;
-			}
-		}
-		if (flag[ch] > old_flag[ch]) {
-            pulse.volume = channel[ch].volume;
-            pulse.pw = interrupter.pw;
-#if USE_DEBUG_PW           
-            pulse.pw = channel[ch].volume;
-#endif
-            xQueueSendFromISR(qPulse,&pulse,0);
-		}
-		old_flag[ch] = flag[ch];
-   
-	}
-    if(itr_end_Read()==0){
-        if(xQueueReceiveFromISR(qPulse,&pulse,0)){
-            interrupter_oneshot(pulse.pw, pulse.volume);
-        }  
+void synthcode_channel_enable(uint8_t ch, uint8_t ena){
+    switch(ch){
+        case 0:
+            if(ena) DDS32_1_Enable_ch(0); else DDS32_1_Disable_ch(0);
+            break;
+        case 1:
+            if(ena) DDS32_1_Enable_ch(1); else DDS32_1_Disable_ch(1);
+            break;
+        case 2:
+            if(ena) DDS32_2_Enable_ch(0); else DDS32_2_Disable_ch(0);
+            break;
+        case 3:
+            if(ena) DDS32_2_Enable_ch(1); else DDS32_2_Disable_ch(1);
+            break;
     }
+ }
+
+uint16_t synthcode_channel_freq_fp8(uint8_t ch, uint32_t freq){
+    switch(ch){
+        case 0:
+            return DDS32_1_SetFrequency_FP8(0,freq);
+        break;
+        case 1:
+            return DDS32_1_SetFrequency_FP8(1,freq);
+        break;
+        case 2:
+            return DDS32_2_SetFrequency_FP8(0,freq);
+        break;
+        case 3:
+            return DDS32_2_SetFrequency_FP8(1,freq);
+        break;
+    }
+    return 0;
+}
+
+void synthcode_noise(uint8_t ch, uint8_t ena, uint32_t rnd){
+    if(ena==0) return;
+    switch(ch){
+        case 0:
+            DDS32_1_WriteRand0(rnd);
+            break;
+        case 1:
+            DDS32_1_WriteRand1(rnd);
+            break;
+        case 2:
+            DDS32_2_WriteRand0(rnd);
+            break;
+        case 3:
+            DDS32_2_WriteRand1(rnd);
+            break;
+    }
+ }
+
+static inline void synthcode_MIDI(){
+    tt.n.midi_voices.value=0;
+    
+	for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
+        compute_adsr_midi(ch);
+        if(channel[ch].volume>0){
+            tt.n.midi_voices.value++;
+            #if DEBUG_PW==1
+                interrupter_set_pw(ch, channel[ch].volume);
+            #else
+                interrupter_set_pw_vol(ch,interrupter.pw,channel[ch].volume);
+            #endif
+            synthcode_channel_enable(ch,1);
+        }else{
+            synthcode_channel_enable(ch,0); 
+        }
+    }    
 }
 
 uint32_t volatile next_frame=4294967295;
@@ -319,18 +451,20 @@ static inline void synthcode_SID(uint32_t r){
         if(xQueueReceiveFromISR(qSID,&sid_frm,0)){
             last_frame=l_time;
             for(uint8_t i=0;i<SID_CHANNELS;i++){
-                channel[i].halfcount = sid_frm.half[i];
-                if(sid_frm.gate[i] > channel[i].old_gate) channel[i].adsr_state=ADSR_ATTACK;  //Rising edge
+                if(sid_frm.gate[i] > channel[i].old_gate) {
+                    channel[i].adsr_state=ADSR_ATTACK;  //Rising edge
+                }
                 if(sid_frm.gate[i] < channel[i].old_gate) channel[i].adsr_state=ADSR_RELEASE;  //Falling edge
                 sid_frm.pw[i]=sid_frm.pw[i]>>4;
-                channel[i].freq = sid_frm.freq[i];
                 channel[i].old_gate = sid_frm.gate[i];
-                channel[i].freq = sid_frm.freq[i];
+                channel[i].halfcount = (uint32_t)(SG_CLOCK_HALFCOUNT<<8)/sid_frm.freq_fp8[i];
+                channel[i].freq = synthcode_channel_freq_fp8(i,sid_frm.freq_fp8[i]); 
             }
             next_frame = sid_frm.next_frame;
         }
     }
-    if((l_time - last_frame)>200){
+    
+    if((l_time - last_frame)>100){
      next_frame = l_time;
      last_frame = l_time;
         for (uint8_t i = 0;i<SID_CHANNELS;++i) {
@@ -339,40 +473,32 @@ static inline void synthcode_SID(uint32_t r){
             channel[i].old_gate=0;
         }   
     }
-        
-    uint8_t random = rand();
-
-    PULSE pulse;
-	uint8_t flag[SID_CHANNELS];
-
+    
+    uint32_t rnd = rand();
+    uint8_t flag[SID_CHANNELS];
+    static uint8_t old_flag[SID_CHANNELS];
 	for (uint8_t ch = 0; ch < SID_CHANNELS; ch++) {
+        flag[ch]=0;
         compute_adsr_sid(ch);
-
-		flag[ch] = 0;
-		if (channel[ch].volume > 0) {
+        if(channel[ch].volume>0){
             tt.n.midi_voices.value++;
-			if ((r / channel[ch].halfcount) % 2 > 0) {
-				flag[ch] = 1; 
-			}
-		}
-		if (flag[ch] > old_flag[ch]) {
-            if(!(sid_frm.wave[ch] && (random & SID_NOISE_WEIGHT))){
-                pulse.volume = channel[ch].volume;
-                pulse.pw = sid_frm.master_pw;
-#if USE_DEBUG_PW
-                pulse.pw = channel[ch].volume;   //For DEBUG with speaker
-#endif
-                xQueueSendFromISR(qPulse,&pulse,0);
-            }
-		}   
-		old_flag[ch] = flag[ch];   
+            #if DEBUG_PW==1
+                interrupter_set_pw(ch, channel[ch].volume);
+            #else
+                interrupter_set_pw_vol(ch,sid_frm.master_pw,channel[ch].volume);
+            #endif
+            synthcode_channel_enable(ch,1);
+            //synthcode_noise(ch, sid_frm.wave[ch],rnd);
+            if (sid_frm.wave[ch] && (r / channel[ch].halfcount) % 2 > 0) {
+                flag[ch]=1;
+			}  
+            if(flag[ch] > old_flag[ch]) synthcode_noise(ch, sid_frm.wave[ch],rnd);
+        }else{
+            synthcode_channel_enable(ch,0); 
+        }
+  
 	}
-    if(itr_end_Read()==0){
-        if(xQueueReceiveFromISR(qPulse,&pulse,0)){
-            pulse_active=pdTRUE;
-            interrupter_oneshot(pulse.pw, pulse.volume);
-        } 
-    }
+
 }
 
 static inline void synthcode_QMIDI(uint32_t r){
@@ -406,16 +532,16 @@ static inline void synthcode_QSID(uint32_t r){
         if(xQueueReceiveFromISR(qSID,&sid_frm,0)){
             last_frame=l_time;
             for(uint8_t i=0;i<SID_CHANNELS;i++){
-                channel[i].halfcount = sid_frm.half[i];
+                channel[i].freq = sid_frm.freq_fp8[i]>>8;
+                channel[i].halfcount = (uint32_t)(SG_CLOCK_HALFCOUNT<<8)/sid_frm.freq_fp8[i];
                 if(sid_frm.gate[i] > channel[i].old_gate){
                     channel[i].adsr_state=ADSR_ATTACK;  //Rising edge
                     if(!QCW_enable_Control) qcw_start();
                 }
                 if(sid_frm.gate[i] < channel[i].old_gate) channel[i].adsr_state=ADSR_RELEASE;  //Falling edge
                 sid_frm.pw[i]=sid_frm.pw[i]>>4;
-                channel[i].freq = sid_frm.freq[i];
+                
                 channel[i].old_gate = sid_frm.gate[i];
-                channel[i].freq = sid_frm.freq[i];
             }
             next_frame = sid_frm.next_frame;
         }
@@ -470,7 +596,7 @@ CY_ISR(isr_synth) {
     }
     switch(param.synth){
         case SYNTH_MIDI:
-            synthcode_MIDI(r);
+            synthcode_MIDI();
             break;
         case SYNTH_SID:
             synthcode_SID(r);
@@ -487,12 +613,6 @@ CY_ISR(isr_synth) {
 }
 
 
-CY_ISR(isr_interrupter) { 
-    PULSE pulse;
-    if(xQueueReceiveFromISR(qPulse,&pulse,0)){
-        interrupter_oneshot(pulse.pw, pulse.volume);
-    }
-}
 
 void USBMIDI_1_callbackLocalMidiEvent(uint8 cable, uint8 *midiMsg) {
 	
@@ -553,8 +673,6 @@ void PortVolumeAllOff() {
 
 void MidichInit(MIDICH ptr[]) {
 	for (uint8_t cnt = 0; cnt < N_MIDICHANNEL; cnt++) {
-		//ptr[cnt].expression = 127; // Expression (0 - 127): Control change (Bxh) 0 BH xx
-
 		// Keep RPN in reset state: In order to avoid malfunctioning when data entry comes in suddenly
 		ptr[cnt].rpn_lsb = 127; // RPN (LSB): Control change (Bxh) 64H xx
 		ptr[cnt].rpn_msb = 127; // RPN (MSB): Control change (Bxh) 65H xx
@@ -574,7 +692,6 @@ void process(NOTE *v) {
 		if (v->data.noteonoff.vol > 0) {		 // Note ON
 			for (ch = 0; ch < N_CHANNEL; ch++) { // Search for ports that are already ringing with the same MIDI channel & node number
 				if (channel[ch].adsr_state != ADSR_IDLE && channel[ch].midich == v->midich && channel[ch].miditone == v->data.noteonoff.tone){
-                    
 					break;
                 }
 			}
@@ -592,7 +709,7 @@ void process(NOTE *v) {
   
                 if(v->data.noteonoff.vol>0){
                     if(param.synth == SYNTH_MIDI_QCW && !QCW_enable_Control) qcw_start();
-                    channel[ch].adsr_state = ADSR_ATTACK;
+                    channel[ch].adsr_state = ADSR_PENDING;
                 }else{
                     channel[ch].adsr_state = ADSR_RELEASE;
                 }
@@ -606,8 +723,6 @@ void process(NOTE *v) {
 					break;
 			}
 			if (ch < N_CHANNEL) { // A port was found
-				//channel[ch].volume = 0;
-                channel[ch].sustain=0;
                 channel[ch].adsr_state=ADSR_RELEASE;
 				channel[ch].updated = 1; // This port has been updated
 			}
@@ -615,10 +730,6 @@ void process(NOTE *v) {
 	} else if (v->command == COMMAND_CONTROLCHANGE) { // Control Change Processing
 
 		switch (v->data.controlchange.n) {
-		case 0x0b: // Expression
-			//midich[v->midich].expression = v->data.controlchange.value;
-			//midich[v->midich].updated = 1; // This MIDI channel has been updated
-			break;
         case 0x48: //Release
             midich[v->midich].release = v->data.controlchange.value;
             break;
@@ -670,10 +781,8 @@ void process(NOTE *v) {
 			break;
 		}
 	} else if (v->command == COMMAND_PITCHBEND) { // Processing Pitch Bend
-        
 		midich[v->midich].pitchbend = v->data.pitchbend.value;
 		midich[v->midich].updated = 1; // This MIDI channel has been updated
-        reflect();
 	}
 }
 
@@ -706,9 +815,12 @@ void reflect() {
 		if (channel[ch].updated || midich[mch].updated) {
 			if (channel[ch].adsr_state) {
                 pb = ((((uint32_t)midich[mch].pitchbend*midich[mch].bendrange)<<10) / PITCHBEND_DIVIDER)<<6;
-                channel[ch].freq=Q16n16_mtof((channel[ch].miditone<<16)+pb);
-                channel[ch].halfcount= (SG_CLOCK_HALFCOUNT<<14) / (channel[ch].freq>>2);
+                channel[ch].freq = Q16n16_mtof((channel[ch].miditone<<16)+pb);
+                channel[ch].halfcount = (SG_CLOCK_HALFCOUNT<<14) / (channel[ch].freq>>2);
+                synthcode_channel_freq_fp8(ch,channel[ch].freq>>8);
                 channel[ch].freq = channel[ch].freq >>16;
+                
+                if(channel[ch].adsr_state==ADSR_PENDING) channel[ch].adsr_state = ADSR_ATTACK;
                 if(filter.channel[ch]==0 || channel[ch].freq < filter.min || channel[ch].freq > filter.max){
                     channel[ch].adsr_state = ADSR_IDLE;   
                     channel[ch].volume = 0;
@@ -716,36 +828,44 @@ void reflect() {
                 }
 			}
 			channel[ch].updated = 0;													// Mission channel update work done
-		}
+		    midich[mch].updated = 0; // MIDI channel update work done
+        }
         
         if (channel[ch].sustain > 0){
             dutycycle+= ((uint32)channel[ch].sustain*(uint32)param.pw)/(127000ul/(uint32)channel[ch].freq);
         }
 	}
-	for (mch = 0; mch < N_MIDICHANNEL; mch++) {
-		midich[mch].updated = 0; // MIDI channel update work done
-	}
-    
-    
+   
     tt.n.duty.value = dutycycle;
     if(dutycycle>(configuration.max_tr_duty-param.temp_duty)){
         interrupter.pw = (param.pw * (configuration.max_tr_duty-param.temp_duty)) / dutycycle;
     }else{
         interrupter.pw = param.pw;
     }
-     
+    
 }
 
 void kill_accu(){
     for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
-                channel[ch].volume=0;
-                channel[ch].freq=0;
-                channel[ch].halfcount=0;
+        channel[ch].volume=0;
+        channel[ch].freq=0;
+        channel[ch].halfcount=0;
+        synthcode_channel_enable(ch,0);
 
 	}
 }
 
 void switch_synth(uint8_t synth){
+    if(configuration.is_qcw){
+        if(param.synth==SYNTH_MIDI) param.synth = SYNTH_MIDI_QCW;
+        if(param.synth==SYNTH_SID) param.synth = SYNTH_SID_QCW;
+    }
+    if(synth==SYNTH_OFF){
+        interrupter_DMA_mode(INTR_DMA_TR);
+        if(configuration.ext_interrupter) interrupter_update_ext();
+    }else if(synth==SYNTH_MIDI || synth==SYNTH_SID){
+        interrupter_DMA_mode(INTR_DMA_DDS);       
+    }
     skip_flag=0;
     tt.n.midi_voices.value=0;
     xQueueReset(qMIDI_rx);
@@ -753,47 +873,44 @@ void switch_synth(uint8_t synth){
     kill_accu();   
 }
 
-uint8_t command_SynthMon(char *commandline, port_str *ptr){
-    char buf[80];
-    uint8_t ret;
+uint8_t CMD_SynthMon(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     uint32_t freq=0;
     uint8_t channels=N_CHANNEL;
-    if(param.synth== SYNTH_SID) channels=3;
-    Term_Disable_Cursor(ptr);
-    Term_Erase_Screen(ptr);
-    SEND_CONST_STRING("Synthesizer monitor    (press q for quit)\r\n",ptr);
-    SEND_CONST_STRING("-----------------------------------------------------------\r\n",ptr);
-    while(getch(ptr,100 /portTICK_RATE_MS) != 'q'){
-        Term_Move_Cursor(3,1,ptr);
+    
+    TERM_sendVT100Code(handle, _VT100_CURSOR_DISABLE,0);
+    TERM_sendVT100Code(handle, _VT100_CLS,0);
+    ttprintf("Synthesizer monitor    [CTRL+C] for quit\r\n");
+    ttprintf("-----------------------------------------------------------\r\n");
+    while(Term_check_break(handle,100)){
+        TERM_setCursorPos(handle, 3,1);
+        if(param.synth == SYNTH_SID || param.synth == SYNTH_SID_QCW) channels=SID_CHANNELS;
+        if(param.synth == SYNTH_MIDI || param.synth == SYNTH_MIDI_QCW) channels=N_CHANNEL;
         
         for(uint8_t i=0;i<channels;i++){
-            ret=sprintf(buf,"Ch:   Freq:      \r");
-            send_buffer((uint8_t*)buf,ret,ptr);   
+            ttprintf("Ch:   Freq:      \r");
             if(channel[i].volume>0){
                 freq=channel[i].freq;
             }else{
                 freq=0;
             }
-            ret=sprintf(buf,"Ch: %u Freq: %u",i+1,freq);
-            send_buffer((uint8_t*)buf,ret,ptr);                 
-            Term_Move_Cursor_right(20,ptr);
-            ret=sprintf(buf,"Vol: ",i+1);
-            send_buffer((uint8_t*)buf,ret,ptr);
+            ttprintf("Ch: %u Freq: %u",i+1,freq);             
+            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 20);
+            ttprintf("Vol: ",i+1);
             uint8_t cnt = channel[i].volume/12;
 
             for(uint8_t w=0;w<10;w++){
                 if(w<cnt){
-                    send_char('o',ptr);
+                    ttprintf("o");
                 }else{
-                    send_char(' ',ptr);
+                    ttprintf(" ");
                 }
             }
-            SEND_CONST_STRING("\r\n",ptr);
+            ttprintf("\r\n");
         }
     }
-    SEND_CONST_STRING("\r\n",ptr);
-    Term_Enable_Cursor(ptr);
-    return 1;
+    ttprintf("\r\n");
+    TERM_sendVT100Code(handle, _VT100_CURSOR_ENABLE,0);
+    return TERM_CMD_EXIT_SUCCESS;
 }
 
 /* `#END` */
@@ -809,9 +926,9 @@ void tsk_midi_TaskProc(void *pvParameters) {
 	 * the the section below.
 	 */
 	/* `#START TASK_VARIABLES` */
-	qMIDI_rx = xQueueCreate(256, sizeof(NOTE));
-    qSID = xQueueCreate(64, sizeof(struct sid_f));
-    qPulse = xQueueCreate(16, sizeof(PULSE));
+	qMIDI_rx = xQueueCreate(N_QUEUE_MIDI, sizeof(NOTE));
+    qSID = xQueueCreate(N_QUEUE_SID, sizeof(struct sid_f));
+    qPulse = xQueueCreate(N_QUEUE_PULSE, sizeof(PULSE));
 
 	NOTE note_struct;
     
@@ -838,10 +955,6 @@ void tsk_midi_TaskProc(void *pvParameters) {
 
 
 	isr_midi_StartEx(isr_synth);
-    //isr_midi_StartEx(isr_sid);
-    
-	isr_interrupter_StartEx(isr_interrupter);
-    isr_interrupter_Enable();
 
 	/* `#END` */
     alarm_push(ALM_PRIO_INFO,warn_task_midi, ALM_NO_VALUE);

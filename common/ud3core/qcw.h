@@ -28,6 +28,7 @@
     
 #include <device.h>
 #include "cli_common.h"
+#include "TTerm.h"
 #include "helper/teslaterm.h"
     
 typedef struct
@@ -56,13 +57,12 @@ void qcw_regenerate_ramp();
 void qcw_handle();   
 void qcw_handle_synth();
 
-void qcw_ramp_visualize(CHART *chart, port_str *ptr);
+void qcw_ramp_visualize(CHART *chart, TERMINAL_HANDLE * handle);
 void qcw_ramp_line(uint16_t x0,uint8_t y0,uint16_t x1, uint8_t y1);
 void qcw_ramp_point(uint16_t x,uint8_t y);
     
-uint8_t qcw_command_ramp(char *commandline, port_str *ptr);
-    
-    
-    
+uint8_t CMD_ramp(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+uint8_t callback_rampFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+BaseType_t QCW_delete_timer(void);    
     
 #endif

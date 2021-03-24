@@ -28,6 +28,7 @@
 #include "tsk_analog.h"
 #include "tsk_fault.h"
 #include "alarmevent.h"
+#include "config.h"
 
 /* RTOS includes. */
 #include "FreeRTOS.h"
@@ -36,6 +37,7 @@
 #include "semphr.h"
 #include "timers.h"
 #include "interrupter.h"
+#include "helper/FastPID.h"
 
 #include <stdlib.h>
 #include "math.h"
@@ -51,10 +53,7 @@ xQueueHandle adc_data;
 TimerHandle_t xCharge_Timer;
 
 
-#define ADC_BUFFER_CNT  25
 
-
-#define NEW_DATA_RATE_MS (0.125 * ADC_BUFFER_CNT)  //ms
 
 
 /* ------------------------------------------------------------------------ */
@@ -82,10 +81,6 @@ TimerHandle_t xCharge_Timer;
 #define ADC_DMA_SRC_BASE (CYDEV_PERIPH_BASE)
 #define ADC_DMA_DST_BASE (CYDEV_SRAM_BASE)
 
-#define SAMPLES_COUNT 2048
-
-#define BUSV_R_BOT 5000UL
-
 #define INITIAL 0 /* Initial value of the filter memory. */
 
 typedef struct
@@ -94,9 +89,12 @@ typedef struct
 	uint64_t sum_squares;
 } rms_t;
 
-uint16 ADC_sample_buf_0[4*ADC_BUFFER_CNT];
-uint16 ADC_sample_buf_1[4*ADC_BUFFER_CNT];
-uint16 *ADC_active_sample_buf = ADC_sample_buf_0;
+
+adc_sample_t ADC_sample_buf_0[ADC_BUFFER_CNT];
+adc_sample_t ADC_sample_buf_1[ADC_BUFFER_CNT];
+adc_sample_t *ADC_active_sample_buf = ADC_sample_buf_0;
+
+FastPID pid_current;
 
 rms_t current_idc;
 uint8_t ADC_mux_ctl[4] = {0x05, 0x02, 0x03, 0x00};
@@ -204,21 +202,21 @@ uint16_t read_driver_mv(uint16_t raw_adc){
     return driver_voltage;
 }
 
-uint16_t CT1_Get_Current(uint8_t channel) {
-    uint32_t counts = ADC_DelSig_1_GetResult16();
+uint32_t CT1_Get_Current(uint8_t channel) {
+    int32_t counts = ADC_peak_GetResult16();
 	if (channel == CT_PRIMARY) {
-		return ((ADC_DelSig_1_CountsTo_mVolts(counts) * configuration.ct1_ratio) / configuration.ct1_burden) / 100;
+		return ((ADC_peak_CountsTo_mVolts(counts) * configuration.ct1_ratio) / configuration.ct1_burden) / 100;
 	} else {
-		return ((ADC_DelSig_1_CountsTo_mVolts(counts) * configuration.ct3_ratio) / configuration.ct3_burden) / 100;
+		return ((ADC_peak_CountsTo_mVolts(counts) * configuration.ct3_ratio) / configuration.ct3_burden) / 100;
 	}
 }
 
 float CT1_Get_Current_f(uint8_t channel) {
-    uint32_t counts = ADC_DelSig_1_GetResult16();
+    int32_t counts = ADC_peak_GetResult16();
 	if (channel == CT_PRIMARY) {
-		return ((float)(ADC_DelSig_1_CountsTo_Volts(counts) * 10) / (float)(configuration.ct1_burden) * configuration.ct1_ratio);
+		return ((float)(ADC_peak_CountsTo_Volts(counts) * 10) / (float)(configuration.ct1_burden) * configuration.ct1_ratio);
 	} else {
-		return ((float)(ADC_DelSig_1_CountsTo_Volts(counts) * 10) / (float)(configuration.ct3_burden) * configuration.ct3_ratio);
+		return ((float)(ADC_peak_CountsTo_Volts(counts) * 10) / (float)(configuration.ct3_burden) * configuration.ct3_ratio);
 	}
 }
 
@@ -248,65 +246,55 @@ uint16_t average_filter(uint32_t *ptr, uint16_t sample) {
 }
 
 void calculate_rms(void) {
-    static uint16_t count=0;
-	//while (uxQueueMessagesWaiting(adc_data)) {
-    for(uint8_t i=0;i<ADC_BUFFER_CNT;i+=4){
+    
+    static uint16_t old_curr_setpoint=0;
+    
+    for(uint8_t i=0;i<ADC_BUFFER_CNT;i++){
 
 		// read the battery voltage
-		tt.n.batt_v.value = read_bus_mv(ADC_active_sample_buf[i+DATA_VBATT]) / 1000;
+		tt.n.batt_v.value = read_bus_mv(ADC_active_sample_buf[i].v_batt) / 1000;
 
 		// read the bus voltage
-		tt.n.bus_v.value = read_bus_mv(ADC_active_sample_buf[i+DATA_VBUS]) / 1000;
+		tt.n.bus_v.value = read_bus_mv(ADC_active_sample_buf[i].v_bus) / 1000;
 
 		// read the battery current
         if(configuration.ct2_type==CT2_TYPE_CURRENT){
-		    tt.n.batt_i.value = (((uint32_t)rms_filter(&current_idc, ADC_active_sample_buf[i+DATA_IBUS]) * params.idc_ma_count) / 100);
+		    tt.n.batt_i.value = (((uint32_t)rms_filter(&current_idc, ADC_active_sample_buf[i].i_bus) * params.idc_ma_count) / 100);
         }else{
-            tt.n.batt_i.value = ((((int32_t)rms_filter(&current_idc, ADC_active_sample_buf[i+DATA_IBUS])-params.ct2_offset_cnt) * params.idc_ma_count) / 100);
+            tt.n.batt_i.value = ((((int32_t)rms_filter(&current_idc, ADC_active_sample_buf[i].i_bus)-params.ct2_offset_cnt) * params.idc_ma_count) / 100);
         }
 
 		tt.n.avg_power.value = tt.n.batt_i.value * tt.n.bus_v.value / 10;
 	}
     
     // read the driver voltage
-    tt.n.driver_v.value = read_driver_mv(ADC_active_sample_buf[DATA_VDRIVER]);
+    tt.n.driver_v.value = read_driver_mv(ADC_active_sample_buf[0].v_driver);
     tt.n.primary_i.value = CT1_Get_Current(CT_PRIMARY);
     
-    if(configuration.max_const_i){  //Only do i2t calculation if enabled
-        if(count<100){
-            int16_t e= abs(tt.n.batt_i.value-configuration.max_const_i);
-            count += e;
-        }else{
-            count = 0;   
+    if(configuration.max_dc_curr){
+        param.temp_duty = configuration.max_tr_duty-pid_step(&pid_current,configuration.max_dc_curr,tt.n.batt_i.value);
+        if(param.temp_duty != old_curr_setpoint){
+            if(interrupter.mode == INTR_MODE_TR){
+                update_interrupter();
+            }else{
+                update_midi_duty();
+            }
         }
+        old_curr_setpoint = param.temp_duty;
+    }
+    
+    if(configuration.max_const_i){  //Only do i2t calculation if enabled
         switch (i2t_calculate()){
             case I2T_LIMIT:
                 sysfault.fuse=1;
                 interrupter_kill();   
                 break;
             case I2T_WARNING:
-                sysfault.fuse=1;
-                if(tt.n.batt_i.value>configuration.max_const_i && !count){
-                    if(param.temp_duty<configuration.max_tr_duty) param.temp_duty++; 
-                    if(tr_running==1){
-                        update_interrupter();
-                    }else{
-                        update_midi_duty();
-                    }
-                }
+                sysfault.fuse=0;
                 break;
             case I2T_NORMAL:
                 sysfault.fuse=0;
-                if(tt.n.batt_i.value<configuration.max_const_i && !count){
-                    if(param.temp_duty>0) param.temp_duty--; 
-                    if(tr_running==1){
-                        update_interrupter();
-                    }else{
-                        update_midi_duty();
-                    }
-                }
-                break;
-                
+                break;      
         }
     }
     
@@ -319,7 +307,7 @@ void calculate_rms(void) {
 void initialize_analogs(void) {
 	
 	CT_MUX_Start();
-	ADC_DelSig_1_Start();
+    ADC_peak_Start();
 	Sample_Hold_1_Start();
 	Comp_1_Start();
 
@@ -402,7 +390,7 @@ void ac_precharge_bus_scheme(){
                 alarm_push(ALM_PRIO_INFO,warn_bus_charging, ALM_NO_VALUE);
             }
             sysfault.charge=1;
-			relay_Write(RELAY_CHARGE);
+			relay_write_bus(1);
 			tt.n.bus_status.value = BUS_CHARGING;
 		}
 		charging_counter = 0;
@@ -413,11 +401,11 @@ void ac_dual_meas_scheme(){
 }
 
 void ac_precharge_fixed_delay(){
-    if(relay_Read()==RELAY_OFF){
+    if(relay_read_bus() && relay_read_charge_end()){
         alarm_push(ALM_PRIO_INFO,warn_bus_charging, ALM_NO_VALUE);
         sysfault.charge=1;
         xTimerStart(xCharge_Timer,0);
-        relay_Write(RELAY_CHARGE);
+        relay_write_bus(1);
         tt.n.bus_status.value = BUS_CHARGING;
     }    
 }
@@ -425,15 +413,16 @@ void ac_precharge_fixed_delay(){
 void vCharge_Timer_Callback(TimerHandle_t xTimer){
     timer_triggerd=0;
     if(bus_command== BUS_COMMAND_ON){
-        if(relay_Read()==RELAY_CHARGE){
+        if(relay_read_bus()){
             alarm_push(ALM_PRIO_INFO,warn_bus_ready, ALM_NO_VALUE);
-            relay_Write(RELAY_ON);
+            relay_write_charge_end(1);
             tt.n.bus_status.value = BUS_READY;
             sysfault.charge=0;
             sysfault.bus_uv=0;
         }
     }else{
-        relay_Write(RELAY_OFF);
+        relay_write_bus(0);
+        relay_read_charge_end(0);
         sysfault.charge=0;
         alarm_push(ALM_PRIO_INFO,warn_bus_off, ALM_NO_VALUE);
         tt.n.bus_status.value = BUS_OFF;
@@ -445,10 +434,10 @@ void control_precharge(void) { //this gets called from tsk_analogs.c when the AD
 	if (bus_command == BUS_COMMAND_ON) {
         switch(configuration.ps_scheme){
             case BAT_PRECHARGE_BUS_SCHEME:
-
+                //Not implemented
             break;
             case BAT_BOOST_BUS_SCHEME:
-
+                //Not implemented
             break;
             case AC_PRECHARGE_BUS_SCHEME:
                 ac_precharge_bus_scheme();
@@ -461,9 +450,10 @@ void control_precharge(void) { //this gets called from tsk_analogs.c when the AD
             break;
         } 
 	} else {
-		if ((relay_Read()==RELAY_ON || relay_Read()==RELAY_CHARGE) && timer_triggerd==0){
+		if ((relay_read_charge_end() || relay_read_bus()) && timer_triggerd==0){
             sysfault.charge=1;
-			relay_Write(RELAY_CHARGE);
+			relay_write_bus(1);
+            relay_write_charge_end(0);
             timer_triggerd=1;
             xTimerStart(xCharge_Timer,0);
 		}
@@ -474,6 +464,16 @@ void reconfig_charge_timer(){
     if(xCharge_Timer!=NULL){
         xTimerChangePeriod(xCharge_Timer,configuration.chargedelay / portTICK_PERIOD_MS,0);
     }
+}
+
+uint8_t callback_pid(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
+    pid_new(&pid_current,configuration.pid_curr_p,configuration.pid_curr_i,0,CURRENT_PID_HZ,10,false);
+    pid_set_anti_windup(&pid_current,0,configuration.max_tr_duty);
+    pid_set_limits(&pid_current,0,configuration.max_tr_duty);
+    if(pid_current._cfg_err==true){
+        ttprintf("PID value error\r\n");   
+    }
+    return pdPASS;
 }
 
 /* `#END` */
@@ -505,6 +505,9 @@ void tsk_analog_TaskProc(void *pvParameters) {
 	adc_ready_Semaphore = xSemaphoreCreateBinary();
 
 	initialize_analogs();
+    
+    CyGlobalIntEnable;
+
     
     alarm_push(ALM_PRIO_INFO,warn_task_analog, ALM_NO_VALUE);
 

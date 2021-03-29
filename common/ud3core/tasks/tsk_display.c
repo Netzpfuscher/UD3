@@ -257,7 +257,7 @@ void tsk_display_Start(void) {
 	 	* Create the task and then leave. When FreeRTOS starts up the scheduler
 	 	* will call the task procedure and start execution of the task.
 	 	*/
-		xTaskCreate(tsk_display_TaskProc, "Display-Svc", STACK_DISPLAY, NULL, PRIO_DISPALY, &tsk_display_TaskHandle);
+		xTaskCreate(tsk_display_TaskProc, "Display-Svc", STACK_DISPLAY, NULL, PRIO_DISPLAY, &tsk_display_TaskHandle);
 		tsk_display_initVar = 1;
 	}
 }

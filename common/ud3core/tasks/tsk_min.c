@@ -318,15 +318,6 @@ void poll_UART(){
     
 }
 
-uint8_t assemble_command(uint8_t cmd, char *str, uint8_t *buf){
-    uint8_t len=0;
-    *buf = cmd;
-    buf++;
-    len=strlen(str);
-    memcpy(buf,str,len);
-    return len+1;
-}
-
 void send_command_wq(struct min_context *ctx, uint8_t cmd, char *str){
     uint8_t len=0;
     uint8_t buf[40];
@@ -362,7 +353,6 @@ uint8_t min_send(uint8_t id, uint8_t *data, uint8_t len, TickType_t ticks){
         return pdFAIL;
     }      
 }
-
 
 
 /* `#END` */

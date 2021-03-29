@@ -115,7 +115,6 @@ void init_config(){
     configuration.ps_scheme = 2;
     configuration.autotune_s = 1;
     configuration.baudrate = 460800;
-    configuration.spi_speed = 16;
     configuration.r_top = 500000;
     strncpy(configuration.ud_name,"UD3-Tesla", sizeof(configuration.ud_name));
     strncpy(configuration.synth_filter,"f<0f>20000", sizeof(configuration.ud_name));  //No filter
@@ -228,7 +227,6 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_fault_i"     , configuration.max_fault_i     , 0      ,2000   ,10     ,callback_i2tFunction        ,"Maximum fault current for 10s [A]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"baudrate"        , configuration.baudrate        , 1200   ,4000000,0      ,callback_baudrateFunction   ,"Serial baudrate")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ivo_uart"        , configuration.ivo_uart        , 0      ,11     ,0      ,callback_ivoUART            ,"[RX][TX] 0=not inverted 1=inverted")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"spi_speed"       , configuration.spi_speed       , 10     ,160    ,10     ,callback_SPIspeedFunction   ,"SPI speed [MHz]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"r_bus"           , configuration.r_top           , 100    ,1000000,1000   ,callback_TTupdateFunction   ,"Series resistor of voltage input [kOhm]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ena_display"     , configuration.enable_display  , 0      ,6      ,0      ,NULL                        ,"Enables the WS2812 display")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"synth_filter"    , configuration.synth_filter    , 0      ,0      ,0      ,callback_synthFilter        ,"Synthesizer filter string")
@@ -249,7 +247,6 @@ void eeprom_load(TERMINAL_HANDLE * handle){
     update_ivo_uart();
     update_visibilty();
     uart_baudrate(configuration.baudrate);
-    spi_speed(configuration.spi_speed);
     callback_synthFilter(NULL,0, handle);
     ramp.changed = pdTRUE;
     qcw_regenerate_ramp();
@@ -403,36 +400,7 @@ uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, TERMINAL_
 		return 1;
 }
 
-/*****************************************************************************
-* Callback if the SPI speed is changed
-******************************************************************************/
-void spi_speed(uint32_t speed){
-    speed = speed * 100000;
-    float divider = (float)(BCLK__BUS_CLK__HZ/8)/(float)speed;
-   
-    uint32_t down_rate = (BCLK__BUS_CLK__HZ/8)/floor(divider);
-    uint32_t up_rate = (BCLK__BUS_CLK__HZ/8)/ceil(divider);
-   
-    float down_rate_error = (down_rate/(float)speed)-1;
-    float up_rate_error = (up_rate/(float)speed)-1;
-    
-    SPIM0_Stop();
-    if(fabs(down_rate_error) < fabs(up_rate_error)){
-        //selected round down divider
-        SPI_CLK_SetDividerValue(floor(divider));
-    }else{
-        //selected round up divider
-        SPI_CLK_SetDividerValue(ceil(divider));
-    }
-    SPIM0_Start(); 
-    
-}
 
-uint8_t callback_SPIspeedFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
-    spi_speed(configuration.spi_speed);
- 
-    return 1;
-}
 
 /*****************************************************************************
 * Callback if the baudrate is changed

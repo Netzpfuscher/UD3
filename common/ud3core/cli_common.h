@@ -97,7 +97,6 @@ struct config_struct{
     uint16_t max_const_i;
     uint16_t max_fault_i;
     uint32_t baudrate;
-    uint8_t spi_speed;
     uint8_t ct2_type;
     uint16_t ct2_current;
     uint16_t ct2_voltage;

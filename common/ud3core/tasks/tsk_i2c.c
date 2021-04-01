@@ -35,99 +35,12 @@
 #include "cli_common.h"
 #include <stdlib.h>
 #include "telemetry.h"
+#include "helper/PCA9685.h"
 
 xTaskHandle tsk_i2c_TaskHandle;
 uint8 tsk_i2c_initVar = 0u;
 
-#define MODE1 0x00			//Mode  register  1
-#define MODE2 0x01			//Mode  register  2
-#define SUBADR1 0x02		//I2C-bus subaddress 1
-#define SUBADR2 0x03		//I2C-bus subaddress 2
-#define SUBADR3 0x04		//I2C-bus subaddress 3
-#define ALLCALLADR 0x05     //LED All Call I2C-bus address
-#define LED0 0x6			//LED0 start register
-#define LED0_ON_L 0x6		//LED0 output and brightness control byte 0
-#define LED0_ON_H 0x7		//LED0 output and brightness control byte 1
-#define LED0_OFF_L 0x8		//LED0 output and brightness control byte 2
-#define LED0_OFF_H 0x9		//LED0 output and brightness control byte 3
-#define LED_MULTIPLYER 4	// For the other 15 channels
-#define ALLLED_ON_L 0xFA    //load all the LEDn_ON registers, byte 0 (turn 0-7 channels on)
-#define ALLLED_ON_H 0xFB	//load all the LEDn_ON registers, byte 1 (turn 8-15 channels on)
-#define ALLLED_OFF_L 0xFC	//load all the LEDn_OFF registers, byte 0 (turn 0-7 channels off)
-#define ALLLED_OFF_H 0xFD	//load all the LEDn_OFF registers, byte 1 (turn 8-15 channels off)
-#define PRE_SCALE 0xFE		//prescaler for output frequency
-#define CLOCK_FREQ 25000000.0 //25MHz default osc clock
 
-uint8_t buffer[5];
-
-void I2C_Write(uint8_t address, uint8_t registerAddress, uint8_t data){
-    I2C_MasterSendStart(address,I2C_WRITE_XFER_MODE);
-    I2C_MasterWriteByte(registerAddress);
-    I2C_MasterWriteByte(data);
-    I2C_MasterSendStop();
-    
-}
-
-uint8_t I2C_Read(uint8_t address, uint8_t registerAddress){
-    uint8_t ret;
-    I2C_MasterSendStart(address,I2C_WRITE_XFER_MODE);
-    I2C_MasterWriteByte(registerAddress);
-    I2C_MasterSendRestart(address,I2C_READ_XFER_MODE);
-    ret = I2C_MasterReadByte(I2C_NAK_DATA);
-    I2C_MasterSendStop();
-    return ret; 
-}
-
-void I2C_Write_Blk(uint8_t address, uint8_t * buffer, uint8_t cnt){
-    I2C_MasterClearStatus();
-    I2C_MasterWriteBuf(address,buffer,cnt,I2C_MODE_COMPLETE_XFER);
-    while(!(I2C_MasterStatus() & I2C_MSTAT_WR_CMPLT)){
-        vTaskDelay(1);   
-    }
-}
-
-void I2C_Write_nBlk(uint8_t address, uint8_t * buffer, uint8_t cnt){
-    I2C_MasterClearStatus();
-    I2C_MasterWriteBuf(address,buffer,cnt,I2C_MODE_COMPLETE_XFER);
-}
-
-
-void PCA9685_setPWM_i(uint8_t led, int on_value, int off_value) {
-    buffer[0] = LED0_ON_L + LED_MULTIPLYER * led;
-    buffer[1] = on_value & 0xFF;
-    buffer[2] = on_value >> 8;
-    buffer[3] = off_value & 0xFF;
-    buffer[4] = off_value >> 8;
-    I2C_Write_Blk(0x40,buffer,5);
-}
-
-void PCA9685_setPWM(uint8_t led, uint16_t value) {
-    if(value>4095) value = 4095;
-    if(led>15) led = 15;
-	PCA9685_setPWM_i(led, 0, value);
-}
-
-void PCA9685_reset() {
-
-		I2C_Write(0x40,MODE1, 0x00); //Normal mode
-		I2C_Write(0x40,MODE2, 0x04); //totem pole
-
-}
-
-void PCA9685_setPWMFreq(int freq) {
-
-		uint8_t prescale_val = (CLOCK_FREQ / 4096 / freq)  - 1;
-		I2C_Write(0x40,MODE1, 0x10); //sleep
-		I2C_Write(0x40,PRE_SCALE, prescale_val); // multiplyer for PWM frequency
-		I2C_Write(0x40,MODE1, 0x80); //restart
-		I2C_Write(0x40,MODE2, 0x04); //totem pole (default)
-}
-
-void PCA9685_init() {
-	PCA9685_reset();
-	PCA9685_setPWMFreq(1000);
-    I2C_Write(0x40,MODE1, 0x21); //0010 0001 : AI ENABLED
-}
 
 /* ------------------------------------------------------------------------ */
 /*
@@ -164,7 +77,7 @@ uint8_t CMD_i2c(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     uint16_t val = atoi(args[0]);
     
 
-    ttprintf("Mode 1: %x\r\n",I2C_Read(0x40,MODE1));
+    //ttprintf("Mode 1: %x\r\n",I2C_Read(0x40,MODE1));
 
        
     vTaskDelay(50);

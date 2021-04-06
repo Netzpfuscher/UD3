@@ -38,7 +38,6 @@
     
 void tsk_i2c_Start(void);
 
-uint8_t CMD_i2c(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 
 /*
  * Add user function prototypes in the below merge region to add user

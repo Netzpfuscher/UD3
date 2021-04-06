@@ -110,6 +110,7 @@ struct config_struct{
     uint16_t max_dc_curr;
     uint8_t ext_interrupter;
     uint8_t is_qcw;
+    uint8_t pca9685;
     char synth_filter[32];
 };
 typedef struct config_struct cli_config;

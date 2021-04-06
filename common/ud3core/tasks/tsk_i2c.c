@@ -35,11 +35,22 @@
 #include "cli_common.h"
 #include <stdlib.h>
 #include "telemetry.h"
+#include "alarmevent.h"
 #include "helper/PCA9685.h"
 
 xTaskHandle tsk_i2c_TaskHandle;
 uint8 tsk_i2c_initVar = 0u;
 
+#define N_PCA9685 4
+
+typedef struct  {
+    int32_t* value;
+    int32_t min;
+    int32_t max;
+    int32_t divider;
+}PCA9685_str;
+
+PCA9685_str gauge_data[N_PCA9685];
 
 
 /* ------------------------------------------------------------------------ */
@@ -67,44 +78,6 @@ uint8 tsk_i2c_initVar = 0u;
  * to add functionality to the task.
  */
 
-uint8_t CMD_i2c(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
-    uint8_t byte;
-    uint8_t status;
-    uint8_t cnt=0;
-    //PCA9685_init();
-    vTaskDelay(10);
-    
-    uint16_t val = atoi(args[0]);
-    
-
-    //ttprintf("Mode 1: %x\r\n",I2C_Read(0x40,MODE1));
-
-       
-    vTaskDelay(50);
- 
-    /*
-    I2C_MasterClearStatus();
-    do{
-       
-        status = I2C_MasterSendStart(cnt,I2C_READ_XFER_MODE);
-        
-        if(status==0) ttprintf("Found device = %x\r\n",cnt);
-        if(status==0) byte = I2C_MasterReadByte(I2C_NAK_DATA);
-        status = I2C_MasterSendStop();
-        cnt++;
-        if(cnt>127){
-            cnt = 0;
-            ttprintf("Finished scan...\r\n",cnt);
-            break;
-        }
-        
-        
-    }while(Term_check_break(handle,20));
-    */
-    return TERM_CMD_EXIT_SUCCESS;
-}
-
-
 
 void tsk_i2c_TaskProc(void *pvParameters) {
 	/*
@@ -122,27 +95,55 @@ void tsk_i2c_TaskProc(void *pvParameters) {
 	/* `#START TASK_INIT_CODE` */
     I2C_Start();
     
-    PCA9685_init();
+    PCA9685* pca_ptr = PCA9685_new(0x40);
+    if(pca_ptr==NULL) alarm_push(ALM_PRIO_CRITICAL,warn_PCA9685_malloc, ALM_NO_VALUE);
     
-    uint16_t cnt=0;
-    uint8_t tog=1;
+    gauge_data[0].value = &tt.n.midi_voices.value;
+    gauge_data[0].min = 0;
+    gauge_data[0].max = 4;
+    gauge_data[0].divider = 0;
+    
+    gauge_data[1].value = &tt.n.primary_i.value;
+    gauge_data[1].min = 0;
+    gauge_data[1].max = 1500;
+    gauge_data[1].divider = 0;
+    
+    gauge_data[2].value = &tt.n.bus_v.value;
+    gauge_data[2].min = 0;
+    gauge_data[2].max = 600;
+    gauge_data[2].divider = 0;
+    
+    gauge_data[3].value = &tt.n.batt_i.value;
+    gauge_data[3].min = 0;
+    gauge_data[3].max = 40;
+    gauge_data[3].divider = 10;
+    
     
 	/* `#END` */
 
+    alarm_push(ALM_PRIO_INFO,warn_task_i2c, ALM_NO_VALUE);
+    
 	for (;;) {
-
-        for(uint8_t i = 0;i<16;i++){
-            PCA9685_setPWM(i,cnt);
-        }
         
-        if(tog){
-            cnt+=100;
-        }else{
-            cnt-=100;
+        for(uint8_t i = 0; i < N_PCA9685;i++){
+            if(gauge_data[i].value != NULL){
+                int32_t temp_val;
+                if(gauge_data[i].divider){
+                    temp_val = *gauge_data[i].value / gauge_data[i].divider;
+                }else{
+                    temp_val = *gauge_data[i].value;
+                }
+
+                
+                if(temp_val > gauge_data[i].max) temp_val = gauge_data[i].max;
+                if(temp_val < gauge_data[i].min) temp_val = gauge_data[i].min;
+                
+                temp_val = (temp_val * 4095) / gauge_data[i].max;
+
+                PCA9685_setPWM(pca_ptr,i,temp_val);
+            }
         }
-        if(cnt>4095) tog=0;
-        if(cnt==0) tog=1;
-        vTaskDelay(20);
+        vTaskDelay(50);
 	}
 }
 /* ------------------------------------------------------------------------ */

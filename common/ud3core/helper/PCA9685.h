@@ -27,11 +27,17 @@
 
 #include <stdint.h>
 
-void PCA9685_setPWM_i(uint8_t led, int on_value, int off_value);
-void PCA9685_setPWM(uint8_t led, uint16_t value);
-void PCA9685_reset();
-void PCA9685_setPWMFreq(int freq);
-void PCA9685_init();
+typedef struct{
+    uint8_t address;
+    uint8_t buffer[5];
+}PCA9685;
+    
+PCA9685* PCA9685_new(uint8_t address);  
+void PCA9685_setPWM_i(PCA9685* ptr, uint8_t led, int on_value, int off_value);
+void PCA9685_setPWM(PCA9685* ptr, uint8_t led, uint16_t value);
+void PCA9685_reset(PCA9685* ptr);
+void PCA9685_setPWMFreq(PCA9685* ptr, int freq);
+void PCA9685_init(PCA9685* ptr);
 
 
 #endif

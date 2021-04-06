@@ -107,7 +107,9 @@ int main() {
     if(configuration.enable_display){
         tsk_display_Start();
     }
-    tsk_i2c_Start();
+    if(configuration.pca9685){
+        tsk_i2c_Start();
+    }
     
     //CyGlobalIntEnable; //enables interrupts
     alarm_push(ALM_PRIO_INFO, warn_general_startup, ALM_NO_VALUE);

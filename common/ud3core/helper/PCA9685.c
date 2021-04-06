@@ -24,6 +24,8 @@
 
 #include "PCA9685.h"
 #include "i2c_helper.h"
+#include "FreeRTOS.h"
+
 
 #define MODE1 0x00			//Mode  register  1
 #define MODE2 0x01			//Mode  register  2
@@ -44,42 +46,58 @@
 #define PRE_SCALE 0xFE		//prescaler for output frequency
 #define CLOCK_FREQ 25000000.0 //25MHz default osc clock
 
-uint8_t buffer[5];
-
-
-void PCA9685_setPWM_i(uint8_t led, int on_value, int off_value) {
-    buffer[0] = LED0_ON_L + LED_MULTIPLYER * led;
-    buffer[1] = on_value & 0xFF;
-    buffer[2] = on_value >> 8;
-    buffer[3] = off_value & 0xFF;
-    buffer[4] = off_value >> 8;
-    I2C_Write_Blk(0x40,buffer,5);
+PCA9685* PCA9685_new(uint8_t address){
+    PCA9685* ptr;
+    ptr = pvPortMalloc(sizeof(PCA9685)); 
+    if(ptr != NULL){
+        ptr->address = address;
+        PCA9685_init(ptr);
+        return ptr;
+    }
+    return NULL;
 }
 
-void PCA9685_setPWM(uint8_t led, uint16_t value) {
+void PCA9685_free(PCA9685* ptr){
+   vPortFree(ptr);
+}
+
+
+void PCA9685_setPWM_i(PCA9685* ptr, uint8_t led, int on_value, int off_value) {
+    if(ptr==NULL) return;
+    ptr->buffer[0] = LED0_ON_L + LED_MULTIPLYER * led;
+    ptr->buffer[1] = on_value & 0xFF;
+    ptr->buffer[2] = on_value >> 8;
+    ptr->buffer[3] = off_value & 0xFF;
+    ptr->buffer[4] = off_value >> 8;
+    I2C_Write_Blk(ptr->address,ptr->buffer,5);
+}
+
+void PCA9685_setPWM(PCA9685* ptr, uint8_t led, uint16_t value) {
+    if(ptr==NULL) return;
     if(value>4095) value = 4095;
     if(led>15) led = 15;
-	PCA9685_setPWM_i(led, 0, value);
+	PCA9685_setPWM_i(ptr, led, 0, value);
 }
 
-void PCA9685_reset() {
-
-	I2C_Write(0x40,MODE1, 0x00); //Normal mode
-	I2C_Write(0x40,MODE2, 0x04); //totem pole
+void PCA9685_reset(PCA9685* ptr) {
+    if(ptr==NULL) return;
+	I2C_Write(ptr->address,MODE1, 0x00); //Normal mode
+	I2C_Write(ptr->address,MODE2, 0x04); //totem pole
 
 }
 
-void PCA9685_setPWMFreq(int freq) {
-
+void PCA9685_setPWMFreq(PCA9685* ptr, int freq) {
+    if(ptr==NULL) return;
 	uint8_t prescale_val = (CLOCK_FREQ / 4096 / freq)  - 1;
-	I2C_Write(0x40,MODE1, 0x10); //sleep
-	I2C_Write(0x40,PRE_SCALE, prescale_val); // multiplyer for PWM frequency
-	I2C_Write(0x40,MODE1, 0x80); //restart
-	I2C_Write(0x40,MODE2, 0x04); //totem pole (default)
+	I2C_Write(ptr->address,MODE1, 0x10); //sleep
+	I2C_Write(ptr->address,PRE_SCALE, prescale_val); // multiplyer for PWM frequency
+	I2C_Write(ptr->address,MODE1, 0x80); //restart
+	I2C_Write(ptr->address,MODE2, 0x04); //totem pole (default)
 }
 
-void PCA9685_init() {
-	PCA9685_reset();
-	PCA9685_setPWMFreq(1000);
-    I2C_Write(0x40,MODE1, 0x21); //0010 0001 : AI ENABLED
+void PCA9685_init(PCA9685* ptr) {
+    if(ptr==NULL) return;
+	PCA9685_reset(ptr);
+	PCA9685_setPWMFreq(ptr, 1000);
+    I2C_Write(ptr->address,MODE1, 0x21); //0010 0001 : AI ENABLED
 }

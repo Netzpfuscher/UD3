@@ -45,9 +45,12 @@ uint8_t update;
 uint8_t bus_uv;   
 uint8_t interlock;
 uint8_t link_state;
+uint8_t feedback;
 } SYSFAULT;
 
 extern SYSFAULT sysfault;
+
+extern uint32_t feedback_error_cnt;
     
 void tsk_fault_Start(void);
 void WD_enable(uint8_t enable);

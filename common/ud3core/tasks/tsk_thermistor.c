@@ -38,6 +38,14 @@
 xTaskHandle tsk_thermistor_TaskHandle;
 uint8 tsk_thermistor_initVar = 0u;
 
+enum fan_mode{
+    FAN_NORMAL = 0,
+    FAN_TEMP1_TEMP2 = 1,
+    FAN_NOT_USED = 2,
+    FAN_TEMP2_RELAY3 = 3,
+    FAN_TEMP2_RELAY4 = 4
+};
+
 /* ------------------------------------------------------------------------ */
 /*
  * Place user included headers, defines and task global data in the
@@ -114,32 +122,27 @@ uint16 run_temp_check(void) {
 	if (tt.n.temp2.value > configuration.temp2_max && configuration.temp2_max) {
 		fault |= TEMP2_FAULT;
 	}
+    
+    uint8_t temp1_high = (tt.n.temp1.value > configuration.temp1_setpoint);
+    uint8_t temp2_high = (tt.n.temp2.value > configuration.temp2_setpoint);
 
-	// check fan on/off conditions
-	if ((tt.n.temp1.value > configuration.temp1_setpoint) || 
-		(tt.n.temp2.value > configuration.temp2_setpoint && configuration.temp2_mode == 1)) {
-		Fan_Write(1);
-	} else if ((tt.n.temp1.value <= configuration.temp1_setpoint) && 
-		((tt.n.temp2.value <= configuration.temp2_setpoint && configuration.temp2_mode == 1) || configuration.temp2_mode != 1)) {
-		Fan_Write(0);
-	}
-
-	// check temp2 relay3/4 conditions
-	if (tt.n.temp2.value > configuration.temp2_setpoint) {
-		if (configuration.temp2_mode == 3) {
-			Relay3_Write(1);
-		}
-		if (configuration.temp2_mode == 4) {
-			Relay4_Write(1);
-		}
-	} else {
-		if (configuration.temp2_mode == 3) {
-			Relay3_Write(0);
-		}
-		if (configuration.temp2_mode == 4) {
-			Relay4_Write(0);
-		}
-	}
+    switch(configuration.temp2_mode){
+        case FAN_NORMAL:
+            Fan_Write(temp1_high);
+        break;
+        case FAN_TEMP1_TEMP2:
+            Fan_Write( (temp1_high || temp2_high) ? 1 : 0);
+        break;
+        case FAN_NOT_USED:
+            
+        break;
+        case FAN_TEMP2_RELAY3:
+            Relay3_Write(temp2_high);
+        break;
+        case FAN_TEMP2_RELAY4:
+            Relay4_Write(temp2_high);
+        break;
+    }
 
 	return fault;
 }

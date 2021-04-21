@@ -166,6 +166,8 @@ static const char * AC_set_get[] = {
     "temp1_max",
     "temp1_setpoint",
     "temp2_max",
+    "temp2_setpoint",
+    "temp2_action",
     "transpose",
     "tune_delay",
     "tune_end",

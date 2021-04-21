@@ -107,6 +107,7 @@ uint16 run_temp_check(void) {
 	tt.n.temp1.value = get_temp_128(get_temp_counts(0)) / 128;
 	tt.n.temp2.value = get_temp_128(get_temp_counts(1)) / 128;
 
+	// check for faults
 	if (tt.n.temp1.value > configuration.temp1_max && configuration.temp1_max) {
 		fault |= TEMP1_FAULT;
 	}
@@ -114,11 +115,32 @@ uint16 run_temp_check(void) {
 		fault |= TEMP2_FAULT;
 	}
 
-	if (tt.n.temp1.value > configuration.temp1_setpoint) {
+	// check fan on/off conditions
+	if ((tt.n.temp1.value > configuration.temp1_setpoint) || 
+		(tt.n.temp2.value > configuration.temp2_setpoint && configuration.temp2_mode == 1)) {
 		Fan_Write(1);
-	} else if (tt.n.temp1.value < configuration.temp1_setpoint) {
+	} else if ((tt.n.temp1.value <= configuration.temp1_setpoint) && 
+		((tt.n.temp2.value <= configuration.temp2_setpoint && configuration.temp2_mode == 1) || configuration.temp2_mode != 1)) {
 		Fan_Write(0);
 	}
+
+	// check temp2 relay3/4 conditions
+	if (tt.n.temp2.value > configuration.temp2_setpoint) {
+		if (configuration.temp2_mode == 3) {
+			Relay3_Write(1);
+		}
+		if (configuration.temp2_mode == 4) {
+			Relay4_Write(1);
+		}
+	} else {
+		if (configuration.temp2_mode == 3) {
+			Relay3_Write(0);
+		}
+		if (configuration.temp2_mode == 4) {
+			Relay4_Write(0);
+		}
+	}
+
 	return fault;
 }
 

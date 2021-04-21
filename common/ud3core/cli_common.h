@@ -90,6 +90,8 @@ struct config_struct{
     uint16_t max_tr_duty;
     uint16_t max_qcw_duty;
     uint16_t temp1_setpoint;
+    uint16_t temp2_setpoint;
+    uint8_t temp2_mode;
     uint8_t ps_scheme;
     uint8_t autotune_s;
     char ud_name[16];

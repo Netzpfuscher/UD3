@@ -46,6 +46,12 @@ enum fan_mode{
     FAN_TEMP2_RELAY4 = 4
 };
 
+typedef struct{
+    uint16_t fault1_cnt;
+    uint16_t fault2_cnt;
+}TEMP_FAULT;
+
+
 /* ------------------------------------------------------------------------ */
 /*
  * Place user included headers, defines and task global data in the
@@ -108,23 +114,30 @@ int16_t get_temp_counts(uint8_t channel){
     return ADC_therm_GetResult16()-80;  //compensate for 100mV Offset
 }
 
-uint16 run_temp_check(void) {
+void run_temp_check(TEMP_FAULT * ret) {
 	//this function looks at all the thermistor temperatures, compares them against limits and returns any faults
-	uint16 fault = 0;
     
 	tt.n.temp1.value = get_temp_128(get_temp_counts(0)) / 128;
 	tt.n.temp2.value = get_temp_128(get_temp_counts(1)) / 128;
 
 	// check for faults
 	if (tt.n.temp1.value > configuration.temp1_max && configuration.temp1_max) {
-		fault |= TEMP1_FAULT;
-	}
+        if(ret->fault1_cnt){
+            ret->fault1_cnt--;
+        }
+	}else{
+        ret->fault1_cnt = TEMP_FAULT_COUNTER_MAX;
+    }
 	if (tt.n.temp2.value > configuration.temp2_max && configuration.temp2_max) {
-		fault |= TEMP2_FAULT;
-	}
+		if(ret->fault2_cnt){
+            ret->fault2_cnt--;
+        }
+	}else{
+        ret->fault2_cnt = TEMP_FAULT_COUNTER_MAX;
+    }
     
-    uint8_t temp1_high = (tt.n.temp1.value > configuration.temp1_setpoint);
-    uint8_t temp2_high = (tt.n.temp2.value > configuration.temp2_setpoint);
+    uint_fast8_t temp1_high = (tt.n.temp1.value > configuration.temp1_setpoint);
+    uint_fast8_t temp2_high = (tt.n.temp2.value > configuration.temp2_setpoint);
 
     switch(configuration.temp2_mode){
         case FAN_NORMAL:
@@ -137,14 +150,16 @@ uint16 run_temp_check(void) {
             
         break;
         case FAN_TEMP2_RELAY3:
+            Fan_Write(temp1_high);
             Relay3_Write(temp2_high);
         break;
         case FAN_TEMP2_RELAY4:
+            Fan_Write(temp1_high);
             Relay4_Write(temp2_high);
         break;
     }
 
-	return fault;
+	return;
 }
 
 /* `#END` */
@@ -168,36 +183,34 @@ void tsk_thermistor_TaskProc(void *pvParameters) {
 	 * in the task.
 	 */
 	/* `#START TASK_INIT_CODE` */
-    uint16_t temp_fault_counter=0;
     
 	initialize_thermistor();
+    
+    TEMP_FAULT temp;
+    temp.fault1_cnt = TEMP_FAULT_COUNTER_MAX;
+    temp.fault2_cnt = TEMP_FAULT_COUNTER_MAX;
     
 
 	/* `#END` */
     alarm_push(ALM_PRIO_INFO,warn_task_thermistor, ALM_NO_VALUE);
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
-        uint16_t ret = run_temp_check();
-		if (ret) {
-			temp_fault_counter++;
-			if (temp_fault_counter > TEMP_FAULT_COUNTER_MAX) {
-                if(ret&0x00FF){
-                    if(sysfault.temp1==0){
-                        alarm_push(ALM_PRIO_CRITICAL, warn_temp1_fault, tt.n.temp1.value);
-                    }
-                    sysfault.temp1 = 1;
-                }
-                if(ret&0xFF00){
-                    if(sysfault.temp2==0){
-                        alarm_push(ALM_PRIO_CRITICAL, warn_temp2_fault, tt.n.temp2.value);
-                    }
-                    sysfault.temp2 = 1;
-                }
-			}
-		} else {
-			temp_fault_counter = 0;
-		}
-
+        run_temp_check(&temp);
+        
+        if(temp.fault1_cnt == 0){
+            if(sysfault.temp1==0){
+                alarm_push(ALM_PRIO_CRITICAL, warn_temp1_fault, tt.n.temp1.value);
+            }
+            sysfault.temp1 = 1;
+        }
+        
+        if(temp.fault1_cnt == 0){
+            if(sysfault.temp2==0){
+                alarm_push(ALM_PRIO_CRITICAL, warn_temp2_fault, tt.n.temp2.value);
+            }
+            sysfault.temp2 = 1;
+        }
+      
 		/* `#END` */
 
 		vTaskDelay(1000 / portTICK_PERIOD_MS);

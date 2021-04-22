@@ -94,6 +94,7 @@ static const char warn_driver_undervoltage[]= "DRIVER: Undervoltage";
 
 static const char warn_kill_set[]= "FAULT: Killbit set";
 static const char warn_kill_reset[]= "INFO: Killbit reset";
+static const char warn_feedback_error[]= "FAULT: No Feedback";
 
 static const char warn_eeprom_no_dataset[]= "EEPROM: No or old dataset found";
 static const char warn_eeprom_unknown_id[]= "EEPROM: Found unknown ID";

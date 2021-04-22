@@ -146,7 +146,10 @@ void handle_no_fb(void){
             }
         }
         if(feedback_error_cnt > configuration.max_fb_errors){
-            sysfault.feedback = pdTRUE;
+            if(sysfault.feedback==0){
+                alarm_push(ALM_PRIO_CRITICAL,warn_feedback_error, feedback_error_cnt);
+            }
+            sysfault.feedback = pdTRUE;          
         }
     }else{
         sysfault.feedback = pdFALSE;   

@@ -116,7 +116,7 @@ struct config_struct{
     uint16_t max_fb_errors;
     uint16_t ntc_b;
     uint16_t ntc_r25;
-    uint16_t adc_cal[3];
+    uint16_t idac;
     char synth_filter[32];
 };
 typedef struct config_struct cli_config;

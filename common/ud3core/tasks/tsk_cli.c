@@ -315,6 +315,7 @@ void tsk_cli_Start(void) {
         TERM_addCommand(CMD_telemetry, "telemetry","Telemetry options",0,&TERM_cmdListHead);
         TERM_addCommandConstAC(CMD_ramp, "ramp","Write QCW ramp",AC_ramp,&TERM_cmdListHead);
         TERM_addCommand(CMD_debug, "debug","Debug mode",0,&TERM_cmdListHead);
+        TERM_addCommand(CMD_ntc, "ntc","Calibrate NTC iDAC",0,&TERM_cmdListHead);
      
         if(configuration.minprot==pdTRUE){
             for(uint8_t i=0;i<NUM_MIN_CON;i++){

@@ -140,9 +140,7 @@ void init_config(){
     configuration.ntc_b = 3977;
     configuration.ntc_r25 = 10000;
     
-    configuration.adc_cal[NTC_CAL_MIN] = 62;
-    configuration.adc_cal[NTC_CAL_MAX] = 0;
-    configuration.adc_cal[NTC_IDAC] = 185;
+    configuration.idac = 185;
     
     interrupter.mod = INTR_MOD_PW;
     
@@ -253,8 +251,8 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_fb_errors"   , configuration.max_fb_errors   , 0      ,60000  ,0      ,NULL                        ,"0=off, numer of feedback errors per second to sysfault")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ntc_b"           , configuration.ntc_b           , 0      ,10000  ,0      ,callback_ntc                ,"NTC beta [k]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ntc_r25"         , configuration.ntc_r25         , 0      ,33000  ,0      ,callback_ntc                ,"NTC R25 [kOhm]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ntc_idac"        , configuration.idac            , 0      ,2000   ,0      ,NULL                        ,"iDAC measured [uA]")
     ADD_PARAM(PARAM_CONFIG  ,pdFALSE,"d_calib"         , vdriver_lut                   , 0      ,0      ,0      ,NULL                        ,"For voltage measurement")
-    //ADD_PARAM(PARAM_CONFIG  ,pdFALSE,"t_calib"         , configuration.adc_cal         , 0      ,0      ,0      ,NULL                        ,"For ntc measurement")
 };
 
 

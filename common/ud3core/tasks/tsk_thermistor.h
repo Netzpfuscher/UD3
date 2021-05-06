@@ -40,9 +40,8 @@ void tsk_thermistor_Start(void);
 
 uint8_t callback_ntc(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 
-#define NTC_CAL_MIN 0
-#define NTC_CAL_MAX 1
-#define NTC_IDAC    2
+uint8_t CMD_ntc(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+
 
 
 

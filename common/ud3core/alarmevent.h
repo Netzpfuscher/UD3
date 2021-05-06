@@ -89,6 +89,7 @@ static const char warn_bus_undervoltage[]= "BUS: Undervoltage";
 
 static const char warn_temp1_fault[]= "NTC: Temperature Therm1 high";
 static const char warn_temp2_fault[]= "NTC: Temperature Therm2 high";
+static const char warn_temp_adc_zero[]= "ADC: Temperature ADC offset";
 
 static const char warn_driver_undervoltage[]= "DRIVER: Undervoltage";
 

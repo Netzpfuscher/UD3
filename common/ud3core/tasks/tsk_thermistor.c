@@ -39,6 +39,8 @@
 xTaskHandle tsk_thermistor_TaskHandle;
 uint8 tsk_thermistor_initVar = 0u;
 
+SemaphoreHandle_t adc_sem;
+
 enum fan_mode{
     FAN_NORMAL = 0,
     FAN_TEMP1_TEMP2 = 1,
@@ -69,7 +71,7 @@ typedef struct{
 #define TEMP1_FAULT 0x00FF
 #define TEMP2_FAULT 0xFF00
 
-#define TEMP_FAULT_LOW 0xFFFF
+#define TEMP_FAULT_LOW -32640
 
 #define TEMP_FAULT_COUNTER_MAX 5
 
@@ -78,15 +80,13 @@ typedef struct{
 //temperature *128
 int16_t count_temp_table[TEMP_TABLE_SIZE];
 
-void calc_table_128(int16_t t_table[], uint8_t bits, uint16_t table_size, uint32_t B, uint32_t RN, uint16_t meas_curr_uA, uint16_t cnt_0_off, uint16_t cnt_5_off){
+void calc_table_128(int16_t t_table[], uint8_t bits, uint16_t table_size, uint32_t B, uint32_t RN, uint16_t meas_curr_uA){
 	
 	int32_t max_cnt = 1 << bits;
 	uint32_t steps =  max_cnt / table_size;
 
 	float meas_current = meas_curr_uA * 1e-6;
-	uint32_t cnt_max = max_cnt - cnt_5_off;
-	
-	uint32_t cnt_diff = cnt_max - cnt_0_off;
+
 	float u_ref_mv = 5.0;
 	float r_cnt;
 	float temp_cnt;
@@ -95,8 +95,8 @@ void calc_table_128(int16_t t_table[], uint8_t bits, uint16_t table_size, uint32
 	int32_t i;
 	uint16_t w=0;
 	for(i=0;i<=max_cnt;i+=steps){
-		if(i-cnt_0_off>0){
-			r_cnt = u_ref_mv / max_cnt * (i - cnt_0_off) / meas_current;
+		if(i>0){
+			r_cnt = u_ref_mv / max_cnt * i / meas_current;
 		}else{
 			r_cnt = 0;
 		}
@@ -124,35 +124,35 @@ void initialize_thermistor(void) {
 	IDAC_therm_Start();
 	ADC_therm_Start();
     Therm_Mux_Start();
-	IDAC_therm_SetValue(THERM_DAC_VAL);
+	
 }
 
 int32_t get_temp_128(int32_t counts) {
 	uint16_t counts_div = counts / 128;
-	if (!counts_div)
+	if (counts_div == TEMP_TABLE_SIZE-1){
 		return TEMP_FAULT_LOW;
+    }
 	uint32_t counts_window = counts_div * 128;
 
 	return count_temp_table[counts_div] - (((int32_t)(count_temp_table[counts_div] - count_temp_table[counts_div+1]) * ((uint32_t)counts - counts_window)) / 128);
 
 }
-volatile float test;
 
-int16_t get_temp_counts(uint8_t channel){
+int32_t get_temp_counts(uint8_t channel){
     Therm_Mux_Select(channel);
     vTaskDelay(20);
     ADC_therm_StartConvert();
     vTaskDelay(50);
-    return ADC_therm_GetResult16();  //compensate for 100mV Offset
+    int16_t temp = ADC_therm_GetResult16()-ADC_therm_Offset;
+    if(temp<0)temp=0;
+    return temp;  //compensate for 100mV Offset
 }
 
 void run_temp_check(TEMP_FAULT * ret) {
 	//this function looks at all the thermistor temperatures, compares them against limits and returns any faults
-    
-	tt.n.temp1.value = get_temp_128(get_temp_counts(0)) / 128;
-	tt.n.temp2.value = get_temp_128(get_temp_counts(0)) / 128;
-    
-    test = ADC_CountsTo_Volts(ADC_therm_GetResult16());
+
+    tt.n.temp1.value = get_temp_128(get_temp_counts(0)) / 128;
+    tt.n.temp2.value = get_temp_128(get_temp_counts(0)) / 128;
 
 	// check for faults
 	if (tt.n.temp1.value > configuration.temp1_max && configuration.temp1_max) {
@@ -198,9 +198,52 @@ void run_temp_check(TEMP_FAULT * ret) {
 
 uint8_t callback_ntc(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     calc_table_128(count_temp_table, 12 , sizeof(count_temp_table) / sizeof(int16_t),
-        configuration.ntc_b, configuration.ntc_r25, configuration.adc_cal[NTC_IDAC],
-        configuration.adc_cal[NTC_CAL_MIN], configuration.adc_cal[NTC_CAL_MAX]);
+        configuration.ntc_b, configuration.ntc_r25, configuration.idac);
     return 1;
+}
+
+uint8_t CMD_ntc(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
+    xSemaphoreTake(adc_sem, portMAX_DELAY);
+    
+    ttprintf("Connect a precision 10k to therm 1\r\n");
+    ttprintf("Press [y] to proceed\r\n");
+    port_str * ptr = handle->port;
+    
+    if(getch(handle, portMAX_DELAY) != 'y'){
+        ttprintf("Calibration aborted\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    
+    Therm_Mux_Select(0);
+    vTaskDelay(100);
+    ADC_therm_StartConvert();
+    vTaskDelay(100);
+    float temp = ADC_therm_CountsTo_Volts(ADC_therm_GetResult16())*100;
+    configuration.idac = temp;
+    ttprintf("Calibration finished: %u uA\r\n", configuration.idac);
+    ttprintf("Recalculate NTC LUT...\r\n");
+    callback_ntc(NULL, 0, handle);
+    ttprintf("Finished... Please save to eeprom.\r\n");
+    xSemaphoreGive(adc_sem);
+    return TERM_CMD_EXIT_SUCCESS;
+}
+
+void calib_adc(){
+    
+    IDAC_therm_SetValue(THERM_DAC_VAL*3);
+    Therm_Mux_Select(2);
+    vTaskDelay(50);
+    int32_t cnt=0;
+    for(uint8_t i = 0;i<4;i++){
+        ADC_therm_StartConvert();
+        vTaskDelay(50);
+        cnt += ADC_therm_GetResult16();
+        if(i==3){
+            cnt /= 4;
+            ADC_therm_SetOffset(cnt);
+            alarm_push(ALM_PRIO_INFO,warn_temp_adc_zero, cnt);
+        }
+    }    
 }
 
 /* `#END` */
@@ -225,7 +268,13 @@ void tsk_thermistor_TaskProc(void *pvParameters) {
 	 */
 	/* `#START TASK_INIT_CODE` */
     
+    adc_sem = xSemaphoreCreateBinary();
+    xSemaphoreGive(adc_sem);
+    
 	initialize_thermistor();
+    calib_adc();
+
+    IDAC_therm_SetValue(THERM_DAC_VAL);
     
     callback_ntc(NULL,0,NULL);
     
@@ -237,6 +286,7 @@ void tsk_thermistor_TaskProc(void *pvParameters) {
 	/* `#END` */
     alarm_push(ALM_PRIO_INFO,warn_task_thermistor, ALM_NO_VALUE);
 	for (;;) {
+        xSemaphoreTake(adc_sem, portMAX_DELAY);
 		/* `#START TASK_LOOP_CODE` */
         run_temp_check(&temp);
         
@@ -254,6 +304,7 @@ void tsk_thermistor_TaskProc(void *pvParameters) {
             }
             sysfault.temp2 = 1;
         }
+        xSemaphoreGive(adc_sem);
       
 		/* `#END` */
 

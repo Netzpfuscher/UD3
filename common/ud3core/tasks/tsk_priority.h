@@ -35,7 +35,8 @@
 #define PRIO_FAULT 4
 #define PRIO_MIDI 2
 #define PRIO_QCW 3
-#define PRIO_DISPALY 1  
+#define PRIO_DISPLAY 1  
+#define PRIO_I2C 1 
     
 #define STACK_TERMINAL 256
 #define STACK_OVERLAY 256
@@ -48,7 +49,7 @@
 #define STACK_FAULT 100
 #define STACK_MIDI 200
 #define STACK_DISPLAY 200
-    
+#define STACK_I2C 200    
 
     
 /* Basic bit manipulation macros

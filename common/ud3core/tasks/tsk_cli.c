@@ -30,6 +30,7 @@
 #include "tsk_fault.h"
 #include "tsk_overlay.h"
 #include "tsk_midi.h"
+#include "tsk_i2c.h"
 #include "cli_basic.h"
 #include "alarmevent.h"
 #include "autotune.h"
@@ -131,6 +132,7 @@ static const char * AC_set_get[] = {
     "max_const_i",
     "max_dc_curr",
     "max_fault_i",
+    "max_fb_errors",
     "max_qcw_current",
     "max_qcw_duty",
     "max_qcw_pw",
@@ -142,6 +144,7 @@ static const char * AC_set_get[] = {
     "min_enable",
     "min_tr_current",
     "offtime",
+    "pca9685",
     "pid_curr_i",
     "pid_curr_p",
     "ps_scheme",
@@ -163,8 +166,8 @@ static const char * AC_set_get[] = {
     "temp1_max",
     "temp1_setpoint",
     "temp2_max",
+    "temp2_mode",
     "temp2_setpoint",
-    "temp2_action",
     "transpose",
     "tune_delay",
     "tune_end",
@@ -312,7 +315,7 @@ void tsk_cli_Start(void) {
         TERM_addCommand(CMD_telemetry, "telemetry","Telemetry options",0,&TERM_cmdListHead);
         TERM_addCommandConstAC(CMD_ramp, "ramp","Write QCW ramp",AC_ramp,&TERM_cmdListHead);
         TERM_addCommand(CMD_debug, "debug","Debug mode",0,&TERM_cmdListHead);
-
+        TERM_addCommand(CMD_ntc, "ntc","Calibrate NTC iDAC",0,&TERM_cmdListHead);
      
         if(configuration.minprot==pdTRUE){
             for(uint8_t i=0;i<NUM_MIN_CON;i++){

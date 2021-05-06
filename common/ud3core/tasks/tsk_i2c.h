@@ -22,8 +22,8 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#if !defined(tsk_thermistor_TASK_H)
-#define tsk_thermistor_TASK_H
+#if !defined(tsk_i2c_TASK_H)
+#define tsk_i2c_TASK_H
 
 /*
  * Add user task definitions, types, includes and other things in the below
@@ -31,18 +31,12 @@
  */
 /* `#START USER_TYPES_AND_DEFINES` */
 #include <device.h>
-#include "cli_basic.h"
-#include "TTerm.h"    
-
+#include "TTerm.h"
 /* `#END` */
 
-void tsk_thermistor_Start(void);
 
-uint8_t callback_ntc(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
-
-uint8_t CMD_ntc(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
-
-
+    
+void tsk_i2c_Start(void);
 
 
 /*

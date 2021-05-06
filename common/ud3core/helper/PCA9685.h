@@ -22,37 +22,22 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#if !defined(tsk_thermistor_TASK_H)
-#define tsk_thermistor_TASK_H
+#if !defined(tsk_PCA9685_H)
+#define tsk_PCA9685_H
 
-/*
- * Add user task definitions, types, includes and other things in the below
- * merge region to customize the task.
- */
-/* `#START USER_TYPES_AND_DEFINES` */
-#include <device.h>
-#include "cli_basic.h"
-#include "TTerm.h"    
+#include <stdint.h>
 
-/* `#END` */
-
-void tsk_thermistor_Start(void);
-
-uint8_t callback_ntc(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
-
-uint8_t CMD_ntc(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+typedef struct{
+    uint8_t address;
+    uint8_t buffer[5];
+}PCA9685;
+    
+PCA9685* PCA9685_new(uint8_t address);  
+void PCA9685_setPWM_i(PCA9685* ptr, uint8_t led, int on_value, int off_value);
+void PCA9685_setPWM(PCA9685* ptr, uint8_t led, uint16_t value);
+void PCA9685_reset(PCA9685* ptr);
+void PCA9685_setPWMFreq(PCA9685* ptr, int freq);
+void PCA9685_init(PCA9685* ptr);
 
 
-
-
-/*
- * Add user function prototypes in the below merge region to add user
- * functionality to the task definition.
- */
-/* `#START USER_TASK_PROTOS` */
-
-/* `#END` */
-
-/* ------------------------------------------------------------------------ */
 #endif
-/* [] END OF FILE */

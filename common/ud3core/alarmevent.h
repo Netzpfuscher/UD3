@@ -69,6 +69,9 @@ static const char warn_task_min_cli[]= "TASK: MIN-CLI started";
 static const char warn_task_fault[]= "TASK: Fault started";
 static const char warn_task_midi[]= "TASK: MIDI started";
 static const char warn_task_min[]= "TASK: MIN started";
+static const char warn_task_i2c[]= "TASK: I2C started";
+
+static const char warn_PCA9685_malloc[]= "PCA9685: Malloc failed";
 
 static const char warn_task_VT100_overlay[]= "TASK: Overlay started VT100";
 static const char warn_task_TT_overlay[]= "TASK: Overlay started TT";
@@ -86,11 +89,13 @@ static const char warn_bus_undervoltage[]= "BUS: Undervoltage";
 
 static const char warn_temp1_fault[]= "NTC: Temperature Therm1 high";
 static const char warn_temp2_fault[]= "NTC: Temperature Therm2 high";
+static const char warn_temp_adc_zero[]= "ADC: Temperature ADC offset";
 
 static const char warn_driver_undervoltage[]= "DRIVER: Undervoltage";
 
 static const char warn_kill_set[]= "FAULT: Killbit set";
 static const char warn_kill_reset[]= "INFO: Killbit reset";
+static const char warn_feedback_error[]= "FAULT: No Feedback";
 
 static const char warn_eeprom_no_dataset[]= "EEPROM: No or old dataset found";
 static const char warn_eeprom_unknown_id[]= "EEPROM: Found unknown ID";
@@ -116,7 +121,15 @@ static const char warn_sid_old[]= "SID: Old SID frame received";
 
 static const char warn_interrupter_ext[]= "INT: External interrupter active";
 
-    
+static const char warn_event_get_info[]= "EVENT: Fibernet got ID";
+static const char warn_event_eth_init_fail[]= "EVENT: Fibernet ETH init fail";
+static const char warn_event_eth_init_done[]= "EVENT: Fibernet ETH init success";
+static const char warn_event_eth_link_up[]= "EVENT: Fibernet link up";
+static const char warn_event_eth_link_down[]= "EVENT: Fibernet link down";
+static const char warn_event_eth_dhcp_success[]= "EVENT: DHCP success";
+static const char warn_event_eth_dhcp_fail[]= "EVENT: DHCP fail";
+static const char warn_event_fs_card_con[]= "EVENT: Fibernet SD connected";
+static const char warn_event_fs_card_dis[]= "EVENT: Fibernet SD disconnected";
     
     
 /* ------------------------------------------------------------------------ */

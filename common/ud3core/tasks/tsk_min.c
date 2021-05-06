@@ -211,16 +211,43 @@ struct __event_response {
 typedef struct __event_response event_resonse;
 
 void min_event(uint8_t command, uint8_t *min_payload, uint8_t len_payload){
-    if(command==EVENT_GET_INFO){
-        event_resonse response;
-        response.id = EVENT_GET_INFO;
-        response.struct_version = 1;
-        CyGetUniqueId(response.unique_id);
-        strncpy(response.udname, configuration.ud_name, sizeof(configuration.ud_name));
-        min_send_frame(&min_ctx,MIN_ID_EVENT,(uint8_t*)&response,sizeof(response));
-    }else{
-        alarm_push(ALM_PRIO_INFO, warn_min_command, command);
-    }    
+    event_resonse response;
+    switch(command){
+        case EVENT_GET_INFO:
+            response.id = EVENT_GET_INFO;
+            response.struct_version = 1;
+            CyGetUniqueId(response.unique_id);
+            strncpy(response.udname, configuration.ud_name, sizeof(configuration.ud_name));
+            min_send_frame(&min_ctx,MIN_ID_EVENT,(uint8_t*)&response,sizeof(response));
+            break;
+        case EVENT_ETH_INIT_FAIL:
+            alarm_push(ALM_PRIO_INFO, warn_event_eth_init_fail, ALM_NO_VALUE);
+            break;
+        case EVENT_ETH_INIT_DONE:
+            alarm_push(ALM_PRIO_INFO, warn_event_eth_init_done, ALM_NO_VALUE);
+            break;
+        case EVENT_ETH_LINK_UP:
+            alarm_push(ALM_PRIO_INFO, warn_event_eth_link_up, ALM_NO_VALUE);
+            break;
+        case EVENT_ETH_LINK_DOWN:
+            alarm_push(ALM_PRIO_INFO, warn_event_eth_link_down, ALM_NO_VALUE);
+            break;
+        case EVENT_ETH_DHCP_SUCCESS:
+            alarm_push(ALM_PRIO_INFO, warn_event_eth_dhcp_success, ALM_NO_VALUE);
+            break;
+        case EVENT_ETH_DHCP_FAIL:
+            alarm_push(ALM_PRIO_INFO, warn_event_eth_dhcp_fail, ALM_NO_VALUE);
+            break;
+        case EVENT_FS_CARD_CONNECTED:
+            alarm_push(ALM_PRIO_INFO, warn_event_fs_card_con, ALM_NO_VALUE);
+            break;
+        case EVENT_FS_CARD_REMOVED:
+            alarm_push(ALM_PRIO_INFO, warn_event_fs_card_dis, ALM_NO_VALUE);
+            break;
+        default:
+           alarm_push(ALM_PRIO_INFO, warn_min_event, command);
+           break;
+    }
 }
 
 void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_payload, uint8_t port)
@@ -295,6 +322,9 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
         case MIN_ID_ALARM:
             alarm_push_c(min_payload[0],(char*)&min_payload[5],len_payload-5,min_payload[1] | (min_payload[2] << 2) | (min_payload[3] << 16) | (min_payload[4] << 24));
             return;
+        case MIN_ID_DEBUG:
+       
+            return;
         default:
             break; 
     }
@@ -316,15 +346,6 @@ void poll_UART(){
     }
     min_poll(&min_ctx, NULL, 0);
     
-}
-
-uint8_t assemble_command(uint8_t cmd, char *str, uint8_t *buf){
-    uint8_t len=0;
-    *buf = cmd;
-    buf++;
-    len=strlen(str);
-    memcpy(buf,str,len);
-    return len+1;
 }
 
 void send_command_wq(struct min_context *ctx, uint8_t cmd, char *str){
@@ -362,7 +383,6 @@ uint8_t min_send(uint8_t id, uint8_t *data, uint8_t len, TickType_t ticks){
         return pdFAIL;
     }      
 }
-
 
 
 /* `#END` */

@@ -46,6 +46,7 @@
 #include "tasks/tsk_usb.h"
 #include "tasks/tsk_min.h"
 #include "tasks/tsk_display.h"
+#include "tasks/tsk_i2c.h"
 
 /*
  * Installs the RTOS interrupt handlers and starts the peripherals.
@@ -105,6 +106,9 @@ int main() {
     
     if(configuration.enable_display){
         tsk_display_Start();
+    }
+    if(configuration.pca9685){
+        tsk_i2c_Start();
     }
     
     //CyGlobalIntEnable; //enables interrupts

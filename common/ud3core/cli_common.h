@@ -35,7 +35,7 @@
 #include "semphr.h"
 #include "timers.h"
 #include "TTerm.h"
-
+#include "tasks/tsk_thermistor.h"
 
 void init_config();
 void eeprom_load(TERMINAL_HANDLE * handle);
@@ -99,7 +99,6 @@ struct config_struct{
     uint16_t max_const_i;
     uint16_t max_fault_i;
     uint32_t baudrate;
-    uint8_t spi_speed;
     uint8_t ct2_type;
     uint16_t ct2_current;
     uint16_t ct2_voltage;
@@ -113,6 +112,11 @@ struct config_struct{
     uint16_t max_dc_curr;
     uint8_t ext_interrupter;
     uint8_t is_qcw;
+    uint8_t pca9685;
+    uint16_t max_fb_errors;
+    uint16_t ntc_b;
+    uint16_t ntc_r25;
+    uint16_t idac;
     char synth_filter[32];
 };
 typedef struct config_struct cli_config;

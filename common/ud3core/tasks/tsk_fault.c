@@ -41,7 +41,8 @@ xTaskHandle tsk_fault_TaskHandle;
 uint8 tsk_fault_initVar = 0u;
 
 
-
+#define FAULT_LOOP_SPEED_MS 50
+#define FB_ERROR_TIME 1000 / FAULT_LOOP_SPEED_MS
 
 
 /* ------------------------------------------------------------------------ */
@@ -103,11 +104,16 @@ void handle_UVLO(void) {
     }
 }
 
+uint32_t feedback_error_cnt=0;
+
 void reset_fault(){
+    feedback_error_cnt = 0;
     for(uint8_t i=0;i<sizeof(SYSFAULT);i++){
         ((uint8_t*)&sysfault)[i]=0;
     }
 }
+
+
 
 void handle_FAULT(void) {
 	//UVLO feedback via system_fault (LED2)
@@ -118,9 +124,39 @@ void handle_FAULT(void) {
     system_fault_Control = flag;
 }
 
+
+
 void handle_no_fb(void){
+    
     uint32_t time = ((uint32_t)fb_filter_out * 15625ul)/1000; //ns
     tt.n.fres.value = (5000000ul / time);
+    
+    static uint8_t fb_error_timer=FB_ERROR_TIME;
+    
+    
+    if(configuration.max_fb_errors){
+        if(no_fb_reg_Read()){
+            feedback_error_cnt++;
+            fb_error_timer=FB_ERROR_TIME;
+        }else{
+            fb_error_timer--;
+            if(fb_error_timer==0){
+                fb_error_timer = 20;
+                feedback_error_cnt = 0;
+            }
+        }
+        if(feedback_error_cnt > configuration.max_fb_errors){
+            if(sysfault.feedback==0){
+                alarm_push(ALM_PRIO_CRITICAL,warn_feedback_error, feedback_error_cnt);
+            }
+            sysfault.feedback = pdTRUE;          
+        }
+    }else{
+        sysfault.feedback = pdFALSE;   
+    }
+    
+    
+    
 }
 
 void vWD_Timer_Callback(TimerHandle_t xTimer){
@@ -172,7 +208,7 @@ void tsk_fault_TaskProc(void *pvParameters) {
         handle_no_fb();
 		/* `#END` */
 
-		vTaskDelay(50 / portTICK_PERIOD_MS);
+		vTaskDelay(FAULT_LOOP_SPEED_MS / portTICK_PERIOD_MS);
 	}
 }
 /* ------------------------------------------------------------------------ */

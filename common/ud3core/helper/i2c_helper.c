@@ -22,37 +22,38 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#if !defined(tsk_thermistor_TASK_H)
-#define tsk_thermistor_TASK_H
-
-/*
- * Add user task definitions, types, includes and other things in the below
- * merge region to customize the task.
- */
-/* `#START USER_TYPES_AND_DEFINES` */
+#include "i2c_helper.h"
 #include <device.h>
-#include "cli_basic.h"
-#include "TTerm.h"    
+#include "FreeRTOS.h"
+#include "task.h"
 
-/* `#END` */
+void I2C_Write(uint8_t address, uint8_t registerAddress, uint8_t data){
+    I2C_MasterSendStart(address,I2C_WRITE_XFER_MODE);
+    I2C_MasterWriteByte(registerAddress);
+    I2C_MasterWriteByte(data);
+    I2C_MasterSendStop();
+    
+}
 
-void tsk_thermistor_Start(void);
+uint8_t I2C_Read(uint8_t address, uint8_t registerAddress){
+    uint8_t ret;
+    I2C_MasterSendStart(address,I2C_WRITE_XFER_MODE);
+    I2C_MasterWriteByte(registerAddress);
+    I2C_MasterSendRestart(address,I2C_READ_XFER_MODE);
+    ret = I2C_MasterReadByte(I2C_NAK_DATA);
+    I2C_MasterSendStop();
+    return ret; 
+}
 
-uint8_t callback_ntc(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+void I2C_Write_Blk(uint8_t address, uint8_t * buffer, uint8_t cnt){
+    I2C_MasterClearStatus();
+    I2C_MasterWriteBuf(address,buffer,cnt,I2C_MODE_COMPLETE_XFER);
+    while(!(I2C_MasterStatus() & I2C_MSTAT_WR_CMPLT)){
+        vTaskDelay(1);   
+    }
+}
 
-uint8_t CMD_ntc(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
-
-
-
-
-/*
- * Add user function prototypes in the below merge region to add user
- * functionality to the task definition.
- */
-/* `#START USER_TASK_PROTOS` */
-
-/* `#END` */
-
-/* ------------------------------------------------------------------------ */
-#endif
-/* [] END OF FILE */
+void I2C_Write_nBlk(uint8_t address, uint8_t * buffer, uint8_t cnt){
+    I2C_MasterClearStatus();
+    I2C_MasterWriteBuf(address,buffer,cnt,I2C_MODE_COMPLETE_XFER);
+}

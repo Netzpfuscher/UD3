@@ -96,16 +96,16 @@ void calc_table_128(int16_t t_table[], uint8_t bits, uint16_t table_size, uint32
 	uint16_t w=0;
 	for(i=0;i<=max_cnt;i+=steps){
 		if(i-cnt_0_off>0){
-			r_cnt = u_ref_mv / cnt_diff * (i - cnt_0_off) / meas_current;
+			r_cnt = u_ref_mv / max_cnt * (i - cnt_0_off) / meas_current;
 		}else{
 			r_cnt = 0;
 		}
 		
 		temp_cnt = (298.15/(1-(log(((float)RN/r_cnt))*(298.15/(float)B))))-273.15; 
 		temp_cnt *= 128;
-		if(w<table_size) w++;
+		
 		t_table[w] = temp_cnt;
-
+        if(w<table_size) w++;
 		
 	}	
 }
@@ -127,29 +127,32 @@ void initialize_thermistor(void) {
 	IDAC_therm_SetValue(THERM_DAC_VAL);
 }
 
-int16_t get_temp_128(int32_t counts) {
+int32_t get_temp_128(int32_t counts) {
 	uint16_t counts_div = counts / 128;
 	if (!counts_div)
 		return TEMP_FAULT_LOW;
 	uint32_t counts_window = counts_div * 128;
 
-	return count_temp_table[counts_div+1] - (((int32_t)(count_temp_table[counts_div] - count_temp_table[counts_div+1]) * ((uint32_t)counts - counts_window)) / 128);
+	return count_temp_table[counts_div] - (((int32_t)(count_temp_table[counts_div] - count_temp_table[counts_div+1]) * ((uint32_t)counts - counts_window)) / 128);
 
 }
+volatile float test;
 
 int16_t get_temp_counts(uint8_t channel){
     Therm_Mux_Select(channel);
     vTaskDelay(20);
     ADC_therm_StartConvert();
-    vTaskDelay(20);
-    return ADC_therm_GetResult16()-80;  //compensate for 100mV Offset
+    vTaskDelay(50);
+    return ADC_therm_GetResult16();  //compensate for 100mV Offset
 }
 
 void run_temp_check(TEMP_FAULT * ret) {
 	//this function looks at all the thermistor temperatures, compares them against limits and returns any faults
     
 	tt.n.temp1.value = get_temp_128(get_temp_counts(0)) / 128;
-	tt.n.temp2.value = get_temp_128(get_temp_counts(1)) / 128;
+	tt.n.temp2.value = get_temp_128(get_temp_counts(0)) / 128;
+    
+    test = ADC_CountsTo_Volts(ADC_therm_GetResult16());
 
 	// check for faults
 	if (tt.n.temp1.value > configuration.temp1_max && configuration.temp1_max) {
@@ -237,6 +240,7 @@ void tsk_thermistor_TaskProc(void *pvParameters) {
 		/* `#START TASK_LOOP_CODE` */
         run_temp_check(&temp);
         
+                
         if(temp.fault1_cnt == 0){
             if(sysfault.temp1==0){
                 alarm_push(ALM_PRIO_CRITICAL, warn_temp1_fault, tt.n.temp1.value);

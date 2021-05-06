@@ -137,6 +137,13 @@ void init_config(){
     configuration.pca9685 = 0;
     configuration.max_fb_errors = 0;
     
+    configuration.ntc_b = 3977;
+    configuration.ntc_r25 = 10000;
+    
+    configuration.adc_cal[NTC_CAL_MIN] = 100;
+    configuration.adc_cal[NTC_CAL_MAX] = 100;
+    configuration.adc_cal[NTC_IDAC] = 150;
+    
     interrupter.mod = INTR_MOD_PW;
     
     param.pw = 0;
@@ -244,7 +251,10 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"vol_mod"         , interrupter.mod               , 0      ,1      ,0      ,callback_interrupter_mod    ,"0=pw 1=current modulation")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"pca9685"         , configuration.pca9685         , 0      ,1      ,0      ,NULL                        ,"0=off 1=on")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_fb_errors"   , configuration.max_fb_errors   , 0      ,60000  ,0      ,NULL                        ,"0=off, numer of feedback errors per second to sysfault")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ntc_b"           , configuration.ntc_b           , 0      ,10000  ,0      ,callback_ntc                ,"NTC beta [k]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ntc_r25"         , configuration.ntc_r25         , 0      ,33000  ,0      ,callback_ntc                ,"NTC R25 [kOhm]")
     ADD_PARAM(PARAM_CONFIG  ,pdFALSE,"d_calib"         , vdriver_lut                   , 0      ,0      ,0      ,NULL                        ,"For voltage measurement")
+    ADD_PARAM(PARAM_CONFIG  ,pdFALSE,"t_calib"         , configuration.adc_cal         , 0      ,0      ,0      ,NULL                        ,"For ntc measurement")
 };
 
 

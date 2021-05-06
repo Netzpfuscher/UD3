@@ -35,7 +35,7 @@
 #include "semphr.h"
 #include "timers.h"
 #include "TTerm.h"
-
+#include "tasks/tsk_thermistor.h"
 
 void init_config();
 void eeprom_load(TERMINAL_HANDLE * handle);
@@ -114,6 +114,9 @@ struct config_struct{
     uint8_t is_qcw;
     uint8_t pca9685;
     uint16_t max_fb_errors;
+    uint16_t ntc_b;
+    uint16_t ntc_r25;
+    uint16_t adc_cal[3];
     char synth_filter[32];
 };
 typedef struct config_struct cli_config;

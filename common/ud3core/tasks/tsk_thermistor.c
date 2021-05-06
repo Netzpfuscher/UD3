@@ -24,6 +24,7 @@
 
 #include "cyapicallbacks.h"
 #include <cytypes.h>
+#include <math.h>
 
 #include "tsk_thermistor.h"
 #include "tsk_fault.h"
@@ -72,10 +73,43 @@ typedef struct{
 
 #define TEMP_FAULT_COUNTER_MAX 5
 
+#define TEMP_TABLE_SIZE 32
+
 //temperature *128
-const uint16 count_temp_table[] = {
-	15508, 10939, 8859, 7536, 6579, 5826, 5220, 4715, 4275, 3879, 3551, 3229, 2965, 2706, 2469, 2261,
-	2054, 1861, 1695, 1530, 1364, 1215, 1084, 953, 822, 690, 576, 473, 369, 266, 163, 59};
+int16_t count_temp_table[TEMP_TABLE_SIZE];
+
+void calc_table_128(int16_t t_table[], uint8_t bits, uint16_t table_size, uint32_t B, uint32_t RN, uint16_t meas_curr_uA, uint16_t cnt_0_off, uint16_t cnt_5_off){
+	
+	int32_t max_cnt = 1 << bits;
+	uint32_t steps =  max_cnt / table_size;
+
+	float meas_current = meas_curr_uA * 1e-6;
+	uint32_t cnt_max = max_cnt - cnt_5_off;
+	
+	uint32_t cnt_diff = cnt_max - cnt_0_off;
+	float u_ref_mv = 5.0;
+	float r_cnt;
+	float temp_cnt;
+	
+
+	int32_t i;
+	uint16_t w=0;
+	for(i=0;i<=max_cnt;i+=steps){
+		if(i-cnt_0_off>0){
+			r_cnt = u_ref_mv / cnt_diff * (i - cnt_0_off) / meas_current;
+		}else{
+			r_cnt = 0;
+		}
+		
+		temp_cnt = (298.15/(1-(log(((float)RN/r_cnt))*(298.15/(float)B))))-273.15; 
+		temp_cnt *= 128;
+		if(w<table_size) w++;
+		t_table[w] = temp_cnt;
+
+		
+	}	
+}
+
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */
@@ -93,19 +127,16 @@ void initialize_thermistor(void) {
 	IDAC_therm_SetValue(THERM_DAC_VAL);
 }
 
-uint16_t get_temp_128(uint16_t counts) {
+int16_t get_temp_128(int32_t counts) {
 	uint16_t counts_div = counts / 128;
 	if (!counts_div)
 		return TEMP_FAULT_LOW;
 	uint32_t counts_window = counts_div * 128;
 
-	counts_div--;
-	if (counts > counts_window) {
-		return count_temp_table[counts_div] - (((uint32_t)(count_temp_table[counts_div] - count_temp_table[counts_div + 1]) * ((uint32_t)counts - counts_window)) / 128);
-	} else {
-		return count_temp_table[counts_div] - (((uint32_t)(count_temp_table[counts_div - 1] - count_temp_table[counts_div]) * ((uint32_t)counts - counts_window)) / 128);
-	}
+	return count_temp_table[counts_div+1] - (((int32_t)(count_temp_table[counts_div] - count_temp_table[counts_div+1]) * ((uint32_t)counts - counts_window)) / 128);
+
 }
+
 int16_t get_temp_counts(uint8_t channel){
     Therm_Mux_Select(channel);
     vTaskDelay(20);
@@ -162,6 +193,13 @@ void run_temp_check(TEMP_FAULT * ret) {
 	return;
 }
 
+uint8_t callback_ntc(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
+    calc_table_128(count_temp_table, 12 , sizeof(count_temp_table) / sizeof(int16_t),
+        configuration.ntc_b, configuration.ntc_r25, configuration.adc_cal[NTC_IDAC],
+        configuration.adc_cal[NTC_CAL_MIN], configuration.adc_cal[NTC_CAL_MAX]);
+    return 1;
+}
+
 /* `#END` */
 /* ------------------------------------------------------------------------ */
 /*
@@ -185,6 +223,8 @@ void tsk_thermistor_TaskProc(void *pvParameters) {
 	/* `#START TASK_INIT_CODE` */
     
 	initialize_thermistor();
+    
+    callback_ntc(NULL,0,NULL);
     
     TEMP_FAULT temp;
     temp.fault1_cnt = TEMP_FAULT_COUNTER_MAX;

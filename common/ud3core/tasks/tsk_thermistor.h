@@ -31,10 +31,20 @@
  */
 /* `#START USER_TYPES_AND_DEFINES` */
 #include <device.h>
+#include "cli_basic.h"
+#include "TTerm.h"    
 
 /* `#END` */
 
 void tsk_thermistor_Start(void);
+
+uint8_t callback_ntc(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+
+#define NTC_CAL_MIN 0
+#define NTC_CAL_MAX 1
+#define NTC_IDAC    2
+
+
 
 /*
  * Add user function prototypes in the below merge region to add user

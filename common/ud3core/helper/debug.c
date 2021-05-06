@@ -80,7 +80,8 @@ uint8_t print_min_debug(TERMINAL_HANDLE * handle){
 uint8_t CMD_debug(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     if(argCount==0 || strcmp(args[0], "-?") == 0){
         ttprintf(   "Usage: debug [id]\r\n"
-                    "debug min\r\n");
+                    "debug min\r\n"
+                    "debug fn\r\n");
         return TERM_CMD_EXIT_SUCCESS;
     } 
 

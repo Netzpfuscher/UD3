@@ -54,6 +54,9 @@ typedef struct{
     uint16_t fault2_cnt;
 }TEMP_FAULT;
 
+#define THERM_1 0
+#define THERM_2 1
+#define THERM_GND 2
 
 /* ------------------------------------------------------------------------ */
 /*
@@ -145,14 +148,14 @@ int32_t get_temp_counts(uint8_t channel){
     vTaskDelay(50);
     int16_t temp = ADC_therm_GetResult16()-ADC_therm_Offset;
     if(temp<0)temp=0;
-    return temp;  //compensate for 100mV Offset
+    return temp;
 }
 
 void run_temp_check(TEMP_FAULT * ret) {
 	//this function looks at all the thermistor temperatures, compares them against limits and returns any faults
 
-    tt.n.temp1.value = get_temp_128(get_temp_counts(0)) / 128;
-    tt.n.temp2.value = get_temp_128(get_temp_counts(0)) / 128;
+    tt.n.temp1.value = get_temp_128(get_temp_counts(THERM_1)) / 128;
+    tt.n.temp2.value = get_temp_128(get_temp_counts(THERM_2)) / 128;
 
 	// check for faults
 	if (tt.n.temp1.value > configuration.temp1_max && configuration.temp1_max) {
@@ -207,14 +210,13 @@ uint8_t CMD_ntc(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     
     ttprintf("Connect a precision 10k to therm 1\r\n");
     ttprintf("Press [y] to proceed\r\n");
-    port_str * ptr = handle->port;
-    
+   
     if(getch(handle, portMAX_DELAY) != 'y'){
         ttprintf("Calibration aborted\r\n");
         return TERM_CMD_EXIT_SUCCESS;
     }
     
-    Therm_Mux_Select(0);
+    Therm_Mux_Select(THERM_1);
     vTaskDelay(100);
     ADC_therm_StartConvert();
     vTaskDelay(100);
@@ -231,7 +233,7 @@ uint8_t CMD_ntc(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
 void calib_adc(){
     
     IDAC_therm_SetValue(THERM_DAC_VAL*3);
-    Therm_Mux_Select(2);
+    Therm_Mux_Select(THERM_GND);
     vTaskDelay(50);
     int32_t cnt=0;
     for(uint8_t i = 0;i<4;i++){

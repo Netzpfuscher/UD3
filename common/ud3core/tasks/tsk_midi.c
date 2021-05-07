@@ -482,13 +482,17 @@ static inline void synthcode_SID(uint32_t r){
         compute_adsr_sid(ch);
         if(channel[ch].volume>0){
             tt.n.midi_voices.value++;
-            #if DEBUG_PW==1
-                interrupter_set_pw(ch, channel[ch].volume);
-            #else
+            if(sid_frm.wave[ch]){
+                interrupter_set_pw_vol(ch,sid_frm.master_pw,channel[ch].volume/2);
+            }else{
                 interrupter_set_pw_vol(ch,sid_frm.master_pw,channel[ch].volume);
-            #endif
+            }
             synthcode_channel_enable(ch,1);
-            //synthcode_noise(ch, sid_frm.wave[ch],rnd);
+            
+            if(sid_frm.test[ch]){
+                synthcode_noise(ch, 1 ,0);
+            }
+
             if (sid_frm.wave[ch] && (r / channel[ch].halfcount) % 2 > 0) {
                 flag[ch]=1;
 			}  

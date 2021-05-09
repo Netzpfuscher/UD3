@@ -247,18 +247,6 @@ void init_telemetry(){
     tt.n.dutycycle.name = "Dutycycle";
     tt.n.dutycycle.value = 0;
     tt.n.dutycycle.min = 0;
-    tt.n.dutycycle.max = 1000;
-    tt.n.dutycycle.offset = 0;
-    tt.n.dutycycle.unit = TT_UNIT_PERCENT;
-    tt.n.dutycycle.divider = 10;
-    tt.n.dutycycle.high_res = pdTRUE;
-    tt.n.dutycycle.resend_time = TT_SLOW;
-    tt.n.dutycycle.chart = TT_NO_TELEMETRY;
-    tt.n.dutycycle.gauge = 5;
-    
-    tt.n.dutycycle.name = "Dutycycle";
-    tt.n.dutycycle.value = 0;
-    tt.n.dutycycle.min = 0;
     tt.n.dutycycle.max = 100;
     tt.n.dutycycle.offset = 0;
     tt.n.dutycycle.unit = TT_UNIT_PERCENT;

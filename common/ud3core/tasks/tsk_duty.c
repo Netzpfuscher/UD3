@@ -10,6 +10,7 @@
 #include "cli_common.h"
 #include "tsk_cli.h"
 #include "telemetry.h"
+#include "tsk_priority.h"
 
 void tsk_duty_task(void *pvParameters) {
 	OnTimeCounter_Start();
@@ -37,5 +38,5 @@ void tsk_duty_task(void *pvParameters) {
 }
 
 void tsk_duty_Start(void) {
-	xTaskCreate(tsk_duty_task, "Duty", configMINIMAL_STACK_SIZE, NULL, 1, NULL); //TODO PRIO_DUTY... WHERE IS THE FILE SAUCE???
+	xTaskCreate(tsk_duty_task, "Duty", configMINIMAL_STACK_SIZE, NULL, PRIO_DUTY, NULL);
 }

@@ -81,7 +81,7 @@ void init_telemetry(){
     tt.n.i2t_i.high_res = pdFALSE;
     tt.n.i2t_i.resend_time = TT_FAST;
     tt.n.i2t_i.chart = TT_NO_TELEMETRY;
-    tt.n.i2t_i.gauge = 6;
+    tt.n.i2t_i.gauge = TT_NO_TELEMETRY;
     
     tt.n.fres.name = "Fres";
     tt.n.fres.value = 0;
@@ -243,6 +243,30 @@ void init_telemetry(){
     tt.n.rx_datarate.resend_time = TT_FAST;
     tt.n.rx_datarate.chart = TT_NO_TELEMETRY;
     tt.n.rx_datarate.gauge = TT_NO_TELEMETRY;
+    
+    tt.n.dutycycle.name = "Dutycycle";
+    tt.n.dutycycle.value = 0;
+    tt.n.dutycycle.min = 0;
+    tt.n.dutycycle.max = 1000;
+    tt.n.dutycycle.offset = 0;
+    tt.n.dutycycle.unit = TT_UNIT_PERCENT;
+    tt.n.dutycycle.divider = 10;
+    tt.n.dutycycle.high_res = pdTRUE;
+    tt.n.dutycycle.resend_time = TT_SLOW;
+    tt.n.dutycycle.chart = TT_NO_TELEMETRY;
+    tt.n.dutycycle.gauge = 5;
+    
+    tt.n.dutycycle.name = "Dutycycle";
+    tt.n.dutycycle.value = 0;
+    tt.n.dutycycle.min = 0;
+    tt.n.dutycycle.max = 100;
+    tt.n.dutycycle.offset = 0;
+    tt.n.dutycycle.unit = TT_UNIT_PERCENT;
+    tt.n.dutycycle.divider = 10;
+    tt.n.dutycycle.high_res = pdTRUE;
+    tt.n.dutycycle.resend_time = TT_SLOW;
+    tt.n.dutycycle.chart = TT_NO_TELEMETRY;
+    tt.n.dutycycle.gauge = 6;
     
     recalc_telemetry_limits();
     

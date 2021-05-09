@@ -47,6 +47,7 @@
 #include "tasks/tsk_min.h"
 #include "tasks/tsk_display.h"
 #include "tasks/tsk_i2c.h"
+#include "tasks/tsk_duty.h"
 
 /*
  * Installs the RTOS interrupt handlers and starts the peripherals.
@@ -103,6 +104,7 @@ int main() {
 	tsk_analog_Start();		//Reads bus voltage and currents
 	tsk_thermistor_Start(); //Reads thermistors
 	tsk_fault_Start();		//Handles fault conditions
+    tsk_duty_Start();
     
     if(configuration.enable_display){
         tsk_display_Start();

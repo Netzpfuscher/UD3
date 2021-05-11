@@ -96,6 +96,7 @@ struct sid_f{
     uint32_t freq_fp8[SID_CHANNELS];
     uint16_t pw[SID_CHANNELS];
     uint8_t gate[SID_CHANNELS];
+    uint8_t test[SID_CHANNELS];
     uint8_t wave[SID_CHANNELS];
     uint8_t attack[SID_CHANNELS];
     uint8_t decay[SID_CHANNELS];

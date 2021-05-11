@@ -122,6 +122,11 @@ void process_sid(uint8_t* ptr, uint16_t len) {
                         SID_frame.gate[0] = *ptr & 0x01;
                     }
                     SID_frame.wave[0] = *ptr & 0x80;
+                    if(*ptr & 0x08){
+                        SID_frame.test[0]=1;
+                    }else{
+                        SID_frame.test[0]=0;
+                    }
         			break;
                 case SID_AD1:
                     SID_frame.attack[0] = (*ptr >> 4) & 0x0F;
@@ -152,6 +157,11 @@ void process_sid(uint8_t* ptr, uint16_t len) {
                         SID_frame.gate[1] = *ptr & 0x01;
                     }
                     SID_frame.wave[1] = *ptr & 0x80;
+                    if(*ptr & 0x08){
+                        SID_frame.test[1]=1;
+                    }else{
+                        SID_frame.test[1]=0;
+                    }
         			break;
                 case SID_AD2:
                     SID_frame.attack[1] = (*ptr >> 4) & 0x0F;
@@ -182,6 +192,11 @@ void process_sid(uint8_t* ptr, uint16_t len) {
                         SID_frame.gate[2] = *ptr & 0x01;
                     }
                     SID_frame.wave[2] = *ptr & 0x80;
+                    if(*ptr & 0x08){
+                        SID_frame.test[2]=1;
+                    }else{
+                        SID_frame.test[2]=0;
+                    }
         			break;
                 case SID_AD3:
                     SID_frame.attack[2] = (*ptr >> 4) & 0x0F;
@@ -284,6 +299,11 @@ void process_min_sid(uint8_t* ptr, uint16_t len) {
                 SID_frame.gate[i]=0;
             }else{
                 SID_frame.gate[i] = *ptr & 0x01;
+            }
+            if(*ptr & 0x08){
+                SID_frame.test[i]=1;
+            }else{
+                SID_frame.test[i]=0;
             }
             ptr++;
             //SID_AD1

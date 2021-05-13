@@ -56,7 +56,7 @@ typedef struct __midich__ {
 typedef struct __channel__ {
 	uint8 midich;	// Channel of midi (0 - 15)
 	uint8 miditone;  // Midi's tone number (0-127)
-	uint8 volume;	// Volume (0 - 127)
+	int32 volume;	// Volume (0 - 127) 7bit.16bit
 	uint8 updated;   // Was it updated?
     uint16 halfcount;
     uint32 freq;

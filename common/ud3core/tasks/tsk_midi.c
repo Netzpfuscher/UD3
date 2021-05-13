@@ -278,44 +278,50 @@ struct sid_f sid_frm;
 uint8_t old_flag[N_CHANNEL];
 
 
-static const uint8_t envelope[16] = {0,0,1,2,3,4,5,6,8,20,41,67,83,251,255,255};
+//static const uint8_t envelope[16] = {0,0,1,2,3,4,5,6,8,20,41,67,83,251,255,255};
+
+static const uint32_t attack_env[16] = {520192,130048,65024,43349,27378,18578,15299,13004,10403,4161,2080,1300,1040,346,208,130};
+static const uint32_t decrel_env[16] = {173397,43349,21674,14449,9126,6192,5099,4334,3467,1387,693,433,346,115,69,43};
+#define MAX_VOL (127<<16)
+
 
 static inline void compute_adsr_midi(uint8_t ch){
 	switch (channel[ch].adsr_state){
         case ADSR_ATTACK:
-            if(channel[ch].adsr_count>=midich[channel[ch].midich].attack){
-                channel[ch].volume++;
-                if(channel[ch].volume>=127){
-                    channel[ch].volume=127;
-                    channel[ch].adsr_state=ADSR_DECAY;
-                }
-                channel[ch].adsr_count=0;
+            if(midich[channel[ch].midich].attack){
+                channel[ch].volume+=(128-midich[channel[ch].midich].attack)<<8;
             }else{
-                channel[ch].adsr_count++;
+                channel[ch].adsr_state=ADSR_SUSTAIN;
+            }
+            if(channel[ch].volume>=MAX_VOL){
+                channel[ch].volume=MAX_VOL;
+                channel[ch].adsr_state=ADSR_DECAY;
             }
         break;
         case ADSR_DECAY:
-            if(channel[ch].adsr_count>=midich[channel[ch].midich].decay){
-                channel[ch].volume--;
-                if(channel[ch].volume<=channel[ch].sustain) channel[ch].adsr_state=ADSR_SUSTAIN;
-                channel[ch].adsr_count=0;
+            if(midich[channel[ch].midich].attack){
+                channel[ch].volume-=(128-midich[channel[ch].midich].decay)<<8;
             }else{
-                channel[ch].adsr_count++;
+                channel[ch].adsr_state=ADSR_SUSTAIN;
+            }
+            if(channel[ch].volume<=((int32_t)channel[ch].sustain<<16)){
+                channel[ch].volume=(uint32_t)channel[ch].sustain<<16;
+                channel[ch].adsr_state=ADSR_SUSTAIN;
             }
         break;
         case ADSR_SUSTAIN:
-            channel[ch].volume = channel[ch].sustain;
+            channel[ch].volume = channel[ch].sustain<<16;
         break;
         case ADSR_RELEASE:
-            if(channel[ch].adsr_count>=midich[channel[ch].midich].release){
-                channel[ch].volume--;
-                if(channel[ch].volume==0) {
-                    channel[ch].sustain=0;
-                    channel[ch].adsr_state=ADSR_IDLE;
-                }
-                channel[ch].adsr_count=0;
+            if(midich[channel[ch].midich].release){
+                channel[ch].volume-=(128-midich[channel[ch].midich].release)<<8;
             }else{
-                channel[ch].adsr_count++;
+                channel[ch].volume=0;
+                channel[ch].adsr_state=ADSR_IDLE;
+            }
+            if(channel[ch].volume<=0){
+                channel[ch].volume=0;
+                channel[ch].adsr_state=ADSR_IDLE;
             }
         break;
     }
@@ -324,38 +330,27 @@ static inline void compute_adsr_midi(uint8_t ch){
 static inline void compute_adsr_sid(uint8_t ch){
     switch (channel[ch].adsr_state){
             case ADSR_ATTACK:
-                if(channel[ch].adsr_count>=envelope[sid_frm.attack[ch]]){
-                    channel[ch].volume++;
-                    if(channel[ch].volume>=127){
-                        channel[ch].volume=127;
-                        channel[ch].adsr_state=ADSR_DECAY;
-                    }
-                    channel[ch].adsr_count=0;
-                }else{
-                    channel[ch].adsr_count++;
+                channel[ch].volume+=attack_env[sid_frm.attack[ch]];
+                if(channel[ch].volume>=MAX_VOL){
+                    channel[ch].volume=MAX_VOL;
+                    channel[ch].adsr_state=ADSR_DECAY;
                 }
             break;
             case ADSR_DECAY:
-                if(channel[ch].adsr_count>=envelope[sid_frm.decay[ch]]){
-                    channel[ch].volume--;
-                    if(channel[ch].volume<=sid_frm.sustain[ch]) channel[ch].adsr_state=ADSR_SUSTAIN;
-                    channel[ch].adsr_count=0;
-                }else{
-                    channel[ch].adsr_count++;
+                channel[ch].volume-=decrel_env[sid_frm.decay[ch]];
+                if(channel[ch].volume<=((int32_t)sid_frm.sustain[ch]<<16)){
+                    channel[ch].volume=(uint32_t)sid_frm.sustain[ch]<<16;
+                    channel[ch].adsr_state=ADSR_SUSTAIN;
                 }
             break;
             case ADSR_SUSTAIN:
-                channel[ch].volume = sid_frm.sustain[ch];
+                channel[ch].volume=(uint32_t)sid_frm.sustain[ch]<<16;
             break;
             case ADSR_RELEASE:
-                if(channel[ch].adsr_count>=envelope[sid_frm.release[ch]]){
-                    channel[ch].volume--;
-                    if(channel[ch].volume==0) {
-                        channel[ch].adsr_state=ADSR_IDLE;
-                    }
-                    channel[ch].adsr_count=0;
-                }else{
-                    channel[ch].adsr_count++;
+                channel[ch].volume-=decrel_env[sid_frm.release[ch]];
+                if(channel[ch].volume<=0){
+                    channel[ch].volume=0;
+                    channel[ch].adsr_state=ADSR_IDLE;
                 }
             break;
         }
@@ -421,11 +416,7 @@ static inline void synthcode_MIDI(){
         compute_adsr_midi(ch);
         if(channel[ch].volume>0){
             tt.n.midi_voices.value++;
-            #if DEBUG_PW==1
-                interrupter_set_pw(ch, channel[ch].volume);
-            #else
-                interrupter_set_pw_vol(ch,interrupter.pw,channel[ch].volume);
-            #endif
+            interrupter_set_pw_vol(ch,interrupter.pw,channel[ch].volume>>16);
             synthcode_channel_enable(ch,1);
         }else{
             synthcode_channel_enable(ch,0); 
@@ -477,9 +468,9 @@ static inline void synthcode_SID(uint32_t r){
             
             tt.n.midi_voices.value++;
             if(sid_frm.wave[ch]){
-                interrupter_set_pw_vol(ch,sid_frm.master_pw,channel[ch].volume/2);
+                interrupter_set_pw_vol(ch,sid_frm.master_pw,(channel[ch].volume/2)>>16);
             }else{
-                interrupter_set_pw_vol(ch,sid_frm.master_pw,channel[ch].volume);
+                interrupter_set_pw_vol(ch,sid_frm.master_pw,channel[ch].volume>>16);
             }
 
             synthcode_channel_enable(ch,1);
@@ -497,12 +488,11 @@ static inline void synthcode_SID(uint32_t r){
         }
   
 	}
-
 }
 
 static inline void synthcode_QMIDI(uint32_t r){
     qcw_handle_synth();
-    int16_t vol=0;
+    int32_t vol=0;
     tt.n.midi_voices.value=0;
 	for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
 
@@ -517,6 +507,7 @@ static inline void synthcode_QMIDI(uint32_t r){
             }
 		}
 	}
+    vol>>=16;
     if(vol>127)vol=127;
     if(vol<-128)vol=-128;
     qcw_modulate(vol+0x80);  
@@ -558,7 +549,7 @@ static inline void synthcode_QSID(uint32_t r){
     
     int8_t random = ((uint8_t)rand())-127;
     
-    int16_t vol=0;
+    int32_t vol=0;
 	
 	for (uint8_t ch = 0; ch < SID_CHANNELS; ch++) {
         compute_adsr_sid(ch);
@@ -579,6 +570,7 @@ static inline void synthcode_QSID(uint32_t r){
 		}   
 	}
     vol/=3;
+    vol>>=16;
     if(vol>127)vol=127;
     if(vol<-128)vol=-128;
     qcw_modulate(vol+0x80);    

@@ -183,11 +183,6 @@ typedef struct __note__ {
 	} data;
 } NOTE;
 
-typedef struct __pulse__ {
-	uint8_t  volume;
-	uint16_t pw;
-} PULSE;
-
 
 uint8_t skip_flag = 0; // Skipping system exclusive messages
 
@@ -277,7 +272,6 @@ Q16n16  Q16n16_mtof(Q16n16 midival_fractional)
 /* `#START USER_TASK_LOCAL_CODE` */
 
 xQueueHandle qSID;
-xQueueHandle qPulse;
 struct sid_f sid_frm;
 
 
@@ -285,7 +279,6 @@ uint8_t old_flag[N_CHANNEL];
 
 
 static const uint8_t envelope[16] = {0,0,1,2,3,4,5,6,8,20,41,67,83,251,255,255};
-volatile uint8_t pulse_active=pdFALSE;
 
 static inline void compute_adsr_midi(uint8_t ch){
 	switch (channel[ch].adsr_state){
@@ -934,7 +927,6 @@ void tsk_midi_TaskProc(void *pvParameters) {
 	/* `#START TASK_VARIABLES` */
 	qMIDI_rx = xQueueCreate(N_QUEUE_MIDI, sizeof(NOTE));
     qSID = xQueueCreate(N_QUEUE_SID, sizeof(struct sid_f));
-    qPulse = xQueueCreate(N_QUEUE_PULSE, sizeof(PULSE));
 
 	NOTE note_struct;
     

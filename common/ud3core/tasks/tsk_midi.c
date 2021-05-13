@@ -480,13 +480,15 @@ static inline void synthcode_SID(uint32_t r){
 	for (uint8_t ch = 0; ch < SID_CHANNELS; ch++) {
         flag[ch]=0;
         compute_adsr_sid(ch);
-        if(channel[ch].volume>0){
+        if(channel[ch].volume>0 && channel[ch].freq){
+            
             tt.n.midi_voices.value++;
             if(sid_frm.wave[ch]){
                 interrupter_set_pw_vol(ch,sid_frm.master_pw,channel[ch].volume/2);
             }else{
                 interrupter_set_pw_vol(ch,sid_frm.master_pw,channel[ch].volume);
             }
+
             synthcode_channel_enable(ch,1);
             
             if(sid_frm.test[ch]){

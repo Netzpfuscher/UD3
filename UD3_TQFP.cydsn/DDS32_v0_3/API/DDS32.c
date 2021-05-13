@@ -161,11 +161,18 @@ uint8 `$INSTANCE_NAME`_SetFrequency(uint8_t chan, double freq )
 uint32 `$INSTANCE_NAME`_SetFrequency_FP8(uint8_t chan, uint32 freq )
 { 
     if(chan>1) return 0;
+    if(freq==0){
+        `$INSTANCE_NAME`_Disable_ch(chan);  
+        return 0;
+    }
         
     // todo: uint64 for possible overflow?    
     uint32_t tmp = (((uint64_t)freq * (1<<16))/ (`$INSTANCE_NAME`_CLOCK_FREQ /2) );           // calculate tune word
 
-    if ( (tmp < 1) || (tmp > TUNE_WORD_MAX) )  return 0; // fail -> exit if outside of the valid raange // todo: allow exact 0?
+    if ( (tmp < 1) || (tmp > TUNE_WORD_MAX) ){
+        `$INSTANCE_NAME`_Disable_ch(chan);  
+        return 0; // fail -> exit if outside of the valid raange // todo: allow exact 0?
+    }
           
     tune_word[chan] = tmp;
     

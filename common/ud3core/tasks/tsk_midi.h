@@ -61,7 +61,6 @@ typedef struct __channel__ {
     uint16 halfcount;
     uint32 freq;
     uint8 adsr_state;
-    uint8 adsr_count;
     uint8 sustain;
     uint8 old_gate;
     uint8_t noise;
@@ -69,6 +68,7 @@ typedef struct __channel__ {
     
 #define N_MIDICHANNEL 16
 #define SID_CHANNELS 3
+
 
 xQueueHandle qMIDI_rx;
 

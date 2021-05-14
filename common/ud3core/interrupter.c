@@ -203,19 +203,22 @@ void interrupter_set_pw(uint8_t ch, uint16_t pw){
     }
 }
 
-void interrupter_set_pw_vol(uint8_t ch, uint16_t pw, uint8_t vol){
+void interrupter_set_pw_vol(uint8_t ch, uint16_t pw, uint32_t vol){
     if(ch<N_CHANNEL){
-        if(vol>127)vol=127;
+
         if(pw>configuration.max_tr_pw) pw = configuration.max_tr_pw;
         
-        if(interrupter.mod==INTR_MOD_PW){  
-            uint32_t temp = (uint32_t)pw*vol/127;
+        if(interrupter.mod==INTR_MOD_PW){
+            if(vol>MAX_VOL)vol=MAX_VOL;
+            uint32_t temp = ((uint32_t)pw*(vol>>6))>>17;
+            if(temp > configuration.max_tr_pw) temp = configuration.max_tr_pw;
             uint16_t prd = param.offtime + temp;
             ch_prd[ch] = prd - 3;
             ch_cmp[ch] = prd - temp - 3; 
         }else{
-            if (vol < 127) {
-        		ch_cur[ch] = params.min_tr_cl_dac_val + ((vol * params.diff_tr_cl_dac_val) >> 7);
+            if (vol < MAX_VOL) {
+        		ch_cur[ch] = params.min_tr_cl_dac_val + ((vol * params.diff_tr_cl_dac_val) >> 23);
+                if(ch_cur[ch]>params.max_tr_cl_dac_val) ch_cur[ch] = params.max_tr_cl_dac_val;
         	} else {
         		ch_cur[ch] = params.max_tr_cl_dac_val;
         	}
@@ -228,11 +231,12 @@ void interrupter_set_pw_vol(uint8_t ch, uint16_t pw, uint8_t vol){
 
 
 
-void interrupter_oneshot(uint32_t pw, uint8_t vol) {
+void interrupter_oneshot(uint32_t pw, uint32_t vol) {
     if(sysfault.interlock) return;
     
-	if (vol < 127) {
-		ct1_dac_val[0] = params.min_tr_cl_dac_val + ((vol * params.diff_tr_cl_dac_val) >> 7);
+	if (vol < MAX_VOL) {
+		ct1_dac_val[0] = params.min_tr_cl_dac_val + ((vol * params.diff_tr_cl_dac_val) >> 23);
+        if(ct1_dac_val[0] > params.max_tr_cl_dac_val) ct1_dac_val[0] = params.max_tr_cl_dac_val;
 	} else {
 		ct1_dac_val[0] = params.max_tr_cl_dac_val;
 	}
@@ -350,21 +354,27 @@ void update_interrupter() {
 ******************************************************************************/
 uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle) {
     
-    uint32_t temp;
-    temp = (1000 * param.pw) / configuration.max_tr_pw;
+    uint32_t temp = (1000 * param.pw) / configuration.max_tr_pw;
     param.pwp = temp;
-
-	interrupter.pw = param.pw;
-	interrupter.prd = param.pwd;
     
-    update_midi_duty();
-    
-    
-	if (interrupter.mode!=INTR_MODE_OFF) {
-		update_interrupter();
-	}else if(configuration.ext_interrupter  && param.synth == SYNTH_OFF){
-        interrupter_update_ext();
+    switch(interrupter.mode){
+        case INTR_MODE_OFF:
+        
+        break;
+        case INTR_MODE_TR:
+        	interrupter.pw = param.pw;
+        	interrupter.prd = param.pwd;
+            update_interrupter();
+        break;
+        default:
+            if(configuration.ext_interrupter  && param.synth == SYNTH_OFF){
+                interrupter_update_ext();
+            }else if (param.synth == SYNTH_MIDI || param.synth == SYNTH_MIDI_QCW){
+                update_midi_duty();
+            }
+        break; 
     }
+
 	return pdPASS;
 }
 

@@ -155,7 +155,7 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 
 			//command a one shot
 
-			interrupter_oneshot(pulsewidth, 127);
+			interrupter_oneshot(pulsewidth, MAX_VOL);
 
 			vTaskDelay(delay / portTICK_PERIOD_MS);
 

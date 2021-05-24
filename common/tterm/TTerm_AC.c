@@ -2,7 +2,6 @@
  * TTerm
  *
  * Copyright (c) 2020 Thorben Zethoff
- * Copyright (c) 2020 Jens Kerrinnes
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -45,7 +44,7 @@ void TERM_addCommandAC(TermCommandDescriptor * cmd, TermAutoCompHandler ACH, voi
 uint8_t TERM_doAutoComplete(TERMINAL_HANDLE * handle){
     if(strnchr(handle->inputBuffer, ' ', handle->currBufferLength) != NULL){
         TermCommandDescriptor * cmd = TERM_findCMD(handle);
-        if(cmd != 0){
+        if(cmd != NULL){
             if(cmd->ACHandler == 0){
                 handle->currAutocompleteCount = 0;
                 handle->autocompleteStart = 0;
@@ -81,7 +80,7 @@ uint8_t TERM_findMatchingCMDs(char * currInput, uint8_t length, char ** buff, Te
     for(;currPos < cmdListHead->commandLength; currPos++){
         if(strncmp(currInput, currCMD->command, length) == 0){
             if(currCMD->commandLength >= length){
-                buff[commandsFound] = currCMD->command;
+                buff[commandsFound] = (char*)currCMD->command;
                 commandsFound ++;
                 //UART_print("found %s (count is now %d)\r\n", TERM_cmdList[currPos]->command, commandsFound);
             }
@@ -198,7 +197,7 @@ AC_LIST_HEAD * ACL_create(){
     return ret;
 }
 
-AC_LIST_HEAD * ACL_createConst(const char ** strings, uint32_t count){
+AC_LIST_HEAD * ACL_createConst(char ** strings, uint32_t count){
     AC_LIST_HEAD * ret = pvPortMalloc(sizeof(AC_LIST_HEAD));
     
     if(count == 0){  //autocount (requires "__LIST_END__" string)

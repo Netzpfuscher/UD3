@@ -104,6 +104,23 @@ static void stuffed_tx_byte(struct min_context *self, uint8_t byte)
     }
 }
 
+static void stuffed_tx_byte_wo_crc(struct min_context *self, uint8_t byte)
+{
+    // Transmit the byte
+    min_tx_byte(self->port, byte);
+
+    // See if an additional stuff byte is needed
+    if(byte == HEADER_BYTE) {
+        if(--self->tx_header_byte_countdown == 0) {
+            min_tx_byte(self->port, STUFF_BYTE);        // Stuff byte
+            self->tx_header_byte_countdown = 2U;
+        }
+    }
+    else {
+        self->tx_header_byte_countdown = 2U;
+    }
+}
+
 static void on_wire_bytes(struct min_context *self, uint8_t id_control, uint32_t seq, uint8_t *payload_base, uint16_t payload_offset, uint16_t payload_mask, uint8_t payload_len)
 {
     uint8_t n, i;
@@ -141,10 +158,10 @@ static void on_wire_bytes(struct min_context *self, uint8_t id_control, uint32_t
 
     // Network order is big-endian. A decent C compiler will spot that this
     // is extracting bytes and will use efficient instructions.
-    stuffed_tx_byte(self, (uint8_t)((checksum >> 24) & 0xffU));
-    stuffed_tx_byte(self, (uint8_t)((checksum >> 16) & 0xffU));
-    stuffed_tx_byte(self, (uint8_t)((checksum >> 8) & 0xffU));
-    stuffed_tx_byte(self, (uint8_t)((checksum >> 0) & 0xffU));
+    stuffed_tx_byte_wo_crc(self, (uint8_t)((checksum >> 24) & 0xffU));
+    stuffed_tx_byte_wo_crc(self, (uint8_t)((checksum >> 16) & 0xffU));
+    stuffed_tx_byte_wo_crc(self, (uint8_t)((checksum >> 8) & 0xffU));
+    stuffed_tx_byte_wo_crc(self, (uint8_t)((checksum >> 0) & 0xffU));
 
     // Ensure end-of-frame doesn't contain 0xaa and confuse search for start-of-frame
     min_tx_byte(self->port, EOF_BYTE);

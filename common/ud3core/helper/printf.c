@@ -764,11 +764,12 @@ int fctprintf(void (*out)(char character, void* arg), void* arg, const char* for
 }
 
 void send_stream(char character, void* arg){
+    if(character == '\0') return;
     xStreamBufferSend(((port_str*)arg)->tx,&character, 1,portMAX_DELAY);
 }
 
-void stream_buffer(void * port, uint8_t * buffer, uint32_t len){
-    if(((port_str*)port)->tx==NULL) return;
+uint32_t stream_buffer(void * port, uint8_t * buffer, uint32_t len){
+    if(((port_str*)port)->tx==NULL) return 0;
     while(len){
 		uint16_t space = xStreamBufferSpacesAvailable(((port_str*)port)->tx);
 		uint16_t len_t = len;
@@ -778,9 +779,10 @@ void stream_buffer(void * port, uint8_t * buffer, uint32_t len){
 		len-=count;
 		if(!count) vTaskDelay(2);
     }
+    return 1;
 }
 
-void stream_printf(void * port, char* format, ...){
+uint32_t stream_printf(void * port, char* format, ...){
     va_list va;
     va_start(va, format);
     if(format==NULL){
@@ -792,7 +794,7 @@ void stream_printf(void * port, char* format, ...){
         }
     }
     va_end(va);
-    return;
+    return 0;
 }
 
 void min_debug_prt(const char *fmt, ...){

@@ -2,7 +2,6 @@
  * TTerm
  *
  * Copyright (c) 2020 Thorben Zethoff
- * Copyright (c) 2020 Jens Kerrinnes
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,7 +21,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
     
-#if PIC32 == 1
+#if PIC32
 #include <xc.h>
 #endif    
 #include <stdint.h>
@@ -32,17 +31,21 @@
 
 #include "FreeRTOS.h"
 #include "task.h"
+#include "stream_buffer.h"
 #include "UART.h"
 #include "TTerm.h"
 #include "TTerm_cmd.h"
 #include "TTerm_AC.h"
-#include "cli_common.h"  
+#if TERM_SUPPORT_CWD
+#include "TTerm_cwd.h"
+#endif    
+
+#include "apps.h"
 
 TermCommandDescriptor TERM_cmdListHead = {.nextCmd = 0, .commandLength = 0};
 unsigned TERM_baseCMDsAdded = 0;
 
 #define ESC_STR "\x1b"
-
 
 #if EXTENDED_PRINTF == 1
 TERMINAL_HANDLE * TERM_createNewHandle(TermPrintHandler printFunction, void * port, unsigned echoEnabled, TermCommandDescriptor * cmdListHead, TermErrorPrinter errorPrinter, const char * usr){
@@ -67,6 +70,11 @@ TERMINAL_HANDLE * TERM_createNewHandle(TermPrintHandler printFunction, unsigned 
     }else{
         ret->errorPrinter = errorPrinter;
     }
+    
+    #if TERM_SUPPORT_CWD
+    ret->cwdPath = pvPortMalloc(2);
+    strcpy(ret->cwdPath, "/");
+    #endif
 
     //if this is the first console we initialize we need to add the static commands
     if(!TERM_baseCMDsAdded){
@@ -74,8 +82,15 @@ TERMINAL_HANDLE * TERM_createNewHandle(TermPrintHandler printFunction, unsigned 
         
         TERM_addCommand(CMD_help, "help", "Displays this help message", 0, &TERM_cmdListHead);
         TERM_addCommand(CMD_cls, "cls", "Clears the screen", 0, &TERM_cmdListHead);
-        TERM_addCommand(CMD_top, "top", "shows performance stats", 0, &TERM_cmdListHead);
-
+        TERM_addCommand(CMD_reset, "reset", "resets the fibernet", 0, &TERM_cmdListHead);
+        
+        REGISTER_apps(&TERM_cmdListHead);
+        
+        #if TERM_SUPPORT_CWD
+        TERM_addCommand(CMD_ls, "ls", "List directory", 0, &TERM_cmdListHead);
+        TERM_addCommand(CMD_cd, "cd", "Change directory", 0, &TERM_cmdListHead);
+        TERM_addCommand(CMD_mkdir, "mkdir", "Make directory", 0, &TERM_cmdListHead);
+        #endif  
     }
     
 #ifdef TERM_ENABLE_STARTUP_TEXT
@@ -255,7 +270,7 @@ uint8_t TERM_processBuffer(uint8_t * data, uint16_t length, TERMINAL_HANDLE * ha
 }
 
 unsigned isACIILetter(char c){
-    return (c > 64 && c < 91) || (c > 96 && c < 122);
+    return (c > 64 && c < 91) || (c > 96 && c < 122) || c == '~';
 }
 
 void TERM_printBootMessage(TERMINAL_HANDLE * handle){
@@ -263,6 +278,13 @@ void TERM_printBootMessage(TERMINAL_HANDLE * handle){
     ttprintfEcho("\r\n\n\n%s\r\n", TERM_startupText1);
     ttprintfEcho("%s\r\n", TERM_startupText2);
     ttprintfEcho("%s\r\n", TERM_startupText3);
+    
+    if(handle->currBufferLength == 0){
+        ttprintfEcho("\r\n\r\n%s@%s>", handle->currUserName, TERM_DEVICE_NAME);
+    }else{
+        ttprintfEcho("\r\n\r\n%s@%s>%s", handle->currUserName, TERM_DEVICE_NAME, handle->inputBuffer);
+        if(handle->inputBuffer[handle->currBufferPosition] != 0) TERM_sendVT100Code(handle, _VT100_CURSOR_BACK_BY, handle->currBufferLength - handle->currBufferPosition);
+    }
 }
 
 BaseType_t ptr_is_in_ram(void* ptr){
@@ -586,7 +608,7 @@ TermCommandDescriptor * TERM_findCMD(TERMINAL_HANDLE * handle){
         currCmd = currCmd->nextCmd;
     }
     
-    return 0;
+    return NULL;
 }
 
 uint8_t TERM_interpretCMD(char * data, uint16_t dataLength, TERMINAL_HANDLE * handle){
@@ -619,7 +641,7 @@ uint8_t TERM_interpretCMD(char * data, uint16_t dataLength, TERMINAL_HANDLE * ha
     return TERM_CMD_EXIT_NOT_FOUND;
 }
 
-uint16_t TERM_seperateArgs(char * data, uint16_t dataLength, char ** buff){
+uint8_t TERM_seperateArgs(char * data, uint16_t dataLength, char ** buff){
     uint8_t count = 0;
     uint8_t currPos = 0;
     unsigned quoteMark = 0;
@@ -647,6 +669,7 @@ uint16_t TERM_seperateArgs(char * data, uint16_t dataLength, char ** buff){
                 }
                         
                 break;
+                
             default:
                 if(!quoteMark){
                     if(lastSpace != 0){
@@ -657,7 +680,7 @@ uint16_t TERM_seperateArgs(char * data, uint16_t dataLength, char ** buff){
                 break;
         }
     }
-    if(quoteMark) return TERM_ARGS_ERROR_STRING_LITERAL;
+    if(quoteMark) TERM_ARGS_ERROR_STRING_LITERAL;
     return count;
 }
 
@@ -687,6 +710,9 @@ uint16_t TERM_countArgs(const char * data, uint16_t dataLength){
                 }
                         
                 break;
+            case 0:
+                configASSERT(0);
+                
             default:
                 if(!quoteMark){
                     if(lastSpace){
@@ -697,7 +723,7 @@ uint16_t TERM_countArgs(const char * data, uint16_t dataLength){
                 break;
         }
     }
-    if(quoteMark) return TERM_ARGS_ERROR_STRING_LITERAL;
+    if(quoteMark) TERM_ARGS_ERROR_STRING_LITERAL;
     return count;
 }
 
@@ -1070,10 +1096,32 @@ const char * TERM_getVT100Code(uint16_t cmd, uint8_t var){
 
 void TERM_attachProgramm(TERMINAL_HANDLE * handle, TermProgram * prog){
     handle->currProgram = prog;
+    handle->currProgram->inputStream = xStreamBufferCreate(TERM_PROG_BUFFER_SIZE,1);
 }
 
 void TERM_removeProgramm(TERMINAL_HANDLE * handle){
-    handle->currProgram = 0;
+    handle->currProgram = NULL;
+}
+
+void TERM_killProgramm(TERMINAL_HANDLE * handle){
+    uint8_t currArg = 0;
+    uint8_t argCount = handle->currProgram->argCount;
+    char ** args = handle->currProgram->args;
+    for(;currArg<argCount; currArg++){
+        vPortFree(args[currArg]);
+    }
+    
+    TERM_sendVT100Code(handle, _VT100_RESET, 0); TERM_sendVT100Code(handle, _VT100_CURSOR_POS1, 0);
+    TERM_printBootMessage(handle);
+    
+    TaskHandle_t task = handle->currProgram->task;
+    vStreamBufferDelete(handle->currProgram->inputStream);
+    vPortFree(handle->currProgram);
+    handle->currProgram = NULL;
+    vTaskDelete(task);
+    while(1){
+        vTaskDelay(100);
+    }
 }
 
 

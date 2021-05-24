@@ -1,4 +1,4 @@
-///////////////////////////////////////////////////////////////////////////////
+ ///////////////////////////////////////////////////////////////////////////////
 // \author (c) Marco Paland (info@paland.com)
 //             2014-2018, PALANDesign Hannover, Germany
 //
@@ -96,8 +96,8 @@ int vsnprintf_(char* buffer, size_t count, const char* format, va_list va);
  * \return The number of characters that are sent to the output function, not counting the terminating null character
  */
 int fctprintf(void (*out)(char character, void* arg), void* arg, const char* format, ...);
-void stream_printf(void * port, char* format, ...);
-void stream_buffer(void * port, uint8_t * buffer, uint32_t len);
+uint32_t stream_printf(void * port, char* format, ...);
+uint32_t stream_buffer(void * port, uint8_t * buffer, uint32_t len);
 
 #ifdef __cplusplus
 }

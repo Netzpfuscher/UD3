@@ -2,7 +2,6 @@
  * TTerm
  *
  * Copyright (c) 2020 Thorben Zethoff
- * Copyright (c) 2020 Jens Kerrinnes
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -29,16 +28,19 @@
 
 #include "FreeRTOS.h"
 #include "task.h"
-  
+#include "stream_buffer.h"
 #if PIC32 == 1    
 #include "ff.h"
 #endif    
 
-#define EXTENDED_PRINTF 1
-#define TERM_DEVICE_NAME configuration.ud_name
-#define TERM_VERSION_STRING "V1.0"
 
-#if PIC32 == 1 
+#define EXTENDED_PRINTF 1
+#define TERM_VERSION_STRING "V1.0"
+#define TERM_PROG_BUFFER_SIZE 32
+
+#define CTRL_C 0x03
+
+#if PIC32
     #define START_OF_FLASH  0xa0000000
     #define END_OF_FLASH    0xa000ffff
 #else
@@ -124,7 +126,14 @@ enum color{
 #define TERM_CMD_CONTINUE 0x80
 
 #define TERM_ENABLE_STARTUP_TEXT
-//#define TERM_SUPPORT_CWD
+
+#define TERM_SUPPORT_CWD 0
+
+#if TERM_SUPPORT_CWD
+    #define TERM_DEVICE_NAME handle->cwdPath
+#else
+    #define TERM_DEVICE_NAME "UD3"
+#endif
 
 #ifdef TERM_ENABLE_STARTUP_TEXT
 const extern char TERM_startupText1[];
@@ -139,7 +148,7 @@ const extern char TERM_startupText3[];
 #define ttprintfEcho(format, ...) if(echoEnabled) (*handle->print)(format, ##__VA_ARGS__)
 #endif
 
-#if EXTENDED_PRINTF == 1
+#if EXTENDED_PRINTF
 #define ttprintf(format, ...) (*handle->print)(handle->port, format, ##__VA_ARGS__)
 #define ttprintb(buffer, len) (*handle->print)(handle->port, NULL, (uint8_t*)buffer, (uint32_t)len)
 #else
@@ -155,7 +164,7 @@ typedef uint8_t (* TermCommandInputHandler)(TERMINAL_HANDLE * handle, uint16_t c
 typedef uint8_t (* TermErrorPrinter)(TERMINAL_HANDLE * handle, uint32_t retCode);
 
 #if EXTENDED_PRINTF == 1
-typedef void (* TermPrintHandler)(void * port, char * format, ...);
+typedef uint32_t (* TermPrintHandler)(void * port, char * format, ...);
 #else
 typedef void (* TermPrintHandler)(char * format, ...);
 #endif
@@ -164,6 +173,9 @@ typedef uint8_t (* TermAutoCompHandler)(TERMINAL_HANDLE * handle, void * params)
 typedef struct{
     TaskHandle_t task;
     TermCommandInputHandler inputHandler;
+    StreamBufferHandle_t inputStream;
+    char ** args;
+    uint8_t argCount;
 } TermProgram;
 
 struct __TermCommandDescriptor__{
@@ -201,8 +213,9 @@ struct __TERMINAL_HANDLE__{
     TermCommandDescriptor * cmdListHead;
     TermErrorPrinter errorPrinter;
 //TODO actually finish implementing this...
-#ifdef TERM_SUPPORT_CWD
-    DIR cwd;
+#if TERM_SUPPORT_CWD
+    //DIR cwd;
+    char * cwdPath;
 #endif
 };
 
@@ -231,23 +244,27 @@ void TERM_addCommandAC(TermCommandDescriptor * cmd, TermAutoCompHandler ACH, voi
 unsigned TERM_isSorted(TermCommandDescriptor * a, TermCommandDescriptor * b);
 char toLowerCase(char c);
 void TERM_setCursorPos(TERMINAL_HANDLE * handle, uint16_t x, uint16_t y);
-void TERM_Box(TERMINAL_HANDLE * handle, uint8_t row1, uint8_t col1, uint8_t row2, uint8_t col2);
 void TERM_sendVT100Code(TERMINAL_HANDLE * handle, uint16_t cmd, uint8_t var);
 const char * TERM_getVT100Code(uint16_t cmd, uint8_t var);
 uint16_t TERM_countArgs(const char * data, uint16_t dataLength);
 uint8_t TERM_interpretCMD(char * data, uint16_t dataLength, TERMINAL_HANDLE * handle);
-uint16_t TERM_seperateArgs(char * data, uint16_t dataLength, char ** buff);
+uint8_t TERM_seperateArgs(char * data, uint16_t dataLength, char ** buff);
 void TERM_checkForCopy(TERMINAL_HANDLE * handle, COPYCHECK_MODE mode);
 void TERM_printDebug(TERMINAL_HANDLE * handle, char * format, ...);
 void TERM_removeProgramm(TERMINAL_HANDLE * handle);
 void TERM_attachProgramm(TERMINAL_HANDLE * handle, TermProgram * prog);
+void TERM_killProgramm(TERMINAL_HANDLE * handle);
 uint8_t TERM_doAutoComplete(TERMINAL_HANDLE * handle);
 uint8_t TERM_findMatchingCMDs(char * currInput, uint8_t length, char ** buff, TermCommandDescriptor * cmdListHead);
+TermCommandDescriptor * TERM_findCMD(TERMINAL_HANDLE * handle);
 uint8_t TERM_findLastArg(TERMINAL_HANDLE * handle, char * buff, uint8_t * lenBuff);
 BaseType_t ptr_is_in_ram(void* ptr);
 uint8_t TERM_defaultErrorPrinter(TERMINAL_HANDLE * handle, uint32_t retCode);
 void TERM_LIST_add(TermCommandDescriptor * item, TermCommandDescriptor * head);
-TermCommandDescriptor * TERM_findCMD(TERMINAL_HANDLE * handle);
+
+#if TERM_SUPPORT_CWD
+#include "TTerm_cwd.h"
+#endif    
 
 #endif
 #endif

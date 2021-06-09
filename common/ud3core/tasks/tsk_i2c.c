@@ -32,6 +32,7 @@
 #include "semphr.h"
 
 #include "tsk_priority.h"
+#include "tsk_cli.h"
 #include "cli_common.h"
 #include <stdlib.h>
 #include "telemetry.h"

@@ -17,7 +17,7 @@ void tsk_duty_task(void *pvParameters) {
     uint32_t lastTickCount = SG_Timer_ReadCounter();
     
     while(1){
-        vTaskDelay(pdMS_TO_TICKS(500));
+        vTaskDelay(pdMS_TO_TICKS(250));
         
         //read and reset counters
         uint32_t onTime = 0xffffff - OnTimeCounter_ReadCounter();

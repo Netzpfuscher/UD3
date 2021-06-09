@@ -46,7 +46,7 @@
 #include "tasks/tsk_usb.h"
 #include "tasks/tsk_min.h"
 #include "tasks/tsk_display.h"
-#include "tasks/tsk_i2c.h"
+#include "tasks/tsk_hwGauge.h"
 #include "tasks/tsk_duty.h"
 
 /*
@@ -110,7 +110,7 @@ int main() {
         tsk_display_Start();
     }
     if(configuration.pca9685){
-        tsk_i2c_Start();
+        tsk_hwGauge_init();
     }
     
     //CyGlobalIntEnable; //enables interrupts

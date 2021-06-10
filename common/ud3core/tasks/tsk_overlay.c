@@ -95,7 +95,7 @@ void init_telemetry(){
     tt.n.fres.chart = TT_NO_TELEMETRY;
     tt.n.fres.gauge = TT_NO_TELEMETRY;
     
-    tt.n.duty.name = "Dutycycle";
+    tt.n.duty.name = "SynthDutycycle";
     tt.n.duty.value = 0;
     tt.n.duty.min = 0;
     tt.n.duty.max = 100;
@@ -596,7 +596,9 @@ uint8_t CMD_tterm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
 }
 
 
-uint8_t CMD_telemetry(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+uint8_t CMD_telemetry(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){ 
+    
+    
     if(argCount==0 || strcmp(args[0], "-?") == 0){
         ttprintf(   "Usage: telemetry list\r\n"
                     "       telemetry ls\r\n"
@@ -604,7 +606,7 @@ uint8_t CMD_telemetry(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
                     "       telemetry chart n [name]\r\n");
         return TERM_CMD_EXIT_SUCCESS;
     } 
-            
+    
     if(strcmp(args[0], "list") == 0){
         for(int i=0;i<N_GAUGES;i++){
             int cnt=-1;

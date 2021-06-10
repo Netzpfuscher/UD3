@@ -108,7 +108,7 @@ enum color{
 };
 
 #define TERM_addCommandConstAC(CMDhandler, command, helptext, ACList, CmdDesc) TERM_addCommandAC(TERM_addCommand(CMDhandler, command,helptext,0,CmdDesc) \
-                                                                                , ACL_defaultCompleter, ACL_createConst(ACList, sizeof(ACList)/sizeof(char*)))
+                                                                                , ACL_defaultCompleter, ACL_createConst((char**)ACList, sizeof(ACList)/sizeof(char*)))
 
 
 #define _VT100_POS_IGNORE 0xffff
@@ -261,6 +261,7 @@ uint8_t TERM_findLastArg(TERMINAL_HANDLE * handle, char * buff, uint8_t * lenBuf
 BaseType_t ptr_is_in_ram(void* ptr);
 uint8_t TERM_defaultErrorPrinter(TERMINAL_HANDLE * handle, uint32_t retCode);
 void TERM_LIST_add(TermCommandDescriptor * item, TermCommandDescriptor * head);
+void TERM_Box(TERMINAL_HANDLE * handle, uint8_t row1, uint8_t col1, uint8_t row2, uint8_t col2);
 
 #if TERM_SUPPORT_CWD
 #include "TTerm_cwd.h"

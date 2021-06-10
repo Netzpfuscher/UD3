@@ -54,6 +54,7 @@
 #include <project.h>
 #include "helper/printf.h"
 #include "ZCDtoPWM.h"
+#include "TTerm.h"
 
 
 

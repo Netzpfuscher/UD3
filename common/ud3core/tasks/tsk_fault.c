@@ -127,10 +127,8 @@ void handle_FAULT(void) {
 
 
 void handle_no_fb(void){
-    
     uint32_t time = ((uint32_t)fb_filter_out * 15625ul)/1000; //ns
     tt.n.fres.value = (5000000ul / time);
-    
     static uint8_t fb_error_timer=FB_ERROR_TIME;
     
     
@@ -199,7 +197,6 @@ void tsk_fault_TaskProc(void *pvParameters) {
     reset_fault();
     alarm_push(ALM_PRIO_INFO,warn_task_fault, ALM_NO_VALUE);
 	/* `#END` */
-
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
 		handle_UVLO();
@@ -207,7 +204,6 @@ void tsk_fault_TaskProc(void *pvParameters) {
         LED4_Write(0);
         handle_no_fb();
 		/* `#END` */
-
 		vTaskDelay(FAULT_LOOP_SPEED_MS / portTICK_PERIOD_MS);
 	}
 }

@@ -415,11 +415,11 @@ void calculate_datarate(){
     static uint32 last_rx=0;
     static uint32 last_tx=0;
   
-    tt.n.rx_datarate.value = ((uart_bytes_received-last_rx)*10)/4;
-    tt.n.tx_datarate.value = ((uart_bytes_transmitted-last_tx)*10)/4;
+    tt.n.rx_datarate.value = ((uart_bytes_rx-last_rx)*10)/4;
+    tt.n.tx_datarate.value = ((uart_bytes_tx-last_tx)*10)/4;
     
-    last_rx=uart_bytes_received;
-    last_tx=uart_bytes_transmitted;
+    last_rx=uart_bytes_rx;
+    last_tx=uart_bytes_tx;
 }
 
 

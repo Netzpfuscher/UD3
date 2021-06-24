@@ -34,9 +34,9 @@
 #include <device.h>
 #include <math.h>
 
-uint16 int1_prd, int1_cmp;
-uint16 ch_prd[N_CHANNEL], ch_cmp[N_CHANNEL];
-uint8 ch_cur[N_CHANNEL];
+uint16_t int1_prd, int1_cmp;
+uint16_t ch_prd[N_CHANNEL], ch_cmp[N_CHANNEL];
+uint8_t ch_cur[N_CHANNEL];
 
 void interrupter_kill(void){
     sysfault.interlock = 1;
@@ -131,7 +131,7 @@ void initialize_interrupter(void) {
     
 	/* Variable declarations for int1_dma */
 	
-	uint8 int1_dma_TD[4];
+	uint8_t int1_dma_TD[4];
 	int1_dma_Chan = int1_dma_DmaInitialize(int1_dma_BYTES_PER_BURST, int1_dma_REQUEST_PER_BURST,
 										   HI16(int1_dma_SRC_BASE), HI16(int1_dma_DST_BASE));
 	int1_dma_TD[0] = CyDmaTdAllocate();
@@ -285,9 +285,7 @@ uint8_t callback_ext_interrupter(parameter_entry * params, uint8_t index, TERMIN
     }else{
         uint8 sfflag = system_fault_Read();
         system_fault_Control = 0; //halt tesla coil operation during updates!
-        
         interrupter1_control_Control = 0b0000;
-        vTaskDelay(2);
         system_fault_Control = sfflag;
     }
     return pdPASS;
@@ -326,9 +324,9 @@ void update_interrupter() {
 		interrupter.prd = params.min_tr_prd;
 	}
 	/* Compute the duty cycle and mod the PW if required */
-	limited_pw = (uint32)((uint32)interrupter.pw * 1000ul) / interrupter.prd; //gives duty cycle as 0.1% increment
+	limited_pw = (uint32_t)((uint32_t)interrupter.pw * 1000ul) / interrupter.prd; //gives duty cycle as 0.1% increment
 	if (limited_pw > configuration.max_tr_duty - param.temp_duty) {
-		limited_pw = (uint32)(configuration.max_tr_duty - param.temp_duty) * (uint32)interrupter.prd / 1000ul;
+		limited_pw = (uint32_t)(configuration.max_tr_duty - param.temp_duty) * (uint32_t)interrupter.prd / 1000ul;
 	} else {
 		limited_pw = interrupter.pw;
 	}

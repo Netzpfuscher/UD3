@@ -45,6 +45,9 @@ void tsk_usb_Enable(void);
 
 void tsk_usb_Task(void *pvParameters);
 
+extern uint32_t usb_bytes_rx;
+extern uint32_t usb_bytes_tx;
+
 
 /* The size of the buffer is equal to maximum packet size of the 
 *  IN and OUT bulk endpoints. 

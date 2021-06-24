@@ -47,6 +47,9 @@
 uint8 tsk_usb_initVar;
 xTaskHandle tsk_usb_TaskHandle;
 
+uint32_t usb_bytes_rx=0;
+uint32_t usb_bytes_tx=0;
+
 /* ======================================================================== */
 void tsk_usb_Start(void) {
 	if (tsk_usb_initVar != 1) {
@@ -119,6 +122,7 @@ void tsk_usb_Task(void *pvParameters) {
 				if (count != 0u) {
 					/* insert data in to Receive FIFO */
                     LED4_Write(1);
+                    usb_bytes_rx+=count;
                     xStreamBufferSend(usb_port.rx, &buffer,count, 0);
 				}
 			}
@@ -136,10 +140,10 @@ void tsk_usb_Task(void *pvParameters) {
 				 * Read the data from the transmit queue and buffer it
 				 * locally so that the data can be utilized.
 				 */
-
                 count = xStreamBufferReceive(usb_port.tx,&buffer,tsk_usb_BUFFER_LEN,0);
 				/* Send data back to host */
                 LED4_Write(1);
+                usb_bytes_tx+=count;
 				USBMIDI_1_PutData(buffer, count);
 
 				/* If the last sent packet is exactly maximum packet size, 

@@ -43,26 +43,26 @@
     
 typedef struct __midich__ {
 	//uint8 expression; // Expression: Control change (Bxh) 0 bH
-	uint8 rpn_lsb;	// RPN (LSB): Control change (Bxh) 64 H
-	uint8 rpn_msb;	// RPN (MSB): Control change (Bxh) 65 H
-	uint8 bendrange;  // Pitch Bend Sensitivity (0 - ffh)
-	int16 pitchbend;  // Pitch Bend (0-3fffh)
-    uint8 attack;
-    uint8 decay;
-    uint8 release;
-	uint8 updated;	// Was it updated (whether BentRange or PitchBent was rewritten)
+	uint8_t rpn_lsb;	// RPN (LSB): Control change (Bxh) 64 H
+	uint8_t rpn_msb;	// RPN (MSB): Control change (Bxh) 65 H
+	uint8_t bendrange;  // Pitch Bend Sensitivity (0 - ffh)
+	int16_t pitchbend;  // Pitch Bend (0-3fffh)
+    uint8_t attack;
+    uint8_t decay;
+    uint8_t release;
+	uint8_t updated;	// Was it updated (whether BentRange or PitchBent was rewritten)
 } MIDICH;
 
 typedef struct __channel__ {
-	uint8 midich;	// Channel of midi (0 - 15)
-	uint8 miditone;  // Midi's tone number (0-127)
-	int32 volume;	// Volume (0 - 127) 7bit.16bit
-	uint8 updated;   // Was it updated?
-    uint16 halfcount;
-    uint32 freq;
-    uint8 adsr_state;
-    uint8 sustain;
-    uint8 old_gate;
+	uint8_t midich;	// Channel of midi (0 - 15)
+	uint8_t miditone;  // Midi's tone number (0-127)
+	int32_t volume;	// Volume (0 - 127) 7bit.16bit
+	uint8_t updated;   // Was it updated?
+    uint16_t halfcount;
+    uint32_t freq;
+    uint8_t adsr_state;
+    uint8_t sustain;
+    uint8_t old_gate;
     uint8_t noise;
 } CHANNEL;
     

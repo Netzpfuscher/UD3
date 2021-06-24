@@ -89,7 +89,7 @@ void send_gauge_config(uint8_t gauge, int16_t min, int16_t max, char * text, TER
     ttprintb(text,bytes);
 }
 
-void send_gauge_config32(uint8_t gauge, int32_t min, int32_t max, int32 div ,char * text, TERMINAL_HANDLE * handle){
+void send_gauge_config32(uint8_t gauge, int32_t min, int32_t max, int32_t div ,char * text, TERMINAL_HANDLE * handle){
     uint8_t bytes = strlen(text);
     uint8_t buf[16];
     buf[0] = 0xFF;

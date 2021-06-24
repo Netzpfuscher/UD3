@@ -2370,7 +2370,7 @@ static void prvCopyDataFromQueue( Queue_t * const pxQueue,
 
 static void prvCopyItemFromQueue( Queue_t * const pxQueue, void * const pvBuffer, uint32_t index)
 {
-    int8* temp = pxQueue->u.xQueue.pcReadFrom;// + pxQueue->uxItemSize;
+    int8_t* temp = pxQueue->u.xQueue.pcReadFrom;// + pxQueue->uxItemSize;
 	if( pxQueue->uxItemSize != ( UBaseType_t ) 0 )
 	{
            

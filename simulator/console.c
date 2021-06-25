@@ -40,6 +40,7 @@ StaticSemaphore_t xStdioMutexBuffer;
 void console_init(void)
 {
     xStdioMutex = xSemaphoreCreateMutex();
+	system("stty -echo");
 }
 
 void console_print(const char *fmt, ...)

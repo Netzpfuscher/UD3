@@ -18,7 +18,7 @@ int _kbhit(void)
   tcsetattr(STDIN_FILENO, TCSANOW, &newt);
   oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
   fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
- 
+	
   ch = getchar();
  
   tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
@@ -55,7 +55,8 @@ uint8_t USBMIDI_1_CDCIsReady(){
 
 uint8_t USBMIDI_1_DataIsReady(){
 	if (_kbhit()){
-		c= getch();
+		c= getchar();
+
 		return 1;
 	}
 	return 0;

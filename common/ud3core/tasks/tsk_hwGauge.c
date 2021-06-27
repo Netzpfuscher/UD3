@@ -33,7 +33,7 @@
 #include "helper/PCA9685.h"
 #include "tsk_hwGauge.h"
 
-HWGauge hwGauges[NUM_HWGAUGE] = {[0 ... (NUM_HWGAUGE-1)].calMax = 0xfff};
+HWGauge hwGauges = {.gauge[0 ... (NUM_HWGAUGE-1)].calMax = 0xfff};
 xTaskHandle tsk_hwGauge_TaskHandle;
 
 static unsigned tsk_hwGauge_initVar = 0;
@@ -57,6 +57,25 @@ void tsk_hwGauge_init(){
 	}
 }
 
+uint8_t callback_hwGauge(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
+    TERM_printDebug(min_handle[1], "HWGauge cfg callback");
+    
+    for(uint8_t currGauge = 0; currGauge < NUM_HWGAUGE; currGauge++){
+        if(hwGauges.gauge[currGauge].version > HWGAUGE_CURRVERSION) continue; //TODO better do something...
+        
+        hwGauges.gauge[currGauge].src = NULL;
+        if(hwGauges.gauge[currGauge].tele_hash == 0) continue;
+        for(uint8_t w=0;w<N_TELE;w++){
+            if(djb_hash(tt.a[w].name) == hwGauges.gauge[currGauge].tele_hash){
+                hwGauges.gauge[currGauge].src = &tt.a[w];
+                break;
+            }
+        }
+    }
+    
+    return 1;
+}
+
 void tsk_hwGauge_proc(){
     I2C_Start();
     
@@ -68,7 +87,7 @@ void tsk_hwGauge_proc(){
     while(1){
         if(!calibrationActive){
             for(uint32_t currGauge = 0; currGauge < NUM_HWGAUGE; currGauge++){
-                HWGauge_setValue(currGauge,HWGauge_scaleTelemetry(hwGauges[currGauge].src, 0));
+                HWGauge_setValue(currGauge,HWGauge_scaleTelemetry(hwGauges.gauge[currGauge].src, hwGauges.gauge[currGauge].scalMin, hwGauges.gauge[currGauge].scalMax, 0));
             }
         }
         
@@ -76,23 +95,23 @@ void tsk_hwGauge_proc(){
     }
 }
 
-int32_t HWGauge_scaleTelemetry(TELE * src, unsigned allowNegative){
+int32_t HWGauge_scaleTelemetry(TELE * src, int32_t cMin, int32_t cMax, unsigned allowNegative){
     if(src == NULL) return 0;
-    int32_t teleScaled = ((src->value - src->min) * 4096) / (src->max * src->divider);
-    //TERM_printDebug(min_handle[1], "Calcing %s = %d (at 0x%08x) => %d\r\n", src->name, src->value, &(src->value), teleScaled);
+    int32_t teleScaled = ((src->value - (cMin * src->divider)) * 4096) / (int32_t) ((cMax - cMin) * src->divider);
+    TERM_printDebug(min_handle[1], "Calcing %s = %d (at 0x%08x) => %d, start %d, end %d\r\n", src->name, src->value, &(src->value), teleScaled, cMin, cMax);
     if(teleScaled < 0 && !allowNegative) return 0;
     return teleScaled;
 }
 
 void HWGauge_setValue(uint32_t number, int32_t value){
     if(pca_ptr == NULL) return;
-    int32_t diff = hwGauges[number].calMax - hwGauges[number].calMin;
+    int32_t diff = hwGauges.gauge[number].calMax - hwGauges.gauge[number].calMin;
     if(diff == 0){
         PCA9685_setPWM(pca_ptr,number,value);
         return;
     }
     
-    int32_t writeVal = hwGauges[number].calMin + ((diff * value) >> 12);
+    int32_t writeVal = hwGauges.gauge[number].calMin + ((diff * value) >> 12);
     PCA9685_setPWM(pca_ptr,number,writeVal);
 }
 
@@ -103,58 +122,58 @@ static uint8_t CMD_hwGaugeCalibrate_handleInput(TERMINAL_HANDLE * handle, uint16
             vPortFree(handle->currProgram);
             TERM_removeProgramm(handle);
             calibrationActive = 0;
-            memcpy(&hwGauges[gaugeToCalibrate], &calibrationGaugeBackup, sizeof(HWGauge));
+            memcpy(&hwGauges.gauge[gaugeToCalibrate], &calibrationGaugeBackup, sizeof(HWGauge));
             ttprintf("\r\n\n%sCalibration Canceled!%s\r\n\n", TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_RED), TERM_getVT100Code(_VT100_RESET, 0));
             return TERM_CMD_EXIT_SUCCESS;
         
         case '+':
             if(calibrationStage == 1){
-                if(hwGauges[gaugeToCalibrate].calMax < 0xfff) hwGauges[gaugeToCalibrate].calMax ++;
+                if(hwGauges.gauge[gaugeToCalibrate].calMax < 0xfff) hwGauges.gauge[gaugeToCalibrate].calMax ++;
                 HWGauge_setValue(gaugeToCalibrate, 0xfff);
-                ttprintf("Maximum = %d     \r", hwGauges[gaugeToCalibrate].calMax);
+                ttprintf("Maximum = %d     \r", hwGauges.gauge[gaugeToCalibrate].calMax);
             }else if(calibrationStage == 0){
-                if(hwGauges[gaugeToCalibrate].calMin < 0xfff) hwGauges[gaugeToCalibrate].calMin ++;
+                if(hwGauges.gauge[gaugeToCalibrate].calMin < 0xfff) hwGauges.gauge[gaugeToCalibrate].calMin ++;
                 HWGauge_setValue(gaugeToCalibrate, 0);
-                ttprintf("Minumum = %d     \r", hwGauges[gaugeToCalibrate].calMin);
+                ttprintf("Minumum = %d     \r", hwGauges.gauge[gaugeToCalibrate].calMin);
             }
             
             return TERM_CMD_CONTINUE;
         
         case '-':
             if(calibrationStage == 1){
-                if(hwGauges[gaugeToCalibrate].calMax > 0) hwGauges[gaugeToCalibrate].calMax --;
+                if(hwGauges.gauge[gaugeToCalibrate].calMax > 0) hwGauges.gauge[gaugeToCalibrate].calMax --;
                 HWGauge_setValue(gaugeToCalibrate, 0xfff);
-                ttprintf("Maximum = %d     \r", hwGauges[gaugeToCalibrate].calMax);
+                ttprintf("Maximum = %d     \r", hwGauges.gauge[gaugeToCalibrate].calMax);
             }else if(calibrationStage == 0){
-                if(hwGauges[gaugeToCalibrate].calMin > 0) hwGauges[gaugeToCalibrate].calMin --;
+                if(hwGauges.gauge[gaugeToCalibrate].calMin > 0) hwGauges.gauge[gaugeToCalibrate].calMin --;
                 HWGauge_setValue(gaugeToCalibrate, 0);
-                ttprintf("Minumum = %d     \r", hwGauges[gaugeToCalibrate].calMin);
+                ttprintf("Minumum = %d     \r", hwGauges.gauge[gaugeToCalibrate].calMin);
             }
             
             return TERM_CMD_CONTINUE;
         
         case '0':
             if(calibrationStage == 1){
-                hwGauges[gaugeToCalibrate].calMax = 0;
+                hwGauges.gauge[gaugeToCalibrate].calMax = 0;
                 HWGauge_setValue(gaugeToCalibrate, 0xfff);
-                ttprintf("Maximum = %d     \r", hwGauges[gaugeToCalibrate].calMax);
+                ttprintf("Maximum = %d     \r", hwGauges.gauge[gaugeToCalibrate].calMax);
             }else if(calibrationStage == 0){
-                hwGauges[gaugeToCalibrate].calMin = 0;
+                hwGauges.gauge[gaugeToCalibrate].calMin = 0;
                 HWGauge_setValue(gaugeToCalibrate, 0);
-                ttprintf("Minumum = %d     \r", hwGauges[gaugeToCalibrate].calMin);
+                ttprintf("Minumum = %d     \r", hwGauges.gauge[gaugeToCalibrate].calMin);
             }
             
             return TERM_CMD_CONTINUE;
         
         case '*':
             if(calibrationStage == 1){
-                hwGauges[gaugeToCalibrate].calMax = 0xfff;
+                hwGauges.gauge[gaugeToCalibrate].calMax = 0xfff;
                 HWGauge_setValue(gaugeToCalibrate, 0xfff);
-                ttprintf("Maximum = %d     \r", hwGauges[gaugeToCalibrate].calMax);
+                ttprintf("Maximum = %d     \r", hwGauges.gauge[gaugeToCalibrate].calMax);
             }else if(calibrationStage == 0){
-                hwGauges[gaugeToCalibrate].calMin = 0xfff;
+                hwGauges.gauge[gaugeToCalibrate].calMin = 0xfff;
                 HWGauge_setValue(gaugeToCalibrate, 0);
-                ttprintf("Minumum = %d     \r", hwGauges[gaugeToCalibrate].calMin);
+                ttprintf("Minumum = %d     \r", hwGauges.gauge[gaugeToCalibrate].calMin);
             }
             
             return TERM_CMD_CONTINUE;
@@ -171,7 +190,7 @@ static uint8_t CMD_hwGaugeCalibrate_handleInput(TERMINAL_HANDLE * handle, uint16
                 HWGauge_setValue(gaugeToCalibrate, 0xfff);
                 calibrationStage = 1;
                 ttprintf("\r\n\nUse '+', '-', '0', '*' to set the gauge to the MAX reading. Press ENTER to continue\r\n");
-                ttprintf("Maximum = %d     \r", hwGauges[gaugeToCalibrate].calMax);
+                ttprintf("Maximum = %d     \r", hwGauges.gauge[gaugeToCalibrate].calMax);
             }
             return TERM_CMD_CONTINUE;
             
@@ -184,7 +203,7 @@ uint8_t CMD_hwGauge(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     uint8_t returnCode = TERM_CMD_EXIT_SUCCESS;
     
     if(argCount==0 || strcmp(args[0], "-?") == 0){
-        ttprintf("Usage: hwGauge assign [number] [name]\r\n");
+        ttprintf("Usage: hwGauge assign [number] [name] ([range_min] [range_max])\r\n");
         ttprintf("       hwGauge clear [number]\r\n");
         ttprintf("       hwGauge calibrate [number]\r\n");
         ttprintf("       number = 0-%d\r\n", NUM_HWGAUGE);
@@ -192,18 +211,26 @@ uint8_t CMD_hwGauge(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     }
 	
 
-	if(strcmp(args[0], "assign") == 0 && argCount == 3){
+	if(strcmp(args[0], "assign") == 0 && (argCount == 3 || argCount == 5)){
         uint32_t gauge = atoi(args[1]);
         if(gauge < NUM_HWGAUGE){
-            hwGauges[gauge].src = NULL;
+            hwGauges.gauge[gauge].src = NULL;
             for(uint8_t w=0;w<N_TELE;w++){
                 if(strcmp(args[2],tt.a[w].name)==0){
-                    hwGauges[gauge].src = &tt.a[w];
-                    ttprintf("Assigned gauge %d to \"%s\"\r\n", gauge, tt.a[w].name);
+                    hwGauges.gauge[gauge].src = &tt.a[w];
+                    hwGauges.gauge[gauge].tele_hash = djb_hash(args[2]);
+                    if(argCount == 5){
+                        hwGauges.gauge[gauge].scalMin = atoi(args[3]);
+                        hwGauges.gauge[gauge].scalMax = atoi(args[4]);
+                    }else{
+                        hwGauges.gauge[gauge].scalMin = tt.a[w].min;
+                        hwGauges.gauge[gauge].scalMax = tt.a[w].max;
+                    }
+                    ttprintf("Assigned gauge %d to \"%s\" from %d to %d\r\n", gauge, tt.a[w].name, hwGauges.gauge[gauge].scalMin, hwGauges.gauge[gauge].scalMax);
                     break;
                 }
             }
-            if(hwGauges[gauge].src == NULL){
+            if(hwGauges.gauge[gauge].src == NULL){
                 ttprintf("Telemetry with name \"%s\" could not be found!\r\n", args[2]);
             }
             return returnCode;
@@ -213,7 +240,8 @@ uint8_t CMD_hwGauge(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
 	if(strcmp(args[0], "clear") == 0 && argCount == 2){
         uint32_t gauge = atoi(args[1]);
         if(gauge < NUM_HWGAUGE){
-            hwGauges[gauge].src = NULL;
+            hwGauges.gauge[gauge].src = NULL;
+            hwGauges.gauge[gauge].tele_hash = 0;
             ttprintf("Cleared assignment of gauge %d\r\n", gauge);
             return returnCode;
         }
@@ -226,7 +254,7 @@ uint8_t CMD_hwGauge(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
             prog->inputHandler = CMD_hwGaugeCalibrate_handleInput;
             TERM_sendVT100Code(handle, _VT100_RESET, 0); TERM_sendVT100Code(handle, _VT100_CURSOR_POS1, 0);
             returnCode = TERM_CMD_EXIT_PROC_STARTED;
-            memcpy(&calibrationGaugeBackup, &hwGauges[gauge], sizeof(HWGauge));
+            memcpy(&calibrationGaugeBackup, &hwGauges.gauge[gauge], sizeof(HWGauge));
             calibrationActive = 1;
             gaugeToCalibrate = gauge;
             TERM_attachProgramm(handle, prog);
@@ -234,7 +262,7 @@ uint8_t CMD_hwGauge(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
             HWGauge_setValue(gauge, 0);
             ttprintf("\r\n\nCalibrating hardware gauge #%d\r\n", gauge);
             ttprintf("Use '+', '-', '0', '*' to set the gauge to the MIN reading. Press ENTER to continue\r\n");
-            ttprintf("Minumum = %d     \r", hwGauges[gaugeToCalibrate].calMin);
+            ttprintf("Minumum = %d     \r", hwGauges.gauge[gaugeToCalibrate].calMin);
             return returnCode;
         }
 	}
@@ -243,5 +271,6 @@ uint8_t CMD_hwGauge(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     ttprintf("       hwGauge clear [number]\r\n");
     ttprintf("       hwGauge calibrate [number]\r\n");
     ttprintf("       number = 0-%d\r\n", NUM_HWGAUGE);
+    callback_hwGauge(0,0,0);
     return TERM_CMD_EXIT_ERROR;
 }

@@ -777,6 +777,7 @@ uint32_t stream_buffer(void * port, uint8_t * buffer, uint32_t len){
 		uint16_t count = xStreamBufferSend(((port_str*)port)->tx,buffer, len_t,0);
 		buffer+=count;
 		len-=count;
+        
 		if(!count) vTaskDelay(2);
     }
     return 1;
@@ -785,8 +786,10 @@ uint32_t stream_buffer(void * port, uint8_t * buffer, uint32_t len){
 uint32_t stream_printf(void * port, char* format, ...){
     va_list va;
     va_start(va, format);
-    if(format==NULL){
-        stream_buffer(port,va_arg(va,uint8_t*),va_arg(va,uint32_t));
+    if(*format=='\0'){
+        uint8_t* buffer = va_arg(va,uint8_t*);
+        uint32_t len = va_arg(va,uint32_t);
+        stream_buffer(port,buffer,len);
     }else{
         if(((port_str*)port)->tx!=NULL){;
             const out_fct_wrap_type out_fct_wrap = { &send_stream, port };

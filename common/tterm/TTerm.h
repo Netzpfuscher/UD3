@@ -150,7 +150,7 @@ const extern char TERM_startupText3[];
 
 #if EXTENDED_PRINTF
 #define ttprintf(format, ...) (*handle->print)(handle->port, format, ##__VA_ARGS__)
-#define ttprintb(buffer, len) (*handle->print)(handle->port, NULL, (uint8_t*)buffer, (uint32_t)len)
+#define ttprintb(buffer, len) (*handle->print)(handle->port, "", (uint8_t*)buffer, (uint32_t)len)
 #else
 #define ttprintf(format, ...) (*handle->print)(format, ##__VA_ARGS__)
 #define ttprintb(buffer, len) (*handle->print)(NULL, (uint8_t*)buffer, (uint32_t)len)

@@ -170,11 +170,10 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 	configuration.start_freq = original_freq;
 	configuration.start_cycles = original_lock_cycles;
 	configure_ZCD_to_PWM();
-
 	CT_MUX_Select(CT_PRIMARY);
 
 	//search max current
-	uint16_t max_curr = 0;
+	uint16_t max_curr = 1;
 	uint8_t max_curr_num = 0;
 	for (f = 0; f < ROWS; f++) {
 		if (freq_resp->curr[f] > max_curr) {
@@ -186,12 +185,10 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 	//Draw Diagram
 
     if(portM->term_mode == PORT_TERM_VT100){
-        
         braille_malloc(handle);
         braille_clear();
 	    braille_line(0, 63, 127, 63);
 	    braille_line(0, 0, 0, 63);
-
     	for (f = 0; f < PIX_HEIGHT; f += 4) {
     		braille_line(0, f, 2, f);
     	}

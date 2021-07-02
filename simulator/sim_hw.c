@@ -1,4 +1,6 @@
 #include "sim_hw.h"
+#include <stdio.h>
+#include <sys/time.h>
 
 uint8_t ZCDref_Data=0;
 
@@ -64,7 +66,9 @@ uint8_t Relay2_Read(){
 
 uint32_t SG_cnt=0;
 uint32_t SG_Timer_ReadCounter(){
-	return SG_cnt+=10;
+	struct timeval tv;
+    gettimeofday(&tv,NULL);
+	return (tv.tv_usec);
 }
 
 uint32_t OnTime_cnt=0;
@@ -180,9 +184,36 @@ uint8_t Fan_Read(){
 
 #define CYDEV_EEPROM_ROW_SIZE 0x00000010u
 uint8_t eeprom[2048];
+
+void EEPROM_1_Start(){
+	FILE *fp;
+	fp = fopen("eeprom.txt", "r");
+	if(fp == NULL) return;
+	
+	for(uint32_t i = 0; i<sizeof(eeprom); i++){
+		int c = fgetc(fp);
+		if(c==EOF) break;
+		eeprom[i] = c;
+		
+	}
+	fclose(fp);
+	
+};
+
+
 uint8_t EEPROM_1_Write(const uint8 * rowData, uint8 rowNumber){
 	uint16_t start = rowNumber * CYDEV_EEPROM_ROW_SIZE;
-	memcpy(eeprom,rowData,CYDEV_EEPROM_ROW_SIZE);
+	memcpy(eeprom+start,rowData,CYDEV_EEPROM_ROW_SIZE);
+	FILE *fp;
+	if(rowNumber==0){
+		fp = fopen("eeprom.txt", "w");
+	}else{
+		fp = fopen("eeprom.txt", "a");
+	}
+	for(uint32_t i = 0;i<CYDEV_EEPROM_ROW_SIZE;i++){
+		fputc(eeprom[start+i],fp);
+	}
+	fclose(fp);
 }
 uint8_t EEPROM_1_ReadByte(uint16 address){
 	return eeprom[address];

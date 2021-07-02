@@ -331,8 +331,7 @@ uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle){
             TERM_checkForCopy(handle, TERM_CHECK_COMP_AND_HIST);
             
             if(handle->currBufferLength != 0){
-                ttprintfEcho("\r\n", handle->inputBuffer);
-
+                ttprintfEcho("\r\n");
                 if(handle->historyBuffer[handle->currHistoryWritePosition] != 0){
                     vPortFree(handle->historyBuffer[handle->currHistoryWritePosition]);
                     handle->historyBuffer[handle->currHistoryWritePosition] = 0;
@@ -539,8 +538,10 @@ uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle){
 
 void TERM_checkForCopy(TERMINAL_HANDLE * handle, COPYCHECK_MODE mode){
     if((mode & TERM_CHECK_COMP) && handle->autocompleteBuffer != NULL){ 
+        
         if(handle->currAutocompleteCount != 0){
-            char * dst = (char *) ((uint32_t) handle->inputBuffer + handle->autocompleteStart);
+            char * dst = handle->inputBuffer + handle->autocompleteStart;
+
             if(strchr(handle->autocompleteBuffer[handle->currAutocompleteCount - 1], ' ') != 0){
                 sprintf(dst, "\"%s\"", handle->autocompleteBuffer[handle->currAutocompleteCount - 1]);
             }else{
@@ -600,7 +601,7 @@ TermCommandDescriptor * TERM_findCMD(TERMINAL_HANDLE * handle){
     
     char * firstSpace = strchr(handle->inputBuffer, ' ');
     if(firstSpace != 0){
-        cmdLength = (uint16_t) ((uint32_t) firstSpace - (uint32_t) handle->inputBuffer);
+        cmdLength = firstSpace - handle->inputBuffer;
     }
     
     TermCommandDescriptor * currCmd = handle->cmdListHead->nextCmd;

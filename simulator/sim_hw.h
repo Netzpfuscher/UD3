@@ -193,7 +193,8 @@ uint8_t Fan_Read();
 
 uint8_t system_fault_Read();
 
-#define EEPROM_1_Start()
+//#define EEPROM_1_Start()
+void EEPROM_1_Start();
 uint8_t EEPROM_1_Write(const uint8 * rowData, uint8 rowNumber) ;
 uint8_t EEPROM_1_ReadByte(uint16 address) ;
 

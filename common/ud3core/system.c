@@ -3,6 +3,7 @@
 
 
 uint32_t SYS_getCPULoadFine(TaskStatus_t * taskStats, uint32_t taskCount, uint32_t sysTime){
+    if(sysTime<500) return 0;
     uint32_t currTask = 0;
     for(;currTask < taskCount; currTask++){
         if(strlen(taskStats[currTask].pcTaskName) == 4 && strcmp(taskStats[currTask].pcTaskName, "IDLE") == 0){

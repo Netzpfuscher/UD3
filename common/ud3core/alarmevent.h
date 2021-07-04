@@ -30,8 +30,8 @@
 #include "TTerm.h"
     
 typedef struct __alarms__ {
-uint16 num;
-uint8 alarm_level;
+uint16_t num;
+uint8_t alarm_level;
 char* message;
 uint32_t timestamp;
 uint32_t value;

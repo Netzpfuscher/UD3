@@ -64,8 +64,8 @@ void tsk_min_Start(void);
 void min_reset_flow(void);
 extern struct _socket_info socket_info[NUM_MIN_CON];
 extern struct _time time;
-extern uint32_t uart_bytes_received;
-extern uint32_t uart_bytes_transmitted;
+extern uint32_t uart_bytes_rx;
+extern uint32_t uart_bytes_tx;
 /*
  * Add user function prototypes in the below merge region to add user
  * functionality to the task definition.

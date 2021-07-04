@@ -65,8 +65,8 @@ SemaphoreHandle_t min_Semaphore;
 struct min_context min_ctx;
 struct _time time;
 
-uint32_t uart_bytes_received=0;
-uint32_t uart_bytes_transmitted=0;
+uint32_t uart_bytes_rx=0;
+uint32_t uart_bytes_tx=0;
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */
@@ -117,7 +117,7 @@ uint32_t min_rx_space(uint8_t port){
 }
 
 void min_tx_byte(uint8_t port, uint8_t byte){
-    uart_bytes_transmitted++;
+    uart_bytes_tx++;
     UART_PutChar(byte);
 }
 
@@ -203,9 +203,9 @@ void min_command(uint8_t command, uint8_t *min_payload, uint8_t len_payload){
 }
 
 struct __event_response {
-    uint8 id;
-    uint8 struct_version;
-    uint32 unique_id[2];
+    uint8_t id;
+    uint8_t struct_version;
+    uint32_t unique_id[2];
     char udname[16];   
 };
 typedef struct __event_response event_resonse;
@@ -338,7 +338,7 @@ void poll_UART(){
     uint16_t bytes = UART_GetRxBufferSize();
     if(bytes){
         LED4_Write(1);
-        uart_bytes_received+=bytes;
+        uart_bytes_rx+=bytes;
         while(bytes){
             min_rx_byte(&min_ctx, UART_GetByte());
             bytes--;

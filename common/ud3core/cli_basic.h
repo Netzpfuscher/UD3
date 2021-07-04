@@ -57,7 +57,12 @@ enum port{
     char:       TYPE_CHAR, \
     char*:      TYPE_STRING)
 
-#define SIZEP(x) ((char*)(&(x) + 1) - (char*)&(x))
+#ifndef SIMULATOR
+    #define SIZEP(x) ((char*)(&(x) + 1) - (char*)&(x))
+#else
+    #define SIZEP(x) sizeof(x)
+#endif
+
 #define ADD_PARAM(para_type, visible,text, value_var, min, max, div, update_func, help_text) {para_type, visible,text, &value_var, SIZEP(value_var), typename(value_var),min, max, div, update_func, help_text},
 #define ADD_COMMAND(command, command_func, help_text) {command, command_func, help_text},
 

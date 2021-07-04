@@ -59,7 +59,7 @@ void send_chart(uint8_t chart, int16_t val, TERMINAL_HANDLE * handle);
 void send_chart_draw(TERMINAL_HANDLE * handle);
 void send_chart_config(uint8_t chart, int16_t min, int16_t max, int16_t offset, uint8_t unit,char * text, TERMINAL_HANDLE * handle);
 void send_gauge_config(uint8_t gauge, int16_t min, int16_t max, char * text, TERMINAL_HANDLE * handle);
-void send_gauge_config32(uint8_t gauge, int32_t min, int32_t max, int32 div, char * text, TERMINAL_HANDLE * handle);
+void send_gauge_config32(uint8_t gauge, int32_t min, int32_t max, int32_t div, char * text, TERMINAL_HANDLE * handle);
 void send_chart_text(int16_t x, int16_t y, uint8_t color, uint8_t size, char * text, TERMINAL_HANDLE * handle);
 void send_chart_text_center(int16_t x, int16_t y, uint8_t color, uint8_t size, char * text, TERMINAL_HANDLE * handle);
 void send_chart_line(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint8_t color, TERMINAL_HANDLE * handle);

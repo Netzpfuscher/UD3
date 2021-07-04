@@ -146,7 +146,8 @@ void braille_draw(TERMINAL_HANDLE * handle) {
                 
                 char out_buffer[3];
 				set_bytes(out_buffer, byte);
-				ttprintb(out_buffer, sizeof(out_buffer));
+                ttprintb(out_buffer, sizeof(out_buffer));
+                
 			}
 		}
 		ttprintf("\r\n");

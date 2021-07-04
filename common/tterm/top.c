@@ -39,9 +39,9 @@ uint8_t REGISTER_top(TermCommandDescriptor * desc){
 }
 
 uint8_t CMD_main(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+    
     uint8_t currArg = 0;
     uint8_t returnCode = TERM_CMD_EXIT_SUCCESS;
-    
     char ** cpy_args=NULL;
     argCount++;
     if(argCount){
@@ -54,7 +54,6 @@ uint8_t CMD_main(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
             memcpy(cpy_args[currArg+1], args[currArg], len);
         }
     }
-    
     TermProgram * prog = pvPortMalloc(sizeof(TermProgram));
     prog->inputHandler = INPUT_handler;
     prog->args = cpy_args;
@@ -95,7 +94,10 @@ void TASK_main(void *pvParameters){
                 if(strlen(taskStats[currTask].pcTaskName) != 4 || strcmp(taskStats[currTask].pcTaskName, "IDLE") != 0){
                     char name[configMAX_TASK_NAME_LEN+1];
                     strncpy(name, taskStats[currTask].pcTaskName, configMAX_TASK_NAME_LEN);
-                    uint32_t load = (taskStats[currTask].ulRunTimeCounter) / (sysTime/configTICK_RATE_HZ);
+                     uint32_t load=0;
+                    if(sysTime>1000){
+                        load = (taskStats[currTask].ulRunTimeCounter) / (sysTime/configTICK_RATE_HZ);
+                    }
                     ttprintf("%s%d\r\x1b[%dC%s\r\x1b[%dC%s\r\x1b[%dC%d,%d\r\x1b[%dC%d\r\x1b[%dC%u\r\x1b[%dC%d\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0), taskStats[currTask].xTaskNumber, 6, name, 7 + configMAX_TASK_NAME_LEN
                             , SYS_getTaskStateString(taskStats[currTask].eCurrentState), 20 + configMAX_TASK_NAME_LEN, load / 10, load % 10, 27 + configMAX_TASK_NAME_LEN, taskStats[currTask].ulRunTimeCounter
                             , 38 + configMAX_TASK_NAME_LEN, taskStats[currTask].usStackHighWaterMark, 45 + configMAX_TASK_NAME_LEN, taskStats[currTask].usedHeap);

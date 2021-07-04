@@ -25,7 +25,6 @@ void tsk_duty_task(void *pvParameters) {
         
         OnTimeCounter_WriteCounter(0xfffffff);
         lastTickCount = SG_Timer_ReadCounter();
-        
         // dutycycle := onTime / period
         // the period is 3,125 times slower
         // to get the scaling (0,1% resolution) we do dutycycle * 1000

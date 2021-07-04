@@ -33,18 +33,18 @@
     
 typedef struct
 {
-    uint8 changed;
-    uint16 index;
-    uint8 data[400];
+    uint8_t changed;
+    uint16_t index;
+    uint8_t data[400];
 } ramp_params;
 
 ramp_params volatile ramp; //added volatile
 
 typedef struct
 {
-    uint32 time_start;
-    uint32 time_stop;
-    uint32 last_time;
+    uint32_t time_start;
+    uint32_t time_stop;
+    uint32_t last_time;
 } timer_params;
 
 

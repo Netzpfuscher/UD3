@@ -28,6 +28,9 @@
 #include <device.h>
 #include <math.h>
 
+uint16_t fb_filter_in=1;
+uint16_t fb_filter_out=1;
+
 void initialize_ZCD_to_PWM(void) {
 	//initialize all the timers/counters/PWMs
 	PWMA_Start();

@@ -501,9 +501,9 @@ void tsk_analog_TaskProc(void *pvParameters) {
 	 * in the task.
 	 */
 	/* `#START TASK_INIT_CODE` */
-
+    
 	adc_ready_Semaphore = xSemaphoreCreateBinary();
-
+    
 	initialize_analogs();
     
     CyGlobalIntEnable;

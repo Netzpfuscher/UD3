@@ -31,6 +31,9 @@ typedef struct{
     uint8_t address;
     uint8_t buffer[5];
 }PCA9685;
+
+extern uint32_t i2c_bytes_rx;
+extern uint32_t i2c_bytes_tx;
     
 PCA9685* PCA9685_new(uint8_t address);  
 void PCA9685_setPWM_i(PCA9685* ptr, uint8_t led, int on_value, int off_value);

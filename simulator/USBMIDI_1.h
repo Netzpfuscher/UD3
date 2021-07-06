@@ -1,3 +1,6 @@
+#ifndef USBMIDI_1_H
+#define USBMIDI_1_H
+
 #include <stdint.h>
 
 extern uint8_t USBMIDI_1_initVar;
@@ -15,3 +18,6 @@ uint8_t USBMIDI_1_CDCIsReady();
 
 uint8_t USBMIDI_1_DataIsReady();
 uint16_t USBMIDI_1_GetAll(uint8_t * buffer);
+
+
+#endif

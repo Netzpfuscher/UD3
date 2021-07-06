@@ -132,17 +132,7 @@ void DDS32_2_WriteRand1(uint32_t rnd){
 }
 
 
-uint32_t UART_GetTxBufferSize(){
-	return 0;
-}
-uint32_t UART_GetRxBufferSize(){
-	return 0;
-}
-void UART_PutChar(uint8_t byte){
-}
-uint8_t UART_GetByte(){
-	return 0;
-}
+
 
 const uint32_t uid[2]={123456,456789};
 void CyGetUniqueId(uint32_t * val){
@@ -206,6 +196,7 @@ uint8_t EEPROM_1_Write(const uint8 * rowData, uint8 rowNumber){
 	memcpy(eeprom+start,rowData,CYDEV_EEPROM_ROW_SIZE);
 	FILE *fp;
 	if(rowNumber==0){
+		
 		fp = fopen("eeprom.txt", "w");
 	}else{
 		fp = fopen("eeprom.txt", "a");

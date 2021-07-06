@@ -1,3 +1,6 @@
+#ifndef SIM_HW_H
+#define SIM_HW_H
+
 #include <stdint.h>
 #include <string.h>
 
@@ -60,9 +63,9 @@ uint8_t no_fb_reg_Read();
 #define ADC_data_ready_StartEx(p1)
 #define CyGlobalIntEnable
 
-#define CYDEV_PERIPH_BASE 0
-#define CYDEV_SRAM_BASE 0
-#define HI16(x) ((x>>16)&&0xFFFF)
+//#define CYDEV_PERIPH_BASE 0
+//#define CYDEV_SRAM_BASE 0
+//#define HI16(x) ((x>>16)&&0xFFFF)
 #define CyDmaChDisable(x)
 #define CyGlobalIntDisable
 
@@ -150,19 +153,7 @@ void LED4_Write(uint8_t val);
 typedef uint8_t uint8;
 typedef uint16_t uint16;
 
-#define UART_TX_BUFFER_SIZE 1024
-#define UART_RX_BUFFER_SIZE 1024
 
-uint32_t UART_GetTxBufferSize();
-uint32_t UART_GetRxBufferSize();
-void UART_PutChar(uint8_t byte);
-uint8_t UART_GetByte();
-
-#define UART_Start()
-#define uart_rx_StartEx(p1)
-#define uart_tx_StartEx(p1)
-#define UART_Stop()
-#define UART_CLK_SetDividerValue(divider_selected)
 extern uint8_t IVO_UART_Control;
 
 
@@ -219,3 +210,5 @@ uint8_t EEPROM_1_ReadByte(uint16 address) ;
 #define I2C_MasterReadByte(I2C_NAK_DATA) 0
 
 #define _putchar(character)
+
+#endif

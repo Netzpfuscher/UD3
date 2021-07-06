@@ -132,8 +132,14 @@ void min_reset(uint8_t port){
 }
 
 void min_tx_start(uint8_t port){
+	#ifdef SIMULATOR
+	UART_start_frame();
+	#endif
 }
 void min_tx_finished(uint8_t port){
+	#ifdef SIMULATOR
+	UART_end_frame();
+	#endif
 }
 void time_cb(uint32_t remote_time){
     time.remote = remote_time;

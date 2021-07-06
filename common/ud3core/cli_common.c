@@ -553,8 +553,9 @@ uint8_t con_minstat(TERMINAL_HANDLE * handle){
 uint8_t CMD_con(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     if(argCount==0 || strcmp(args[0], "-?") == 0){
         ttprintf("con [info|numcon|min]\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
     }
-    
+
     if(strcmp(args[0], "info") == 0){
         con_info(handle);
         return TERM_CMD_EXIT_SUCCESS;
@@ -938,8 +939,11 @@ uint8_t CMD_signals(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         ttprintf("UVLO pin: ");
         send_signal_state_wo_new(UVLO_status_Status,pdTRUE,handle);
         ttprintf(" Crystal clock: ");
+        #ifndef SIMULATOR
         send_signal_state_new((CY_GET_XTND_REG8((void CYFAR *)CYREG_FASTCLK_XMHZ_CSR) & 0x80u),pdTRUE,handle);
-        
+        #else
+        send_signal_state_new(1,pdTRUE,handle);
+        #endif
         ttprintf("Sysfault driver undervoltage: ");
         send_signal_state_new(sysfault.uvlo,pdFALSE,handle);
         ttprintf("Sysfault Temp 1: ");

@@ -21,8 +21,12 @@
 
 //FreeRTOS
 #define ACTIVATE_TASK_INFO 1
+
+#ifndef SIMULATOR
 #define HEAP_SIZE 50    //kb
-    
+#else
+#define HEAP_SIZE 512    //kb	
+#endif
     
 //MIN
 #define NUM_MIN_CON 4

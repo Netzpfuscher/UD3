@@ -729,7 +729,7 @@ uint8_t kbhit(TERMINAL_HANDLE * handle){
 
 uint8_t Term_check_break(TERMINAL_HANDLE * handle, uint32_t ms_to_wait){
     uint8_t c = getch(handle,ms_to_wait /portTICK_RATE_MS);
-    if(c == CTRL_C){  //0x03 = CTRL+C
+    if(c == CTRL_C || c == 'q'){  //0x03 = CTRL+C
         return pdFALSE;
     }else{
         return pdTRUE;

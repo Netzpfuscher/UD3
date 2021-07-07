@@ -7,6 +7,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
+#include <errno.h>
 
 #define BUFFER_FAIL     0
 #define BUFFER_SUCCESS  1
@@ -77,6 +78,7 @@ typedef struct __frame__
     uint8_t data[ 400 ];
 }frm;
 
+
 frm frame;
 
 uint8_t r_buffer[16000];
@@ -86,68 +88,110 @@ uint8_t r_buffer[16000];
 
 QueueHandle_t xframes=NULL;
 
-void tsk_udp(void *pvParameters) {
-	
-	xframes = xQueueCreate( 256, sizeof(frm) );
-	
-	int sock, rc;
 
+typedef struct __sck__
+{
+    int sock;
+    int rc;
+	struct sockaddr_in cliAddr;
+	int cliAddrLen;
+	struct sockaddr_in servAddr;
+}sck;
+
+
+void tsk_udp_rx(void *pvParameters) {
+	
+	sck* ip = pvParameters;
+	
+	ip->rc = -1;
+	
 	const int y = 1;
 	
-	struct sockaddr_in client_address;
-	int client_address_len = 0;
-
-	struct sockaddr_in cliAddr, servAddr;
+	ip->sock = socket (PF_INET, SOCK_DGRAM, 0);
 	
-	sock = socket (PF_INET, SOCK_DGRAM, 0);
-	
-	frm to_send;
-	
-	if (sock < 0) {
+		
+	if (ip->sock < 0) {
 		console_print("Socket error\n");
 	}
 	
+	
+	
 	/* Lokalen Server Port bind(en) */
-	servAddr.sin_family = AF_INET;
-	servAddr.sin_addr.s_addr = htonl (INADDR_ANY);
-	servAddr.sin_port = htons (MIN_PORT);
-	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &y, sizeof(int));
-	rc = bind ( sock, (struct sockaddr *) &servAddr,
-			  sizeof (servAddr));
-	if (rc < 0) {
+	ip->servAddr.sin_family = AF_INET;
+	ip->servAddr.sin_addr.s_addr = htonl (INADDR_ANY);
+	ip->servAddr.sin_port = htons (MIN_PORT);
+	setsockopt(ip->sock, SOL_SOCKET, SO_REUSEADDR, &y, sizeof(int));
+	ip->rc = bind ( ip->sock, (struct sockaddr *) &ip->servAddr,
+			  sizeof (ip->servAddr));
+	if (ip->rc < 0) {
 		console_print("Bind error\n");
 	}
 	
+
 	while(1){
 	
-		int len = recvfrom(sock, r_buffer, sizeof(r_buffer), 0,
-							   (struct sockaddr *)&client_address,
-							   &client_address_len);
+		int len = recvfrom(ip->sock, r_buffer, sizeof(r_buffer), 0,
+							   (struct sockaddr *)&ip->cliAddr,
+							   &ip->cliAddrLen);
+		//console_print("str %s\n",strerror(errno));
 		if(len!=-1){
 			r_buffer[len] = '\0';
 			//console_print("len: %i received: '%s' from client %s\n",len,  r_buffer,
-			//		inet_ntoa(client_address.sin_addr));
+			//		inet_ntoa(ip->cliAddr.sin_addr));
 			for(uint32_t i=0;i<len;i++){
 				BufferIn(r_buffer[i]);
 			}				
 		}
+		vTaskDelay(1);
+		
+	}
+	
+}
+
+void tsk_udp_tx(void *pvParameters) {
+	
+	sck* ip = pvParameters;
+	
+	frm to_send;
+	
+	xframes = xQueueCreate( 256, sizeof(frm) );
+	
+
+	while (ip->rc == -1) {
+		vTaskDelay(10);
+	}
+	
+	while(1){
+	
 		
 		if(xQueueReceive( xframes,&to_send, 1 )){
 			//console_print("Frame: %u\n", to_send.len);
-			sendto(sock, to_send.data, to_send.len, 0, (struct sockaddr *)&client_address,sizeof(client_address));
+			sendto(ip->sock, to_send.data, to_send.len, 0, (struct sockaddr *)&ip->cliAddr,sizeof(ip->cliAddr));
 		}
 		
 		
 	}
 	
 }
-xTaskHandle tsk_udp_TaskHandle;
+
+
+xTaskHandle tsk_udp_rx_TaskHandle;
+xTaskHandle tsk_udp_tx_TaskHandle;
+
+int tsk_started = 0;
+
 
 void UART_Start(){
 	
-	xTaskCreate(tsk_udp, "UDP-Svc", 1024, NULL, 3, &tsk_udp_TaskHandle);
+	if(!tsk_started){
+		sck socket;
 	
-	frame.len = 0;
+		xTaskCreate(tsk_udp_rx, "UDP-RX", 1024, &socket, 3, &tsk_udp_rx_TaskHandle);
+		xTaskCreate(tsk_udp_tx, "UDP-TX", 1024, &socket, 3, &tsk_udp_tx_TaskHandle);
+	
+		frame.len = 0;
+		tsk_started=1;
+	}
 	
 }
 

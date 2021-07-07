@@ -85,8 +85,8 @@ uint8_t no_fb_reg_Read();
 #define FB_Filter_KEY_MID 0
 #define ZCD_counter_WritePeriod(x)
 #define ZCD_counter_WriteCompare(x)
-#define BCLK__BUS_CLK__MHZ 64
-#define BCLK__BUS_CLK__HZ 64000000
+//#define BCLK__BUS_CLK__MHZ 64
+//#define BCLK__BUS_CLK__HZ 64000000
 #define FB_glitch_detect_WritePeriod(x)
 #define FB_glitch_detect_WriteCompare1(x)
 #define FB_glitch_detect_WriteCompare2(x)

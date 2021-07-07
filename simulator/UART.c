@@ -9,6 +9,7 @@
 #include "queue.h"
 #include <errno.h>
 
+
 #define BUFFER_FAIL     0
 #define BUFFER_SUCCESS  1
 
@@ -178,14 +179,17 @@ void tsk_udp_tx(void *pvParameters) {
 xTaskHandle tsk_udp_rx_TaskHandle;
 xTaskHandle tsk_udp_tx_TaskHandle;
 
+
 int tsk_started = 0;
 
 
 void UART_Start(){
 	
-	if(!tsk_started){
-		sck socket;
 	
+	if(!tsk_started){
+		
+		sck socket;
+		
 		xTaskCreate(tsk_udp_rx, "UDP-RX", 1024, &socket, 3, &tsk_udp_rx_TaskHandle);
 		xTaskCreate(tsk_udp_tx, "UDP-TX", 1024, &socket, 3, &tsk_udp_tx_TaskHandle);
 	

@@ -16,6 +16,7 @@
 
 #include "sim_hw.h"
 #include "UART.h"
+#include "cyfitter.h"
 
 /*
 #include "cyfitter_cfg.h"

@@ -173,7 +173,8 @@ uint8_t Fan_Read(){
 }
 
 #define CYDEV_EEPROM_ROW_SIZE 0x00000010u
-uint8_t eeprom[2048];
+#define EEPROM_SIZE 2048
+uint8_t eeprom[EEPROM_SIZE];
 
 void EEPROM_1_Start(){
 	FILE *fp;
@@ -195,14 +196,12 @@ uint8_t EEPROM_1_Write(const uint8 * rowData, uint8 rowNumber){
 	uint16_t start = rowNumber * CYDEV_EEPROM_ROW_SIZE;
 	memcpy(eeprom+start,rowData,CYDEV_EEPROM_ROW_SIZE);
 	FILE *fp;
-	if(rowNumber==0){
+	//if(rowNumber==0){
 		
-		fp = fopen("eeprom.txt", "w");
-	}else{
-		fp = fopen("eeprom.txt", "a");
-	}
-	for(uint32_t i = 0;i<CYDEV_EEPROM_ROW_SIZE;i++){
-		fputc(eeprom[start+i],fp);
+	fp = fopen("eeprom.txt", "w");
+
+	for(uint32_t i = 0;i<EEPROM_SIZE;i++){
+		fputc(eeprom[i],fp);
 	}
 	fclose(fp);
 }

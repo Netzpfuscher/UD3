@@ -31,6 +31,7 @@
 #include "tsk_overlay.h"
 #include "tsk_midi.h"
 #include "tsk_i2c.h"
+#include "tsk_display.h"
 #include "cli_basic.h"
 #include "alarmevent.h"
 #include "autotune.h"
@@ -98,7 +99,16 @@ static const char * AC_alarms[] = {
 static const char * AC_hwGauge[] = {
     "assign",
     "clear",
-    "calibrate"
+    "calibrate",
+    "startColor",
+    "endColor",
+    "transition"
+};
+
+static const char * AC_display[] = {
+    "assign",
+    "clear",
+    "select"
 };
 
 static const char * AC_eeprom[] = {
@@ -324,6 +334,7 @@ void tsk_cli_Start(void) {
         TERM_addCommand(CMD_debug, "debug","Debug mode",0,&TERM_cmdListHead);
         TERM_addCommand(CMD_ntc, "ntc","Calibrate NTC iDAC",0,&TERM_cmdListHead);
         TERM_addCommandConstAC(CMD_hwGauge, "hwGauge","adjust hardware gauge parameters",AC_hwGauge,&TERM_cmdListHead);
+        TERM_addCommandConstAC(CMD_display, "display","adjust WS2812 parameters",AC_display,&TERM_cmdListHead);
      
         if(configuration.minprot==pdTRUE){
             for(uint8_t i=0;i<NUM_MIN_CON;i++){

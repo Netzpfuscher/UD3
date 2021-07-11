@@ -34,6 +34,7 @@
 #include "cli_basic.h"
 #include "telemetry.h"
 #include "TTerm.h"  
+#include "tsk_display.h"
 
 typedef struct{
     TELE* src;
@@ -44,6 +45,9 @@ typedef struct{
     int32_t scalMin;
     int32_t scalMax;
     uint8_t lightZone;
+    SMALL_COLOR colorA;
+    SMALL_COLOR colorB;
+    uint16_t colorTransition;
 }HWGauge_s;
 
 typedef union{
@@ -55,6 +59,7 @@ extern HWGauge hwGauges;
 
 void tsk_hwGauge_init(); 
 void tsk_hwGauge_proc();
+uint32_t HWGauge_getGaugeColor(uint8_t id);
 void HWGauge_setValue(uint32_t number, int32_t value);
 int32_t HWGauge_scaleTelemetry(TELE * src, int32_t cMin, int32_t cMax, unsigned allowNegative);
 uint8_t callback_hwGauge(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);

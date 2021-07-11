@@ -24,6 +24,8 @@
 
 #include "cyapicallbacks.h"
 #include <cytypes.h>
+#include <stdint.h>
+#include <stdlib.h>
 
 #include "tsk_display.h"
 #include "tsk_midi.h"
@@ -51,7 +53,9 @@ uint8 tsk_display_initVar = 0u;
 #include "cli_common.h"
 #include "telemetry.h"
 #include "tsk_priority.h"
+#include "tsk_cli.h"
 #include "tsk_analog.h"
+#include "tsk_hwGauge.h"
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */
@@ -66,116 +70,11 @@ uint8 tsk_display_initVar = 0u;
 #define DISPLAY_SYNTH_STATE 1
 #define DISPLAY_SYNTHMON    2
 
-/* `#END` */
-/* ------------------------------------------------------------------------ */
-/*
- * This is the main procedure that comprises the task.  Place the code required
- * to preform the desired function within the merge regions of the task procedure
- * to add functionality to the task.
- */
-void display_bus_state(){
-    Disp_MemClear(0);
-    switch(tt.n.bus_status.value){
-        case BUS_OFF:
-            if(tt.n.bus_v.value<40){
-                Disp_DrawRect(3,0,4,4,1,Disp_GREEN);        
-                Disp_DrawRect(3,6,4,7,1,Disp_GREEN);
-            }
-        break;
-        case BUS_TEMP1_FAULT:
-            Disp_DrawLine(0,0,7,7,Disp_RED);
-            Disp_DrawLine(7,0,0,7,Disp_RED);
-    		break;    
-        default:
-            Disp_DrawRect(3,0,4,4,1,Disp_RED);        
-            Disp_DrawRect(3,6,4,7,1,Disp_RED);
-        break;
-        
-    }
-    Disp_Trigger(1);
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-}
-
-uint8_t display_text(char *text,uint16_t len,int32_t *memory){
-    Disp_MemClear(0);
-    Disp_PrintString(*memory,0,text,Disp_WHITE,Disp_BLACK);
-    *memory = *memory -1;
-    
-    Disp_Trigger(1);
-    vTaskDelay(100 / portTICK_PERIOD_MS);
-    if(*memory<(-1*(len+1)*5)){
-        *memory = 8;
-        return pdFALSE;
-    }
-    return pdTRUE;
-}
-
-void display_synthmon(){
-    Disp_MemClear(0);
-    uint8_t freq[8];
-    for(uint8_t i=0; i<8;i++){
-        freq[i]=0;
-    }
-    
-    for(uint8_t i=0; i<N_CHANNEL;i++){
-        if(channel[i].volume>0){
-            if(channel[i].freq > 0 && channel[i].freq <187){
-                freq[0]=freq[0]+channel[i].volume;
-                if(freq[0]>127)freq[0]=127;
-            }
-            if(channel[i].freq > 186 && channel[i].freq <375){
-                freq[1]=freq[1]+channel[i].volume;
-                if(freq[1]>127)freq[1]=127;
-            }
-            if(channel[i].freq > 374 && channel[i].freq <561){
-                freq[2]=freq[2]+channel[i].volume;
-                if(freq[2]>127)freq[2]=127;
-            }
-            if(channel[i].freq > 560 && channel[i].freq <748){
-                freq[3]=freq[3]+channel[i].volume;
-                if(freq[3]>127)freq[3]=127;
-            }
-            if(channel[i].freq > 747 && channel[i].freq <935){
-                freq[4]=freq[4]+channel[i].volume;
-                if(freq[4]>127)freq[4]=127;
-            }
-            if(channel[i].freq > 934 && channel[i].freq <1122){
-                freq[5]=freq[5]+channel[i].volume;
-                if(freq[5]>127)freq[5]=127;
-            }
-            if(channel[i].freq > 1121 && channel[i].freq <1309){
-                freq[6]=freq[6]+channel[i].volume;
-                if(freq[6]>127)freq[6]=127;
-            }
-            if(channel[i].freq > 1308){
-                freq[7]=freq[7]+channel[i].volume;
-                if(freq[7]>127)freq[7]=127;
-            }
-        }   
-    }
-    for(uint8_t i=0; i<8;i++){
-        freq[i]=freq[i]/15;
-        Disp_DrawLine(i,7,i,7-freq[i],Disp_BLUE);
-    }
-    
-    Disp_Trigger(1);
-    vTaskDelay(20 / portTICK_PERIOD_MS);
-}
-
-uint8_t display_syntstate(int32_t *memory){
-    switch(param.synth){
-                case SYNTH_OFF:
-                    return display_text("OFF",3,memory);
-                    break;
-                case SYNTH_MIDI:
-                    return display_text("MIDI",4,memory);
-                    break;
-                case SYNTH_SID:
-                    return display_text("SID",3,memory);
-                    break;
-            }
-    return 0;
-}
+DISP_ZONE_t DISP_zones;
+static unsigned selectionActive = 0;
+static uint32_t selectionStage = 0;
+static uint32_t sectionToSelect = 0;
+static uint16_t selectionBackup;
 
 void tsk_display_TaskProc(void *pvParameters) {
 	/*
@@ -196,48 +95,54 @@ void tsk_display_TaskProc(void *pvParameters) {
     Disp_MemClear(0);
     Disp_Dim(configuration.enable_display-1);
     Disp_Trigger(1);
-    //param.display = 1;
-    vTaskDelay(250 / portTICK_PERIOD_MS);
-    
-    
-    int32_t memory =0;
-    uint8_t old_state=param.synth;
-    
-    while(display_text("UD3 Starting...",15,&memory));
-    
-	/* `#END` */
 
 	for (;;) {
-		/* `#START TASK_LOOP_CODE` */
-        if(old_state!=param.synth){
-            param.display=2;
+		vTaskDelay(10 / portTICK_PERIOD_MS);
+        if(selectionActive) continue;
+        
+        Disp_MemClear(0);
+        for(uint32_t currZone = 0; currZone < DISP_MAX_ZONES; currZone++){
+            if(DISP_zones.zone[currZone].src == DISP_SRC_OFF) continue;
+            Disp_DrawLine(DISP_zones.zone[currZone].firstLed, 0, DISP_zones.zone[currZone].lastLed, 0, DISP_getZoneColor(DISP_zones.zone[currZone].src));
         }
-        switch(param.display){
-        case DISPLAY_BUS_STATE:
-            display_bus_state();
-            break;
-        case DISPLAY_SYNTH_STATE:
-            display_syntstate(&memory);
-            break;
-        case DISPLAY_SYNTHMON:
-            if(old_state!=param.synth){
-                while(display_syntstate(&memory));
-                old_state=param.synth;
-                if(param.synth==SYNTH_OFF) param.display=0;
-            }
-            display_synthmon();
-            break;
-        default:
-            vTaskDelay(500 / portTICK_PERIOD_MS);
-            break;
-            
-        }
-        
-        
-        
-		/* `#END` */
+        Disp_Trigger(1);
 	}
 }
+
+uint32_t DISP_getZoneColor(uint8_t src){
+    //TERM_printDebug(min_handle[1], "getting src %d\r\n", src);
+    switch(src){
+    case DISP_SRC_BUS:
+        if(tt.n.bus_status.value == BUS_OFF) return Disp_GREEN;
+        return Disp_RED;
+        
+    case DISP_SRC_SYNTH:
+        switch(param.synth){
+            case SYNTH_MIDI:
+                return Disp_OCEAN;
+            case SYNTH_SID:
+                return Disp_ORANGE;
+            default:
+                return 0;
+        }
+        
+    case DISP_SRC_HWG0 ... DISP_SRC_HWG5:
+        return HWGauge_getGaugeColor(src - DISP_SRC_HWG0);
+        break;
+        
+    case DISP_SRC_WHITE_STATIC:
+        return Disp_WHITE;
+        
+    default:
+        return 0;
+    }
+}
+
+
+uint32_t smallColorToColor(SMALL_COLOR c){
+    return ((c.blue << 19) & 0xff0000) | ((c.green << 10) & 0xff00) | ((c.red << 3) & 0xff);
+}
+
 /* ------------------------------------------------------------------------ */
 void tsk_display_Start(void) {
 	/*
@@ -260,6 +165,151 @@ void tsk_display_Start(void) {
 		xTaskCreate(tsk_display_TaskProc, "Display-Svc", STACK_DISPLAY, NULL, PRIO_DISPLAY, &tsk_display_TaskHandle);
 		tsk_display_initVar = 1;
 	}
+}
+
+static void DISP_drawSel(){
+    Disp_MemClear(0);
+    Disp_DrawLine(DISP_zones.zone[sectionToSelect].firstLed, 0, DISP_zones.zone[sectionToSelect].lastLed, 0, Disp_WHITE);
+    Disp_Trigger(1);
+}
+
+static uint8_t CMD_displaySelect_handleInput(TERMINAL_HANDLE * handle, uint16_t c){
+    switch(c){
+        case 'q':
+        case 0x03:
+            vPortFree(handle->currProgram);
+            TERM_removeProgramm(handle);
+            selectionActive = 0;
+            DISP_zones.data[sectionToSelect] = selectionBackup;
+            ttprintf("\r\n\n%sSelection Canceled!%s\r\n\n", TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_RED), TERM_getVT100Code(_VT100_RESET, 0));
+            return TERM_CMD_EXIT_SUCCESS;
+        
+        case '+':
+            if(selectionStage == 1){
+                if(DISP_zones.zone[sectionToSelect].lastLed < 0x3f) DISP_zones.zone[sectionToSelect].lastLed ++;
+                DISP_drawSel();
+                ttprintf("End = %d     \r", DISP_zones.zone[sectionToSelect].lastLed);
+            }else if(selectionStage == 0){
+                if(DISP_zones.zone[sectionToSelect].firstLed < 0x3f) DISP_zones.zone[sectionToSelect].firstLed ++;
+                DISP_drawSel();
+                ttprintf("Start = %d     \r", DISP_zones.zone[sectionToSelect].firstLed);
+            }
+            
+            return TERM_CMD_CONTINUE;
+        
+        case '-':
+            if(selectionStage == 1){
+                if(DISP_zones.zone[sectionToSelect].lastLed > 0) DISP_zones.zone[sectionToSelect].lastLed --;
+                DISP_drawSel();
+                ttprintf("End = %d     \r", DISP_zones.zone[sectionToSelect].lastLed);
+            }else if(selectionStage == 0){
+                if(DISP_zones.zone[sectionToSelect].firstLed > 0) DISP_zones.zone[sectionToSelect].firstLed --;
+                DISP_drawSel();
+                ttprintf("Start = %d     \r", DISP_zones.zone[sectionToSelect].firstLed);
+            }
+            
+            return TERM_CMD_CONTINUE;
+        
+        case '0':
+            if(selectionStage == 1){
+                DISP_zones.zone[sectionToSelect].lastLed = 0;
+                DISP_drawSel();
+                ttprintf("End = %d     \r", DISP_zones.zone[sectionToSelect].lastLed);
+            }else if(selectionStage == 0){
+                DISP_zones.zone[sectionToSelect].firstLed = 0;
+                DISP_drawSel();
+                ttprintf("Start = %d     \r", DISP_zones.zone[sectionToSelect].firstLed);
+            }
+            
+            return TERM_CMD_CONTINUE;
+        
+        case '*':
+            if(selectionStage == 1){
+                DISP_zones.zone[sectionToSelect].lastLed = 0x3f;
+                DISP_drawSel();
+                ttprintf("End = %d     \r", DISP_zones.zone[sectionToSelect].lastLed);
+            }else if(selectionStage == 0){
+                DISP_zones.zone[sectionToSelect].firstLed = 0x3f;
+                DISP_drawSel();
+                ttprintf("Start = %d     \r", DISP_zones.zone[sectionToSelect].firstLed);
+            }
+            
+            return TERM_CMD_CONTINUE;
+            
+        case '\r':
+            if(selectionStage == 1){
+                vPortFree(handle->currProgram);
+                TERM_removeProgramm(handle);
+                selectionActive = 0;
+                ttprintf("Calibration saved succesfully\r\n");
+                //Todo successfully safe calibration
+            }else if(selectionStage == 0){
+                selectionStage = 1;
+                ttprintf("\r\n\nUse '+', '-', '0', '*' to set the gauge to the MAX reading. Press ENTER to continue\r\n");
+                ttprintf("End = %d     \r", DISP_zones.zone[sectionToSelect].lastLed);
+            }
+            return TERM_CMD_CONTINUE;
+            
+        default:
+            return TERM_CMD_CONTINUE;
+    }
+}
+
+uint8_t CMD_display(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+    uint8_t returnCode = TERM_CMD_EXIT_SUCCESS;
+    
+    if(argCount==0 || strcmp(args[0], "-?") == 0){
+        ttprintf("Usage: display assign [number] [src]\r\n");
+        ttprintf("       display clear  [number]\r\n");
+        ttprintf("       display select [number]\r\n");
+        return returnCode;
+    }
+	
+
+	if(strcmp(args[0], "assign") == 0 && (argCount == 3)){
+        uint8_t section = atoi(args[1]);
+        uint8_t src = atoi(args[2]);
+        if(section < DISP_MAX_ZONES || src <= 0xf){
+            DISP_zones.zone[section].src = src;
+            ttprintf("Assigned section %d to src %d\r\n", section, src);
+            return TERM_CMD_EXIT_SUCCESS;
+        }
+	}
+    
+	if(strcmp(args[0], "clear") == 0 && argCount == 2){
+        uint8_t section = atoi(args[1]);
+        if(section < DISP_MAX_ZONES){
+            DISP_zones.zone[section].src = DISP_SRC_OFF;
+            ttprintf("cleared assignment of section %d\r\n", section);
+            return TERM_CMD_EXIT_SUCCESS;
+        }
+	}
+    
+	if(strcmp(args[0], "select") == 0 && argCount == 2){
+        uint32_t section = atoi(args[1]);
+        if(section < DISP_MAX_ZONES){
+            TermProgram * prog = pvPortMalloc(sizeof(TermProgram));
+            prog->inputHandler = CMD_displaySelect_handleInput;
+            TERM_sendVT100Code(handle, _VT100_RESET, 0); TERM_sendVT100Code(handle, _VT100_CURSOR_POS1, 0);
+            returnCode = TERM_CMD_EXIT_PROC_STARTED;
+            selectionBackup = DISP_zones.data[sectionToSelect];
+            selectionActive = 1;
+            sectionToSelect = section;
+            TERM_attachProgramm(handle, prog);
+            selectionStage = 0;
+            DISP_drawSel();
+            ttprintf("\r\n\nCalibrating hardware gauge #%d\r\n", section);
+            ttprintf("Use '+', '-', '0', '*' to set the gauge to the MIN reading. Press ENTER to continue\r\n");
+            ttprintf("Start = %d     \r", DISP_zones.zone[sectionToSelect].firstLed);
+            return returnCode;
+        }
+	}
+    
+    ttprintf("Usage: hwGauge assign [number] [name]\r\n");
+    ttprintf("       hwGauge clear [number]\r\n");
+    ttprintf("       hwGauge calibrate [number]\r\n");
+    ttprintf("       number = 0-%d\r\n", NUM_HWGAUGE);
+    return TERM_CMD_EXIT_ERROR;
 }
 /* ------------------------------------------------------------------------ */
 /* ======================================================================== */

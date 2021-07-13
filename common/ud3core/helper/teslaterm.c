@@ -10,7 +10,7 @@
 #include "semphr.h"
 
 uint8_t gaugebuf[] = {0xFF,0x04, TT_GAUGE,0x00,0x00,0x00};
-uint8_t gaugebuf32[] = {0xFF,0x06, TT_GAUGE32,0x00,0x00,0x00,0x00,0x00};
+uint8_t buf32[] = {0xFF,0x06, TT_GAUGE32,0x00,0x00,0x00,0x00,0x00};
 uint8_t chartbuf[] = {0xFF,0x04, TT_CHART,0x00,0x00,0x00};
 uint8_t statusbuf[] = {0xFF,0x02, TT_STATUS,0x00};
 const uint8_t chartdraw[] = {0xFF,0x02, TT_CHART_DRAW,0x00};
@@ -38,12 +38,13 @@ void send_gauge(uint8_t gauge, int16_t val, TERMINAL_HANDLE * handle){
 }
 
 void send_gauge32(uint8_t gauge, int32_t val, TERMINAL_HANDLE * handle){
-    gaugebuf32[3]=gauge;
-    gaugebuf32[4]=(uint8_t)val;
-    gaugebuf32[5]=(uint8_t)(val>>8);
-    gaugebuf32[6]=(uint8_t)(val>>16);
-    gaugebuf32[7]=(uint8_t)(val>>24);
-    ttprintb(gaugebuf32,sizeof(gaugebuf32));
+    buf32[2]=TT_GAUGE32;
+    buf32[3]=gauge;
+    buf32[4]=(uint8_t)val;
+    buf32[5]=(uint8_t)(val>>8);
+    buf32[6]=(uint8_t)(val>>16);
+    buf32[7]=(uint8_t)(val>>24);
+    ttprintb(buf32,sizeof(buf32));
 }
 
 void send_chart(uint8_t chart, int16_t val, TERMINAL_HANDLE * handle){
@@ -52,6 +53,18 @@ void send_chart(uint8_t chart, int16_t val, TERMINAL_HANDLE * handle){
     chartbuf[5]=(uint8_t)(val>>8);
     ttprintb(chartbuf,sizeof(chartbuf));
 }
+
+void send_chart32(uint8_t chart, int32_t val, TERMINAL_HANDLE * handle){
+    buf32[2]=TT_CHART32;
+    buf32[3]=chart;
+    buf32[4]=(uint8_t)val;
+    buf32[5]=(uint8_t)(val>>8);
+    buf32[6]=(uint8_t)(val>>16);
+    buf32[7]=(uint8_t)(val>>24);
+    ttprintb(buf32,sizeof(buf32));
+}
+
+
 void send_chart_draw(TERMINAL_HANDLE * handle){
     ttprintb(chartdraw,sizeof(chartdraw));
 }
@@ -70,6 +83,34 @@ void send_chart_config(uint8_t chart, int16_t min, int16_t max, int16_t offset,u
     buf[8] = offset;
     buf[9] = (offset>>8);
     buf[10] = unit;
+    ttprintb(buf,sizeof(buf));
+    ttprintb(text,bytes);
+}
+
+void send_chart_config32(uint8_t chart, int32_t min, int32_t max, int32_t offset, int32_t div, uint8_t unit, char * text, TERMINAL_HANDLE * handle){
+    uint8_t bytes = strlen(text);
+    uint8_t buf[21];
+    buf[0] = 0xFF;
+    buf[1] = bytes+sizeof(buf)-2;
+    buf[2] = TT_CHART32_CONF;
+    buf[3] = chart;
+    buf[4] = (uint8_t)min;
+    buf[5] = (uint8_t)(min>>8);
+    buf[6] = (uint8_t)(min>>16);
+    buf[7] = (uint8_t)(min>>24);
+    buf[8] = (uint8_t)max;
+    buf[9] = (uint8_t)(max>>8);
+    buf[10] = (uint8_t)(max>>16);
+    buf[11] = (uint8_t)(max>>24);
+    buf[12] = (uint8_t)offset;
+    buf[13] = (uint8_t)(offset>>8);
+    buf[14] = (uint8_t)(offset>>16);
+    buf[15] = (uint8_t)(offset>>24);
+    buf[16] = (uint8_t)div;
+    buf[17] = (uint8_t)(div>>8);
+    buf[18] = (uint8_t)(div>>16);
+    buf[19] = (uint8_t)(div>>24);
+    buf[20] = unit;
     ttprintb(buf,sizeof(buf));
     ttprintb(text,bytes);
 }

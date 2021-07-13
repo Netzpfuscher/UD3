@@ -21,6 +21,8 @@
 #define TT_GAUGE32      13
 #define TT_GAUGE_CONF32 14
 #define TT_FEATURE_GET  15
+#define TT_CHART32      16
+#define TT_CHART32_CONF 17
 
 #define TT_UNIT_NONE    0
 #define TT_UNIT_V       1
@@ -56,10 +58,14 @@ void send_gauge(uint8_t gauge, int16_t val, TERMINAL_HANDLE * handle);
 void send_gauge32(uint8_t gauge, int32_t val, TERMINAL_HANDLE * handle);
 
 void send_chart(uint8_t chart, int16_t val, TERMINAL_HANDLE * handle);
+void send_chart32(uint8_t chart, int32_t val, TERMINAL_HANDLE * handle);
 void send_chart_draw(TERMINAL_HANDLE * handle);
 void send_chart_config(uint8_t chart, int16_t min, int16_t max, int16_t offset, uint8_t unit,char * text, TERMINAL_HANDLE * handle);
+void send_chart_config32(uint8_t chart, int32_t min, int32_t max, int32_t offset, int32_t div, uint8_t unit, char * text, TERMINAL_HANDLE * handle);
+
 void send_gauge_config(uint8_t gauge, int16_t min, int16_t max, char * text, TERMINAL_HANDLE * handle);
 void send_gauge_config32(uint8_t gauge, int32_t min, int32_t max, int32_t div, char * text, TERMINAL_HANDLE * handle);
+
 void send_chart_text(int16_t x, int16_t y, uint8_t color, uint8_t size, char * text, TERMINAL_HANDLE * handle);
 void send_chart_text_center(int16_t x, int16_t y, uint8_t color, uint8_t size, char * text, TERMINAL_HANDLE * handle);
 void send_chart_line(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint8_t color, TERMINAL_HANDLE * handle);

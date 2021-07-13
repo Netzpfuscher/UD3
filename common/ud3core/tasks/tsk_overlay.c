@@ -268,7 +268,7 @@ void recalc_telemetry_limits(){
     tt.n.batt_i.max = ((configuration.ct2_ratio * 50) / configuration.ct2_burden);
     tt.n.temp1.max = configuration.temp1_max;
     tt.n.temp2.max = configuration.temp2_max;
-    tt.n.avg_power.max = (configuration.r_top / 1000) * ((configuration.ct2_ratio * 50) / configuration.ct2_burden);
+    tt.n.avg_power.max = ((configuration.r_top / 1000) * ((configuration.ct2_ratio * 50) / configuration.ct2_burden)) / tt.n.avg_power.divider;
 }
 
 
@@ -355,8 +355,8 @@ void show_overlay_100ms(TERMINAL_HANDLE * handle){
                     }
                 }
                 if(tt.a[i].chart!=TT_NO_TELEMETRY && chart){
-                    if(tt.a[i].divider>1){
-                        send_chart(tt.a[i].chart, tt.a[i].value / tt.a[i].divider, handle);
+                    if(tt.a[i].high_res){
+                        send_chart32(tt.a[i].chart, tt.a[i].value, handle);
                     }else{
                         send_chart(tt.a[i].chart, tt.a[i].value, handle);
                     }
@@ -392,8 +392,8 @@ void show_overlay_400ms(TERMINAL_HANDLE * handle) {
                     }
                 }
                 if(tt.a[i].chart!=TT_NO_TELEMETRY && chart){
-                    if(tt.a[i].divider>1){
-                        send_chart(tt.a[i].chart, tt.a[i].value / tt.a[i].divider, handle);
+                    if(tt.a[i].high_res){
+                        send_chart32(tt.a[i].chart, tt.a[i].value, handle);
                     } else {
                         send_chart(tt.a[i].chart, tt.a[i].value, handle);
                     }
@@ -536,7 +536,7 @@ void init_tt(uint8_t with_chart, TERMINAL_HANDLE * handle){
         }
         if(tt.a[i].chart!=TT_NO_TELEMETRY && with_chart){
             if(tt.a[i].high_res){
-                send_chart_config(tt.a[i].chart, tt.a[i].min / tt.a[i].divider, tt.a[i].max / tt.a[i].divider, tt.a[i].offset / tt.a[i].divider, tt.a[i].unit, tt.a[i].name, handle);
+                send_chart_config32(tt.a[i].chart, tt.a[i].min, tt.a[i].max, tt.a[i].offset, tt.a[i].divider, tt.a[i].unit, tt.a[i].name, handle);
             }else{
                 send_chart_config(tt.a[i].chart, tt.a[i].min, tt.a[i].max, tt.a[i].offset, tt.a[i].unit, tt.a[i].name, handle);
             }

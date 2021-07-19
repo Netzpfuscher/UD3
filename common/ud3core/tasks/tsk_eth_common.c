@@ -21,6 +21,7 @@
 #include "tasks/tsk_midi.h"
 #include "tasks/tsk_fault.h"
 #include "clock.h"
+#include "SignalGeneratorSID.h"
 
 void process_midi(uint8_t* ptr, uint16_t len) {
 	uint8_t c;

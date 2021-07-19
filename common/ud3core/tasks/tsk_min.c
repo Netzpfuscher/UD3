@@ -35,6 +35,7 @@
 #include "alarmevent.h"
 #include "clock.h"
 #include "version.h"
+#include "SignalGenerator.h"
 
 #include "helper/printf.h"
 #include "helper/debug.h"
@@ -126,7 +127,7 @@ uint32_t min_time_ms(void){
 }
 
 void min_reset(uint8_t port){
-    kill_accu();
+    SigGen_kill();
     USBMIDI_1_callbackLocalMidiEvent(0, (uint8_t*)kill_msg);   
     alarm_push(ALM_PRIO_WARN,warn_min_reset,ALM_NO_VALUE);
 }
@@ -168,20 +169,20 @@ void process_synth(uint8_t *min_payload, uint8_t len_payload){
         case SYNTH_CMD_FLUSH:
             if(qSID!=NULL){
                 xQueueReset(qSID);
-                kill_accu();
+                SigGen_kill();
             }
             break;
         case SYNTH_CMD_SID:
             param.synth=SYNTH_SID;
-            switch_synth(SYNTH_SID);
+            SigGen_switch_synth(SYNTH_SID);
             break;
         case SYNTH_CMD_MIDI:
             param.synth=SYNTH_MIDI;
-            switch_synth(SYNTH_MIDI);
+            SigGen_switch_synth(SYNTH_MIDI);
             break;
         case SYNTH_CMD_OFF:
             param.synth=SYNTH_OFF;
-            switch_synth(SYNTH_OFF);
+            SigGen_switch_synth(SYNTH_OFF);
             break;
   }
 }

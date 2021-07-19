@@ -26,6 +26,7 @@
 #include "hardware.h"
 #include "ZCDtoPWM.h"
 #include "autotune.h"
+#include "SignalGenerator.h"
 #include "cli_common.h"
 #include "qcw.h"
 #include "tasks/tsk_fault.h"
@@ -509,7 +510,7 @@ uint8_t CMD_tr(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     }
 
 	if(strcmp(args[0], "stop") == 0){
-        switch_synth(param.synth);
+        SigGen_switch_synth(param.synth);
         if (interrupter.xBurst_Timer != NULL) {
 			if(xTimerDelete(interrupter.xBurst_Timer, 100 / portTICK_PERIOD_MS) != pdFALSE){
 			    interrupter.xBurst_Timer = NULL;

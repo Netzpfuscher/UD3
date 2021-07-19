@@ -27,6 +27,7 @@
 #include "qcw.h"
 #include "interrupter.h"
 #include "hardware.h"
+#include "SignalGenerator.h"
 
 #include "ZCDtoPWM.h"
 #include "helper/teslaterm.h"
@@ -249,7 +250,7 @@ uint8_t CMD_qcw(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         
 	if(strcmp(args[0], "start") == 0){
         
-        switch_synth(SYNTH_MIDI);
+        SigGen_switch_synth(SYNTH_MIDI);
         if(param.qcw_repeat>99){
             if(xQCW_Timer==NULL){
                 xQCW_Timer = xTimerCreate("QCW-Tmr", param.qcw_repeat / portTICK_PERIOD_MS, pdFALSE,(void * ) 0, vQCW_Timer_Callback);
@@ -276,7 +277,7 @@ uint8_t CMD_qcw(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
 		}
         qcw_stop();
 		ttprintf("QCW Disabled\r\n");
-        switch_synth(param.synth);
+        SigGen_switch_synth(param.synth);
 		return TERM_CMD_EXIT_SUCCESS;
 	}
 	return TERM_CMD_EXIT_SUCCESS;

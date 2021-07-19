@@ -40,6 +40,7 @@
     
 #include "cli_basic.h"
 #include "TTerm.h"
+#include "SignalGenerator.h"
     
 typedef struct __midich__ {
 	//uint8 expression; // Expression: Control change (Bxh) 0 bH
@@ -53,32 +54,17 @@ typedef struct __midich__ {
 	uint8_t updated;	// Was it updated (whether BentRange or PitchBent was rewritten)
 } MIDICH;
 
-typedef struct __channel__ {
-	uint8_t midich;	// Channel of midi (0 - 15)
-	uint8_t miditone;  // Midi's tone number (0-127)
-	int32_t volume;	// Volume (0 - 127) 7bit.16bit
-	uint8_t updated;   // Was it updated?
-    uint16_t halfcount;
-    uint32_t freq;
-    uint8_t adsr_state;
-    uint8_t sustain;
-    uint8_t old_gate;
-    uint8_t noise;
-} CHANNEL;
-    
-#define N_MIDICHANNEL 16
-#define SID_CHANNELS 3
-
-
 xQueueHandle qMIDI_rx;
 
 /* `#END` */
 
 void tsk_midi_Start(void);
 
+void tsk_midi_reset_skip();
+
 void update_midi_duty();
 
-void switch_synth(uint8_t synth);
+//void switch_synth(uint8_t synth);
 
 void kill_accu();
 
@@ -86,45 +72,16 @@ extern xQueueHandle qSID;
 
 extern MIDICH midich[N_MIDICHANNEL];
 
-extern CHANNEL channel[N_CHANNEL];
-
 extern const uint8_t kill_msg[3];
 
 extern volatile uint32_t next_frame;
 
-struct sid_f{
-    uint32_t freq_fp8[SID_CHANNELS];
-    uint16_t pw[SID_CHANNELS];
-    uint8_t gate[SID_CHANNELS];
-    uint8_t test[SID_CHANNELS];
-    uint8_t wave[SID_CHANNELS];
-    uint8_t attack[SID_CHANNELS];
-    uint8_t decay[SID_CHANNELS];
-    uint8_t sustain[SID_CHANNELS];
-    uint8_t release[SID_CHANNELS];
-    uint16_t master_pw;
-    uint32_t next_frame;
-};
 
-enum SYNTH{
-    SYNTH_OFF=0,
-    SYNTH_MIDI=1,
-    SYNTH_SID=2,
-    SYNTH_MIDI_QCW=3,
-    SYNTH_SID_QCW=4
-};
 
-struct _filter{
-    uint16_t min;
-    uint16_t max;
-    uint8_t channel[N_MIDICHANNEL];
-};
 
-extern struct _filter filter;
 
-uint8_t CMD_SynthMon(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
-uint8_t callback_synthFilter(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
-uint8_t callback_SynthFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+
+
 
 /*
  * Add user function prototypes in the below merge region to add user

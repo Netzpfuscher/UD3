@@ -36,6 +36,7 @@
 #include "autotune.h"
 #include "qcw.h"
 #include "helper/debug.h"
+#include "helper/nvm.h"
 
 #include "helper/printf.h"
 
@@ -273,6 +274,9 @@ void tsk_cli_TaskProc(void *pvParameters) {
         /* `#END` */
 	}
 }
+
+
+
 /* ------------------------------------------------------------------------ */
 void tsk_cli_Start(void) {
 /*
@@ -296,7 +300,9 @@ void tsk_cli_Start(void) {
         usb_handle = TERM_createNewHandle(stream_printf,&usb_port,pdTRUE,&TERM_cmdListHead,NULL,"usb");
 
         TERM_addCommand(CMD_signals, "signals","For debugging",0,&TERM_cmdListHead);
-
+        
+        nvm_init();
+    
         TERM_addCommandConstAC(CMD_tr, "tr", "Transient [start/stop]", AC_start_stop,&TERM_cmdListHead);
         TERM_addCommandConstAC(CMD_con, "con","Prints the connections",AC_con,&TERM_cmdListHead);
         TERM_addCommandConstAC(CMD_alarms, "alarms","Alarms [get/roll/reset]",AC_alarms,&TERM_cmdListHead);

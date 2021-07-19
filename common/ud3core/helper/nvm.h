@@ -21,27 +21,27 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#if !defined(SignalGeneratorSID_H)
-#define SignalGeneratorSID_H
-    #include <stdint.h>
-    #include "SignalGenerator.h"
+#if !defined(nvm_H)
+#define nvm_H
+
+    #include "TTerm.h"
+    #include "vms_types.h"
     
-    void synthcode_SID(uint32_t r);
-    void synthcode_QSID(uint32_t r);
-    void SigGen_SID_init();
+    #ifndef SIMULATOR
+        extern const volatile uint8_t* NVM_mapMem;
+        extern const volatile uint8_t * NVM_blockMem;
+        extern const VMS_BLOCK* VMS_BLKS;
+    #else
+        extern uint8_t * NVM_mapMem;
+        extern uint8_t * NVM_blockMem;
+        extern VMS_BLOCK* VMS_BLKS;
+    #endif
     
-    struct sid_f{
-    uint32_t freq_fp8[SID_CHANNELS];
-    uint16_t pw[SID_CHANNELS];
-    uint8_t gate[SID_CHANNELS];
-    uint8_t test[SID_CHANNELS];
-    uint8_t wave[SID_CHANNELS];
-    uint8_t attack[SID_CHANNELS];
-    uint8_t decay[SID_CHANNELS];
-    uint8_t sustain[SID_CHANNELS];
-    uint8_t release[SID_CHANNELS];
-    uint16_t master_pw;
-    uint32_t next_frame;
-};
-        
+    #define MAPMEM_SIZE   16384
+    #define BLOCKMEM_SIZE 16384
+    
+    void nvm_init();
+    uint8_t CMD_nvm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+
+    
 #endif

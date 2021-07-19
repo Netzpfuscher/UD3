@@ -37,7 +37,7 @@
 CHANNEL channel[N_CHANNEL];
 
 CY_ISR(isr_synth) {
-    uint32 r = SG_Timer_ReadCounter();
+    uint32_t r = SG_Timer_ReadCounter();
     clock_tick();
     if(qcw_reg){
         qcw_handle();

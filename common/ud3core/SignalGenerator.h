@@ -68,6 +68,8 @@
 
     typedef uint32_t Q16n16;
     
+    extern xQueueHandle qSID;
+    
     Q16n16  Q16n16_mtof(Q16n16 midival_fractional);
     
     void SigGen_channel_enable(uint8_t ch, uint8_t ena);

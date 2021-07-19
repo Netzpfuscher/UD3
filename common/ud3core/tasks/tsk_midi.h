@@ -66,20 +66,15 @@ void update_midi_duty();
 
 //void switch_synth(uint8_t synth);
 
-void kill_accu();
+//void kill_accu();
 
-extern xQueueHandle qSID;
+//extern xQueueHandle qSID;
 
 extern MIDICH midich[N_MIDICHANNEL];
 
 extern const uint8_t kill_msg[3];
 
-extern volatile uint32_t next_frame;
-
-
-
-
-
+//extern volatile uint32_t next_frame;
 
 
 

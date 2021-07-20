@@ -28,7 +28,7 @@
     #include <xc.h>
     #endif
     #include <stdint.h>
-    #include "vms_types.h"
+    #include "helper/vms_types.h"
     //#include "sys/attribs.h"
 
     #define MAP_ENA_PITCHBEND   0x80

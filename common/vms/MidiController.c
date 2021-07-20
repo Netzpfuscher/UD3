@@ -17,7 +17,7 @@
 #include "ADSREngine.h"
 #include "SignalGenerator.h"
 #include "VMSRoutines.h"
-#include "vms_types.h"
+#include "helper/vms_types.h"
 #include "mapper.h"
 //#include "HIDController.h"
 
@@ -37,12 +37,12 @@ uint8_t Midi_currCoilIndex = 0xff;          //this is used by the pc software to
 
 
 //USB comms stuff
-//static uint8_t ReceivedDataBuffer[64];          //data received from the midi endpoint
-//static uint8_t ConfigReceivedDataBuffer[64];    //data received from the config endpoint
-//static uint8_t ToSendDataBuffer[64];            //data to send to the config endpoint
-//static USB_HANDLE Midi_dataHandle;              //Micochip usb library handles
-//static USB_HANDLE Midi_configTxHandle;
-//static USB_HANDLE Midi_configRxHandle;
+static uint8_t ReceivedDataBuffer[64];          //data received from the midi endpoint
+static uint8_t ConfigReceivedDataBuffer[64];    //data received from the config endpoint
+static uint8_t ToSendDataBuffer[64];            //data to send to the config endpoint
+static USB_HANDLE Midi_dataHandle;              //Micochip usb library handles
+static USB_HANDLE Midi_configTxHandle;
+static USB_HANDLE Midi_configRxHandle;
 
 //Global midi settings
 

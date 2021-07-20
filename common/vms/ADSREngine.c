@@ -23,7 +23,6 @@
 #if PIC32
 #include <xc.h>
 #endif
-#include <stdint.h>
 #include <string.h>
 #include "FreeRTOS.h"
 
@@ -34,7 +33,7 @@
 #include "DLL.h"
 #include "NoteManager.h"
 #include "VMSRoutines.h"
-#include "nvm.h"
+#include "helper/nvm.h"
 
 
 DLLObject * VMS_listHead = 0;

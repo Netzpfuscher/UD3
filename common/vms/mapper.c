@@ -24,7 +24,7 @@
 #include "SignalGenerator.h"
 #include "mapper.h"
 #include "VMSRoutines.h"
-#include "nvm.h"
+#include "helper/nvm.h"
 
 #define MAX_PORTAMENTOTIME 100
 

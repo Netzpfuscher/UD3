@@ -65,7 +65,7 @@ SOURCE_FILES += $(wildcard ${CORE_DIR}/min/*.c)
 # Trace library.
 
 
-CFLAGS := -ggdb3 -Os -DprojCOVERAGE_TEST=0 -std=gnu11 -flto
+CFLAGS := -ggdb3 -Os -DprojCOVERAGE_TEST=0 -std=gnu11
 LDFLAGS := -ggdb3 -Os -pthread -lpcap -lm
 
 OBJ_FILES = $(SOURCE_FILES:%.c=$(BUILD_DIR)/%.o)

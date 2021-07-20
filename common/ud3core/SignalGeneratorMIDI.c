@@ -71,7 +71,7 @@ static inline void compute_adsr_midi(uint8_t ch){
     }
 }
 
-inline void synthcode_MIDI(){
+void synthcode_MIDI(){
     tt.n.midi_voices.value=0;
     
 	for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
@@ -86,7 +86,7 @@ inline void synthcode_MIDI(){
     }    
 }
 
-inline void synthcode_QMIDI(uint32_t r){
+void synthcode_QMIDI(uint32_t r){
     qcw_handle_synth();
     int32_t vol=0;
     tt.n.midi_voices.value=0;

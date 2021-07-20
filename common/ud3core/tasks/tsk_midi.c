@@ -66,7 +66,7 @@ enum midi_commands{
 void reflect();
 
 const uint8_t kill_msg[3] = {0xb0, 0x77, 0x00};
-
+xQueueHandle qMIDI_rx;
 
 typedef struct __note__ {
 	uint8 command;

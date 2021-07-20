@@ -76,7 +76,7 @@ static inline void compute_adsr_sid(uint8_t ch){
 uint32_t volatile next_frame=4294967295;
 uint32_t last_frame=4294967295;
 
-inline void synthcode_SID(uint32_t r){
+void synthcode_SID(uint32_t r){
   
     tt.n.midi_voices.value=0;
     
@@ -134,7 +134,7 @@ inline void synthcode_SID(uint32_t r){
 	}
 }
 
-inline void synthcode_QSID(uint32_t r){
+void synthcode_QSID(uint32_t r){
     qcw_handle_synth();
     
     tt.n.midi_voices.value=0;

@@ -54,7 +54,7 @@ typedef struct __midich__ {
 	uint8_t updated;	// Was it updated (whether BentRange or PitchBent was rewritten)
 } MIDICH;
 
-xQueueHandle qMIDI_rx;
+extern xQueueHandle qMIDI_rx;
 
 /* `#END` */
 

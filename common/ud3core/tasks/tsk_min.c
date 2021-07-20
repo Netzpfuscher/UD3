@@ -443,7 +443,7 @@ void tsk_min_TaskProc(void *pvParameters) {
     send_command_wq(&min_ctx,CMD_HELLO_WORLD, configuration.ud_name);
     
 	for (;;) {
-        
+     
         if(xSemaphoreTake(min_Semaphore,100)){
             bytes_waiting=UART_GetRxBufferSize();
             
@@ -456,8 +456,6 @@ void tsk_min_TaskProc(void *pvParameters) {
         
         
             for(i=0;i<NUM_MIN_CON;i++){
-            
-        		/* `#START TASK_LOOP_CODE` */
                  
                 poll_UART();
                 if(socket_info[i].socket==SOCKET_DISCONNECTED) goto end;   

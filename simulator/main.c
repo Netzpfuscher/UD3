@@ -175,7 +175,8 @@ int main( void )
 		console_print("UART init...\n");
 	    tsk_uart_Start();       //Handles UART-Hardware and queues
     }
-    console_print("USB init...\n");
+    
+	console_print("USB init...\n");
 	tsk_usb_Start();        //Handles USB-Hardware and queues
     console_print("CLI init...\n");
     tsk_cli_Start();		//Commandline interface

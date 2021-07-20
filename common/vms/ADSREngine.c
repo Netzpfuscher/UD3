@@ -1,39 +1,46 @@
 /*
- * VMS - Versatile Modulation System
- *
- * Copyright (c) 2020 Thorben Zethoff
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of
- * this software and associated documentation files (the "Software"), to deal in
- * the Software without restriction, including without limitation the rights to
- * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
- * the Software, and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
- * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
- * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
- * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
- * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+    Copyright (C) 2020,2021 TMax-Electronics.de
+   
+    This file is part of the MidiStick Firmware.
+
+    the MidiStick Firmware is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    the MidiStick Firmware is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with the MidiStick Firmware.  If not, see <https://www.gnu.org/licenses/>.
 */
+    
 #if PIC32
 #include <xc.h>
 #endif
-#include <string.h>
 #include "FreeRTOS.h"
 
-#include "MidiController.h"
-#include "SignalGenerator.h"
-#include "ADSREngine.h"
+#include <stdint.h>
+#include <math.h>
+#include <stdlib.h>
+//#include <sys/attribs.h>
+#include <string.h>
+//#include <GenericTypeDefs.h>
 
-#include "DLL.h"
-#include "NoteManager.h"
+//#include "usb lib/usb.h"
+#include "MidiController.h"
+//#include "ConfigManager.h"
+//#include "UART32.h"
+#include "ADSREngine.h"
+#include "SignalGenerator.h"
 #include "VMSRoutines.h"
+#include "helper/vms_types.h"
+#include "mapper.h"
+#include "DLL.h"
 #include "helper/nvm.h"
+//#include "HIDController.h"
 
 
 DLLObject * VMS_listHead = 0;
@@ -85,9 +92,7 @@ void VMS_run(){
                 currBlock->nextRunTime = SYS_getTime() + currBlock->period * 24;
             }
         }
-    
     }
-    
 }
 
 inline uint32_t SYS_timeSince(uint32_t start){
@@ -149,8 +154,23 @@ int32_t VMS_getKnownValue(KNOWN_VALUE ID, SynthVoice * voice){
             return voice->freqFactor;
         case pTime:
             return voice->portamentoParam;
+            
         case circ1:
             return voice->circ1;
+        case circ2:
+            return voice->circ2;
+        case circ3:
+            return voice->circ3;
+        case circ4:
+            return voice->circ4;
+            
+        case HyperVoice_Count:
+            return voice->hyperVoiceCount;
+        case HyperVoice_Phase:
+            return voice->hyperVoicePhaseFrac;
+            
+        case CC_102 ... CC_119:
+            return channelData[voice->currNoteOrigin].parameters[ID - CC_102];
     }
     return 0;
 }
@@ -173,6 +193,7 @@ void VMS_setKnownValue(KNOWN_VALUE ID, int32_t value, SynthVoice * voice){
                 voice->otCurrent = (voice->otTarget * value) / 1000000 + Midi_currCoil->minOnTime;
                 //UART_print("OT is now %d", Midi_voice[0].otCurrent);
             }
+            SigGen_limit();
             break;
         case freqCurrent:
             voice->freqCurrent = value;
@@ -191,13 +212,34 @@ void VMS_setKnownValue(KNOWN_VALUE ID, int32_t value, SynthVoice * voice){
         case noise:
             voice->noiseFactor = value;
             voice->noiseCurrent = (voice->noiseTarget * value) / 1000000;
+            SigGen_limit();
             break;
+            
         case circ1:
             voice->circ1 = value;
-            //UART_print("circ=%d (%d)\r\n", voice->circ1, value);
+            break;
+        case circ2:
+            voice->circ2 = value;
+            break;
+        case circ3:
+            voice->circ3 = value;
+            break;
+        case circ4:
+            voice->circ4 = value;
+            break;
+
+        case HyperVoice_Count:
+            if(value == 1000000) voice->hyperVoiceCount = 1;
+            if(value == 2000000) voice->hyperVoiceCount = 2;
+            //UART_print("HPV count now %d\r\n", voice->hyperVoiceCount);
+            SigGen_setNoteTPR(voice->id, voice->freqCurrent);
+            break;
+        case HyperVoice_Phase:
+            voice->hyperVoicePhaseFrac = value;
+            voice->hyperVoicePhase = value / 977;  //map to 0 - 0xff
+            SigGen_setNoteTPR(voice->id, voice->freqCurrent);
             break;
     }
-    SigGen_limit();
 }
 
 int32_t VMS_getParam(VMS_BLOCK * block, SynthVoice * voice, uint8_t param){
@@ -220,18 +262,32 @@ int32_t VMS_getCurrentFactor(KNOWN_VALUE ID, SynthVoice * voice){
             return voice->freqFactor;
         case noise:
             return voice->noiseFactor;
+            
         case circ1:
             return voice->circ1;
+        case circ2:
+            return voice->circ2;
+        case circ3:
+            return voice->circ3;
+        case circ4:
+            return voice->circ4;
+            
+        case HyperVoice_Count:
+            return (HyperVoice_Count == 2) ? 2000000 : 1000000;
+        case HyperVoice_Phase:
+            return voice->hyperVoicePhaseFrac;
     }
     return 0;
 }
 
-unsigned VMS_hasReachedThreshold(VMS_BLOCK * block, int32_t factor, DIRECTION customDirection){
-    switch(customDirection){
+unsigned VMS_hasReachedThreshold(VMS_BLOCK * block, int32_t factor, int32_t targetFactor, int32_t param1){
+    if(block->type == VMS_JUMP) return 1;
+    
+    switch(VMS_getThresholdDirection(block, param1)){
         case RISING:
-            return factor >= block->targetFactor;
+            return factor >= targetFactor;
         case FALLING:
-            return factor <= block->targetFactor;
+            return factor <= targetFactor;
         case NONE:
             return 0;
     }
@@ -256,9 +312,6 @@ void VMS_removeBlockFromList(VMS_listDataObject * target){
             break;
     }
     
-    //UART_print("removed block 0x%08x at 0x%08x for voice %d\r\n", target->block, data, data->targetVoice->id);
-    //if(data->data > 0xa0000000 && data->data < 0xa0010000) free(data->data);
-    
     vPortFree(data);
     DLL_remove(currObject);
 }
@@ -275,40 +328,6 @@ void VMS_addBlockToList(VMS_BLOCK * block, SynthVoice * voice){
     data->nextRunTime = SYS_getTime();
     
     int32_t param1 = VMS_getParam(block, voice, 1);
-    
-    switch(block->type){
-        case VMS_EXP:
-            if(param1 > 1000){
-                data->thresholdDirection = RISING;
-            }else{
-                data->thresholdDirection = FALLING;
-            }
-            //UART_print("exp: param = %d => %s\r\n", param1, (data->thresholdDirection == RISING) ? "rising" : "falling");
-            break;
-        case VMS_EXP_INV:
-            if(param1 > 1000){
-                data->thresholdDirection = FALLING;
-            }else{
-                data->thresholdDirection = RISING;
-            }
-            break;
-        case VMS_LIN:
-            if(param1 > 0){
-                data->thresholdDirection = RISING;
-            }else{
-                data->thresholdDirection = FALLING;
-            }
-            //UART_print("LIN: param = %d => %s\r\n", param1, (data->thresholdDirection == RISING) ? "rising" : "falling");
-            break;
-        case VMS_SIN:
-            data->thresholdDirection = NONE;
-            break;
-        default:
-            data->thresholdDirection = (block->targetFactor < VMS_getCurrentFactor(block->target, voice)) ? FALLING : RISING;
-            //UART_print("tfrom %d to %d (%s)\r\n", VMS_getCurrentFactor(block->target, voice), block->targetFactor, (data->thresholdDirection == FALLING) ? "falling" : "rising");
-            break;
-    }
-    
     
     switch(block->type){
         case VMS_SIN:
@@ -378,12 +397,12 @@ unsigned VMS_calculateValue(VMS_listDataObject * data){
         }
     }
     
-    int32_t param1 = (block->param1 > 0 && block->param1 < KNOWNVAL_MAX) ? VMS_getKnownValue(block->param1, voice) : block->param1;
-    int32_t param2 = (block->param2 > 0 && block->param2 < KNOWNVAL_MAX) ? VMS_getKnownValue(block->param2, voice) : block->param2;
+    int32_t param1 = VMS_getParameter(1, block, voice);
+    int32_t param2 = VMS_getParameter(2, block, voice);
+    int32_t param3 = VMS_getParameter(3, block, voice);
+    int32_t targetFactor = VMS_getParameter(4, block, voice);
     
-    /*if(block->param1 > 0 && block->param1 < KNOWNVAL_MAX){
-        UART_print("getting %d\r\n", block->param1);
-    }*/
+    //if(block->flags & VMS_FLAG_ISVARIABLE_PARAM1) UART_print("param1 = %d\r\n", param1);
     
     int32_t currFactor = VMS_getCurrentFactor(block->target, voice);
     
@@ -404,12 +423,12 @@ unsigned VMS_calculateValue(VMS_listDataObject * data){
             break;
             
         case VMS_EXP_INV:
-            currFactorDiff = abs(block->targetFactor - currFactor);
+            currFactorDiff = abs(targetFactor - currFactor);
             currFactorDiff = (currFactorDiff * param1) / 1000;
             if(currFactorDiff < 10000){
                 currFactorDiff = 0;
             }
-            currFactor = block->targetFactor - currFactorDiff;
+            currFactor = targetFactor - currFactorDiff;
             break;
             
         case VMS_LIN:
@@ -417,19 +436,19 @@ unsigned VMS_calculateValue(VMS_listDataObject * data){
             //if(block->target == frequency) UART_print("frequency lin: factor = %d, param1 = %d\r\n", currFactor, param1);
             break;
         case VMS_SIN:
-            d->currCount += block->param3;
+            d->currCount += param3;
             if(d->currCount > 0xff) d->currCount = -0xff;
             currFactor = ((param1 * qSin(d->currCount)) / 1000);
             currFactor += param2;
             if(currFactor < 0) currFactor = 0;
             break;
         case VMS_JUMP:
-            currFactor = block->targetFactor;
+            currFactor = targetFactor;
             break;
     }
     
-    if(VMS_hasReachedThreshold(block, currFactor, data->thresholdDirection)){
-        currFactor = block->targetFactor;
+    if(VMS_hasReachedThreshold(block, currFactor, targetFactor, param1)){
+        currFactor = targetFactor;
         VMS_nextBlock(data, 1);
         VMS_setKnownValue(block->target, currFactor, voice);
         return 0;
@@ -439,9 +458,170 @@ unsigned VMS_calculateValue(VMS_listDataObject * data){
     return 1;
 }
 
+int32_t VMS_getParameter(uint8_t param, VMS_BLOCK * block, SynthVoice * voice){
+    switch(param){
+    case 1:
+        if(block->flags & VMS_FLAG_ISVARIABLE_PARAM1){
+            KNOWN_VALUE source = block->param1 & 0xff;
+            if(source == freqCurrent){    //does the parameter selected support range mapping?
+                RangeParameters * range = &block->param1;
+                int32_t slope = range->rangeEnd - range->rangeStart;
+                int32_t ret = range->rangeStart + (slope * VMS_getKnownValue(freqCurrent, voice)) / 20000;
+                if(block->type == VMS_EXP || block->type == VMS_EXP_INV){
+                    return ret;
+                }else if(block->type == VMS_SIN){
+                    return ret * 2;
+                }else{
+                    return ret * 1000;
+                }
+            }else if(source >= circ1 && source <= circ4){    //does the parameter selected support range mapping?
+                RangeParameters * range = &block->param1;
+                int32_t slope = range->rangeEnd - range->rangeStart;
+                int32_t ret = range->rangeStart + (slope * (VMS_getKnownValue(source, voice) >> 4)) / 62500;
+                if(block->type == VMS_EXP || block->type == VMS_EXP_INV){
+                    return ret;
+                }else if(block->type == VMS_SIN){
+                    return ret * 2;
+                }else{
+                    return ret * 1000;
+                }
+            }else if(source >= CC_102 && source <= CC_119){    //does the parameter selected support range mapping?
+                RangeParameters * range = &block->param1;
+                int32_t slope = range->rangeEnd - range->rangeStart;
+                int32_t ret = range->rangeStart + (slope * VMS_getKnownValue(source, voice)) / 127;
+                if(block->type == VMS_EXP || block->type == VMS_EXP_INV){
+                    return ret;
+                }else if(block->type == VMS_SIN){
+                    return ret * 2;
+                }else{
+                    return ret * 1000;
+                }
+            }else{
+                int32_t kv = VMS_getKnownValue(source, voice);
+                return kv;
+            }
+        }else{
+            return block->param1;
+        }
+        break;
+        
+    case 2:
+        if(block->flags & VMS_FLAG_ISVARIABLE_PARAM2){
+            KNOWN_VALUE source = block->param2 & 0xff;
+            if(source == freqCurrent){    //does the parameter selected support range mapping?
+                RangeParameters * range = &block->param2;
+                int32_t slope = range->rangeEnd - range->rangeStart;
+                int32_t ret = range->rangeStart + (slope * VMS_getKnownValue(freqCurrent, voice)) / 20000;
+                return ret * 1000;
+            }else if(source >= circ1 && source <= circ4){    //does the parameter selected support range mapping?
+                RangeParameters * range = &block->param2;
+                int32_t slope = range->rangeEnd - range->rangeStart;
+                int32_t ret = range->rangeStart + (slope * (VMS_getKnownValue(source, voice) >> 4)) / 625;
+                return ret * 10;
+            }else if(source >= CC_102 && source <= CC_119){    //does the parameter selected support range mapping?
+                RangeParameters * range = &block->param2;
+                int32_t slope = range->rangeEnd - range->rangeStart;
+                int32_t ret = range->rangeStart + (slope * VMS_getKnownValue(source, voice)) / 127;
+                return ret * 1000;
+            }else{
+                return VMS_getKnownValue(source & 0xff, voice);
+            }
+        }else{
+            return block->param2;
+        }
+        break;
+        
+        case 3:
+        if(block->flags & VMS_FLAG_ISVARIABLE_PARAM3){
+            KNOWN_VALUE source = block->param3 & 0xff;
+            if(source == freqCurrent){    //does the parameter selected support range mapping?
+                RangeParameters * range = &block->param3;
+                int32_t slope = range->rangeEnd - range->rangeStart;
+                int32_t ret = range->rangeStart + (slope * VMS_getKnownValue(freqCurrent, voice)) / 20000;
+                return ret;
+            }else if(source >= circ1 && source <= circ4){    //does the parameter selected support range mapping?
+                RangeParameters * range = &block->param3;
+                int32_t slope = range->rangeEnd - range->rangeStart;
+                int32_t ret = range->rangeStart + (slope * (VMS_getKnownValue(source, voice) >> 4)) / 62500;
+                return ret;
+            }else if(source >= CC_102 && source <= CC_119){    //does the parameter selected support range mapping?
+                RangeParameters * range = &block->param3;
+                int32_t slope = range->rangeEnd - range->rangeStart;
+                int32_t ret = range->rangeStart + (slope * VMS_getKnownValue(source, voice)) / 127;
+                return ret;
+            }else{
+                return VMS_getKnownValue(source & 0xff, voice);
+            }
+        }else{
+            return block->param3;
+        }
+        break;
+        
+        
+    case 4: //target value
+        if(block->flags & VMS_FLAG_ISVARIABLE_TARGETFACTOR){
+            KNOWN_VALUE source = block->targetFactor & 0xff;
+            if(source == freqCurrent){    //does the parameter selected support range mapping?
+                RangeParameters * range = &block->targetFactor;
+                int32_t slope = range->rangeEnd - range->rangeStart;
+                int32_t ret = range->rangeStart + (slope * VMS_getKnownValue(freqCurrent, voice)) / 20000;
+                return ret * 1000;
+            }else if(source >= circ1 && source <= circ4){    //does the parameter selected support range mapping?
+                RangeParameters * range = &block->targetFactor;
+                int32_t slope = range->rangeEnd - range->rangeStart;
+                int32_t ret = range->rangeStart + (slope * (VMS_getKnownValue(source, voice) >> 4)) / 62500;
+                return ret * 10;
+            }else if(source >= CC_102 && source <= CC_119){    //does the parameter selected support range mapping?
+                RangeParameters * range = &block->targetFactor;
+                int32_t slope = range->rangeEnd - range->rangeStart;
+                int32_t ret = range->rangeStart + (slope * VMS_getKnownValue(source, voice)) / 127;
+                return ret * 1000;
+            }else{
+                return VMS_getKnownValue(source & 0xff, voice);
+            }
+        }else{
+            return block->targetFactor;
+        }
+        break;
+    }
+}
+
 int32_t qSin(int32_t x){
     int32_t xt = abs(x) % 0xff;
     
     if(xt == 0) return 0;
     return (x > 0) ? SINTABLE[xt] : -SINTABLE[xt];
+}
+
+DIRECTION VMS_getThresholdDirection(VMS_BLOCK * block, int32_t param1){
+    switch(block->type){
+        case VMS_EXP:
+            if(param1 > 1000){
+                return RISING;
+            }else{
+                return FALLING;
+            }
+            //UART_print("exp: param = %d => %s\r\n", param1, (data->thresholdDirection == RISING) ? "rising" : "falling");
+            break;
+        case VMS_EXP_INV:
+            if(param1 > 1000){
+                return FALLING;
+            }else{
+                return RISING;
+            }
+            break;
+        case VMS_LIN:
+            if(param1 > 0){
+                return RISING;
+            }else{
+                return FALLING;
+            }
+            //UART_print("LIN: param = %d => %s\r\n", param1, (data->thresholdDirection == RISING) ? "rising" : "falling");
+            break;
+        case VMS_SIN:
+            return NONE;
+            break;
+        default:
+            return 0;
+    }
 }

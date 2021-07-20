@@ -29,6 +29,7 @@
 #include "tsk_fault.h"
 #include "clock.h"
 #include "SignalGenerator.h"
+#include "MidiController.h"
 
 xTaskHandle tsk_midi_TaskHandle;
 uint8 tsk_midi_initVar = 0u;
@@ -138,45 +139,11 @@ NOTE *v_NOTE_PITCHBEND(NOTE *v, uint8 midich, uint8 lsb, uint8 msb) {
 
 
 void USBMIDI_1_callbackLocalMidiEvent(uint8 cable, uint8 *midiMsg) {
-	
-	NOTE note_struct;
-	uint8_t message_filter = midiMsg[0] & 0xf0;
     uint8_t ret=pdTRUE;
-	if (skip_flag) {
-		if (midiMsg[0] == 0xf7 || midiMsg[1] == 0xf7 || midiMsg[2] == 0xf7) {
-			skip_flag = 0;
-		}
-	} else {
-		switch (message_filter) {
-		case 0x90:
-			v_NOTE_NOTEONOFF(&note_struct, midiMsg[0] & 0x0f, midiMsg[1], midiMsg[2]);
-			ret = xQueueSendFromISR(qMIDI_rx, &note_struct, NULL);
-			break;
-		case 0x80:
-			v_NOTE_NOTEONOFF(&note_struct, midiMsg[0] & 0x0f, midiMsg[1], 0);
-			ret = xQueueSendFromISR(qMIDI_rx, &note_struct, NULL);
-			break;
-		case 0xb0:
-			v_NOTE_CONTROLCHANGE(&note_struct, midiMsg[0] & 0x0f, midiMsg[1], midiMsg[2]);
-			ret = xQueueSendFromISR(qMIDI_rx, &note_struct, NULL);
-			break;
-		case 0xe0:
-			v_NOTE_PITCHBEND(&note_struct, midiMsg[0] & 0x0f, midiMsg[1], midiMsg[2]);
-			ret = xQueueSendFromISR(qMIDI_rx, &note_struct, NULL);
-			break;
-		case 0xf0:
-			skip_flag = 1;
-			break;
-		default:
-			break;
-		}
-    	if (skip_flag && (midiMsg[1] == 0xf7 || midiMsg[2] == 0xf7)) {
-    		skip_flag = 0;
-    	}
-        if(ret==errQUEUE_FULL){
-             alarm_push(ALM_PRIO_WARN,warn_midi_overrun,ALM_NO_VALUE);
-        }
-	}
+    ret = xQueueSendFromISR(qMIDI_rx, midiMsg, NULL);
+	if(ret==errQUEUE_FULL){
+        alarm_push(ALM_PRIO_WARN,warn_midi_overrun,ALM_NO_VALUE);
+    }
 }
 
 // Initialization of sound source channel
@@ -377,15 +344,18 @@ void reflect() {
  * to preform the desired function within the merge regions of the task procedure
  * to add functionality to the task.
  */
+
+#define MIDI_MSG_SIZE 3
+
 void tsk_midi_TaskProc(void *pvParameters) {
 	/*
 	 * Add and initialize local variables that are allocated on the Task stack
 	 * the the section below.
 	 */
 	/* `#START TASK_VARIABLES` */
-	qMIDI_rx = xQueueCreate(N_QUEUE_MIDI, sizeof(NOTE));
+	qMIDI_rx = xQueueCreate(N_QUEUE_MIDI, MIDI_MSG_SIZE);
     
-	NOTE note_struct;
+	uint8_t msg[MIDI_MSG_SIZE];
     
 #if USE_DEBUG_DAC
     DEBUG_DAC_Start();
@@ -416,15 +386,14 @@ void tsk_midi_TaskProc(void *pvParameters) {
 		/* `#START TASK_LOOP_CODE` */
 
         if(param.synth==SYNTH_MIDI ||param.synth==SYNTH_MIDI_QCW){
-    		if (xQueueReceive(qMIDI_rx, &note_struct, portMAX_DELAY)) {
-    			process(&note_struct);
-    			while (xQueueReceive(qMIDI_rx, &note_struct, 0)) {
-    				process(&note_struct);
+    		if (xQueueReceive(qMIDI_rx, msg, portMAX_DELAY)) {
+    			Midi_run(msg);
+    			while (xQueueReceive(qMIDI_rx, msg, 0)) {
+    				Midi_run(msg);
     			}
-    			reflect();
     		}
         }else{
-        vTaskDelay(200 /portTICK_RATE_MS);
+            vTaskDelay(200 /portTICK_RATE_MS);
         }
 
 		/* `#END` */

@@ -218,8 +218,26 @@ void VMS_print_blk(TERMINAL_HANDLE* handle, VMS_BLOCK* blk, uint8_t indent){
         case circ1:
             ttprintf("circ1");
         break;
+        case circ2:
+            ttprintf("circ2");
+        break;
+        case circ3:
+            ttprintf("circ3");
+        break;
+        case circ4:
+            ttprintf("circ4");
+        break;
+        case CC_102 ... CC_119:
+            ttprintf("CC_102 ... CC_119");
+        break;
         case KNOWNVAL_MAX:
             ttprintf("KNOWNVAL_MAX");
+        break;
+        case HyperVoice_Count:
+            ttprintf("Hypervoice_Count");
+        break;
+        case HyperVoice_Phase:
+            ttprintf("Hypervoice_Phase");
         break;
     }
     

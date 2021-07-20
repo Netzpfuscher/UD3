@@ -31,100 +31,144 @@
 const struct{
     MAPTABLE_HEADER h0;
     MAPTABLE_ENTRY h0e0;
-} DEFMAP = {.h0 = {.programNumber = 0, .listEntries = 1} , .h0e0 = {.startNote = 0, .endNote = 127, .data.VMS_Startblock = &ATTAC, .data.flags = MAP_ENA_DAMPER | MAP_ENA_STEREO | MAP_ENA_VOLUME | MAP_ENA_PITCHBEND | MAP_FREQ_MODE, .data.noteFreq = 0, .data.targetOT = 0}};
+} DEFMAP = {.h0 = {.programNumber = 0, .listEntries = 1} , .h0e0 = {.startNote = 0, .endNote = 127, .data.VMS_Startblock = &ATTAC, .data.flags = MAP_ENA_DAMPER | MAP_ENA_STEREO | MAP_ENA_VOLUME | MAP_ENA_PITCHBEND | MAP_FREQ_MODE, .data.noteFreq = 0, .data.targetOT = 255}};
 
-void MAPPER_map(uint8_t voice, uint8_t note, uint8_t velocity, uint8_t channel){
-    MAPTABLE_DATA * map = MAPPER_getMap(note, channelData[channel].currentMap);
-    
-    uint32_t currNoteFreq = 0;
-    if(map->flags & MAP_FREQ_MODE){
-        int16_t currNote = (int16_t) note + map->noteFreq;
-        if(currNote > 127 || currNote < 1) return;
-        currNoteFreq = Midi_NoteFreq[currNote];
-    }else{
-        currNoteFreq = map->noteFreq;
-    }
-    if(map->flags & MAP_ENA_PITCHBEND) currNoteFreq = ((currNoteFreq * channelData[channel].bendFactor) / 20000); else currNoteFreq *= 10;
-    
-    
-    int32_t targetOT = (Midi_currCoil->maxOnTime - Midi_currCoil->minOnTime) * map->targetOT;
-    targetOT /= 0xff;
-    
-    if(map->flags & MAP_ENA_DAMPER){
-        targetOT *= channelData[channel].damperPedal ? 6 : 10;
-        targetOT /= 10;
+void MAPPER_map(uint8_t note, uint8_t velocity, uint8_t channel){
+    MAPTABLE_DATA * maps[MIDI_VOICECOUNT];
+    uint8_t requestedChannels = MAPPER_getMaps(note, channelData[channel].currentMap, maps);
+    if(requestedChannels == 0){
+        maps[0] = &DEFMAP.h0e0.data;
+        requestedChannels = 1;
     }
     
-    if(map->flags & MAP_ENA_STEREO){
-        targetOT *= channelData[channel].currStereoVolume;
-        targetOT /= 0xff;
-    }
-    
-    if(map->flags & MAP_ENA_VOLUME){
-        targetOT *= channelData[channel].currVolume;
-        targetOT *= velocity;
-        targetOT /= 16129;
-    }
-    
-    //UART_print("OT=%d;freq=%d;ch=%d;voice=%d\r\n", targetOT, currNoteFreq, channel, voice);
-    if(currNoteFreq != 0 && targetOT){
-        Midi_voice[voice].currNoteOrigin = channel;
-        
-        //TODO fix this... (maybe done?)
-        Midi_voice[voice].noteAge = 0;
-
-        Midi_voice[voice].currNote = note;
-        Midi_voice[voice].on = 1;
-        Midi_voice[voice].otTarget = targetOT;
-        Midi_voice[voice].otCurrent = 0;
-
-        if(map->flags & MAP_ENA_PORTAMENTO){
-            
-            int32_t differenceFactor = (channelData[channel].lastFrequency * 1000) / currNoteFreq;
-            if(differenceFactor < 0) differenceFactor = 0;
-            if(differenceFactor > 2000000) differenceFactor = 2000000;
-            differenceFactor *= 1000;
-            Midi_voice[voice].freqFactor = differenceFactor;
-            
-            
-            int32_t pTimeTarget = (MAX_PORTAMENTOTIME * channelData[channel].portamentoTime) >> 14;
-            
-            //UART_print("differenceFactor = %d (from %d to %d) delta=%d, pTimeTarget = %d, ", differenceFactor, Midi_voice[voice].freqTarget, currNoteFreq, (1000000 - differenceFactor), pTimeTarget);
-            
-            if(pTimeTarget == 0){
-                Midi_voice[voice].portamentoParam = (1000000 - differenceFactor);
-            }else{
-                Midi_voice[voice].portamentoParam = (1000000 - differenceFactor) / pTimeTarget;
-            }
-            //UART_print("portamentoParam = %d\r\n", Midi_voice[voice].portamentoParam);
+    while(requestedChannels > 0){
+        requestedChannels --;
+        uint8_t voice = MAPPER_getNextChannel(note, channel);
+        uint32_t currNoteFreq = 0;
+        if(maps[requestedChannels]->flags & MAP_FREQ_MODE){
+            int16_t currNote = (int16_t) note + maps[requestedChannels]->noteFreq;
+            if(currNote > 127 || currNote < 1) return;
+            currNoteFreq = Midi_NoteFreq[currNote];
         }else{
-            Midi_voice[voice].freqFactor = 1000000;
+            currNoteFreq = maps[requestedChannels]->noteFreq;
         }
-        
-        Midi_voice[voice].freqTarget = currNoteFreq;
-        channelData[channel].lastFrequency = currNoteFreq;
+        if(maps[requestedChannels]->flags & MAP_ENA_PITCHBEND) currNoteFreq = ((currNoteFreq * channelData[channel].bendFactor) / 20000); else currNoteFreq *= 10;
 
-        Midi_voice[voice].noiseCurrent = 0;
-        Midi_voice[voice].noiseTarget = 80;
-        Midi_voice[voice].noiseFactor = 0;
 
-        SigGen_setNoteTPR(voice, currNoteFreq);
-        
-        Midi_voice[voice].map = map;
+        int32_t targetOT = (Midi_currCoil->maxOnTime - Midi_currCoil->minOnTime) * maps[requestedChannels]->targetOT;
+        targetOT /= 0xff;
 
-        VMS_resetVoice(&Midi_voice[voice], map->VMS_Startblock);
+        if(maps[requestedChannels]->flags & MAP_ENA_DAMPER){
+            targetOT *= channelData[channel].damperPedal ? 6 : 10;
+            targetOT /= 10;
+        }
+
+        if(maps[requestedChannels]->flags & MAP_ENA_STEREO){
+            targetOT *= channelData[channel].currStereoVolume;
+            targetOT /= 0xff;
+        }
+
+        if(maps[requestedChannels]->flags & MAP_ENA_VOLUME){
+            targetOT *= channelData[channel].currVolume;
+            targetOT *= velocity;
+            targetOT /= 16129;
+        }
+
+        //UART_print("OT=%d;freq=%d;ch=%d;voice=%d\r\n", targetOT, currNoteFreq, channel, voice);
+        if(currNoteFreq != 0 && targetOT){
+            Midi_voice[voice].currNoteOrigin = channel;
+
+            Midi_voice[voice].noteAge = 0;
+            
+            Midi_voice[voice].hyperVoiceCount = 0;
+            Midi_voice[voice].hyperVoicePhase = 0;
+
+            Midi_voice[voice].currNote = note;
+            Midi_voice[voice].on = 1;
+            Midi_voice[voice].otTarget = targetOT;
+            Midi_voice[voice].otCurrent = 0;
+
+            if(maps[requestedChannels]->flags & MAP_ENA_PORTAMENTO){
+
+                int32_t differenceFactor = (channelData[channel].lastFrequency * 1000) / currNoteFreq;
+                if(differenceFactor < 0) differenceFactor = 0;
+                if(differenceFactor > 2000000) differenceFactor = 2000000;
+                differenceFactor *= 1000;
+                Midi_voice[voice].freqFactor = differenceFactor;
+
+
+                int32_t pTimeTarget = (MAX_PORTAMENTOTIME * channelData[channel].portamentoTime) >> 14;
+
+                //UART_print("differenceFactor = %d (from %d to %d) delta=%d, pTimeTarget = %d, ", differenceFactor, Midi_voice[voice].freqTarget, currNoteFreq, (1000000 - differenceFactor), pTimeTarget);
+
+                if(pTimeTarget == 0){
+                    Midi_voice[voice].portamentoParam = (1000000 - differenceFactor);
+                }else{
+                    Midi_voice[voice].portamentoParam = (1000000 - differenceFactor) / pTimeTarget;
+                }
+                //UART_print("portamentoParam = %d\r\n", Midi_voice[voice].portamentoParam);
+            }else{
+                Midi_voice[voice].freqFactor = 1000000;
+            }
+
+            Midi_voice[voice].freqTarget = currNoteFreq;
+            channelData[channel].lastFrequency = currNoteFreq;
+
+            Midi_voice[voice].noiseCurrent = 0;
+            Midi_voice[voice].noiseTarget = 80;
+            Midi_voice[voice].noiseFactor = 0;
+
+            SigGen_setNoteTPR(voice, currNoteFreq);
+
+            Midi_voice[voice].map = maps[requestedChannels];
+
+            VMS_resetVoice(&Midi_voice[voice], maps[requestedChannels]->VMS_Startblock);
+        }
     }
 }
 
-MAPTABLE_DATA * MAPPER_getMap(uint8_t note, MAPTABLE_HEADER * table){
+uint8_t MAPPER_getMaps(uint8_t note, MAPTABLE_HEADER * table, MAPTABLE_DATA ** dst){
     uint8_t currScan = 0;
+    uint8_t foundCount = 0;
     MAPTABLE_ENTRY * entries = (MAPTABLE_ENTRY *) ((uint32_t) table + sizeof(MAPTABLE_HEADER));
-    for(currScan = 0; currScan < table->listEntries; currScan++){
+    for(currScan = 0; currScan < table->listEntries && foundCount < MIDI_VOICECOUNT; currScan++){
         if(entries[currScan].endNote >= note && entries[currScan].startNote <= note){
-            return &entries[currScan].data;
+            dst[foundCount++] = &entries[currScan].data;
         }
     }
-    return &DEFMAP.h0e0.data;
+    return foundCount;
+}
+
+uint8_t MAPPER_getNextChannel(uint8_t note, uint8_t channel){
+    uint8_t currVoice = 0;
+    /*for(currVoice = 0; currVoice < MIDI_VOICECOUNT; currVoice++){
+        if(Midi_voice[currVoice].currNote == note && Midi_voice[currVoice].currNoteOrigin == channel && Midi_voice[currVoice].noteAge > 0){
+            return currVoice;
+        }
+    }*/
+    
+    for(currVoice = 0; currVoice < MIDI_VOICECOUNT; currVoice++){
+        if(Midi_isNoteOff(currVoice)){
+            return currVoice;
+        }
+    }
+    
+    for(currVoice = 0; currVoice < MIDI_VOICECOUNT; currVoice++){
+        if(Midi_isNoteDecaying(currVoice)){
+            return currVoice;
+        }
+    }
+    
+    uint32_t oldestAge = 0;
+    uint8_t oldestVoice = 0;
+    for(currVoice = 0; currVoice < MIDI_VOICECOUNT; currVoice++){
+        if(Midi_voice[currVoice].noteAge > oldestAge){ 
+            oldestAge = Midi_voice[currVoice].noteAge;
+            oldestVoice = currVoice;
+        }
+    }
+    
+    return oldestVoice;
 }
 
 void MAPPER_programChangeHandler(uint8_t channel, uint8_t program){
@@ -232,7 +276,7 @@ void MAPPER_bendHandler(uint8_t channel){
             currNoteFreq = ((currNoteFreq * channelData[channel].bendFactor) / 20000);
             
             Midi_voice[currChannel].freqTarget = currNoteFreq;
-            Midi_voice[currChannel].freqCurrent = ((Midi_voice[currChannel].freqTarget >> 4) * Midi_voice[currChannel].freqFactor) / 62500;  //62500 is 1000000 >> 4
+            Midi_voice[currChannel].freqCurrent = (Midi_voice[currChannel].freqTarget * (Midi_voice[currChannel].freqFactor >> 4)) / 62500;  //62500 is 1000000 >> 4
             
             SigGen_setNoteTPR(currChannel, Midi_voice[currChannel].freqCurrent);
         }

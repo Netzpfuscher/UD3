@@ -24,7 +24,7 @@
 
 #include "MidiController.h"
 
-#define VMS_DIE 0xdeadbeef
+#define VMS_DIE (VMS_BLOCK*)0xdeadbeef
 #define VMS_PREVIEW_MEMSIZE 15000
 
 #define VMS_FLAG_ISVARIABLE_PARAM1          0x00000001

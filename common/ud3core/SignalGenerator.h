@@ -78,6 +78,9 @@
     void SigGen_init();
     void SigGen_switch_synth(uint8_t synth);
     void SigGen_kill();
+    size_t SigGen_get_channel(uint8_t ch);
+    void SigGen_setNoteTPR(uint8_t voice, uint32_t freqTenths);
+    void SigGen_limit();
     
     uint8_t CMD_SynthMon(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
     uint8_t callback_synthFilter(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);

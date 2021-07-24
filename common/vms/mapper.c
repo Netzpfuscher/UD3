@@ -25,6 +25,8 @@
 #include "mapper.h"
 #include "VMSRoutines.h"
 #include "helper/nvm.h"
+#include "cli_common.h"
+#include "interrupter.h"
 
 #define MAX_PORTAMENTOTIME 100
 
@@ -55,7 +57,7 @@ void MAPPER_map(uint8_t note, uint8_t velocity, uint8_t channel){
         if(maps[requestedChannels]->flags & MAP_ENA_PITCHBEND) currNoteFreq = ((currNoteFreq * channelData[channel].bendFactor) / 20000); else currNoteFreq *= 10;
 
 
-        int32_t targetOT = (Midi_currCoil->maxOnTime - Midi_currCoil->minOnTime) * maps[requestedChannels]->targetOT;
+        int32_t targetOT = (MAX_VOL - MIN_VOL) * maps[requestedChannels]->targetOT;
         targetOT /= 0xff;
 
         if(maps[requestedChannels]->flags & MAP_ENA_DAMPER){
@@ -231,7 +233,7 @@ void MAPPER_volumeHandler(uint8_t channel){
             MAPTABLE_DATA * map = Midi_voice[currChannel].map;
             
         
-            int32_t targetOT = (Midi_currCoil->maxOnTime - Midi_currCoil->minOnTime) * map->targetOT;
+            int32_t targetOT = (MAX_VOL - MIN_VOL) * map->targetOT;
             targetOT /= 0xff;
 
             if(map->flags & MAP_ENA_DAMPER){
@@ -252,7 +254,7 @@ void MAPPER_volumeHandler(uint8_t channel){
             Midi_voice[currChannel].otTarget = targetOT;
             
             if(Midi_voice[currChannel].otFactor > 0){
-                Midi_voice[currChannel].otCurrent = (Midi_voice[currChannel].otTarget * Midi_voice[currChannel].otFactor) / 1000000 + Midi_currCoil->minOnTime;
+                Midi_voice[currChannel].otCurrent = (Midi_voice[currChannel].otTarget * Midi_voice[currChannel].otFactor) / 1000000 + MIN_VOL;
             }
         }
     }

@@ -36,13 +36,13 @@
 
 #ifndef SIMULATOR
     const volatile uint8_t* NVM_mapMem = (uint8_t*)NVM_START_ADDR; 
-    const volatile uint8_t * NVM_blockMem = (uint8_t*)NVM_START_ADDR;
-    const VMS_BLOCK* VMS_BLKS = (VMS_BLOCK*)(NVM_START_ADDR + BLOCKMEM_SIZE);
+    const volatile uint8_t * NVM_blockMem = (uint8_t*)(NVM_START_ADDR + MAPMEM_SIZE);
+    const VMS_BLOCK* VMS_BLKS = (VMS_BLOCK*)(NVM_START_ADDR + MAPMEM_SIZE);
 #else
     uint8_t mem[0xFFFF];
     uint8_t * NVM_mapMem = (uint8_t*)mem;
-    uint8_t * NVM_blockMem = (uint8_t*)(mem + BLOCKMEM_SIZE);
-    VMS_BLOCK* VMS_BLKS = (VMS_BLOCK*)(mem + BLOCKMEM_SIZE);
+    uint8_t * NVM_blockMem = (uint8_t*)(mem + MAPMEM_SIZE);
+    VMS_BLOCK* VMS_BLKS = (VMS_BLOCK*)(mem + MAPMEM_SIZE);
 #endif
 
 void nvm_init(){
@@ -354,7 +354,7 @@ uint8_t CMD_nvm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     ttprintf("NVM MEM --> %u blocks:\r\n", n_blocks);
     
     for(uint32_t i=0;i<n_blocks;i++){
-        VMS_print_blk(handle, &VMS_BLKS[i], 4);
+        VMS_print_blk(handle, (VMS_BLOCK*)&VMS_BLKS[i], 4);
     }
     vPortFree(temp);
     

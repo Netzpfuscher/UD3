@@ -63,6 +63,10 @@ uint8_t no_fb_reg_Read();
 #define ADC_data_ready_StartEx(p1)
 #define CyGlobalIntEnable
 
+#define DDS32_1_sCTRLReg_ctrlreg__CONTROL_REG 0
+#define DDS32_2_sCTRLReg_ctrlreg__CONTROL_REG 0
+
+
 //#define CYDEV_PERIPH_BASE 0
 //#define CYDEV_SRAM_BASE 0
 //#define HI16(x) ((x>>16)&&0xFFFF)

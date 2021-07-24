@@ -87,7 +87,7 @@
 extern SynthVoice Midi_voice[MIDI_VOICECOUNT];
 extern const uint16_t Midi_NoteFreq[128];
 
-extern CoilConfig * Midi_currCoil;
+//extern CoilConfig * Midi_currCoil;
 extern uint16_t Midi_minOnTimeVal;
 extern uint16_t Midi_maxOnTimeVal;
 
@@ -102,7 +102,7 @@ void Midi_initTimers();
 void Midi_SOFHandler();
 
 //Midi&Config CMD interpreter routines
-void Midi_run();
+void Midi_run(uint8_t* ReceivedDataBuffer);
 
 //On time calculation functions
 void Midi_setNoteOnTime(uint16_t onTimeUs, uint8_t ch);
@@ -120,10 +120,7 @@ unsigned Midi_areAllNotesOff();
 void Midi_setEnabled(unsigned ena);
 
 //Timer ISRs
-inline void Midi_timerHandler(uint8_t voice);
-
-//"HAL" for led on,off and invert
-void Midi_LED(uint8_t type, uint8_t state);
+//inline void Midi_timerHandler(uint8_t voice);
 
 unsigned Midi_isNoteOff(uint8_t voice);
 unsigned Midi_isNoteDecaying(uint8_t voice);

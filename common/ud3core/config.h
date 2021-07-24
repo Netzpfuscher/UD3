@@ -23,7 +23,7 @@
 #define ACTIVATE_TASK_INFO 1
 
 #ifndef SIMULATOR
-#define HEAP_SIZE 50    //kb
+#define HEAP_SIZE 49    //kb
 #else
 #define HEAP_SIZE 512    //kb	
 #endif

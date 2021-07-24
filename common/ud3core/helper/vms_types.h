@@ -21,8 +21,8 @@
 #endif
 #include <stdint.h>
 
-#ifndef types
-#define types
+#if !defined(vms_types_H)
+#define vms_types_H
 
 #define VMS_MAX_BRANCHES 4
 
@@ -112,10 +112,6 @@ struct _SynthVoice_{
     
     uint32_t *  hyperVoice_DCHXCONptr;
     uint32_t *  hyperVoice_DCHXECONptr;
-    uint32_t *  tmrPR;
-    uint32_t *  tmrCON;
-    uint32_t *  tmrTMR;
-    uint32_t    iecMask;
 };
 
 struct _ChannelInfo_{

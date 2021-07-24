@@ -30,6 +30,7 @@
 #include "clock.h"
 #include "SignalGenerator.h"
 #include "MidiController.h"
+#include "ADSREngine.h"
 
 xTaskHandle tsk_midi_TaskHandle;
 uint8 tsk_midi_initVar = 0u;
@@ -355,7 +356,8 @@ void tsk_midi_TaskProc(void *pvParameters) {
 	/* `#START TASK_VARIABLES` */
 	qMIDI_rx = xQueueCreate(N_QUEUE_MIDI, MIDI_MSG_SIZE);
     
-	uint8_t msg[MIDI_MSG_SIZE];
+	uint8_t msg[MIDI_MSG_SIZE+1];
+    msg[0] = 0;
     
 #if USE_DEBUG_DAC
     DEBUG_DAC_Start();
@@ -379,19 +381,26 @@ void tsk_midi_TaskProc(void *pvParameters) {
 	// Sound source relation module initialization
 
     SigGen_init();
-
+    VMS_init();
+    Midi_init();
+    Midi_setEnabled(1);
+    
+       
 		/* `#END` */
     alarm_push(ALM_PRIO_INFO,warn_task_midi, ALM_NO_VALUE);
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
 
         if(param.synth==SYNTH_MIDI ||param.synth==SYNTH_MIDI_QCW){
-    		if (xQueueReceive(qMIDI_rx, msg, portMAX_DELAY)) {
+            
+    		if (xQueueReceive(qMIDI_rx, msg+1, 1)) { //+1 copy only midi msg not midi-cable (byte 0)
     			Midi_run(msg);
-    			while (xQueueReceive(qMIDI_rx, msg, 0)) {
+    			while (xQueueReceive(qMIDI_rx, msg+1, 0)) { //+1 copy only midi msg not midi-cable (byte 0)
     				Midi_run(msg);
     			}
     		}
+            VMS_run();
+            
         }else{
             vTaskDelay(200 /portTICK_RATE_MS);
         }

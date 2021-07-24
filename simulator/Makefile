@@ -20,6 +20,7 @@ INCLUDE_DIRS += -I${CORE_DIR}/ud3core
 INCLUDE_DIRS += -I${CORE_DIR}/ud3core/helper
 INCLUDE_DIRS += -I${CORE_DIR}/tterm
 INCLUDE_DIRS += -I${CORE_DIR}/min
+INCLUDE_DIRS += -I${CORE_DIR}/vms
 
 SOURCE_FILES := $(wildcard *.c)
 SOURCE_FILES += $(wildcard ${FREERTOS_DIR}/*.c)
@@ -61,6 +62,7 @@ SOURCE_FILES += ${CORE_DIR}/ud3core/helper/brailledraw.c
 SOURCE_FILES += $(wildcard ${CORE_DIR}/ud3core/helper/*.c)
 SOURCE_FILES += $(wildcard ${CORE_DIR}/tterm/*.c)
 SOURCE_FILES += $(wildcard ${CORE_DIR}/min/*.c)
+SOURCE_FILES += $(wildcard ${CORE_DIR}/vms/*.c)
 
 # Trace library.
 

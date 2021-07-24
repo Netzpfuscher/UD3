@@ -44,6 +44,7 @@ Its a 16 bit PWM clocked at 1MHz, so thats 1uS per count.
     
     
 #define MAX_VOL (128<<16)
+#define MIN_VOL 0
     
 enum interrupter_DMA{
     INTR_DMA_TR,

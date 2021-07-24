@@ -31,7 +31,8 @@
 #include "telemetry.h"
 #include <device.h>
 #include <stdlib.h>
-
+#include "MidiController.h"
+#include "telemetry.h"
 
 // Tone generator channel status (updated according to MIDI messages)
 CHANNEL channel[N_CHANNEL];
@@ -210,6 +211,22 @@ void SigGen_channel_enable(uint8_t ch, uint8_t ena){
     }
  }
 
+size_t SigGen_get_channel(uint8_t ch){
+    switch(ch){
+        case 0:
+            return (DDS32_1_sCTRLReg_ctrlreg__CONTROL_REG & (1u << 1)) ? pdTRUE : pdFALSE;
+        case 1:
+            return (DDS32_1_sCTRLReg_ctrlreg__CONTROL_REG & (1u << 2)) ? pdTRUE : pdFALSE;
+        case 2:
+            return (DDS32_2_sCTRLReg_ctrlreg__CONTROL_REG & (1u << 1)) ? pdTRUE : pdFALSE;
+        case 3:
+            return (DDS32_2_sCTRLReg_ctrlreg__CONTROL_REG & (1u << 2)) ? pdTRUE : pdFALSE;
+    }
+    return pdFALSE;
+ }
+
+
+
 uint16_t SigGen_channel_freq_fp8(uint8_t ch, uint32_t freq){
     switch(ch){
         case 0:
@@ -243,6 +260,90 @@ void SigGen_noise(uint8_t ch, uint8_t ena, uint32_t rnd){
         case 3:
             DDS32_2_WriteRand1(rnd);
             break;
+    }
+}
+
+void SigGen_setNoteTPR(uint8_t voice, uint32_t freqTenths){
+    
+    SigGen_limit();
+    
+    uint32_t divVal = 69;
+    if(freqTenths != 0) divVal = 1875000 / freqTenths;
+    
+    Midi_voice[voice].periodCurrent = divVal;
+    Midi_voice[voice].freqCurrent = freqTenths;
+    
+    uint32_t freq = ((freqTenths / 10)<<8) + ((0xFF *  (freqTenths % 10)) / 10);
+    if(freqTenths != 0){
+        switch(voice){
+            case 0:
+                DDS32_1_SetFrequency_FP8(0,freq);
+            break;
+            case 1:
+                DDS32_1_SetFrequency_FP8(1,freq);
+            break;
+            case 2:
+                DDS32_2_SetFrequency_FP8(0,freq);
+            break;
+            case 3:
+                DDS32_2_SetFrequency_FP8(1,freq);
+            break;
+        }
+        return;  
+    }else{
+        switch(voice){
+        case 0:
+            DDS32_1_Disable_ch(0);
+            break;
+        case 1:
+            DDS32_1_Disable_ch(1);
+            break;
+        case 2:
+            DDS32_2_Disable_ch(0);
+            break;
+        case 3:
+            DDS32_2_Disable_ch(1);
+            break;
+        }
+ 
+    }
+}
+
+uint8_t SigGen_masterVol = 255;
+
+void SigGen_limit(){ //<------------------------Todo Ontime and so on
+    
+    uint32_t totalDuty = 0;
+    uint32_t scale = 1000;
+    uint8_t c = 0;
+    
+    for(; c < MIDI_VOICECOUNT; c++){
+        uint32_t ourDuty = (Midi_voice[c].otCurrent * Midi_voice[c].freqCurrent) / 10; //TODO preemtively increase the frequency used for calculation if noise is on
+        if(Midi_voice[c].hyperVoiceCount == 2 && Midi_voice[c].noiseCurrent == 0) ourDuty *= 2;
+        totalDuty += ourDuty;
+    }
+    
+   
+    //UART_print("duty = %d%% -> scale = %d%%m\r\n", totalDuty / 10000, scale);
+    
+    //limit noise frequency change
+    for(c = 0; c < MIDI_VOICECOUNT; c++){
+        if(Midi_voice[c].noiseCurrent > (Midi_voice[c].periodCurrent >> 1)){
+            Midi_voice[c].noiseRaw = Midi_voice[c].periodCurrent >> 1;
+            //UART_print("limiting noise to %d\r\n", Midi_voice[c].noiseRaw);
+        }else{
+            Midi_voice[c].noiseRaw = Midi_voice[c].noiseCurrent;
+        }
+    }
+    
+    tt.n.midi_voices.value = 0;
+    for(c = 0; c < MIDI_VOICECOUNT; c++){
+        uint32_t ot;
+        ot = (Midi_voice[c].otCurrent * scale) / 1330;
+        ot = (ot * SigGen_masterVol) / 255;
+        
+        if(Midi_voice[c].outputOT) tt.n.midi_voices.value++;
+        interrupter_set_pw_vol(c, param.pw, Midi_voice[c].outputOT);
     }
 }
 

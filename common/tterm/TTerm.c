@@ -267,6 +267,7 @@ uint8_t TERM_processBuffer(uint8_t * data, uint16_t length, TERMINAL_HANDLE * ha
                 break;
         }
     }
+    return 0;
 }
 
 unsigned isACIILetter(char c){
@@ -288,10 +289,17 @@ void TERM_printBootMessage(TERMINAL_HANDLE * handle){
 }
 
 BaseType_t ptr_is_in_ram(void* ptr){
-    if(ptr > (void*)START_OF_FLASH && ptr < (void*)END_OF_FLASH){
-        return pdFALSE;
+    if(ptr > (void*)START_OF_RAM && ptr < (void*)END_OF_RAM){
+        return pdTRUE;
     }
-    return pdTRUE;
+    return pdFALSE;
+}
+
+BaseType_t ptr_is_in_flash(void* ptr){
+    if(ptr > (void*)START_OF_FLASH && ptr < (void*)END_OF_FLASH){
+        return pdTRUE;
+    }
+    return pdFALSE;
 }
 
 uint8_t TERM_defaultErrorPrinter(TERMINAL_HANDLE * handle, uint32_t retCode){
@@ -534,6 +542,7 @@ uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle){
             TERM_printDebug(handle, "unknown code received: 0x%02x\r\n", c);
             break;
     }
+    return 0;
 }
 
 void TERM_checkForCopy(TERMINAL_HANDLE * handle, COPYCHECK_MODE mode){

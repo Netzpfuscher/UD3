@@ -452,31 +452,28 @@ void tsk_min_TaskProc(void *pvParameters) {
                 min_queue_frame(&min_ctx, MIN_ID_FEATURE, (uint8_t*)version[temp],strlen(version[temp]));  
                 transmit_features--;
             }
-        
-        
+            
+            if(param.synth==SYNTH_SID || param.synth==SYNTH_SID_QCW){
+                if(uxQueueSpacesAvailable(qSID) < 30 && flow_ctl){
+                    min_queue_frame(&min_ctx, MIN_ID_MIDI, (uint8_t*)&min_stop,1);
+                    flow_ctl=0;
+                }else if(uxQueueSpacesAvailable(qSID) > 45 && !flow_ctl){ //
+                    min_queue_frame(&min_ctx, MIN_ID_MIDI, (uint8_t*)&min_start,1);
+                    flow_ctl=1;
+                }else if(uxQueueSpacesAvailable(qSID) > 59){
+                    if(xTaskGetTickCount()>next_sid_flow){
+                        next_sid_flow = xTaskGetTickCount() + FLOW_RETRANSMIT_TICKS;
+                        min_send_frame(&min_ctx, MIN_ID_MIDI, (uint8_t*)&min_start,1);
+                        flow_ctl=1;
+                    }
+                }
+            }
         
             for(i=0;i<NUM_MIN_CON;i++){
                  
                 poll_UART();
                 if(socket_info[i].socket==SOCKET_DISCONNECTED) goto end;   
                 
-                
-                if(param.synth==SYNTH_SID || param.synth==SYNTH_SID_QCW){
-                    if(uxQueueSpacesAvailable(qSID) < 30 && flow_ctl){
-                        min_queue_frame(&min_ctx, MIN_ID_MIDI, (uint8_t*)&min_stop,1);
-                        flow_ctl=0;
-                    }else if(uxQueueSpacesAvailable(qSID) > 45 && !flow_ctl){ //
-                        min_queue_frame(&min_ctx, MIN_ID_MIDI, (uint8_t*)&min_start,1);
-                        flow_ctl=1;
-                    }else if(uxQueueSpacesAvailable(qSID) > 59){
-                        if(xTaskGetTickCount()>next_sid_flow){
-                            next_sid_flow = xTaskGetTickCount() + FLOW_RETRANSMIT_TICKS;
-                            min_send_frame(&min_ctx, MIN_ID_MIDI, (uint8_t*)&min_start,1);
-                            flow_ctl=1;
-                        }
-                    }
-                }
-
                 uint16_t eth_bytes=xStreamBufferBytesAvailable(min_port[i].tx);
                 if(eth_bytes){
                     bytes_waiting+=eth_bytes;

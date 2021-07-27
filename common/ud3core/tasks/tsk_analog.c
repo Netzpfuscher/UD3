@@ -248,7 +248,6 @@ uint16_t average_filter(uint32_t *ptr, uint16_t sample) {
 void calculate_rms(void) {
     
     static uint16_t old_curr_setpoint=0;
-    
     for(uint8_t i=0;i<ADC_BUFFER_CNT;i++){
 
 		// read the battery voltage
@@ -516,7 +515,6 @@ void tsk_analog_TaskProc(void *pvParameters) {
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
 		xSemaphoreTake(adc_ready_Semaphore, portMAX_DELAY);
-
 		calculate_rms();
 
 		/* `#END` */

@@ -83,6 +83,7 @@
 #include "tasks/tsk_display.h"
 #include "tasks/tsk_hwGauge.h"
 #include "tasks/tsk_duty.h"
+#include "tsk_sim.h"
 
 
 /*
@@ -199,6 +200,9 @@ int main( void )
 		console_print("HW gauge init...\n");
         tsk_hwGauge_init();
     }
+	
+	console_print("Simulation init...\n");
+	tsk_sim_Start();
     
     //CyGlobalIntEnable; //enables interrupts
     alarm_push(ALM_PRIO_INFO, warn_general_startup, ALM_NO_VALUE);

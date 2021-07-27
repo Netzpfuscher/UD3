@@ -283,7 +283,7 @@ void ACL_remove(AC_LIST_HEAD * head, char * string){
             *lastComp = currComp->next;
             
             //TODO make this portable
-            if(ptr_is_in_ram(currComp->string)){
+            if(ptr_is_freeable(currComp->string)){
                 vPortFree(currComp->string);
             }
             

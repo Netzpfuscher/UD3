@@ -40,7 +40,7 @@ void alarm_push(uint8_t level, const char* message, int32_t value){
     ALARMS temp;
     if(uxQueueSpacesAvailable(qAlarms)==0){
         xQueueReceive(qAlarms,&temp,0);
-        if(ptr_is_in_ram(temp.message)) vPortFree(temp.message);
+        if(ptr_is_freeable(temp.message)) vPortFree(temp.message);
     }
     temp.alarm_level = level;
     temp.message = (char*)message;
@@ -55,7 +55,7 @@ void alarm_push_c(uint8_t level, char* message, uint16_t len, int32_t value){
     ALARMS temp;
     if(uxQueueSpacesAvailable(qAlarms)==0){
         xQueueReceive(qAlarms,&temp,0);
-        if(ptr_is_in_ram(temp.message)) vPortFree(temp.message);
+        if(ptr_is_freeable(temp.message)) vPortFree(temp.message);
     }
     temp.alarm_level = level;
     temp.message = (char*)pvPortMalloc(len+1);
@@ -88,7 +88,7 @@ uint32_t alarm_pop(ALARMS * alm){
 }
 
 uint32_t alarm_free(ALARMS * alm){
-    if(ptr_is_in_ram(alm->message)){
+    if(ptr_is_freeable(alm->message)){
         vPortFree(alm->message);
         return pdTRUE;
     }
@@ -98,7 +98,7 @@ uint32_t alarm_free(ALARMS * alm){
 void alarm_clear(){
     ALARMS temp;
     while(alarm_pop(&temp)){
-        if(ptr_is_in_ram(temp.message)) vPortFree(temp.message);
+        if(ptr_is_freeable(temp.message)) vPortFree(temp.message);
     }
 }
 void alarm_init(){

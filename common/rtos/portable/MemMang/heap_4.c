@@ -79,6 +79,15 @@ typedef struct A_BLOCK_LINK
 
 /*-----------------------------------------------------------*/
 
+size_t ptr_is_freeable(void * ptr){
+    if(ptr >= (void*)&ucHeap && ptr < (void*)&ucHeap[configTOTAL_HEAP_SIZE]){
+        return pdTRUE;
+    }else{
+        return pdFALSE;
+    } 
+}
+
+
 /*
  * Inserts a block of memory that is being freed into the correct position in
  * the list of free memory blocks.  The block being freed will be merged with

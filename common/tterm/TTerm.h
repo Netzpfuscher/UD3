@@ -265,6 +265,8 @@ BaseType_t ptr_is_in_flash(void* ptr);
 uint8_t TERM_defaultErrorPrinter(TERMINAL_HANDLE * handle, uint32_t retCode);
 void TERM_LIST_add(TermCommandDescriptor * item, TermCommandDescriptor * head);
 void TERM_Box(TERMINAL_HANDLE * handle, uint8_t row1, uint8_t col1, uint8_t row2, uint8_t col2);
+size_t ptr_is_freeable(void * ptr);
+
 
 #if TERM_SUPPORT_CWD
 #include "TTerm_cwd.h"

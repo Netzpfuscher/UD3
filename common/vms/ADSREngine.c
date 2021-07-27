@@ -375,7 +375,7 @@ void VMS_clear(){
     
     while(currObject != VMS_listHead){
         data = currObject->data;
-        if(ptr_is_in_ram(data)){  //Free when is in RAM
+        if(ptr_is_freeable(data)){  //Free when is in RAM
             switch(data->block->type){
                 case VMS_SIN:
                     vPortFree(data->data);

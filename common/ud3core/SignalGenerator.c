@@ -264,7 +264,6 @@ void SigGen_noise(uint8_t ch, uint8_t ena, uint32_t rnd){
 }
 
 void SigGen_setNoteTPR(uint8_t voice, uint32_t freqTenths){
-    
     SigGen_limit();
     
     uint32_t divVal = 69;
@@ -278,15 +277,19 @@ void SigGen_setNoteTPR(uint8_t voice, uint32_t freqTenths){
         switch(voice){
             case 0:
                 DDS32_1_SetFrequency_FP8(0,freq);
+                DDS32_1_Enable_ch(0);
             break;
             case 1:
                 DDS32_1_SetFrequency_FP8(1,freq);
+                DDS32_1_Enable_ch(1);
             break;
             case 2:
                 DDS32_2_SetFrequency_FP8(0,freq);
+                DDS32_2_Enable_ch(0);
             break;
             case 3:
                 DDS32_2_SetFrequency_FP8(1,freq);
+                DDS32_2_Enable_ch(1);
             break;
         }
         return;  
@@ -344,6 +347,7 @@ void SigGen_limit(){ //<------------------------Todo Ontime and so on
         Midi_voice[c].outputOT = ot;
         if(Midi_voice[c].outputOT) tt.n.midi_voices.value++;
         interrupter_set_pw_vol(c, param.pw, Midi_voice[c].outputOT);
+        
     }
 }
 

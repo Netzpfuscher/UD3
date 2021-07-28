@@ -87,7 +87,7 @@ void VMS_run(){
     
         if(SYS_getTime() > currBlock->nextRunTime){
             if(VMS_calculateValue(currBlock)){
-                currBlock->nextRunTime = SYS_getTime() + currBlock->period * 24;
+                currBlock->nextRunTime = SYS_getTime() + currBlock->period;
             }
         }
     }

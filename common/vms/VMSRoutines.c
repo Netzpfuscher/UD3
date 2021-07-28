@@ -28,6 +28,7 @@
 #include "VMSRoutines.h"
 
 const VMS_BLOCK ATTAC = {
+    .uid = 1,
     .nextBlocks[0] = &SUSTAIN,
     .offBlock = &RELEASE,
     .behavior = NORMAL,
@@ -39,6 +40,7 @@ const VMS_BLOCK ATTAC = {
 };
 
 const VMS_BLOCK SUSTAIN = {
+    .uid = 2,
     .nextBlocks[0] = VMS_DIE,
     .offBlock = &RELEASE,
     .behavior = NORMAL,
@@ -50,6 +52,7 @@ const VMS_BLOCK SUSTAIN = {
 };
 
 const VMS_BLOCK RELEASE = {
+    .uid = 3,
     .behavior = INVERTED,
     
     .thresholdDirection = FALLING,

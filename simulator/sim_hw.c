@@ -1,6 +1,7 @@
 #include "sim_hw.h"
 #include <stdio.h>
 #include <sys/time.h>
+#include "telemetry.h"
 
 uint8_t ZCDref_Data=0;
 
@@ -68,7 +69,8 @@ uint32_t SG_cnt=0;
 uint32_t SG_Timer_ReadCounter(){
 	struct timeval tv;
     gettimeofday(&tv,NULL);
-	return (tv.tv_usec);
+	float temp = tv.tv_usec / 3.3333;
+	return (temp);
 }
 
 uint32_t OnTime_cnt=0;
@@ -141,9 +143,20 @@ void CyGetUniqueId(uint32_t * val){
 }
 
 uint16_t ADC_therm_Offset=0;
-uint16_t ADC[2]={400,500};
+uint16_t ADC[2]={1800,1800};
 uint16_t* adc_data = &ADC[0];
 void Therm_Mux_Select(uint8_t ch){
+	
+	if(tt.n.avg_power.value<1000){
+		if(ADC[ch]<1800){
+			ADC[ch]+=10;
+		}
+	}else{
+		if(ADC[ch]>500){
+			ADC[ch]-=tt.n.avg_power.value/1000;
+		}
+	}
+	
 	adc_data = &ADC[ch];
 }
 uint16_t ADC_therm_GetResult16(){

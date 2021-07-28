@@ -137,7 +137,6 @@ void Midi_run(uint8_t* ReceivedDataBuffer){
                 }
                 
             }else if(cmd == MIDI_CMD_NOTE_ON){
-                
                 if(ReceivedDataBuffer[3] > 0){  //velocity is > 0 -> turn note on && channelData[channel].currStereoVolume > 0
                     MAPPER_map(ReceivedDataBuffer[2], ReceivedDataBuffer[3], channel);
                     

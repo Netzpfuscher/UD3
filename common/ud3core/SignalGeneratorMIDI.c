@@ -72,6 +72,7 @@ static inline void compute_adsr_midi(uint8_t ch){
 }
 
 void synthcode_MIDI(){
+    /*
     tt.n.midi_voices.value=0;
     
 	for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
@@ -83,7 +84,7 @@ void synthcode_MIDI(){
         }else{
             SigGen_channel_enable(ch,0); 
         }
-    }    
+    }   */ 
 }
 
 void synthcode_QMIDI(uint32_t r){

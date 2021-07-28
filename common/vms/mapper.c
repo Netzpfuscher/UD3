@@ -42,7 +42,6 @@ void MAPPER_map(uint8_t note, uint8_t velocity, uint8_t channel){
         maps[0] = &DEFMAP.h0e0.data;
         requestedChannels = 1;
     }
-    
     while(requestedChannels > 0){
         requestedChannels --;
         uint8_t voice = MAPPER_getNextChannel(note, channel);
@@ -119,7 +118,6 @@ void MAPPER_map(uint8_t note, uint8_t velocity, uint8_t channel){
             Midi_voice[voice].noiseCurrent = 0;
             Midi_voice[voice].noiseTarget = 80;
             Midi_voice[voice].noiseFactor = 0;
-
             SigGen_setNoteTPR(voice, currNoteFreq);
 
             Midi_voice[voice].map = maps[requestedChannels];
@@ -132,7 +130,7 @@ void MAPPER_map(uint8_t note, uint8_t velocity, uint8_t channel){
 uint8_t MAPPER_getMaps(uint8_t note, MAPTABLE_HEADER * table, MAPTABLE_DATA ** dst){
     uint8_t currScan = 0;
     uint8_t foundCount = 0;
-    MAPTABLE_ENTRY * entries = (MAPTABLE_ENTRY *) ((uint32_t) table + sizeof(MAPTABLE_HEADER));
+    MAPTABLE_ENTRY * entries = (MAPTABLE_ENTRY *) (table++);
     for(currScan = 0; currScan < table->listEntries && foundCount < MIDI_VOICECOUNT; currScan++){
         if(entries[currScan].endNote >= note && entries[currScan].startNote <= note){
             dst[foundCount++] = &entries[currScan].data;

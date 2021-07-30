@@ -195,12 +195,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_hold"        , param.qcw_holdoff             , 0      ,255    ,0      ,callback_rampFunction       ,"QCW Ramp time to start ramp [125 us]")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_max"         , param.qcw_max                 , 0      ,255    ,0      ,callback_rampFunction       ,"QCW Ramp end value")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_repeat"      , param.qcw_repeat              , 0      ,1000   ,0      ,NULL                        ,"QCW pulse repeat time [ms] <100=single shot")
-    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"transpose"       , param.transpose               , -48    ,48     ,0      ,NULL                        ,"Transpose MIDI")
-    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"synth"           , param.synth                   , 0      ,4      ,0      ,callback_SynthFunction      ,"0=off 1=MIDI 2=SID")
-    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"mch"             , param.mch                     , 0      ,16     ,0      ,callback_MchFunction        ,"MIDI channel 16=write to all channels")
-    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"attack"          , midich[0].attack              , 0      ,127    ,0      ,callback_MchCopyFunction    ,"MIDI attack time of mch") //WARNING: Must be mch index +1
-    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"decay"           , midich[0].decay               , 0      ,127    ,0      ,callback_MchCopyFunction    ,"MIDI decay time of mch")  //WARNING: Must be mch index +2
-    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"release"         , midich[0].release             , 0      ,127    ,0      ,callback_MchCopyFunction    ,"MIDI release time of mch")//WARNING: Must be mch index +3
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"synth"           , param.synth                   , 0      ,4      ,0      ,callback_SynthFunction      ,"0=off 1=MIDI 2=SID")    
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"display"         , param.display                 , 0      ,4      ,0      ,NULL                        ,"Actual display frame")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"watchdog"        , configuration.watchdog        , 0      ,1      ,0      ,callback_ConfigFunction     ,"Watchdog Enable")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_tr_pw"       , configuration.max_tr_pw       , 0      ,10000  ,0      ,callback_ConfigFunction     ,"Maximum TR PW [uSec]")
@@ -331,22 +326,6 @@ uint8_t callback_ivoUART(parameter_entry * params, uint8_t index, TERMINAL_HANDL
         ttprintf("11 = rx and tx inverted\r\n");
         return 0;
     }
-}
-
-/*****************************************************************************
-* Callback if the MIDI channel is changed
-******************************************************************************/
-uint8_t callback_MchFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
-    if(param.mch<16){
-        params[index+1].value = &midich[param.mch].attack;
-        params[index+2].value = &midich[param.mch].decay;
-        params[index+3].value = &midich[param.mch].release;
-    }else{
-        params[index+1].value = &midich[0].attack;
-        params[index+2].value = &midich[0].decay;
-        params[index+3].value = &midich[0].release;
-    }
-    return 1;
 }
 
 /*****************************************************************************

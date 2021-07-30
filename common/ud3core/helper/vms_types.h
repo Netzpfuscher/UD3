@@ -79,8 +79,6 @@ struct _SynthVoice_{
     uint32_t    freqTarget;
     uint32_t    freqCurrent;
     int32_t     freqFactor;
-    int32_t     periodCurrent;
-    int32_t     divCurrent;
     
     uint32_t    otTarget;
     uint32_t    otCurrent;
@@ -89,7 +87,6 @@ struct _SynthVoice_{
     
     uint32_t    noiseTarget;
     uint32_t    noiseCurrent;
-    uint32_t    noiseRaw;
     int32_t     noiseFactor;
     
     uint8_t     currNote;
@@ -110,8 +107,6 @@ struct _SynthVoice_{
     uint8_t     id;
     MAPTABLE_DATA * map;
     
-    uint32_t *  hyperVoice_DCHXCONptr;
-    uint32_t *  hyperVoice_DCHXECONptr;
 };
 
 struct _ChannelInfo_{
@@ -174,36 +169,4 @@ struct _VMS_BLOCK_{
     uint32_t period;
     uint32_t flags;
 };
-
-typedef struct{
-    uint16_t v1Freq;
-    uint16_t v1OT;
-    uint16_t v1NoiseAmp;
-    uint16_t v1Flags;
-    
-    uint16_t v2Freq;
-    uint16_t v2OT;
-    uint16_t v2NoiseAmp;
-    uint16_t v2Flags;
-    
-    uint16_t v3Freq;
-    uint16_t v3OT;
-    uint16_t v3NoiseAmp;
-    uint16_t v3Flags;
-    
-    uint16_t v4Freq;
-    uint16_t v4OT;
-    uint16_t v4NoiseAmp;
-    uint16_t v4Flags;
-    
-    uint8_t v1HPVCount;
-    uint8_t v1HPVPhase;
-    uint8_t v2HPVCount;
-    uint8_t v2HPVPhase;
-    uint8_t v3HPVCount;
-    uint8_t v3HPVPhase;
-    uint8_t v4HPVCount;
-    uint8_t v4HPVPhase;
-} RAW_WRITE_NOTES_Cmd;
-
 #endif

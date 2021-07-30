@@ -35,6 +35,7 @@
 #define MIDI_CMD_NOTE_ON                0x90
 #define MIDI_CMD_KEY_PRESSURE           0xA0
 #define MIDI_CMD_CONTROLLER_CHANGE      0xB0
+#define MIDI_CC_PANIC                   0x77
 #define MIDI_CC_ALL_SOUND_OFF           0x78
 #define MIDI_CC_RESET_ALL_CONTROLLERS   0x79
 #define MIDI_CC_ALL_NOTES_OFF           0x7B

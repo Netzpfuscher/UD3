@@ -29,8 +29,8 @@
 
 const VMS_BLOCK ATTAC = {
     .uid = 1,
-    .nextBlocks[0] = &SUSTAIN,
-    .offBlock = &RELEASE,
+    .nextBlocks[0] = (VMS_BLOCK*)&SUSTAIN,
+    .offBlock = (VMS_BLOCK*)&RELEASE,
     .behavior = NORMAL,
     
     .thresholdDirection = RISING,
@@ -42,7 +42,7 @@ const VMS_BLOCK ATTAC = {
 const VMS_BLOCK SUSTAIN = {
     .uid = 2,
     .nextBlocks[0] = VMS_DIE,
-    .offBlock = &RELEASE,
+    .offBlock = (VMS_BLOCK*)&RELEASE,
     .behavior = NORMAL,
     
     .thresholdDirection = RISING,

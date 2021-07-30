@@ -31,7 +31,7 @@
 //MIN
 #define NUM_MIN_CON 4
 #define STREAMBUFFER_RX_SIZE    256     //bytes
-#define STREAMBUFFER_TX_SIZE    1024    //bytes  
+#define STREAMBUFFER_TX_SIZE    512    //bytes  
     
 //Alarm-Event
 #define AE_QUEUE_SIZE 50            //Length of the alarm and event queue
@@ -46,8 +46,7 @@
     
 //Synthesizer
 #define N_QUEUE_SID     64          //Size of the SID frame buffer
-#define N_QUEUE_MIDI    256         //Size of the midi event buffer
-#define N_QUEUE_PULSE   16          //Size of the oneshot buffer
+#define N_QUEUE_MIDI    64         //Size of the midi event buffer
 #define N_CHANNEL 4                 //Number of parallel voices
 
     

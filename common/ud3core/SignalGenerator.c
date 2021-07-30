@@ -51,9 +51,6 @@ CY_ISR(isr_synth) {
         case SYNTH_SID:
             synthcode_SID(r);
             break;
-        case SYNTH_MIDI_QCW:
-            synthcode_QMIDI(r);
-            break;
         case SYNTH_SID_QCW:
             synthcode_QSID(r);
             break;
@@ -266,14 +263,12 @@ void SigGen_noise(uint8_t ch, uint8_t ena, uint32_t rnd){
 void SigGen_setNoteTPR(uint8_t voice, uint32_t freqTenths){
     SigGen_limit();
     
-    uint32_t divVal = 69;
-    if(freqTenths != 0) divVal = 1875000 / freqTenths;
-    
-    Midi_voice[voice].periodCurrent = divVal;
     Midi_voice[voice].freqCurrent = freqTenths;
+    channel[voice].freq = (freqTenths / 10);
     
-    uint32_t freq = ((freqTenths / 10)<<8) + ((0xFF *  (freqTenths % 10)) / 10);
+    uint32_t freq = ((channel[voice].freq)<<8) + ((0xFF *  (freqTenths % 10)) / 10);
     if(freqTenths != 0){
+        channel[voice].halfcount = (SG_CLOCK_HALFCOUNT<<14) / (freq>>2);
         switch(voice){
             case 0:
                 DDS32_1_SetFrequency_FP8(0,freq);
@@ -329,16 +324,7 @@ void SigGen_limit(){ //<------------------------Todo Ontime and so on
    
     //UART_print("duty = %d%% -> scale = %d%%m\r\n", totalDuty / 10000, scale);
     
-    //limit noise frequency change
-    for(c = 0; c < MIDI_VOICECOUNT; c++){
-        if(Midi_voice[c].noiseCurrent > (Midi_voice[c].periodCurrent >> 1)){
-            Midi_voice[c].noiseRaw = Midi_voice[c].periodCurrent >> 1;
-            //UART_print("limiting noise to %d\r\n", Midi_voice[c].noiseRaw);
-        }else{
-            Midi_voice[c].noiseRaw = Midi_voice[c].noiseCurrent;
-        }
-    }
-    
+   
     tt.n.midi_voices.value = 0;
     for(c = 0; c < MIDI_VOICECOUNT; c++){
         uint32_t ot;
@@ -346,7 +332,9 @@ void SigGen_limit(){ //<------------------------Todo Ontime and so on
         ot = (ot * SigGen_masterVol) / 255;
         Midi_voice[c].outputOT = ot;
         if(Midi_voice[c].outputOT) tt.n.midi_voices.value++;
-        interrupter_set_pw_vol(c, param.pw, Midi_voice[c].outputOT<<12);
+        uint32_t out = Midi_voice[c].outputOT<<12;
+        interrupter_set_pw_vol(c, param.pw, out);
+        channel[c].volume = out;
         
     }
 }
@@ -376,7 +364,6 @@ void SigGen_switch_synth(uint8_t synth){
     }else if(synth==SYNTH_MIDI || synth==SYNTH_SID){
         interrupter_DMA_mode(INTR_DMA_DDS);       
     }
-    tsk_midi_reset_skip();
     tt.n.midi_voices.value=0;
     xQueueReset(qMIDI_rx);
     xQueueReset(qSID);
@@ -428,7 +415,7 @@ void SigGen_kill(){
         channel[ch].volume=0;
         channel[ch].freq=0;
         channel[ch].halfcount=0;
-        SigGen_channel_enable(ch,0);
+        SigGen_setNoteTPR(ch,0);
 	}
 }
 

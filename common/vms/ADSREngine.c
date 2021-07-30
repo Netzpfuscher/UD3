@@ -199,7 +199,6 @@ void VMS_setKnownValue(KNOWN_VALUE ID, int32_t value, SynthVoice * voice){
             break;
         case freqCurrent:
             voice->freqCurrent = value;
-            voice->periodCurrent = 1000000 / value;
             break;
         case frequency:
             voice->freqFactor = value;

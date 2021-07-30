@@ -33,13 +33,13 @@
 const struct{
     MAPTABLE_HEADER h0;
     MAPTABLE_ENTRY h0e0;
-} DEFMAP = {.h0 = {.programNumber = 0, .listEntries = 1} , .h0e0 = {.startNote = 0, .endNote = 127, .data.VMS_Startblock = &ATTAC, .data.flags = MAP_ENA_DAMPER | MAP_ENA_STEREO | MAP_ENA_VOLUME | MAP_ENA_PITCHBEND | MAP_FREQ_MODE, .data.noteFreq = 0, .data.targetOT = 255}};
+} DEFMAP = {.h0 = {.programNumber = 0, .listEntries = 1} , .h0e0 = {.startNote = 0, .endNote = 127, .data.VMS_Startblock = (VMS_BLOCK*)&ATTAC, .data.flags = MAP_ENA_DAMPER | MAP_ENA_STEREO | MAP_ENA_VOLUME | MAP_ENA_PITCHBEND | MAP_FREQ_MODE, .data.noteFreq = 0, .data.targetOT = 255}};
 
 void MAPPER_map(uint8_t note, uint8_t velocity, uint8_t channel){
     MAPTABLE_DATA * maps[MIDI_VOICECOUNT];
     uint8_t requestedChannels = MAPPER_getMaps(note, channelData[channel].currentMap, maps);
     if(requestedChannels == 0){
-        maps[0] = &DEFMAP.h0e0.data;
+        maps[0] = (MAPTABLE_DATA*)&DEFMAP.h0e0.data;
         requestedChannels = 1;
     }
     while(requestedChannels > 0){
@@ -263,7 +263,7 @@ void MAPPER_bendHandler(uint8_t channel){
     for(;currChannel < 4; currChannel ++){
         if(Midi_voice[currChannel].currNoteOrigin == channel && Midi_voice[currChannel].otCurrent > 0){
             MAPTABLE_DATA * map = Midi_voice[currChannel].map;
-            if(map->flags & MAP_ENA_PITCHBEND == 0) continue;
+            if((map->flags & MAP_ENA_PITCHBEND) == 0) continue;
             
             uint32_t currNoteFreq = 0;
             if(map->flags & MAP_FREQ_MODE){

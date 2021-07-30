@@ -53,25 +53,10 @@ ChannelInfo channelData[16] = {[0 ... 15].bendFactor = 200000, [0 ... 15].bendRa
 //voice parameters and variables
 SynthVoice Midi_voice[MIDI_VOICECOUNT] = {[0 ... 3].currNote = 0xff, [0].id = 0, [1].id = 1, [2].id = 2, [3].id = 3};
 
-//Programm and coil configuration
-//CoilConfig * Midi_currCoil;
-uint8_t Midi_currCoilIndex = 0xff;          //this is used by the pc software to figure out which configuration is active
-//uint16_t Midi_minOnTimeVal = 0;
-//uint16_t Midi_maxOnTimeVal = 0;
-
-
-
 //Global midi settings
 
-//LED Time variables
-unsigned Midi_blinkLED = 0;
-uint16_t Midi_blinkScaler = 0;
-uint16_t Midi_currComsLEDTime = 0;
 
 unsigned Midi_enabled = 1;
-uint32_t FWUpdate_currPLOffset = 0;
-uint8_t * payload = 0;
-uint16_t currPage = 0;
 
 uint16_t Midi_currRPN = 0xffff;
 unsigned Midi_initialized = 0;
@@ -79,9 +64,6 @@ unsigned Midi_initialized = 0;
 void Midi_init(){
     if(Midi_initialized) return;
     Midi_initialized = 1;
-    //allocate ram for programm and coild configurations
-    //Midi_currProgramm = malloc(sizeof(MidiProgramm));
-    //Midi_currCoil = malloc(sizeof(CoilConfig));
     
     VMS_init();
     
@@ -150,7 +132,7 @@ void Midi_run(uint8_t* ReceivedDataBuffer){
                 }
 
             }else if(cmd == MIDI_CMD_CONTROLLER_CHANGE){
-                if(ReceivedDataBuffer[2] == MIDI_CC_ALL_SOUND_OFF || ReceivedDataBuffer[2] == MIDI_CC_ALL_NOTES_OFF || ReceivedDataBuffer[2] == MIDI_CC_RESET_ALL_CONTROLLERS){ //Midi panic, and sometimes used by programms when you press the "stop" button
+                if(ReceivedDataBuffer[2] == MIDI_CC_PANIC || ReceivedDataBuffer[2] == MIDI_CC_ALL_SOUND_OFF || ReceivedDataBuffer[2] == MIDI_CC_ALL_NOTES_OFF || ReceivedDataBuffer[2] == MIDI_CC_RESET_ALL_CONTROLLERS){ //Midi panic, and sometimes used by programms when you press the "stop" button
 
                     VMS_clear();
                     
@@ -249,7 +231,6 @@ void Midi_setEnabled(unsigned ena){
         //step through all voices and switch them off
         uint8_t currVoice = 0;
         for(;currVoice < MIDI_VOICECOUNT; currVoice++){
-            //Midi_voice[currVoice].currNote = 0xff;
             Midi_voice[currVoice].otTarget = 0;
             Midi_voice[currVoice].on = 0;
         }

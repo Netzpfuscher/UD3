@@ -137,9 +137,9 @@ int32_t VMS_getKnownValue(KNOWN_VALUE ID, SynthVoice * voice){
     //UART_print("get %d\r\n", ID);
     switch(ID){
         case maxOnTime:
-            return  MAX_VOL; //Midi_currCoil->maxOnTime;
+            return  (MAX_VOL>>12); //Midi_currCoil->maxOnTime;
         case minOnTime:
-            return MIN_VOL;
+            return (MIN_VOL>>12);
         case otCurrent:
             return voice->otCurrent;
         case otTarget:
@@ -192,7 +192,7 @@ void VMS_setKnownValue(KNOWN_VALUE ID, int32_t value, SynthVoice * voice){
                 voice->otCurrent = 0;
             }else{
                 voice->otFactor = value;
-                voice->otCurrent = (voice->otTarget * value) / 1000000 + MIN_VOL;
+                voice->otCurrent = (voice->otTarget * value) / 1000000 + (MIN_VOL>>12);
                 //UART_print("OT is now %d", Midi_voice[0].otCurrent);
             }
             SigGen_limit();

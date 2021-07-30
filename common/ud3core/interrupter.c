@@ -206,7 +206,7 @@ void interrupter_set_pw(uint8_t ch, uint16_t pw){
 
 void interrupter_set_pw_vol(uint8_t ch, uint16_t pw, uint32_t vol){
     if(ch<N_CHANNEL){
-
+        
         if(pw>configuration.max_tr_pw) pw = configuration.max_tr_pw;
         
         if(interrupter.mod==INTR_MOD_PW){

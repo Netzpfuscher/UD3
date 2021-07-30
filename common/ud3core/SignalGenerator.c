@@ -346,7 +346,7 @@ void SigGen_limit(){ //<------------------------Todo Ontime and so on
         ot = (ot * SigGen_masterVol) / 255;
         Midi_voice[c].outputOT = ot;
         if(Midi_voice[c].outputOT) tt.n.midi_voices.value++;
-        interrupter_set_pw_vol(c, param.pw, Midi_voice[c].outputOT);
+        interrupter_set_pw_vol(c, param.pw, Midi_voice[c].outputOT<<12);
         
     }
 }

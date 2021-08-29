@@ -104,7 +104,7 @@ static const char warn_eeprom_loaded[]= "EEPROM: Dataset loaded";
 static const char warn_eeprom_written[]= "EEPROM: Dataset written changes";
 
 
-static const char warn_watchdog[]= "WD: Watchdog triggerd";
+static const char warn_watchdog[]= "WD: Watchdog triggered";
 
 static const char warn_serial_overrun[]= "COM: Serial buffer overrun";
 static const char warn_midi_overrun[]= "COM: MIDI buffer overrun";

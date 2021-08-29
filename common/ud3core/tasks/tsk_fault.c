@@ -193,7 +193,7 @@ void tsk_fault_TaskProc(void *pvParameters) {
 	 */
 	/* `#START TASK_INIT_CODE` */
     
-    xWD_Timer = xTimerCreate("WD-Tmr", 1000 / portTICK_PERIOD_MS, pdFALSE,(void * ) 0, vWD_Timer_Callback);
+    xWD_Timer = xTimerCreate("WD-Tmr", configuration.watchdog_timeout / portTICK_PERIOD_MS, pdFALSE,(void * ) 0, vWD_Timer_Callback);
     
     WD_enable(configuration.watchdog);
     reset_fault();

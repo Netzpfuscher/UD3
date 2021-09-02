@@ -225,7 +225,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ct2_offset"      , configuration.ct2_offset      , 0      ,5000   ,1000   ,callback_ConfigFunction     ,"CT2 offset voltage")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"lead_time"       , configuration.lead_time       , 0      ,2000   ,0      ,callback_ConfigFunction     ,"Lead time [nSec]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"start_freq"      , configuration.start_freq      , 0      ,5000   ,10     ,callback_ConfigFunction     ,"Resonant freq [kHz]")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"start_cycles"    , configuration.start_cycles    , 0      ,20     ,0      ,callback_ConfigFunction     ,"Start Cyles [N]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"start_cycles"    , configuration.start_cycles    , 0      ,20     ,0      ,callback_ConfigFunction     ,"Start Cycles [N]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_tr_duty"     , configuration.max_tr_duty     , 1      ,500    ,10     ,callback_ConfigFunction     ,"Max TR duty cycle [%]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_qcw_duty"    , configuration.max_qcw_duty    , 1      ,500    ,10     ,callback_ConfigFunction     ,"Max QCW duty cycle [%]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"temp1_setpoint"  , configuration.temp1_setpoint  , 0      ,100    ,0      ,NULL                        ,"Setpoint for fan [*C]")
@@ -775,7 +775,7 @@ uint8_t CMD_set(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
 ******************************************************************************/
 uint8_t CMD_eeprom(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     if(argCount==0 || strcmp(args[0], "-?") == 0){
-        ttprintf("Usage: eprom [load|save]\r\n");
+        ttprintf("Usage: eeprom [load|save]\r\n");
         return TERM_CMD_EXIT_SUCCESS;
     }
     EEPROM_1_UpdateTemperature();

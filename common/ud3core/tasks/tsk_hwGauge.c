@@ -165,7 +165,7 @@ static uint8_t CMD_hwGaugeCalibrate_handleInput(TERMINAL_HANDLE * handle, uint16
                 vPortFree(handle->currProgram);
                 TERM_removeProgramm(handle);
                 calibrationActive = 0;
-                ttprintf("Calibration saved succesfully\r\n");
+                ttprintf("Calibration saved successfully\r\n");
                 //Todo successfully safe calibration
             }else if(calibrationStage == 0){
                 HWGauge_setValue(gaugeToCalibrate, 0xfff);

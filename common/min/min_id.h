@@ -14,6 +14,7 @@
 #define MIN_ID_EVENT    40
 #define MIN_ID_ALARM    41
 #define MIN_ID_DEBUG    42
+#define MIN_ID_VMS      43
     
 #define SYNTH_CMD_FLUSH     1
 #define SYNTH_CMD_SID       2

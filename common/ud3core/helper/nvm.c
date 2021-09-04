@@ -51,7 +51,7 @@ void nvm_init(){
 }
 
 #ifndef SIMULATOR
-uint8_t nvm_write_buffer(TERMINAL_HANDLE * handle, uint16_t index, uint8_t* buffer, int32_t len){
+uint8_t nvm_write_buffer(uint16_t index, uint8_t* buffer, int32_t len){
 
     uint16_t n_pages = 0;
 
@@ -109,7 +109,7 @@ uint8_t nvm_write_buffer(TERMINAL_HANDLE * handle, uint16_t index, uint8_t* buff
     return pdPASS;
 }
 #else
-uint8_t nvm_write_buffer(TERMINAL_HANDLE * handle, uint16_t index, uint8_t* buffer, int32_t len){
+uint8_t nvm_write_buffer(uint16_t index, uint8_t* buffer, int32_t len){
     
     memcpy(&NVM_mapMem[index], buffer, len);
     
@@ -257,13 +257,33 @@ void VMS_print_blk(TERMINAL_HANDLE* handle, VMS_BLOCK* blk, uint8_t indent){
         break;
     }
     
-    ttprintf("\r\n%*sTarget factor: %u\r\n", indent, "", blk->targetFactor);
-    ttprintf("%*sParam 1: %u\r\n", indent, "", blk->param1);
-    ttprintf("%*sParam 2: %u\r\n", indent, "", blk->param2);
-    ttprintf("%*sParam 3: %u\r\n", indent, "", blk->param3);
+    ttprintf("\r\n%*sTarget factor: %i\r\n", indent, "", blk->targetFactor);
+    ttprintf("%*sParam 1: %i\r\n", indent, "", blk->param1);
+    ttprintf("%*sParam 2: %i\r\n", indent, "", blk->param2);
+    ttprintf("%*sParam 3: %i\r\n", indent, "", blk->param3);
     ttprintf("%*sPeriod: %u\r\n", indent, "", blk->period);
     ttprintf("%*sFlags: 0x%08X\r\n\r\n", indent, "", blk->flags);
  
+}
+
+MAPTABLE_HEADER* VMS_print_map(TERMINAL_HANDLE* handle, MAPTABLE_HEADER* map){
+    ttprintf("\r\nProgram: %u - %s\r\n", map->programNumber, map->name);
+    MAPTABLE_ENTRY* ptr = (MAPTABLE_ENTRY*)(map+1);
+    for(uint32_t i=0;i<map->listEntries;i++){
+        ttprintf("   Note range: %u - %u\r\n", ptr->startNote, ptr->endNote);
+        ttprintf("   Note frequency: %u\r\n", ptr->data.noteFreq);
+        ttprintf("   Target ontime : %u\r\n", ptr->data.targetOT);
+        ttprintf("   Flags         : 0x%04x\r\n", ptr->data.flags);
+        ttprintf("   Start block   : 0x%04x\r\n\r\n", ptr->data.VMS_Startblock);
+        ptr++;
+    }
+    
+    map = (MAPTABLE_HEADER*)ptr;
+    if(map->listEntries){
+        return map;
+    }else{
+        return NULL;
+    }
 }
 
 uint32_t NVM_get_blk_cnt(const VMS_BLOCK* blk){
@@ -276,6 +296,7 @@ uint32_t NVM_get_blk_cnt(const VMS_BLOCK* blk){
     return cnt;
 }
 
+
 uint8_t CMD_nvm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     
     //if(argCount == 0) return TERM_CMD_EXIT_SUCCESS;
@@ -285,77 +306,20 @@ uint8_t CMD_nvm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     
     ttprintf("Size of %u\r\n", sizeof(VMS_BLOCK));
     
-    VMS_init_blk(&temp[0]);
-    VMS_init_blk(&temp[1]);
-    VMS_init_blk(&temp[2]);
-    VMS_init_blk(&temp[3]);
-    
-    temp[0].uid = 1;
-    temp[0].nextBlocks[0] = HARD_BLK(1);
-    temp[0].nextBlocks[1] = HARD_BLK(2);
-    temp[0].behavior = NORMAL;
-    temp[0].type = VMS_LIN;
-    temp[0].target = maxOnTime;
-    temp[0].thresholdDirection = RISING;
-    temp[0].targetFactor = 1;
-    temp[0].param1 = 1;
-    temp[0].param2 = 2;
-    temp[0].param3 = 3;
-    temp[0].period = 4;
-    temp[0].flags = 0;
-    
-    temp[1].uid = 2;
-    temp[1].nextBlocks[0] = &temp[0];
-    temp[1].nextBlocks[1] = &temp[2];
-    temp[1].behavior = NORMAL;
-    temp[1].type = VMS_SIN;
-    temp[1].target = maxOnTime;
-    temp[1].thresholdDirection = FALLING;
-    temp[1].targetFactor = 1;
-    temp[1].param1 = 5;
-    temp[1].param2 = 6;
-    temp[1].param3 = 7;
-    temp[1].period = 8;
-    temp[1].flags = 0;
-    
-    temp[2].uid = 3;
-    temp[2].behavior = NORMAL;
-    temp[2].type = VMS_LIN;
-    temp[2].target = maxOnTime;
-    temp[2].thresholdDirection = RISING;
-    temp[2].targetFactor = 1;
-    temp[2].param1 = 6;
-    temp[2].param2 = 7;
-    temp[2].param3 = 8;
-    temp[2].period = 9;
-    temp[2].flags = 0;
-    
-    temp[3].uid = 4;
-    temp[3].behavior = INVERTED;
-    temp[3].type = VMS_EXP;
-    temp[3].target = maxOnTime;
-    temp[3].thresholdDirection = FALLING;
-    temp[3].targetFactor = 1;
-    temp[3].param1 = 6;
-    temp[3].param2 = 7;
-    temp[3].param3 = 8;
-    temp[3].period = 9;
-    temp[3].flags = 0xFF;
-    
-    VMS_print_blk(handle, &temp[0], 0);
-    VMS_print_blk(handle, &temp[1], 0);
-    VMS_print_blk(handle, &temp[2], 0);
-    VMS_print_blk(handle, &temp[3], 0);
-    
 
-    nvm_write_buffer(handle, index, (uint8_t*)temp, sizeof(VMS_BLOCK)*4);
-    
     uint32_t n_blocks = NVM_get_blk_cnt(VMS_BLKS);
     ttprintf("NVM MEM --> %u blocks:\r\n", n_blocks);
     
     for(uint32_t i=0;i<n_blocks;i++){
         VMS_print_blk(handle, (VMS_BLOCK*)&VMS_BLKS[i], 4);
     }
+    
+    MAPTABLE_HEADER* map = (MAPTABLE_HEADER*) NVM_mapMem;
+    
+    while(map){
+        map = VMS_print_map(handle, map);
+    }
+    
     vPortFree(temp);
     
     return TERM_CMD_EXIT_SUCCESS; 

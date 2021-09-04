@@ -75,7 +75,7 @@ void isr_synth() {
             synthcode_SID(r);
             break;
         case SYNTH_MIDI_QCW:
-            synthcode_QMIDI(r);
+            //synthcode_QMIDI(r);
             break;
         case SYNTH_SID_QCW:
             synthcode_QSID(r);

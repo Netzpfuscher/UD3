@@ -113,6 +113,8 @@ static const char warn_min_id[]= "COM: Unknown MIN ID";
 static const char warn_min_command[]= "COM: Unknown command";
 static const char warn_min_reset[]= "COM: MIN reset";
 static const char warn_min_event[]= "COM: Unknown event";
+static const char warn_min_vms_wrt[]= "COM: Malformed block write";
+static const char warn_min_vms_map[]= "COM: Malformed map write";
 
 static const char warn_midi_noSpace[]= "MIDI: No Space";
 
@@ -130,7 +132,8 @@ static const char warn_event_eth_dhcp_success[]= "EVENT: DHCP success";
 static const char warn_event_eth_dhcp_fail[]= "EVENT: DHCP fail";
 static const char warn_event_fs_card_con[]= "EVENT: Fibernet SD connected";
 static const char warn_event_fs_card_dis[]= "EVENT: Fibernet SD disconnected";
-    
+   
+
     
 /* ------------------------------------------------------------------------ */
 #endif

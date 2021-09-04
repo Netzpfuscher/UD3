@@ -1,5 +1,5 @@
 CC := gcc
-BIN := posix_demo
+BIN := ud3sim
 
 BUILD_DIR := build
 
@@ -64,8 +64,6 @@ SOURCE_FILES += $(wildcard ${CORE_DIR}/tterm/*.c)
 SOURCE_FILES += $(wildcard ${CORE_DIR}/min/*.c)
 SOURCE_FILES += $(wildcard ${CORE_DIR}/vms/*.c)
 
-# Trace library.
-
 
 CFLAGS := -ggdb3 -Os -DprojCOVERAGE_TEST=0 -std=gnu11
 LDFLAGS := -ggdb3 -Os -pthread -lpcap -lm
@@ -91,10 +89,3 @@ ${BUILD_DIR}/%.o : %.c
 
 clean:
 	-rm -rf $(BUILD_DIR)
-
-
-
-
-
-
-

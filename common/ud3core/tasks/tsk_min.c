@@ -43,6 +43,9 @@
 #include "TTerm.h"
 #include "cli_basic.h"
 
+#include "helper/vms_types.h"
+#include "helper/nvm.h"
+
 xTaskHandle tsk_min_TaskHandle;
 uint8 tsk_min_initVar = 0u;
 
@@ -257,6 +260,198 @@ void min_event(uint8_t command, uint8_t *min_payload, uint8_t len_payload){
     }
 }
 
+#define VMS_WRT_BLOCK      1
+#define VMS_WRT_MAP_HEADER 2
+#define VMS_WRT_MAP_DATA   3
+#define VMS_WRT_FLUSH      4
+#define VMS_WIRE_SIZE ((12+VMS_MAX_BRANCHES)*4)   //12+4 * 4 bytes
+
+uint32_t wire_to_uint32 (uint8_t * ptr){
+    uint32_t val;
+    val = (*ptr << 24);
+    ptr++;
+    val +=(*ptr << 16);
+    ptr++;
+    val += (*ptr << 8);
+    ptr++;
+    val += *ptr;
+    return val;
+}
+
+uint16_t wire_to_uint16 (uint8_t * ptr){
+    uint16_t val;
+    val += (*ptr << 8);
+    ptr++;
+    val += *ptr;
+    return val;
+}
+
+void write_blk_struct(VMS_BLOCK* blk, uint8_t* min_payload){
+    uint32_t temp = wire_to_uint32(min_payload);
+    blk->uid = temp;
+    min_payload+=4;
+    temp = wire_to_uint32(min_payload);
+    if(temp != 0){
+        temp--;
+        blk->nextBlocks[0] = (VMS_BLOCK*)&VMS_BLKS[temp];
+    }else{
+        blk->nextBlocks[0] = NULL;
+    }
+    min_payload+=4;
+    temp = wire_to_uint32(min_payload);
+    if(temp != 0){
+        temp--;
+        blk->nextBlocks[1] = (VMS_BLOCK*)&VMS_BLKS[temp];
+    }else{
+        blk->nextBlocks[1] = NULL;
+    }
+    min_payload+=4;
+    temp = wire_to_uint32(min_payload);
+    if(temp != 0){
+        temp--;
+        blk->nextBlocks[2] = (VMS_BLOCK*)&VMS_BLKS[temp];
+    }else{
+        blk->nextBlocks[2] = NULL;
+    }
+    min_payload+=4;
+    temp = wire_to_uint32(min_payload);
+    if(temp != 0){
+        temp--;
+        blk->nextBlocks[3] = (VMS_BLOCK*)&VMS_BLKS[temp];
+    }else{
+        blk->nextBlocks[3] = NULL;
+    }
+    min_payload+=4;
+    temp = wire_to_uint32(min_payload);
+    if(temp != 0){
+        temp--;
+        blk->offBlock = (VMS_BLOCK*)&VMS_BLKS[temp];
+    }else{
+        blk->offBlock = NULL;
+    }
+    min_payload+=4;
+    temp = wire_to_uint32(min_payload);
+    blk->behavior = temp;
+    min_payload+=4;
+    temp = wire_to_uint32(min_payload);
+    blk->type = temp;
+    min_payload+=4;
+    temp = wire_to_uint32(min_payload);
+    blk->target = temp;
+    min_payload+=4;
+    temp = wire_to_uint32(min_payload);
+    blk->thresholdDirection = temp;
+    min_payload+=4;
+    temp = wire_to_uint32(min_payload);
+    blk->targetFactor = temp;
+    min_payload+=4;
+    temp = wire_to_uint32(min_payload);
+    blk->param1 = temp;
+    min_payload+=4;
+    temp = wire_to_uint32(min_payload);
+    blk->param2 = temp;
+    min_payload+=4;
+    temp = wire_to_uint32(min_payload);
+    blk->param3 = temp;
+    min_payload+=4;
+    temp = wire_to_uint32(min_payload);
+    blk->period = temp;
+    min_payload+=4;
+    temp = wire_to_uint32(min_payload);
+    blk->flags = temp;
+    
+}
+
+void write_map_header_struct(MAPTABLE_HEADER* map_header, uint8_t* min_payload){
+    map_header->listEntries = *min_payload;
+    min_payload++;
+    map_header->programNumber = *min_payload;
+    min_payload++;
+    memcpy(map_header->name, min_payload, sizeof(map_header->name));
+}
+
+void write_map_entry_struct(MAPTABLE_ENTRY* map_entry, uint8_t* min_payload){
+    map_entry->startNote = *min_payload;
+    min_payload++;
+    map_entry->endNote = *min_payload;
+    min_payload++;
+    map_entry->data.noteFreq = wire_to_uint16(min_payload);
+    min_payload+=2;
+    map_entry->data.targetOT = *min_payload;
+    min_payload++;
+    map_entry->data.flags = *min_payload;
+    min_payload++;
+    uint32_t temp = wire_to_uint32(min_payload);
+    if(temp != 0){
+        temp--;
+        map_entry->data.VMS_Startblock = (VMS_BLOCK*)&VMS_BLKS[temp];
+    }else{
+        map_entry->data.VMS_Startblock = NULL;
+    }
+}
+
+
+void min_vms(uint8_t *min_payload, uint8_t len_payload){
+    
+    uint8_t packet_type = *min_payload;
+    min_payload++;
+    len_payload--;
+    
+    uint8_t n_blk;
+    
+    VMS_BLOCK* blk;
+    static MAPTABLE_HEADER* map_header;
+    static MAPTABLE_ENTRY* map_entry;
+    static uint8_t n_map_entry=0;
+    static uint16_t last_write_index=0;
+    
+    switch (packet_type){
+        case VMS_WRT_BLOCK:
+            if((len_payload % VMS_WIRE_SIZE) != 0){
+                alarm_push(ALM_PRIO_WARN, warn_min_vms_wrt, len_payload);
+                return;
+            }
+            blk = pvPortMalloc(sizeof(VMS_BLOCK));
+            write_blk_struct(blk, min_payload);           
+            nvm_write_buffer(MAPMEM_SIZE + (sizeof(VMS_BLOCK) * (blk->uid-1)), (uint8_t*)blk, sizeof(VMS_BLOCK));
+            vPortFree(blk);
+            blk=NULL;
+            break;
+        case VMS_WRT_MAP_HEADER:
+            map_header = pvPortMalloc(sizeof(MAPTABLE_HEADER)); 
+            write_map_header_struct(map_header, min_payload);
+            map_entry = pvPortMalloc(sizeof(MAPTABLE_ENTRY) * map_header->listEntries);
+            n_map_entry = 0;
+            console_print("Header\r\n");
+            break;
+        case VMS_WRT_MAP_DATA:
+            if(map_header != NULL || map_entry != NULL){
+                write_map_entry_struct(&map_entry[n_map_entry], min_payload);
+                n_map_entry++;
+                if(n_map_entry == map_header->listEntries){
+                    nvm_write_buffer(last_write_index, (uint8_t*)map_header, sizeof(MAPTABLE_HEADER));
+                    last_write_index += sizeof(MAPTABLE_HEADER);
+                    nvm_write_buffer(last_write_index, (uint8_t*)map_entry, sizeof(MAPTABLE_ENTRY) * map_header->listEntries);
+                    last_write_index += sizeof(MAPTABLE_ENTRY) * map_header->listEntries;
+                    vPortFree(map_entry);
+                    vPortFree(map_header);
+                    map_entry = NULL;
+                    map_header = NULL;
+                }
+            }else{
+                alarm_push(ALM_PRIO_WARN, warn_min_vms_map, len_payload);
+            }
+            break;
+        case VMS_WRT_FLUSH:
+            last_write_index=0;
+            vPortFree(map_entry);
+            vPortFree(map_header);
+            break;
+        default:
+            break;
+    }
+}
+
 void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_payload, uint8_t port)
 {
     if(min_id==debug_id && debug_port!=NULL){
@@ -331,6 +526,9 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
             return;
         case MIN_ID_DEBUG:
        
+            return;
+        case MIN_ID_VMS:
+            min_vms(min_payload, len_payload);
             return;
         default:
             break; 

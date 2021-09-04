@@ -328,20 +328,6 @@ uint8_t callback_ivoUART(parameter_entry * params, uint8_t index, TERMINAL_HANDL
     }
 }
 
-/*****************************************************************************
-* Callback for mch==16
-******************************************************************************/
-uint8_t callback_MchCopyFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
-    if(param.mch<16) return 1;
-
-    for(uint8_t i=1;i<16;i++){
-        midich[i].attack = midich[0].attack;
-        midich[i].decay = midich[0].decay;
-        midich[i].release = midich[0].release;
-    }
-
-    return 1;
-}
 
 /*****************************************************************************
 * Callback if the offtime parameter is changed

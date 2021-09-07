@@ -33,16 +33,29 @@
 #define NVM_DEBUG 0
 
 
-
 #ifndef SIMULATOR
     const volatile uint8_t* NVM_mapMem = (uint8_t*)NVM_START_ADDR; 
     const volatile uint8_t * NVM_blockMem = (uint8_t*)(NVM_START_ADDR + MAPMEM_SIZE);
     const VMS_BLOCK* VMS_BLKS = (VMS_BLOCK*)(NVM_START_ADDR + MAPMEM_SIZE);
 #else
-    uint8_t mem[0xFFFF];
-    uint8_t * NVM_mapMem = (uint8_t*)mem;
-    uint8_t * NVM_blockMem = (uint8_t*)(mem + MAPMEM_SIZE);
-    VMS_BLOCK* VMS_BLKS = (VMS_BLOCK*)(mem + MAPMEM_SIZE);
+    
+    uint8_t flash_pages[128][256];
+    
+    uint8_t * NVM_mapMem = (uint8_t*)flash_pages;
+    uint8_t * NVM_blockMem = (uint8_t*)(((uint8_t*)flash_pages) + MAPMEM_SIZE);
+    VMS_BLOCK* VMS_BLKS = (VMS_BLOCK*)(((uint8_t*)flash_pages) + MAPMEM_SIZE);
+    
+    uint8_t CyWriteRowData(uint8_t arr_n, uint16_t page, uint8_t* page_content){
+        page -= NVM_START_PAGE;
+        memcpy(&flash_pages[page][0], page_content, NVM_PAGE_SIZE);
+        return 0;
+    }
+    void CyFlushCache(){
+        
+    }
+    void CySetTemp(){
+        
+    }
 #endif
 
 void nvm_init(){
@@ -50,38 +63,59 @@ void nvm_init(){
     TERM_addCommand(CMD_nvm, "nvm","NVM-Test Func",0,&TERM_cmdListHead);  
 }
 
-#ifndef SIMULATOR
+static uint8_t *page_content=NULL;
+static uint16_t last_page=0xFFFF;
+static uint16_t page;
+
+
+uint8_t nvm_flush(){
+    CySetTemp();
+    uint32_t rc = CyWriteRowData((uint8)NVM_ARRAY, page, page_content);
+    CyFlushCache();
+    vPortFree(page_content);
+    page_content = NULL;
+    last_page=0xFFFF;
+    
+    return rc ? pdFAIL : pdTRUE;
+}
+
 uint8_t nvm_write_buffer(uint16_t index, uint8_t* buffer, int32_t len){
 
     uint16_t n_pages = 0;
 
-    uint8_t *page_content;
-    page_content = pvPortMalloc(NVM_PAGE_SIZE);
+
+    if(page_content==NULL){
+        page_content = pvPortMalloc(NVM_PAGE_SIZE);
+    }
     if(page_content == NULL) return pdFAIL;
     
     uint32_t write_offset = index % NVM_PAGE_SIZE;
 
     while(len>0){
         uint8_t * page_addr = (uint8_t*)NVM_mapMem + ((index / NVM_PAGE_SIZE)*NVM_PAGE_SIZE); 
-        uint16_t page = NVM_START_PAGE + (index / NVM_PAGE_SIZE);
+        page = NVM_START_PAGE + (index / NVM_PAGE_SIZE);
+        if(last_page==0xFFFF){
+            last_page = page;
+            memcpy(page_content, page_addr , NVM_PAGE_SIZE);
+        }
         if(page > 256) return pdFAIL;
         
-        memcpy(page_content, page_addr , NVM_PAGE_SIZE);
-
         uint32_t write_len = len;
         if(write_len+write_offset > NVM_PAGE_SIZE){
             write_len = NVM_PAGE_SIZE-write_offset;   
         }
         
+        
+        
+        if(last_page!=page){
+            CySetTemp();
+            uint32_t rc = CyWriteRowData((uint8)NVM_ARRAY, last_page, page_content);
+            CyFlushCache();
+            if(rc) return pdFAIL;
+            memcpy(page_content, page_addr , NVM_PAGE_SIZE);
+        }
         memcpy(page_content + write_offset, buffer , write_len);
-        
-        CySetTemp();
-        uint32_t rc = CyWriteRowData((uint8)NVM_ARRAY, page, page_content);
-        CyFlushCache();
-        
-        if(rc) return pdFAIL;
-        
-        
+        last_page=page;
         
         buffer+=write_len;
         
@@ -105,17 +139,8 @@ uint8_t nvm_write_buffer(uint16_t index, uint8_t* buffer, int32_t len){
 
     }
     
-    vPortFree(page_content);
     return pdPASS;
 }
-#else
-uint8_t nvm_write_buffer(uint16_t index, uint8_t* buffer, int32_t len){
-    
-    memcpy(&NVM_mapMem[index], buffer, len);
-    
-    return pdPASS;
-}   
-#endif
 
 void VMS_init_blk(VMS_BLOCK* blk){
     blk->uid = 0;
@@ -299,10 +324,6 @@ uint32_t NVM_get_blk_cnt(const VMS_BLOCK* blk){
 
 uint8_t CMD_nvm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     
-    //if(argCount == 0) return TERM_CMD_EXIT_SUCCESS;
-    uint32_t index = BLOCKMEM_SIZE;
-    
-    VMS_BLOCK* temp = pvPortMalloc(sizeof(VMS_BLOCK)*4);
     
     ttprintf("Size of %u\r\n", sizeof(VMS_BLOCK));
     
@@ -320,7 +341,6 @@ uint8_t CMD_nvm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
         map = VMS_print_map(handle, map);
     }
     
-    vPortFree(temp);
     
     return TERM_CMD_EXIT_SUCCESS; 
 }

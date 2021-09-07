@@ -397,8 +397,6 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
     min_payload++;
     len_payload--;
     
-    uint8_t n_blk;
-    
     VMS_BLOCK* blk;
     static MAPTABLE_HEADER* map_header;
     static MAPTABLE_ENTRY* map_entry;
@@ -422,7 +420,6 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
             write_map_header_struct(map_header, min_payload);
             map_entry = pvPortMalloc(sizeof(MAPTABLE_ENTRY) * map_header->listEntries);
             n_map_entry = 0;
-            console_print("Header\r\n");
             break;
         case VMS_WRT_MAP_DATA:
             if(map_header != NULL || map_entry != NULL){
@@ -444,6 +441,7 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
             break;
         case VMS_WRT_FLUSH:
             last_write_index=0;
+            nvm_flush();
             vPortFree(map_entry);
             vPortFree(map_header);
             break;

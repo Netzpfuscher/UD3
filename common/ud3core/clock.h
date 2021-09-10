@@ -27,7 +27,8 @@
     
 #include <device.h>
     
-extern volatile uint32_t l_time;
+extern volatile uint32_t l_time;  //1 ms
+extern volatile uint64_t h_time;
     
 void clock_tick();
 void clock_reset_inc();

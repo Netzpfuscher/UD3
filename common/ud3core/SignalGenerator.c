@@ -32,6 +32,7 @@
 #include <device.h>
 #include <stdlib.h>
 #include "MidiController.h"
+#include "mapper.h"
 #include "telemetry.h"
 
 // Tone generator channel status (updated according to MIDI messages)
@@ -333,6 +334,9 @@ void SigGen_limit(){ //<------------------------Todo Ontime and so on
         Midi_voice[c].outputOT = ot;
         if(Midi_voice[c].outputOT) tt.n.midi_voices.value++;
         uint32_t out = Midi_voice[c].outputOT<<12;
+       // if(!out){
+       //     SigGen_channel_enable(c,0);  
+       // }
         interrupter_set_pw_vol(c, param.pw, out);
         channel[c].volume = out;
         
@@ -370,9 +374,9 @@ void SigGen_switch_synth(uint8_t synth){
     SigGen_kill(); 
 }
 
-uint8_t CMD_SynthMon(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+void Synthmon_MIDI(TERMINAL_HANDLE * handle){
+    
     uint32_t freq=0;
-    uint8_t channels=N_CHANNEL;
     
     TERM_sendVT100Code(handle, _VT100_CURSOR_DISABLE,0);
     TERM_sendVT100Code(handle, _VT100_CLS,0);
@@ -380,10 +384,63 @@ uint8_t CMD_SynthMon(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     ttprintf("-----------------------------------------------------------\r\n");
     while(Term_check_break(handle,100)){
         TERM_setCursorPos(handle, 3,1);
-        if(param.synth == SYNTH_SID || param.synth == SYNTH_SID_QCW) channels=SID_CHANNELS;
-        if(param.synth == SYNTH_MIDI || param.synth == SYNTH_MIDI_QCW) channels=N_CHANNEL;
         
-        for(uint8_t i=0;i<channels;i++){
+        for(uint8_t i=0;i<N_CHANNEL;i++){
+
+            freq= Midi_voice[i].freqCurrent/10;
+            uint8_t noteOrigin=Midi_voice[i].currNoteOrigin;
+            
+            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 0);
+            ttprintf("Ch:   ");
+            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 0);
+            ttprintf("Ch: %u", i+1);
+            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 7);
+            ttprintf("Freq:      ");
+            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 7);
+            ttprintf("Freq: %u", freq);
+            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 20);
+            ttprintf("Prog:   ");
+            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 20);
+            ttprintf("Prog: %u", channelData[noteOrigin].currProgramm);
+    
+            MAPTABLE_HEADER* map = MAPPER_findHeader(channelData[noteOrigin].currProgramm);
+            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 28);
+            ttprintf("Name:                  ", map->name);
+            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 28);
+            ttprintf("Name: %s", map->name);
+            
+            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 50);
+            ttprintf("Vol: ",i+1);
+
+            uint8_t cnt = (channel[i].volume>>16)/12;
+
+            for(uint8_t w=0;w<10;w++){
+                if(w<cnt){
+                    ttprintf("o");
+                }else{
+                    ttprintf(" ");
+                }
+            }
+            ttprintf("\r\n");
+        }
+    }
+    ttprintf("\r\n");
+    TERM_sendVT100Code(handle, _VT100_CURSOR_ENABLE,0);    
+    
+}
+
+void Synthmon_SID(TERMINAL_HANDLE * handle){
+    
+    uint32_t freq=0;
+    
+    TERM_sendVT100Code(handle, _VT100_CURSOR_DISABLE,0);
+    TERM_sendVT100Code(handle, _VT100_CLS,0);
+    ttprintf("Synthesizer monitor    [CTRL+C] for quit\r\n");
+    ttprintf("-----------------------------------------------------------\r\n");
+    while(Term_check_break(handle,100)){
+        TERM_setCursorPos(handle, 3,1);
+        
+        for(uint8_t i=0;i<SID_CHANNELS;i++){
             ttprintf("Ch:   Freq:      \r");
             if(channel[i].volume>0){
                 freq=channel[i].freq;
@@ -407,6 +464,15 @@ uint8_t CMD_SynthMon(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     }
     ttprintf("\r\n");
     TERM_sendVT100Code(handle, _VT100_CURSOR_ENABLE,0);
+    
+    
+}
+
+
+
+uint8_t CMD_SynthMon(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+    if(param.synth == SYNTH_SID || param.synth == SYNTH_SID_QCW) Synthmon_SID(handle);
+    if(param.synth == SYNTH_MIDI || param.synth == SYNTH_MIDI_QCW) Synthmon_MIDI(handle);
     return TERM_CMD_EXIT_SUCCESS;
 }
 

@@ -45,6 +45,7 @@
 
 #include "helper/vms_types.h"
 #include "helper/nvm.h"
+#include "ADSREngine.h"
 
 xTaskHandle tsk_min_TaskHandle;
 uint8 tsk_min_initVar = 0u;
@@ -291,11 +292,15 @@ void write_blk_struct(VMS_BLOCK* blk, uint8_t* min_payload){
     blk->uid = temp;
     min_payload+=4;
     temp = wire_to_uint32(min_payload);
-    if(temp != 0){
-        temp--;
-        blk->nextBlocks[0] = (VMS_BLOCK*)&VMS_BLKS[temp];
-    }else{
-        blk->nextBlocks[0] = NULL;
+    if(temp==(uint32)VMS_DIE){
+         blk->nextBlocks[0] = VMS_DIE;
+    } else {    
+        if(temp != 0){
+            temp--;
+            blk->nextBlocks[0] = (VMS_BLOCK*)&VMS_BLKS[temp];
+        }else{
+            blk->nextBlocks[0] = NULL;
+        }
     }
     min_payload+=4;
     temp = wire_to_uint32(min_payload);

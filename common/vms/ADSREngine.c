@@ -44,7 +44,8 @@
 #include "cli_common.h"
 #include "interrupter.h"
 //#include "HIDController.h"
-
+#include "TTerm.h"
+#include "tasks/tsk_cli.h"
 
 DLLObject * VMS_listHead = 0;
 uint8_t * VMSBLOCKS = 0;
@@ -94,11 +95,11 @@ void VMS_run(){
 }
 
 inline uint32_t SYS_timeSince(uint32_t start){  //normal us  --> schnellere Zeitbasis
-    return (l_time - start);
+    return ((h_time >> 22) - start);
 }
 
 inline uint32_t SYS_getTime(){
-    return l_time;
+    return (h_time >> 22);
 }
 
 void VMS_resetVoice(SynthVoice * voice, VMS_BLOCK * startBlock){
@@ -317,7 +318,6 @@ void VMS_removeBlockFromList(VMS_listDataObject * target){
         default:
             break;
     }
-    
     vPortFree(data);
     DLL_remove(currObject);
 }
@@ -343,7 +343,6 @@ void VMS_addBlockToList(VMS_BLOCK * block, SynthVoice * voice){
         default:
             break;
     }
-    
     DLL_add(data, VMS_listHead);
 }
 

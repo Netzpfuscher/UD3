@@ -193,6 +193,7 @@ void tsk_midi_TaskProc(void *pvParameters) {
         if(param.synth==SYNTH_MIDI ||param.synth==SYNTH_MIDI_QCW){
             
     		if (xQueueReceive(qMIDI_rx, msg+1, 1)) { //+1 copy only midi msg not midi-cable (byte 0)
+                Midi_SOFHandler();
     			Midi_run(msg);
     			while (xQueueReceive(qMIDI_rx, msg+1, 0)) { //+1 copy only midi msg not midi-cable (byte 0)
     				Midi_run(msg);

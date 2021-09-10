@@ -172,6 +172,15 @@ void VMS_print_blk(TERMINAL_HANDLE* handle, VMS_BLOCK* blk, uint8_t indent){
             ttprintf("%*sNext %i: 0x%08X\r\n", indent, "", i, blk->nextBlocks[i]);
         }
     }
+    
+    if(blk->offBlock == NO_BLK){
+        ttprintf("%*soffBlock: No Block\r\n", indent, "");   
+    }else if(blk->offBlock < (VMS_BLOCK*)4096){
+        ttprintf("%*soffBlock: ID %u\r\n", indent, "", blk->offBlock);
+    }else{
+        ttprintf("%*soffBlock: 0x%08X\r\n", indent, "", blk->offBlock);
+    }
+    
 
     ttprintf("%*sBehavior: ", indent, "");
     switch(blk->behavior){
@@ -323,24 +332,29 @@ uint32_t NVM_get_blk_cnt(const VMS_BLOCK* blk){
 
 
 uint8_t CMD_nvm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
-    
-    
-    ttprintf("Size of %u\r\n", sizeof(VMS_BLOCK));
-    
-
-    uint32_t n_blocks = NVM_get_blk_cnt(VMS_BLKS);
-    ttprintf("NVM MEM --> %u blocks:\r\n", n_blocks);
-    
-    for(uint32_t i=0;i<n_blocks;i++){
-        VMS_print_blk(handle, (VMS_BLOCK*)&VMS_BLKS[i], 4);
+    if(argCount==0 || strcmp(args[0], "-?") == 0){
+        ttprintf("nvm [maps|blocks]\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
     }
     
-    MAPTABLE_HEADER* map = (MAPTABLE_HEADER*) NVM_mapMem;
+    if(strcmp(args[0], "maps") == 0){
+        MAPTABLE_HEADER* map = (MAPTABLE_HEADER*) NVM_mapMem;
     
-    while(map){
-        map = VMS_print_map(handle, map);
+        while(map){
+            map = VMS_print_map(handle, map);
+        }
+        return TERM_CMD_EXIT_SUCCESS;
     }
     
+    if(strcmp(args[0], "blocks") == 0){
+        uint32_t n_blocks = NVM_get_blk_cnt(VMS_BLKS);
+        ttprintf("NVM block count: %u\r\n", n_blocks);
+        
+        for(uint32_t i=0;i<n_blocks;i++){
+            VMS_print_blk(handle, (VMS_BLOCK*)&VMS_BLKS[i], 4);
+        }
+        return TERM_CMD_EXIT_SUCCESS;
+    }
     
     return TERM_CMD_EXIT_SUCCESS; 
 }

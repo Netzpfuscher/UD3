@@ -33,7 +33,7 @@
 const struct{
     MAPTABLE_HEADER h0;
     MAPTABLE_ENTRY h0e0;
-} DEFMAP = {.h0 = {.programNumber = 0, .listEntries = 1} , .h0e0 = {.startNote = 0, .endNote = 127, .data.VMS_Startblock = (VMS_BLOCK*)&ATTAC, .data.flags = MAP_ENA_DAMPER | MAP_ENA_STEREO | MAP_ENA_VOLUME | MAP_ENA_PITCHBEND | MAP_FREQ_MODE, .data.noteFreq = 0, .data.targetOT = 255}};
+} DEFMAP = {.h0 = {.programNumber = 0, .listEntries = 1, .name = "DEFMAP"} , .h0e0 = {.startNote = 0, .endNote = 127, .data.VMS_Startblock = (VMS_BLOCK*)&ATTAC, .data.flags = MAP_ENA_DAMPER | MAP_ENA_STEREO | MAP_ENA_VOLUME | MAP_ENA_PITCHBEND | MAP_FREQ_MODE, .data.noteFreq = 0, .data.targetOT = 255}};
 
 void MAPPER_map(uint8_t note, uint8_t velocity, uint8_t channel){
     MAPTABLE_DATA * maps[MIDI_VOICECOUNT];
@@ -130,7 +130,8 @@ void MAPPER_map(uint8_t note, uint8_t velocity, uint8_t channel){
 uint8_t MAPPER_getMaps(uint8_t note, MAPTABLE_HEADER * table, MAPTABLE_DATA ** dst){
     uint8_t currScan = 0;
     uint8_t foundCount = 0;
-    MAPTABLE_ENTRY * entries = (MAPTABLE_ENTRY *) (table++);
+    MAPTABLE_HEADER * temp = table+1;
+    MAPTABLE_ENTRY * entries = (MAPTABLE_ENTRY *)temp;
     for(currScan = 0; currScan < table->listEntries && foundCount < MIDI_VOICECOUNT; currScan++){
         if(entries[currScan].endNote >= note && entries[currScan].startNote <= note){
             dst[foundCount++] = &entries[currScan].data;
@@ -180,8 +181,14 @@ MAPTABLE_HEADER * MAPPER_findHeader(uint8_t prog){
     MAPTABLE_HEADER * currHeader = (MAPTABLE_HEADER *) NVM_mapMem;
     while(currHeader->listEntries != 0 && currHeader->listEntries != 0xff){
         if(currHeader->programNumber == prog) return currHeader;
-        currHeader += sizeof(MAPTABLE_HEADER) + sizeof(MAPTABLE_ENTRY) * currHeader->listEntries;
-        if(((uint32_t) currHeader - (uint32_t) NVM_mapMem) >= MAPMEM_SIZE) break;
+        
+        uint8_t* calc = (uint8_t*)currHeader;
+        calc += sizeof(MAPTABLE_HEADER) + sizeof(MAPTABLE_ENTRY) * currHeader->listEntries;
+        currHeader = (MAPTABLE_HEADER *)calc;  //WARNING!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        
+        //currHeader += sizeof(MAPTABLE_HEADER) + sizeof(MAPTABLE_ENTRY) * currHeader->listEntries;
+        
+        //if(((uint32_t) currHeader - (uint32_t) NVM_mapMem) >= MAPMEM_SIZE) break;
     }
     //return default maptable
     return (MAPTABLE_HEADER *) &DEFMAP;

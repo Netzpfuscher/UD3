@@ -44,6 +44,11 @@ void process_midi(uint8_t* ptr, uint16_t len) {
 		case 1:
 			midiMsg[1] = c;
 			midi_count = 2;
+            if((midiMsg[0] & 0xF0) == 0xC0){
+                midi_count = 0;
+                midiMsg[2]=0;
+                USBMIDI_1_callbackLocalMidiEvent(0, midiMsg);
+            }
 			break;
 		case 2:
 			midiMsg[2] = c;

@@ -49,7 +49,7 @@
 // ststic must present for multiple instances of component
 
 static double Tdiv;		    // time period per bit increment
-static uint32 tune_word[2];       // DDS tune word
+uint32 `$INSTANCE_NAME`_tune_word[2];       // DDS tune word
 
 
 //==============================================================================

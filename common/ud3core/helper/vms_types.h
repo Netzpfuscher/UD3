@@ -87,6 +87,7 @@ struct _SynthVoice_{
     
     uint32_t    noiseTarget;
     uint32_t    noiseCurrent;
+    uint32_t    noiseRaw;
     int32_t     noiseFactor;
     
     uint8_t     currNote;

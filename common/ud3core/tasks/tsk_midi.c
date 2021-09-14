@@ -179,7 +179,7 @@ void tsk_midi_TaskProc(void *pvParameters) {
 	/* `#START TASK_INIT_CODE` */
 
 
-    SigGen_init();
+//    SigGen_init();
     VMS_init();
     Midi_init();
     Midi_setEnabled(1);

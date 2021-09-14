@@ -112,6 +112,17 @@
     #define `$INSTANCE_NAME`_A0_PTR	((reg8 *)     `$INSTANCE_NAME`_sD24_DDSdp_u0__A0_REG)
     #define `$INSTANCE_NAME`_A1_PTR	((reg8 *)     `$INSTANCE_NAME`_sD24_DDSdp_u0__A1_REG)
     #define `$INSTANCE_NAME`_STEP1_PTR	((reg8 *) `$INSTANCE_NAME`_sD24_DDSdp_u0__D1_REG)
+    
+    #define `$INSTANCE_NAME`DMA_LO_STEP0_PTR ((reg16 *)`$INSTANCE_NAME`_sD24_DDSdp_u0__16BIT_D0_REG)
+    #define `$INSTANCE_NAME`DMA_HI_STEP0_PTR ((reg16 *)`$INSTANCE_NAME`_sD24_DDSdp_u2__16BIT_D0_REG)
+    #define `$INSTANCE_NAME`DMA_LO_STEP1_PTR ((reg16 *)`$INSTANCE_NAME`_sD24_DDSdp_u0__16BIT_D1_REG)
+    #define `$INSTANCE_NAME`DMA_HI_STEP1_PTR ((reg16 *)`$INSTANCE_NAME`_sD24_DDSdp_u2__16BIT_D1_REG)
+    
+    #define `$INSTANCE_NAME`DMA_LO_A0_PTR ((reg16 *)`$INSTANCE_NAME`_sD24_DDSdp_u0__16BIT_A0_REG)
+    #define `$INSTANCE_NAME`DMA_HI_A0_PTR ((reg16 *)`$INSTANCE_NAME`_sD24_DDSdp_u2__16BIT_A0_REG)
+    #define `$INSTANCE_NAME`DMA_LO_A1_PTR ((reg16 *)`$INSTANCE_NAME`_sD24_DDSdp_u0__16BIT_A1_REG)
+    #define `$INSTANCE_NAME`DMA_HI_A1_PTR ((reg16 *)`$INSTANCE_NAME`_sD24_DDSdp_u2__16BIT_A1_REG)
+  
 #elif (`$INSTANCE_NAME`_BUS_WIDTH == 32u)
 	#define `$INSTANCE_NAME`_STEP0_PTR	((reg8 *) `$INSTANCE_NAME`_sD32_DDSdp_u0__D0_REG)
     #define `$INSTANCE_NAME`_A0_PTR	((reg8 *)     `$INSTANCE_NAME`_sD32_DDSdp_u0__A0_REG)
@@ -140,7 +151,7 @@ void `$INSTANCE_NAME`_Rand(uint8_t chan);
 void `$INSTANCE_NAME`_Disable_ch(uint8_t chan);
 
 
-
+extern uint32 `$INSTANCE_NAME`_tune_word[2];
 
 //uint8  `$INSTANCE_NAME`_SetAcc( uint32 value );      // Set DDS accumulator value
 //uint32 `$INSTANCE_NAME`_GetAcc();                    // Get DDS accumulator value 

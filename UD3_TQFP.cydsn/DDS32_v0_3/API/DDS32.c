@@ -49,7 +49,7 @@
 // ststic must present for multiple instances of component
 
 static double Tdiv;		    // time period per bit increment
-static uint32 tune_word[2];       // DDS tune word
+uint32 `$INSTANCE_NAME`_tune_word[2];       // DDS tune word
 
 
 //==============================================================================
@@ -60,7 +60,7 @@ static uint32 tune_word[2];       // DDS tune word
 void `$INSTANCE_NAME`_Init()
 {   
     // make record of the input clock frequency into period   
-    Tdiv = (double) (DDS_RESOLUTION / `$INSTANCE_NAME`_CLOCK_FREQ *2);	
+    Tdiv = (double) (DDS_RESOLUTION / `$INSTANCE_NAME`_CLOCK_FREQ);	
     
     //Initialized = true;
 
@@ -141,15 +141,15 @@ uint8 `$INSTANCE_NAME`_SetFrequency(uint8_t chan, double freq )
     uint32 tmp = (uint32) (freq * Tdiv + 0.5);           // calculate tune word
     if ( (tmp < 1) || (tmp > TUNE_WORD_MAX) )  return 0; // fail -> exit if outside of the valid raange // todo: allow exact 0?
           
-    tune_word[chan] = tmp;
+    `$INSTANCE_NAME`_tune_word[chan] = tmp;
     
     //todo: tune_word not used anywhere
     switch(chan){
         case 0:
-            `$INSTANCE_NAME`_WriteStep0(tune_word[chan]);
+            `$INSTANCE_NAME`_WriteStep0(`$INSTANCE_NAME`_tune_word[chan]);
         break;
         case 1:
-            `$INSTANCE_NAME`_WriteStep1(tune_word[chan]);
+            `$INSTANCE_NAME`_WriteStep1(`$INSTANCE_NAME`_tune_word[chan]);
         break;
     }    
          
@@ -161,33 +161,37 @@ uint8 `$INSTANCE_NAME`_SetFrequency(uint8_t chan, double freq )
 uint32 `$INSTANCE_NAME`_SetFrequency_FP8(uint8_t chan, uint32 freq )
 { 
     if(chan>1) return 0;
-    if(freq==0){
-        `$INSTANCE_NAME`_Disable_ch(chan);  
-        return 0;
-    }
         
     // todo: uint64 for possible overflow?    
-    uint32_t tmp = (((uint64_t)freq * (1<<16))/ (`$INSTANCE_NAME`_CLOCK_FREQ /2) );           // calculate tune word
+    uint32_t tmp = (((uint64_t)freq * (1<<16))/ (`$INSTANCE_NAME`_CLOCK_FREQ) );           // calculate tune word
 
-    if ( (tmp < 1) || (tmp > TUNE_WORD_MAX) ){
-        `$INSTANCE_NAME`_Disable_ch(chan);  
-        return 0; // fail -> exit if outside of the valid raange // todo: allow exact 0?
-    }
+    if ( (tmp < 1) || (tmp > TUNE_WORD_MAX) )  return 0; // fail -> exit if outside of the valid raange // todo: allow exact 0?
           
-    tune_word[chan] = tmp;
+    `$INSTANCE_NAME`_tune_word[chan] = tmp;
     
     //todo: tune_word not used anywhere
     switch(chan){
         case 0:
-            `$INSTANCE_NAME`_WriteStep0(tune_word[chan]);
+            `$INSTANCE_NAME`_WriteStep0(`$INSTANCE_NAME`_tune_word[chan]);
         break;
         case 1:
-            `$INSTANCE_NAME`_WriteStep1(tune_word[chan]);
+            `$INSTANCE_NAME`_WriteStep1(`$INSTANCE_NAME`_tune_word[chan]);
         break;
     }    
          
     return freq>>8;
 
+}
+
+uint32 `$INSTANCE_NAME`_CalcTune_FP8(uint32 freq )
+{ 
+       
+    // todo: uint64 for possible overflow?    
+    uint32_t tmp = (((uint64_t)freq * (1<<16))/ (`$INSTANCE_NAME`_CLOCK_FREQ /2) );           // calculate tune word
+
+    if ( (tmp < 1) || (tmp > TUNE_WORD_MAX) )  return 0; // fail -> exit if outside of the valid raange // todo: allow exact 0?
+
+    return tmp;
 }
 
 void `$INSTANCE_NAME`_Rand(uint8_t chan){

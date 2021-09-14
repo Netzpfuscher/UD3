@@ -26,6 +26,6 @@
     #include <stdint.h>
         
     void synthcode_QMIDI(uint32_t r);
-    void synthcode_MIDI();    
+    void synthcode_MIDI(uint32_t r);    
     
 #endif

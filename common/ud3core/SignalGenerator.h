@@ -72,9 +72,9 @@
     
     Q16n16  Q16n16_mtof(Q16n16 midival_fractional);
     
-    void SigGen_channel_enable(uint8_t ch, uint8_t ena);
+    void SigGen_channel_enable(uint8_t ch, uint32_t ena);
     uint16_t SigGen_channel_freq_fp8(uint8_t ch, uint32_t freq);
-    void SigGen_noise(uint8_t ch, uint8_t ena, uint32_t rnd);
+    void SigGen_noise(uint8_t ch, uint32_t ena, uint32_t rnd);
     void SigGen_init();
     void SigGen_switch_synth(uint8_t synth);
     void SigGen_kill();

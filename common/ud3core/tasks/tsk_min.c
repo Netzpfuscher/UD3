@@ -690,7 +690,7 @@ void tsk_min_TaskProc(void *pvParameters) {
             }
             xSemaphoreGive(min_Semaphore);
             if(bytes_waiting==0){
-                vTaskDelay(1);
+                vTaskDelay(2);
             }
         }
         

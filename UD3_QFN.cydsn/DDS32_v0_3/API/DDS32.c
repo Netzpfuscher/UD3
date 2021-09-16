@@ -60,7 +60,7 @@ uint32 `$INSTANCE_NAME`_tune_word[2];       // DDS tune word
 void `$INSTANCE_NAME`_Init()
 {   
     // make record of the input clock frequency into period   
-    Tdiv = (double) (DDS_RESOLUTION / `$INSTANCE_NAME`_CLOCK_FREQ *2);	
+    Tdiv = (double) (DDS_RESOLUTION / `$INSTANCE_NAME`_CLOCK_FREQ);	
     
     //Initialized = true;
 
@@ -163,7 +163,7 @@ uint32 `$INSTANCE_NAME`_SetFrequency_FP8(uint8_t chan, uint32 freq )
     if(chan>1) return 0;
         
     // todo: uint64 for possible overflow?    
-    uint32_t tmp = (((uint64_t)freq * (1<<16))/ (`$INSTANCE_NAME`_CLOCK_FREQ /2) );           // calculate tune word
+    uint32_t tmp = (((uint64_t)freq * (1<<16))/ (`$INSTANCE_NAME`_CLOCK_FREQ) );           // calculate tune word
 
     if ( (tmp < 1) || (tmp > TUNE_WORD_MAX) )  return 0; // fail -> exit if outside of the valid raange // todo: allow exact 0?
           

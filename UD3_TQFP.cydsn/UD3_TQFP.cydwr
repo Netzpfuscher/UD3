@@ -1620,7 +1620,11 @@
   <Group key="DMA">
     <Data key="2dfce217-1794-49fc-9f78-716a76e8e77c" value="0" />
     <Data key="5a5b75d8-8669-41f4-a985-1e9dde7cf2d8" value="7" />
+    <Data key="38c54247-1883-4d27-a1c2-9c085edeb652" value="4" />
+    <Data key="47eb16ed-a604-4dbc-89ae-01d95ba56fba" value="4" />
     <Data key="4980b51b-23c7-4c52-bb97-d0c7862efe52" value="7" />
+    <Data key="dcd1fc89-c351-4660-b349-60899bd8d0ff" value="4" />
+    <Data key="ffa3388e-5d25-43e9-b2c1-7a644a710381" value="4" />
   </Group>
   <Group key="DWRInstGuidMapping">
     <Group key="Clock">
@@ -1684,15 +1688,24 @@
       <Data key="3c6661a5-9630-4e43-87ef-7d1ab83f15f4" value="TR1_CL_DMA" />
       <Data key="4c33e2da-12d7-4024-90e0-c7c5349fc02d" value="MUX_DMA" />
       <Data key="5a5b75d8-8669-41f4-a985-1e9dde7cf2d8" value="therm_dma" />
+      <Data key="8a673ad3-4ab1-45c0-9800-81e7ea162a3e" value="ADC_DMA_peak" />
       <Data key="16bbcbf1-3688-460c-8a50-cd3468d19953" value="PWMB_PSB_DMA" />
+      <Data key="27b6499a-11a0-4df0-a965-509bbfdc16c4" value="Ch2_DMA" />
+      <Data key="38c54247-1883-4d27-a1c2-9c085edeb652" value="Hyper_Ch1" />
+      <Data key="47eb16ed-a604-4dbc-89ae-01d95ba56fba" value="Hyper_Ch2" />
+      <Data key="68c81b15-7bba-4577-b2d6-0328f6ae9ea7" value="Ch4_DMA" />
       <Data key="76d651a8-74ab-44c9-ae67-e42605189f68" value="QCW_CL_DMA" />
       <Data key="659c56f8-ea77-48c8-9e0a-c51edfd013d5" value="filter_to_fram_DMA" />
       <Data key="0992f4b5-ba67-4ad0-a246-49757a31913d" value="ram_to_filter_DMA" />
       <Data key="1802e906-d19e-4cae-ba09-b980b6f0cb00" value="FBC_to_ram_DMA" />
       <Data key="4980b51b-23c7-4c52-bb97-d0c7862efe52" value="ADC_DMA" />
+      <Data key="b2d103cd-d9c2-4568-a0d6-b4febf493079" value="Ch1_DMA" />
       <Data key="b26ca7a3-5648-4cf3-9f10-7d833e5488e7" value="PSBINIT_DMA" />
       <Data key="b9085c23-556a-4c14-b995-04b3b6831e19" value="fram_to_PWMA_DMA" />
       <Data key="c3fa8456-01a6-4e64-8ec6-fc2a4eb0782b" value="int1_dma" />
+      <Data key="d747af87-687d-4261-832c-6dc8174b4ba1" value="Ch3_DMA" />
+      <Data key="dcd1fc89-c351-4660-b349-60899bd8d0ff" value="Hyper_Ch4" />
+      <Data key="ffa3388e-5d25-43e9-b2c1-7a644a710381" value="Hyper_Ch3" />
     </Group>
     <Group key="Interrupt">
       <Data key="2b269b96-47a4-4e9a-937e-76d4080bb211/8c70c28a-acdf-4af1-b803-ce0c58edb918" value="USBMIDI_1_ep_3" />

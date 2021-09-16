@@ -1619,12 +1619,18 @@
   <Data key="DataVersionKey" value="2" />
   <Group key="DMA">
     <Data key="2dfce217-1794-49fc-9f78-716a76e8e77c" value="0" />
+    <Data key="4c33e2da-12d7-4024-90e0-c7c5349fc02d" value="2" />
     <Data key="5a5b75d8-8669-41f4-a985-1e9dde7cf2d8" value="7" />
-    <Data key="38c54247-1883-4d27-a1c2-9c085edeb652" value="4" />
-    <Data key="47eb16ed-a604-4dbc-89ae-01d95ba56fba" value="4" />
-    <Data key="4980b51b-23c7-4c52-bb97-d0c7862efe52" value="7" />
-    <Data key="dcd1fc89-c351-4660-b349-60899bd8d0ff" value="4" />
-    <Data key="ffa3388e-5d25-43e9-b2c1-7a644a710381" value="4" />
+    <Data key="8a673ad3-4ab1-45c0-9800-81e7ea162a3e" value="4" />
+    <Data key="27b6499a-11a0-4df0-a965-509bbfdc16c4" value="3" />
+    <Data key="38c54247-1883-4d27-a1c2-9c085edeb652" value="6" />
+    <Data key="47eb16ed-a604-4dbc-89ae-01d95ba56fba" value="6" />
+    <Data key="68c81b15-7bba-4577-b2d6-0328f6ae9ea7" value="3" />
+    <Data key="4980b51b-23c7-4c52-bb97-d0c7862efe52" value="2" />
+    <Data key="b2d103cd-d9c2-4568-a0d6-b4febf493079" value="3" />
+    <Data key="d747af87-687d-4261-832c-6dc8174b4ba1" value="3" />
+    <Data key="dcd1fc89-c351-4660-b349-60899bd8d0ff" value="6" />
+    <Data key="ffa3388e-5d25-43e9-b2c1-7a644a710381" value="6" />
   </Group>
   <Group key="DWRInstGuidMapping">
     <Group key="Clock">

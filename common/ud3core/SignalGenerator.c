@@ -302,20 +302,18 @@ void SigGen_calc_hyper(uint8_t voice, uint32_t word){
         
         uint32_t phase;
         
-        if(Midi_voice[voice].hyperVoicePhase<10){
-            phase = 10;
-        }else if(Midi_voice[voice].hyperVoicePhase > (0xFF-10)){
-            phase = 0xFF-10;
+        if(Midi_voice[voice].hyperVoicePhase<20){
+            phase = 20;
+        }else if(Midi_voice[voice].hyperVoicePhase > (0xFF-200)){
+            phase = 0xFF-20;
         }else{
             phase = Midi_voice[voice].hyperVoicePhase;
         }
-        hyper[voice][0]=word;
-        hyper[voice][1]=word;
         
         //ttdf("Voice: %u, Word: %u\r\n", voice, word);
         
-        //hyper[voice][0] = (word * 0xFF) /  phase;
-        //hyper[voice][1] = (word * 0xFF) /  (0xFF - phase);
+        hyper[voice][0] = (word * 0xFF) /  phase;
+        hyper[voice][1] = (word * 0xFF) /  (0xFF - phase);
         
         CyDmaChEnable(Hyper_Chan[voice], 1);
     
@@ -379,22 +377,22 @@ void SigGen_setNoteTPR(uint8_t voice, uint32_t freqTenths){
         switch(voice){
             case 0:
                 DDS32_1_SetFrequency_FP8(0,freq);
-                //SigGen_calc_hyper(voice, DDS32_1_tune_word[0]);
+                SigGen_calc_hyper(voice, DDS32_1_tune_word[0]);
                 DDS32_1_Enable_ch(0);
             break;
             case 1:
                 DDS32_1_SetFrequency_FP8(1,freq);
-                //SigGen_calc_hyper(voice, DDS32_1_tune_word[1]);
+                SigGen_calc_hyper(voice, DDS32_1_tune_word[1]);
                 DDS32_1_Enable_ch(1);
             break;
             case 2:
                 DDS32_2_SetFrequency_FP8(0,freq);
-                //SigGen_calc_hyper(voice, DDS32_2_tune_word[0]);
+                SigGen_calc_hyper(voice, DDS32_2_tune_word[0]);
                 DDS32_2_Enable_ch(0);
             break;
             case 3:
-                 DDS32_2_SetFrequency_FP8(1,freq);
-                //SigGen_calc_hyper(voice, DDS32_2_tune_word[1]);
+                DDS32_2_SetFrequency_FP8(1,freq);
+                SigGen_calc_hyper(voice, DDS32_2_tune_word[1]);
                 DDS32_2_Enable_ch(1);
             break;
         }
@@ -457,7 +455,7 @@ void SigGen_init(){
     
     SigGen_SID_init();
     
-   // init_hyper();
+    init_hyper();
 
     for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
         channel[ch].volume=0;

@@ -39,105 +39,6 @@
 // Tone generator channel status (updated according to MIDI messages)
 CHANNEL channel[N_CHANNEL];
 
-volatile uint32_t hyper[4][2];
-
-uint8 Hyper_Chan[4];
-
-void init_hyper(){
- /* Defines for Hyper_Ch1 */
-    #define Hyper_Ch1_BYTES_PER_BURST 4
-    #define Hyper_Ch1_REQUEST_PER_BURST 1
-    #define Hyper_Ch1_SRC_BASE (CYDEV_SRAM_BASE)
-    #define Hyper_Ch1_DST_BASE (CYDEV_PERIPH_BASE)
-
-    /* Variable declarations for Hyper_Ch1 */
-    /* Move these variable declarations to the top of the function */
-    uint8 Hyper_Ch1_TD[4];
-
-    /* DMA Configuration for Hyper_Ch1 */
-    Hyper_Chan[0] = Hyper_Ch1_DmaInitialize(Hyper_Ch1_BYTES_PER_BURST, Hyper_Ch1_REQUEST_PER_BURST, 
-        HI16(Hyper_Ch1_SRC_BASE), HI16(Hyper_Ch1_DST_BASE));
-    Hyper_Ch1_TD[0] = CyDmaTdAllocate();
-    Hyper_Ch1_TD[1] = CyDmaTdAllocate();
-    Hyper_Ch1_TD[2] = CyDmaTdAllocate();
-    Hyper_Ch1_TD[3] = CyDmaTdAllocate();
-   
-    CyDmaTdSetConfiguration(Hyper_Ch1_TD[0], 2, Hyper_Ch1_TD[1], TD_AUTO_EXEC_NEXT);
-    CyDmaTdSetConfiguration(Hyper_Ch1_TD[1], 1, Hyper_Ch1_TD[2], 0);
-    CyDmaTdSetConfiguration(Hyper_Ch1_TD[2], 2, Hyper_Ch1_TD[3], TD_AUTO_EXEC_NEXT);
-    CyDmaTdSetConfiguration(Hyper_Ch1_TD[3], 1, Hyper_Ch1_TD[0], 0);
-    CyDmaTdSetAddress(Hyper_Ch1_TD[0], LO16((uint32)&hyper[0][0]), LO16((uint32)((uint16_t *)DDS32_1_sD24_DDSdp_u0__16BIT_D0_REG)));
-    CyDmaTdSetAddress(Hyper_Ch1_TD[1], LO16((uint32)&hyper[0][0])+2, LO16((uint32)((uint16_t *)DDS32_1_sD24_DDSdp_u2__16BIT_D0_REG)));
-    CyDmaTdSetAddress(Hyper_Ch1_TD[2], LO16((uint32)&hyper[0][1]), LO16((uint32)((uint16_t *)DDS32_1_sD24_DDSdp_u0__16BIT_D0_REG)));
-    CyDmaTdSetAddress(Hyper_Ch1_TD[3], LO16((uint32)&hyper[0][1])+2, LO16((uint32)((uint16_t *)DDS32_1_sD24_DDSdp_u2__16BIT_D0_REG)));
-    CyDmaChSetInitialTd(Hyper_Chan[0], Hyper_Ch1_TD[0]);
-    
-    
-    
-    /* DMA Configuration for Hyper_Ch2 */
-    Hyper_Chan[1] = Hyper_Ch2_DmaInitialize(Hyper_Ch1_BYTES_PER_BURST, Hyper_Ch1_REQUEST_PER_BURST, 
-        HI16(Hyper_Ch1_SRC_BASE), HI16(Hyper_Ch1_DST_BASE));
-    Hyper_Ch1_TD[0] = CyDmaTdAllocate();
-    Hyper_Ch1_TD[1] = CyDmaTdAllocate();
-    Hyper_Ch1_TD[2] = CyDmaTdAllocate();
-    Hyper_Ch1_TD[3] = CyDmaTdAllocate();
-   
-    CyDmaTdSetConfiguration(Hyper_Ch1_TD[0], 2, Hyper_Ch1_TD[1], TD_AUTO_EXEC_NEXT);
-    CyDmaTdSetConfiguration(Hyper_Ch1_TD[1], 1, Hyper_Ch1_TD[2], 0);
-    CyDmaTdSetConfiguration(Hyper_Ch1_TD[2], 2, Hyper_Ch1_TD[3], TD_AUTO_EXEC_NEXT);
-    CyDmaTdSetConfiguration(Hyper_Ch1_TD[3], 1, Hyper_Ch1_TD[0], 0);
-    CyDmaTdSetAddress(Hyper_Ch1_TD[0], LO16((uint32)&hyper[1][0]), LO16((uint32)((uint16_t *)DDS32_1_sD24_DDSdp_u0__16BIT_D1_REG)));
-    CyDmaTdSetAddress(Hyper_Ch1_TD[1], LO16((uint32)&hyper[1][0])+2, LO16((uint32)((uint16_t *)DDS32_1_sD24_DDSdp_u2__16BIT_D1_REG)));
-    CyDmaTdSetAddress(Hyper_Ch1_TD[2], LO16((uint32)&hyper[1][1]), LO16((uint32)((uint16_t *)DDS32_1_sD24_DDSdp_u0__16BIT_D1_REG)));
-    CyDmaTdSetAddress(Hyper_Ch1_TD[3], LO16((uint32)&hyper[1][1])+2, LO16((uint32)((uint16_t *)DDS32_1_sD24_DDSdp_u2__16BIT_D1_REG)));
-    CyDmaChSetInitialTd(Hyper_Chan[1], Hyper_Ch1_TD[0]);
-    
-    
-    /* DMA Configuration for Hyper_Ch3 */
-    Hyper_Chan[3] = Hyper_Ch3_DmaInitialize(Hyper_Ch1_BYTES_PER_BURST, Hyper_Ch1_REQUEST_PER_BURST, 
-        HI16(Hyper_Ch1_SRC_BASE), HI16(Hyper_Ch1_DST_BASE));
-    Hyper_Ch1_TD[0] = CyDmaTdAllocate();
-    Hyper_Ch1_TD[1] = CyDmaTdAllocate();
-    Hyper_Ch1_TD[2] = CyDmaTdAllocate();
-    Hyper_Ch1_TD[3] = CyDmaTdAllocate();
-   
-    CyDmaTdSetConfiguration(Hyper_Ch1_TD[0], 2, Hyper_Ch1_TD[1], TD_AUTO_EXEC_NEXT);
-    CyDmaTdSetConfiguration(Hyper_Ch1_TD[1], 1, Hyper_Ch1_TD[2], 0);
-    CyDmaTdSetConfiguration(Hyper_Ch1_TD[2], 2, Hyper_Ch1_TD[3], TD_AUTO_EXEC_NEXT);
-    CyDmaTdSetConfiguration(Hyper_Ch1_TD[3], 1, Hyper_Ch1_TD[0], 0);
-    CyDmaTdSetAddress(Hyper_Ch1_TD[0], LO16((uint32)&hyper[2][0]), LO16((uint32)((uint16_t *)DDS32_2_sD24_DDSdp_u0__16BIT_D0_REG)));
-    CyDmaTdSetAddress(Hyper_Ch1_TD[1], LO16((uint32)&hyper[2][0])+2, LO16((uint32)((uint16_t *)DDS32_2_sD24_DDSdp_u2__16BIT_D0_REG)));
-    CyDmaTdSetAddress(Hyper_Ch1_TD[2], LO16((uint32)&hyper[2][1]), LO16((uint32)((uint16_t *)DDS32_2_sD24_DDSdp_u0__16BIT_D0_REG)));
-    CyDmaTdSetAddress(Hyper_Ch1_TD[3], LO16((uint32)&hyper[2][1])+2, LO16((uint32)((uint16_t *)DDS32_2_sD24_DDSdp_u2__16BIT_D0_REG)));
-    CyDmaChSetInitialTd(Hyper_Chan[2], Hyper_Ch1_TD[0]);
-    
-    
-    /* DMA Configuration for Hyper_Ch3 */
-    Hyper_Chan[3] = Hyper_Ch4_DmaInitialize(Hyper_Ch1_BYTES_PER_BURST, Hyper_Ch1_REQUEST_PER_BURST, 
-        HI16(Hyper_Ch1_SRC_BASE), HI16(Hyper_Ch1_DST_BASE));
-    Hyper_Ch1_TD[0] = CyDmaTdAllocate();
-    Hyper_Ch1_TD[1] = CyDmaTdAllocate();
-    Hyper_Ch1_TD[2] = CyDmaTdAllocate();
-    Hyper_Ch1_TD[3] = CyDmaTdAllocate();
-   
-    CyDmaTdSetConfiguration(Hyper_Ch1_TD[0], 2, Hyper_Ch1_TD[1], TD_AUTO_EXEC_NEXT);
-    CyDmaTdSetConfiguration(Hyper_Ch1_TD[1], 1, Hyper_Ch1_TD[2], 0);
-    CyDmaTdSetConfiguration(Hyper_Ch1_TD[2], 2, Hyper_Ch1_TD[3], TD_AUTO_EXEC_NEXT);
-    CyDmaTdSetConfiguration(Hyper_Ch1_TD[3], 1, Hyper_Ch1_TD[0], 0);
-    CyDmaTdSetAddress(Hyper_Ch1_TD[0], LO16((uint32)&hyper[3][0]), LO16((uint32)((uint16_t *)DDS32_2_sD24_DDSdp_u0__16BIT_D1_REG)));
-    CyDmaTdSetAddress(Hyper_Ch1_TD[1], LO16((uint32)&hyper[3][0])+2, LO16((uint32)((uint16_t *)DDS32_2_sD24_DDSdp_u2__16BIT_D1_REG)));
-    CyDmaTdSetAddress(Hyper_Ch1_TD[2], LO16((uint32)&hyper[3][1]), LO16((uint32)((uint16_t *)DDS32_2_sD24_DDSdp_u0__16BIT_D1_REG)));
-    CyDmaTdSetAddress(Hyper_Ch1_TD[3], LO16((uint32)&hyper[3][1])+2, LO16((uint32)((uint16_t *)DDS32_2_sD24_DDSdp_u2__16BIT_D1_REG)));
-    CyDmaChSetInitialTd(Hyper_Chan[3], Hyper_Ch1_TD[0]);
-    
-
-    /*CyDmaChEnable(Hyper_Chan[0], 1);
-    CyDmaChEnable(Hyper_Chan[1], 1);
-    CyDmaChEnable(Hyper_Chan[2], 1);
-    CyDmaChEnable(Hyper_Chan[3], 1);*/
-    
-
-}
 
 
 CY_ISR(isr_synth) {
@@ -287,45 +188,6 @@ size_t SigGen_get_channel(uint8_t ch){
     return pdFALSE;
  }
 
-void SigGen_calc_hyper(uint8_t voice, uint32_t word){
-
-    if(param.burst_on<255){
-        Midi_voice[voice].hyperVoiceCount=1;
-        Midi_voice[voice].hyperVoicePhase = param.burst_on;
-    }else{
-        
-        Midi_voice[voice].hyperVoiceCount=0;
-    }
-    
-
-    if(Midi_voice[voice].hyperVoiceCount){
-        
-        uint32_t phase;
-        
-        if(Midi_voice[voice].hyperVoicePhase<20){
-            phase = 20;
-        }else if(Midi_voice[voice].hyperVoicePhase > (0xFF-200)){
-            phase = 0xFF-20;
-        }else{
-            phase = Midi_voice[voice].hyperVoicePhase;
-        }
-        
-        //ttdf("Voice: %u, Word: %u\r\n", voice, word);
-        
-        hyper[voice][0] = (word * 0xFF) /  phase;
-        hyper[voice][1] = (word * 0xFF) /  (0xFF - phase);
-        
-        CyDmaChEnable(Hyper_Chan[voice], 1);
-    
-    }else{
-        CyDmaChDisable(Hyper_Chan[voice]);
-        hyper[voice][0] = word;
-        hyper[voice][1] = word;  
-        
-    }
-    
-}
-
 
 
 uint16_t SigGen_channel_freq_fp8(uint8_t ch, uint32_t freq){
@@ -377,22 +239,18 @@ void SigGen_setNoteTPR(uint8_t voice, uint32_t freqTenths){
         switch(voice){
             case 0:
                 DDS32_1_SetFrequency_FP8(0,freq);
-                SigGen_calc_hyper(voice, DDS32_1_tune_word[0]);
                 DDS32_1_Enable_ch(0);
             break;
             case 1:
                 DDS32_1_SetFrequency_FP8(1,freq);
-                SigGen_calc_hyper(voice, DDS32_1_tune_word[1]);
                 DDS32_1_Enable_ch(1);
             break;
             case 2:
                 DDS32_2_SetFrequency_FP8(0,freq);
-                SigGen_calc_hyper(voice, DDS32_2_tune_word[0]);
                 DDS32_2_Enable_ch(0);
             break;
             case 3:
                 DDS32_2_SetFrequency_FP8(1,freq);
-                SigGen_calc_hyper(voice, DDS32_2_tune_word[1]);
                 DDS32_2_Enable_ch(1);
             break;
         }
@@ -455,7 +313,6 @@ void SigGen_init(){
     
     SigGen_SID_init();
     
-    init_hyper();
 
     for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
         channel[ch].volume=0;

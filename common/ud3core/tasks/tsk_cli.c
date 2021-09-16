@@ -112,6 +112,11 @@ static const char * AC_tune[] = {
     "sec"
 };
 
+static const char * AC_nvm[] = {
+    "blocks",
+    "maps"
+};
+
 static const char * AC_set_get[] = {
     "attack",
     "autotune_s",
@@ -300,9 +305,7 @@ void tsk_cli_Start(void) {
         usb_handle = TERM_createNewHandle(stream_printf,&usb_port,pdTRUE,&TERM_cmdListHead,NULL,"usb");
 
         TERM_addCommand(CMD_signals, "signals","For debugging",0,&TERM_cmdListHead);
-        
-        nvm_init();
-    
+           
         TERM_addCommandConstAC(CMD_tr, "tr", "Transient [start/stop]", AC_start_stop,&TERM_cmdListHead);
         TERM_addCommandConstAC(CMD_con, "con","Prints the connections",AC_con,&TERM_cmdListHead);
         TERM_addCommandConstAC(CMD_alarms, "alarms","Alarms [get/roll/reset]",AC_alarms,&TERM_cmdListHead);
@@ -319,7 +322,9 @@ void tsk_cli_Start(void) {
         
         TERM_addCommandConstAC(CMD_get, "get", "Usage get [param]", AC_set_get,&TERM_cmdListHead);     
         TERM_addCommandConstAC(CMD_set, "set","Usage set [param] [value]",AC_set_get,&TERM_cmdListHead);
-     
+        
+        TERM_addCommandConstAC(CMD_nvm, "nvm","NVM-Test Func", AC_nvm,&TERM_cmdListHead); 
+        
         TERM_addCommandConstAC(CMD_qcw, "qcw","QCW [start/stop]",AC_start_stop,&TERM_cmdListHead);
         TERM_addCommand(CMD_relay, "relay","Switch user relay 3/4",0,&TERM_cmdListHead);
         TERM_addCommand(CMD_reset, "reset","Resets UD3",0,&TERM_cmdListHead);

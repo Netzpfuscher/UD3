@@ -281,7 +281,7 @@ uint32_t wire_to_uint32 (uint8_t * ptr){
 
 uint16_t wire_to_uint16 (uint8_t * ptr){
     uint16_t val;
-    val += (*ptr << 8);
+    val = (*ptr << 8);
     ptr++;
     val += *ptr;
     return val;
@@ -449,6 +449,14 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
             nvm_flush();
             vPortFree(map_entry);
             vPortFree(map_header);
+            for(uint8_t i=0;i<NUM_MIN_CON;i++){
+                if(socket_info[i].socket==SOCKET_CONNECTED){
+                    TERMINAL_HANDLE* handle = min_handle[i];
+                    ttprintf("\r\n VMS-Block write finished: %u\r\n", nvm_get_blk_cnt(VMS_BLKS));
+                    
+                    ttprintfEcho("\r\n\r\n%s@%s>", handle->currUserName, TERM_DEVICE_NAME);
+                }
+            }
             break;
         default:
             break;

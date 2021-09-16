@@ -58,10 +58,6 @@
     }
 #endif
 
-void nvm_init(){
-   
-    TERM_addCommand(CMD_nvm, "nvm","NVM-Test Func",0,&TERM_cmdListHead);  
-}
 
 static uint8_t *page_content=NULL;
 static uint16_t last_page=0xFFFF;
@@ -320,7 +316,7 @@ MAPTABLE_HEADER* VMS_print_map(TERMINAL_HANDLE* handle, MAPTABLE_HEADER* map){
     }
 }
 
-uint32_t NVM_get_blk_cnt(const VMS_BLOCK* blk){
+uint32_t nvm_get_blk_cnt(const VMS_BLOCK* blk){
     uint32_t cnt=0;
     while(1){
         if(blk->uid==0) break;
@@ -347,7 +343,7 @@ uint8_t CMD_nvm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     }
     
     if(strcmp(args[0], "blocks") == 0){
-        uint32_t n_blocks = NVM_get_blk_cnt(VMS_BLKS);
+        uint32_t n_blocks = nvm_get_blk_cnt(VMS_BLKS);
         ttprintf("NVM block count: %u\r\n", n_blocks);
         
         for(uint32_t i=0;i<n_blocks;i++){

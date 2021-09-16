@@ -44,5 +44,6 @@
     uint8_t CMD_nvm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
     uint8_t nvm_write_buffer(uint16_t index, uint8_t* buffer, int32_t len);
     uint8_t nvm_flush();
+    uint32_t nvm_get_blk_cnt(const VMS_BLOCK* blk);
     
 #endif

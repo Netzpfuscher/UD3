@@ -254,6 +254,7 @@ parameter_entry confparam[] = {
    
 void eeprom_load(TERMINAL_HANDLE * handle){
     EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,handle);
+    if(param.offtime<3) param.offtime=3;
     i2t_set_limit(configuration.max_const_i,configuration.max_fault_i,10000);
     update_ivo_uart();
     update_visibilty();

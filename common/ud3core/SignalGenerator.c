@@ -39,8 +39,6 @@
 // Tone generator channel status
 CHANNEL channel[N_CHANNEL];
 
-
-
 CY_ISR(isr_synth) {
     uint32_t r = SG_Timer_ReadCounter();
     
@@ -274,7 +272,7 @@ void SigGen_setNoteTPR(uint8_t voice, uint32_t freqTenths){
 }
 
 
-void SigGen_limit(){ //<------------------------Todo Ontime and so on
+void SigGen_limit(){
     
     uint32_t totalDuty = 0;
     uint8_t c = 0;
@@ -282,15 +280,11 @@ void SigGen_limit(){ //<------------------------Todo Ontime and so on
     
 
     for(; c < MIDI_VOICECOUNT; c++){
-        
         uint32_t ourDuty = (((uint32)127*(uint32)param.pw)/(1270000ul/Midi_voice[c].freqCurrent));
-        
-        ourDuty = (ourDuty * Midi_voice[c].otCurrent) / (MAX_VOL>>12); //MAX_VOL>>12 = 2048
-        
+        ourDuty = (ourDuty * Midi_voice[c].otCurrent) / (MAX_VOL>>12); //MAX_VOL>>12 = 2048  
         totalDuty += ourDuty;
     }
     
-    //UART_print("duty = %d%% -> scale = %d%%m\r\n", totalDuty / 10000, scale);
     if(totalDuty>configuration.max_tr_duty - param.temp_duty){
         out_pw = (param.pw * (configuration.max_tr_duty - param.temp_duty)) / totalDuty;   
     }
@@ -438,6 +432,9 @@ void Synthmon_SID(TERMINAL_HANDLE * handle){
 uint8_t CMD_SynthMon(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     if(param.synth == SYNTH_SID || param.synth == SYNTH_SID_QCW) Synthmon_SID(handle);
     if(param.synth == SYNTH_MIDI || param.synth == SYNTH_MIDI_QCW) Synthmon_MIDI(handle);
+    if(param.synth == 0){
+        ttprintf("\r\nNo synthesizer active\r\n");   
+    }
     return TERM_CMD_EXIT_SUCCESS;
 }
 

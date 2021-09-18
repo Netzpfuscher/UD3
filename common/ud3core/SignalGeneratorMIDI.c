@@ -29,21 +29,19 @@
 #include "interrupter.h"
 #include "qcw.h"
 #include "MidiController.h"
-
+#include <stdlib.h>
 
 void synthcode_MIDI(uint32_t r){
-    
     uint32_t rnd = rand();
-    uint8_t flag[N_CHANNEL];
-    static uint8_t old_flag[N_CHANNEL];
+    uint8_t flag;
 	for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
-        flag[ch]=0;
+        flag=0;
         if(channel[ch].volume > 0 && channel[ch].freq){
-
             if (Midi_voice[ch].noiseCurrent && (r / channel[ch].halfcount) % 2 > 0) {
-                flag[ch]=1;
+                flag=1;
 			} 
-            if(flag[ch] > old_flag[ch]) SigGen_noise(ch, Midi_voice[ch].noiseCurrent,rnd);
+            if(flag > channel[ch].old_flag) SigGen_noise(ch, Midi_voice[ch].noiseCurrent,rnd);
+            channel[ch].old_flag = flag;
         }
 	}
 }

@@ -109,10 +109,10 @@ void synthcode_SID(uint32_t r){
     }
     
     uint32_t rnd = rand();
-    uint8_t flag[SID_CHANNELS];
-    static uint8_t old_flag[SID_CHANNELS];
-	for (uint8_t ch = 0; ch < SID_CHANNELS; ch++) {
-        flag[ch]=0;
+    uint8_t flag;
+
+    for (uint8_t ch = 0; ch < SID_CHANNELS; ch++) {
+        flag=0;
         compute_adsr_sid(ch);
         if(channel[ch].volume > 0 && channel[ch].freq){
             tt.n.midi_voices.value++;
@@ -123,13 +123,14 @@ void synthcode_SID(uint32_t r){
             }
 
             if(sid_frm.test[ch]){
-                SigGen_noise(ch, 1 ,0);
+                SigGen_noise(ch, 1 ,0);  //Not for noise only to set accu to 0
             }
 
             if (sid_frm.wave[ch] && (r / channel[ch].halfcount) % 2 > 0) {
-                flag[ch]=1;
+                flag=1;
 			}  
-            if(flag[ch] > old_flag[ch]) SigGen_noise(ch, sid_frm.wave[ch],rnd);
+            if(flag > channel[ch].old_flag) SigGen_noise(ch, sid_frm.wave[ch],rnd);
+            channel[ch].old_flag = flag;
         }
 	}
 }

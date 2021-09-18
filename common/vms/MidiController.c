@@ -108,6 +108,8 @@ void Midi_run(uint8_t* ReceivedDataBuffer){
             uint8_t channel = ReceivedDataBuffer[1] & 0xf;
             uint8_t cmd = ReceivedDataBuffer[1] & 0xf0;
             
+            if(filter.channel[channel]==pdFALSE) return;
+            
             if(cmd == MIDI_CMD_NOTE_OFF){
                 
                 //step through all voices and check if the note that was just switched off is playing on any, if it is and the channel matches, we switch it off

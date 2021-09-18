@@ -53,6 +53,9 @@ void MAPPER_map(uint8_t note, uint8_t velocity, uint8_t channel){
         }else{
             currNoteFreq = maps[requestedChannels]->noteFreq;
         }
+        
+        if(currNoteFreq < filter.min || currNoteFreq > filter.max) return;
+        
         if(maps[requestedChannels]->flags & MAP_ENA_PITCHBEND) currNoteFreq = ((currNoteFreq * channelData[channel].bendFactor) / 20000); else currNoteFreq *= 10;
 
 

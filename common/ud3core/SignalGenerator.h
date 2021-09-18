@@ -54,9 +54,9 @@
     uint16_t halfcount;
     uint32_t freq;
     uint8_t adsr_state;
-    uint8_t sustain;
     uint8_t old_gate;
     uint8_t noise;
+    uint8_t  old_flag;
     } CHANNEL;
     
     extern CHANNEL channel[N_CHANNEL];

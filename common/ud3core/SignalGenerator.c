@@ -36,7 +36,7 @@
 #include "telemetry.h"
 #include "tasks/tsk_cli.h"
 
-// Tone generator channel status (updated according to MIDI messages)
+// Tone generator channel status
 CHANNEL channel[N_CHANNEL];
 
 
@@ -189,7 +189,6 @@ size_t SigGen_get_channel(uint8_t ch){
  }
 
 
-
 uint16_t SigGen_channel_freq_fp8(uint8_t ch, uint32_t freq){
     switch(ch){
         case 0:
@@ -274,37 +273,36 @@ void SigGen_setNoteTPR(uint8_t voice, uint32_t freqTenths){
     }
 }
 
-uint8_t SigGen_masterVol = 255;
 
 void SigGen_limit(){ //<------------------------Todo Ontime and so on
     
     uint32_t totalDuty = 0;
-    uint32_t scale = 1000;
     uint8_t c = 0;
+    uint32_t out_pw=param.pw;
     
+
     for(; c < MIDI_VOICECOUNT; c++){
-        uint32_t ourDuty = (Midi_voice[c].otCurrent * Midi_voice[c].freqCurrent) / 10; //TODO preemtively increase the frequency used for calculation if noise is on
-        if(Midi_voice[c].hyperVoiceCount == 2 && Midi_voice[c].noiseCurrent == 0) ourDuty *= 2;
+        
+        uint32_t ourDuty = (((uint32)127*(uint32)param.pw)/(1270000ul/Midi_voice[c].freqCurrent));
+        
+        ourDuty = (ourDuty * Midi_voice[c].otCurrent) / (MAX_VOL>>12); //MAX_VOL>>12 = 2048
+        
         totalDuty += ourDuty;
     }
     
     //UART_print("duty = %d%% -> scale = %d%%m\r\n", totalDuty / 10000, scale);
-    
+    if(totalDuty>configuration.max_tr_duty - param.temp_duty){
+        out_pw = (param.pw * (configuration.max_tr_duty - param.temp_duty)) / totalDuty;   
+    }
     
     tt.n.midi_voices.value = 0;
     for(c = 0; c < MIDI_VOICECOUNT; c++){
-        uint32_t ot;
-        ot = (Midi_voice[c].otCurrent * scale) / 1330;
-        ot = (ot * SigGen_masterVol) / 255;
-        Midi_voice[c].outputOT = ot;
-        if(Midi_voice[c].outputOT){
+        if(Midi_voice[c].otCurrent){
             tt.n.midi_voices.value++;
         }
-        uint32_t out = Midi_voice[c].outputOT<<12;
-        interrupter_set_pw_vol(c, param.pw, out);
+        uint32_t out = Midi_voice[c].otCurrent<<12;
+        interrupter_set_pw_vol(c, out_pw, out);
         channel[c].volume = out;
-        
-        
         SigGen_channel_enable(c, out);
     }
 }

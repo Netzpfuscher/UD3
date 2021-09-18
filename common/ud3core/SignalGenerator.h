@@ -50,10 +50,7 @@
     };
     
     typedef struct __channel__ {
-	uint8_t midich;	// Channel of midi (0 - 15)
-	uint8_t miditone;  // Midi's tone number (0-127)
 	int32_t volume;	// Volume (0 - 127) 7bit.16bit
-	uint8_t updated;   // Was it updated?
     uint16_t halfcount;
     uint32_t freq;
     uint8_t adsr_state;
@@ -66,11 +63,9 @@
 
     extern struct _filter filter;
 
-    typedef uint32_t Q16n16;
     
     extern xQueueHandle qSID;
     
-    Q16n16  Q16n16_mtof(Q16n16 midival_fractional);
     
     void SigGen_channel_enable(uint8_t ch, uint32_t ena);
     uint16_t SigGen_channel_freq_fp8(uint8_t ch, uint32_t freq);

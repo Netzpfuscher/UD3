@@ -101,7 +101,7 @@ void Midi_run(uint8_t* ReceivedDataBuffer){
     /* If the device is not configured yet, or the device is suspended, then
      * we don't need to run the demo since we can't send any data.
      */
-    
+
     //a new Midi data packet was received
         if(Midi_enabled){
 
@@ -149,7 +149,7 @@ void Midi_run(uint8_t* ReceivedDataBuffer){
                     
                     //stop the timers
                     SigGen_kill();
-                    
+  
                     //reset all bend factors
                     uint8_t currChannel = 0;
                     for(;currChannel < 16; currChannel++){

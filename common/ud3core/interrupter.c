@@ -369,7 +369,7 @@ uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, TERMINAL_HA
             if(configuration.ext_interrupter  && param.synth == SYNTH_OFF){
                 interrupter_update_ext();
             }else if (param.synth == SYNTH_MIDI || param.synth == SYNTH_MIDI_QCW){
-                update_midi_duty();
+                SigGen_limit();
             }
         break; 
     }
@@ -389,7 +389,9 @@ uint8_t callback_TRPFunction(parameter_entry * params, uint8_t index, TERMINAL_H
     
     interrupter.pw = param.pw;
     
-    update_midi_duty();
+    if (param.synth == SYNTH_MIDI || param.synth == SYNTH_MIDI_QCW){
+        SigGen_limit();
+    }
     
 	if (interrupter.mode!=INTR_MODE_OFF) {
 		update_interrupter();

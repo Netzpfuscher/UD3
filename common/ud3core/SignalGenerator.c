@@ -275,11 +275,10 @@ void SigGen_setNoteTPR(uint8_t voice, uint32_t freqTenths){
 void SigGen_limit(){
     
     uint32_t totalDuty = 0;
-    uint8_t c = 0;
     uint32_t out_pw=param.pw;
     
 
-    for(; c < MIDI_VOICECOUNT; c++){
+    for(uint32_t c=0; c < MIDI_VOICECOUNT; c++){
         uint32_t ourDuty = (((uint32)127*(uint32)param.pw)/(1270000ul/Midi_voice[c].freqCurrent));
         ourDuty = (ourDuty * Midi_voice[c].otCurrent) / (MAX_VOL>>12); //MAX_VOL>>12 = 2048  
         totalDuty += ourDuty;
@@ -290,7 +289,7 @@ void SigGen_limit(){
     }
     
     tt.n.midi_voices.value = 0;
-    for(c = 0; c < MIDI_VOICECOUNT; c++){
+    for(uint32_t c = 0; c < MIDI_VOICECOUNT; c++){
         if(Midi_voice[c].otCurrent){
             tt.n.midi_voices.value++;
         }

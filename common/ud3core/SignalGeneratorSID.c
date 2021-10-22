@@ -109,9 +109,9 @@ void synthcode_SID(uint32_t r){
     }
     
     uint32_t rnd = rand();
-    uint8_t flag;
+    uint32_t flag;
 
-    for (uint8_t ch = 0; ch < SID_CHANNELS; ch++) {
+    for (uint32_t ch = 0; ch < SID_CHANNELS; ch++) {
         flag=0;
         compute_adsr_sid(ch);
         if(channel[ch].volume > 0 && channel[ch].freq){

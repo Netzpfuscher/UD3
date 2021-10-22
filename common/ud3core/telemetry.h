@@ -73,7 +73,6 @@ typedef struct __tele_human__ {
     TELE i2t_i;
     TELE primary_i;
     TELE midi_voices;
-    TELE duty;
     TELE fres;
     TELE tx_datarate;
     TELE rx_datarate;

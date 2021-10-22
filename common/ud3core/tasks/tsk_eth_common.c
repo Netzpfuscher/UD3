@@ -238,7 +238,6 @@ void process_sid(uint8_t* ptr, uint16_t len) {
                         }
                     }
                 }
-                tt.n.duty.value = dutycycle;
                 if(dutycycle>configuration.max_tr_duty - param.temp_duty){
                     SID_frame.master_pw = (param.pw * (configuration.max_tr_duty - param.temp_duty)) / dutycycle;
                 }else{
@@ -352,7 +351,6 @@ void process_min_sid(uint8_t* ptr, uint16_t len) {
         ptr++;
         n_frames--;
         
-        tt.n.duty.value = dutycycle;
         if(dutycycle>configuration.max_tr_duty - param.temp_duty){
             SID_frame.master_pw = (param.pw * (configuration.max_tr_duty - param.temp_duty)) / dutycycle;
         }else{

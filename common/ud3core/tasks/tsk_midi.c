@@ -82,68 +82,6 @@ void USBMIDI_1_callbackLocalMidiEvent(uint8 cable, uint8 *midiMsg) {
 }
 
 
-void update_midi_duty(){
-    /*
-    if(!tt.n.midi_voices.value) return;
-    uint32_t dutycycle=0;
-
-    for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {    
-        if (channel[ch].volume > 0){
-            dutycycle+= ((uint32)channel[ch].sustain*(uint32)param.pw)/(127000ul/(uint32)channel[ch].freq);
-        }
-	}
-  
-    tt.n.duty.value = dutycycle;
-    if(dutycycle>(configuration.max_tr_duty-param.temp_duty)){
-        interrupter.pw = (param.pw * (configuration.max_tr_duty-param.temp_duty)) / dutycycle;
-    }else{
-        interrupter.pw = param.pw;
-    }*/
-}
-/*
-void reflect() {
-	uint8_t ch;
-	uint8_t mch;
-    uint32_t dutycycle=0;
-    uint32_t pb;
-	// Reflect the status of the updated tone generator channel & MIDI channel on the port
-	for (ch = 0; ch < N_CHANNEL; ch++) {
-		mch = channel[ch].midich;
-		if (channel[ch].updated || midich[mch].updated) {
-			if (channel[ch].adsr_state) {
-                pb = ((((uint32_t)midich[mch].pitchbend*midich[mch].bendrange)<<10) / PITCHBEND_DIVIDER)<<6;
-                channel[ch].freq = Q16n16_mtof((channel[ch].miditone<<16)+pb);
-                channel[ch].halfcount = (SG_CLOCK_HALFCOUNT<<14) / (channel[ch].freq>>2);
-                SigGen_channel_freq_fp8(ch,channel[ch].freq>>8);
-                channel[ch].freq = channel[ch].freq >>16;
-                
-                if(channel[ch].adsr_state==ADSR_PENDING) channel[ch].adsr_state = ADSR_ATTACK;
-                if(filter.channel[ch]==0 || channel[ch].freq < filter.min || channel[ch].freq > filter.max){
-                    channel[ch].adsr_state = ADSR_IDLE;   
-                    channel[ch].volume = 0;
-                    channel[ch].sustain = 0;
-                }
-			}
-			channel[ch].updated = 0;													// Mission channel update work done
-		    midich[mch].updated = 0; // MIDI channel update work done
-        }
-        
-        if (channel[ch].sustain > 0){
-            dutycycle+= ((uint32)channel[ch].sustain*(uint32)param.pw)/(127000ul/(uint32)channel[ch].freq);
-        }
-	}
-   
-    tt.n.duty.value = dutycycle;
-    if(dutycycle>(configuration.max_tr_duty-param.temp_duty)){
-        interrupter.pw = (param.pw * (configuration.max_tr_duty-param.temp_duty)) / dutycycle;
-    }else{
-        interrupter.pw = param.pw;
-    }
-    
-}*/
-
-
-
 /* `#END` */
 /* ------------------------------------------------------------------------ */
 /*

@@ -95,19 +95,7 @@ void init_telemetry(){
     tt.n.fres.resend_time = TT_SLOW;
     tt.n.fres.chart = TT_NO_TELEMETRY;
     tt.n.fres.gauge = TT_NO_TELEMETRY;
-    
-    tt.n.duty.name = "SynthDutycycle";
-    tt.n.duty.value = 0;
-    tt.n.duty.min = 0;
-    tt.n.duty.max = 100;
-    tt.n.duty.offset = 0;
-    tt.n.duty.unit = TT_UNIT_PERCENT;
-    tt.n.duty.divider = 10;
-    tt.n.duty.high_res = pdTRUE;
-    tt.n.duty.resend_time = TT_FAST;
-    tt.n.duty.chart = TT_NO_TELEMETRY;
-    tt.n.duty.gauge = TT_NO_TELEMETRY;
-    
+     
     tt.n.driver_v.name = "Driver_Voltage";
     tt.n.driver_v.value = 0;
     tt.n.driver_v.min = 0;

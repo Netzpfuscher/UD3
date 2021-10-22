@@ -276,7 +276,7 @@ void calculate_rms(void) {
             if(interrupter.mode == INTR_MODE_TR){
                 update_interrupter();
             }else{
-                update_midi_duty();
+                SigGen_limit();
             }
         }
         old_curr_setpoint = param.temp_duty;

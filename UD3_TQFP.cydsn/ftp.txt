@@ -1,3 +1,4 @@
+quit
 open 192.168.50.62
 root
 root

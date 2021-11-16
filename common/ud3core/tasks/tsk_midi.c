@@ -128,7 +128,7 @@ void tsk_midi_TaskProc(void *pvParameters) {
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
 
-        if(param.synth==SYNTH_MIDI ||param.synth==SYNTH_MIDI_QCW){
+        if(param.synth==SYNTH_MIDI){
             
     		if (xQueueReceive(qMIDI_rx, msg+1, 1)) { //+1 copy only midi msg not midi-cable (byte 0)
                 Midi_SOFHandler();

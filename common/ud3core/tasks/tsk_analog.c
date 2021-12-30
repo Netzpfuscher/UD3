@@ -400,7 +400,7 @@ void ac_dual_meas_scheme(){
 }
 
 void ac_precharge_fixed_delay(){
-    if(relay_read_bus() && relay_read_charge_end()){
+    if(!relay_read_bus() && !relay_read_charge_end()){
         alarm_push(ALM_PRIO_INFO,warn_bus_charging, ALM_NO_VALUE);
         sysfault.charge=1;
         xTimerStart(xCharge_Timer,0);

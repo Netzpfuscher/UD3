@@ -63,8 +63,8 @@ enum I2T {
 #define relay_write_bus(val) Relay1_Write(val)
 #define relay_write_charge_end(val) Relay2_Write(val)
 
-#define relay_read_bus(val) Relay1_Read()
-#define relay_read_charge_end(val) Relay2_Read()
+#define relay_read_bus() Relay1_Read()
+#define relay_read_charge_end() Relay2_Read()
 
 volatile uint8 bus_command;
 

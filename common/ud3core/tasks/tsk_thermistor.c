@@ -143,7 +143,9 @@ int32_t get_temp_128(int32_t counts) {
 
 int32_t get_temp_counts(uint8_t channel){
     Therm_Mux_Select(channel);
-    vTaskDelay(20);
+    vTaskDelay(50);     // DS: this used to delay just 20 ticks which wasn't long enough on my board.
+                        // The temps were all off by 10 degrees or so.  Once I changed this to 50 the 
+                        // temps were all within a degree of where they should be.
     ADC_therm_StartConvert();
     vTaskDelay(50);
     int16_t temp = ADC_therm_GetResult16()-ADC_therm_Offset;

@@ -84,6 +84,7 @@ interrupter_params interrupter;
 extern uint16 ch_prd[4], ch_cmp[4];
 
 void initialize_interrupter(void);
+void configure_interrupter();
 void update_interrupter();
 void ramp_control(void);
 void interrupter_oneshot(uint32_t pw, uint32_t vol);

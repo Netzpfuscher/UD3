@@ -31,12 +31,49 @@
  */
 /* `#START USER_TYPES_AND_DEFINES` */
 #include <device.h>
+#include "TTerm.h"
 
 /* `#END` */
+    
+#define DISP_MAX_ZONES 10
 
+#define DISP_SRC_OFF            0
+#define DISP_SRC_BUS            1
+#define DISP_SRC_SYNTH          2
+    
+#define DISP_SRC_HWG0           9
+#define DISP_SRC_HWG1           10
+#define DISP_SRC_HWG2           11
+#define DISP_SRC_HWG3           12
+#define DISP_SRC_HWG4           13
+#define DISP_SRC_HWG5           14
+    
+#define DISP_SRC_WHITE_STATIC   15
+    
+typedef struct{
+    uint8_t firstLed        : 6;
+    uint8_t lastLed         : 6;
+    uint8_t src             : 4;
+} DISP_ZONE_s;
 
+typedef struct{
+    uint8_t red : 5;
+    uint8_t green : 6;
+    uint8_t blue : 5;
+} SMALL_COLOR;
+
+typedef union{
+    DISP_ZONE_s zone[DISP_MAX_ZONES];
+    uint16_t data[DISP_MAX_ZONES];
+} DISP_ZONE_t;
+
+extern DISP_ZONE_t DISP_zones;
     
 void tsk_display_Start(void);
+uint32_t DISP_getZoneColor(uint8_t src);
+uint8_t CMD_display(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+
+uint32_t smallColorToColor(SMALL_COLOR c);
 
 /*
  * Add user function prototypes in the below merge region to add user

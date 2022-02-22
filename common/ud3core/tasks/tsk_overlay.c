@@ -136,7 +136,7 @@ void init_telemetry(){
     tt.n.primary_i.min = 0;
     tt.n.primary_i.offset = 0;
     tt.n.primary_i.unit = TT_UNIT_A;
-    tt.n.primary_i.divider = 0;
+    tt.n.primary_i.divider = 1;
     tt.n.primary_i.high_res = pdFALSE;
     tt.n.primary_i.resend_time = TT_FAST;
     tt.n.primary_i.chart = 2;

@@ -201,7 +201,7 @@ void tsk_fault_TaskProc(void *pvParameters) {
 		/* `#START TASK_LOOP_CODE` */
 		handle_UVLO();
         handle_FAULT();
-        LED4_Write(0);
+        LED4_Write(LED4_OFF);
         handle_no_fb();
 		/* `#END` */
 		vTaskDelay(FAULT_LOOP_SPEED_MS / portTICK_PERIOD_MS);

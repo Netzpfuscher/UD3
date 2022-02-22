@@ -66,7 +66,7 @@ CY_ISR(isr_uart_tx) {
 }
 CY_ISR(isr_uart_rx) {
 	char c;
-    LED4_Write(1);
+    LED4_Write(LED4_ON);
 	while (UART_GetRxBufferSize()) {
 		c = UART_GetByte();
 		if (c & 0x80) {
@@ -137,7 +137,7 @@ void tsk_uart_TaskProc(void *pvParameters) {
 		/* `#START TASK_LOOP_CODE` */
 
 		if (xStreamBufferReceive(min_port[0].tx, &c, 1, portMAX_DELAY)) {
-            LED4_Write(1);
+            LED4_Write(LED4_ON);
 			UART_PutChar(c);
 			if (UART_GetTxBufferSize() == 4) {
 				xSemaphoreTake(tx_Semaphore, portMAX_DELAY);

@@ -28,7 +28,6 @@
 #include "tsk_analog.h"
 #include "tsk_fault.h"
 #include "alarmevent.h"
-#include "config.h"
 
 /* RTOS includes. */
 #include "FreeRTOS.h"

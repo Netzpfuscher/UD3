@@ -32,6 +32,7 @@
 /* `#START USER_TYPES_AND_DEFINES` */
 #include <device.h>
 #include "cli_basic.h"
+#include "config.h"
 
 #define CT_PRIMARY 0
 #define CT_SECONDARY 1
@@ -60,11 +61,21 @@ enum I2T {
 #define BUS_COMMAND_ON 1
 #define BUS_COMMAND_FAULT 2
 
-#define relay_write_bus(val) Relay1_Write(val)
-#define relay_write_charge_end(val) Relay2_Write(val)
+#if RELAY1_INVERTED
+    #define relay_write_bus(val) Relay1_Write(val ? 0 : 1)
+    #define relay_read_bus(val) (Relay1_Read() ? 0 : 1)
+#else
+    #define relay_write_bus(val) Relay1_Write(val)
+    #define relay_read_bus(val) Relay1_Read()
+#endif
 
-#define relay_read_bus() Relay1_Read()
-#define relay_read_charge_end() Relay2_Read()
+#if RELAY2_INVERTED
+    #define relay_write_charge_end(val) Relay2_Write(val ? 0 : 1)
+    #define relay_read_charge_end(val) (Relay2_Read() ? 0 : 1)
+#else
+    #define relay_write_charge_end(val) Relay2_Write(val)
+    #define relay_read_charge_end(val) Relay2_Read()
+#endif
 
 volatile uint8 bus_command;
 

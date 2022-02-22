@@ -501,7 +501,7 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
 void poll_UART(){
     uint16_t bytes = UART_GetRxBufferSize();
     if(bytes){
-        LED4_Write(1);
+        LED4_Write(LED4_ON);
         uart_bytes_rx+=bytes;
         while(bytes){
             min_rx_byte(&min_ctx, UART_GetByte());

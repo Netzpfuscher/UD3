@@ -49,5 +49,17 @@
 #define N_QUEUE_MIDI    64         //Size of the midi event buffer
 #define N_CHANNEL 4                 //Number of parallel voices
 
+#define RELAY1_INVERTED 0
+#define RELAY2_INVERTED 0
+#define LED4_INVERTED   0
+
+#if LED4_INVERTED
+    #define LED4_ON  0
+    #define LED4_OFF 1
+#else
+    #define LED4_ON  1
+    #define LED4_OFF 0
+#endif
+
     
 #endif

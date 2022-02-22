@@ -56,6 +56,9 @@ static void prvFreeRTOSSetup( void );
 
 int main() {
     
+    relay_write_bus(0);
+    relay_write_charge_end(0);
+    
     prvFreeRTOSSetup();
     alarm_init();
 	system_fault_Control = 0; //this should suppress any start-up sparking until the system is ready
@@ -84,7 +87,7 @@ int main() {
 	//calls that must always happen after updating the configuration/settings
 	configure_ZCD_to_PWM();
     
-    LED4_Write(1);
+    LED4_Write(LED4_ON);
 	
 
 	//Starting Tasks

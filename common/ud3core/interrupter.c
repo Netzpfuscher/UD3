@@ -109,66 +109,91 @@ void interrupter_reconf_dma(enum interrupter_modulation mod){
     }
 }
 
+// Adds an alarm with the specified message to the alarm queue and stops the UD3
+// TODO: Make this a global function so it can be used everywhere resources and memory are allocated.
+void critical_error(const char *message, int32_t val) {
+    alarm_push(ALM_PRIO_CRITICAL, message, val);
+    interrupter_kill();
+}
 
+// One-time initialization of the interrupter components (called once at system startup)
 void initialize_interrupter(void) {
-
 	//over current detection
 	//    OCD_StartEx(OCD_ISR);
 
 	//initialize the PWM generators for safe PW and PRD
-	interrupter1_WritePeriod(65000);
-	interrupter1_WriteCompare2(65000);
-	interrupter1_WriteCompare1(64999);
-
-	int1_prd = 65000;
+	int1_prd = 65000;   // An arbitrary large number to count down from
 	int1_cmp = 64999;
+    
+	interrupter1_WritePeriod(int1_prd);
+	interrupter1_WriteCompare1(int1_cmp);      // pwm1 will be true for one clock, then false.  int1_prd - int1_cmp is the on time for the pulse.
+  	interrupter1_WriteCompare2(int1_prd);      // pwm2 will be false for one clock then true.  This creates the int1_fin signal.
 
 	//Start up timers
 	interrupter1_Start();
-
-	params.min_tr_prd = INTERRUPTER_CLK_FREQ / configuration.max_tr_prf;
     
-    interrupter.mode = INTR_MODE_OFF;
-    
-	/* Variable declarations for int1_dma */
-	
+	// Variable declarations for int1_dma.  This transfers int1_prd and int1_cmp to the interrupter1 component.
 	uint8_t int1_dma_TD[4];
 	int1_dma_Chan = int1_dma_DmaInitialize(int1_dma_BYTES_PER_BURST, int1_dma_REQUEST_PER_BURST,
 										   HI16(int1_dma_SRC_BASE), HI16(int1_dma_DST_BASE));
-	int1_dma_TD[0] = CyDmaTdAllocate();
-	int1_dma_TD[1] = CyDmaTdAllocate();
-	int1_dma_TD[2] = CyDmaTdAllocate();
-	int1_dma_TD[3] = CyDmaTdAllocate();
+    
+    for(int i=0; i<4; ++i){
+    	int1_dma_TD[i] = CyDmaTdAllocate();
+        if(int1_dma_TD[i] == DMA_INVALID_TD)
+            critical_error("CyDmaTdAllocate failure INT", i);
+    }
+    
 	CyDmaTdSetConfiguration(int1_dma_TD[0], 2, int1_dma_TD[1], int1_dma__TD_TERMOUT_EN | TD_AUTO_EXEC_NEXT);
 	CyDmaTdSetConfiguration(int1_dma_TD[1], 2, int1_dma_TD[2], int1_dma__TD_TERMOUT_EN | TD_AUTO_EXEC_NEXT);
 	CyDmaTdSetConfiguration(int1_dma_TD[2], 2, int1_dma_TD[3], int1_dma__TD_TERMOUT_EN | TD_AUTO_EXEC_NEXT);
 	CyDmaTdSetConfiguration(int1_dma_TD[3], 2, int1_dma_TD[0], int1_dma__TD_TERMOUT_EN);
+    
 	CyDmaTdSetAddress(int1_dma_TD[0], LO16((uint32)&int1_prd), LO16((uint32)interrupter1_PERIOD_LSB_PTR));
 	CyDmaTdSetAddress(int1_dma_TD[1], LO16((uint32)&int1_cmp), LO16((uint32)interrupter1_COMPARE1_LSB_PTR));
 	CyDmaTdSetAddress(int1_dma_TD[2], LO16((uint32)&int1_prd), LO16((uint32)interrupter1_COMPARE2_LSB_PTR));
 	CyDmaTdSetAddress(int1_dma_TD[3], LO16((uint32)&int1_prd), LO16((uint32)interrupter1_COUNTER_LSB_PTR));
 	CyDmaChSetInitialTd(int1_dma_Chan, int1_dma_TD[0]);
     
-    
     //Allocate memory for DDS DMA TDs
     for(uint8_t ch=0;ch<N_CHANNEL;ch++){
         for(uint8_t i=0;i<N_TD;i++){
             ch_dma_TD[ch][i] = CyDmaTdAllocate();
-        }
+            if(ch_dma_TD[ch][i] ==  DMA_INVALID_TD)
+                critical_error("CyDmaTdAllocate failure DDS", i);
+         }
     }
-    
-    interrupter_reconf_dma(interrupter.mod);
 
-   
     DDS32_1_Start();
     DDS32_2_Start();
+
+    configure_interrupter();
+}
+
+// Called whenever an interrupter-related param is changed oe eeprom is loaded.
+void configure_interrupter()
+{
+    // Safe defaults in case anything fails.
+  	int1_prd = 65000;
+	int1_cmp = 64999;
+
+  	//initialize the PWM generators for safe PW and PRD
+	interrupter1_WritePeriod(int1_prd);
+	interrupter1_WriteCompare1(int1_cmp);      // pwm1 will be true for one clock, then false.  int1_prd - int1_cmp is the on time for the pulse.
+  	interrupter1_WriteCompare2(int1_prd);      // pwm2 will be false for one clock then true
+
+    // The minimum interrupter period for transient mode in clock ticks (which are equal to microseconds here).
+	params.min_tr_prd = INTERRUPTER_CLK_FREQ / configuration.max_tr_prf;
+    
+    // Disable interrupter
+    interrupter.mode = INTR_MODE_OFF;
+    interrupter_reconf_dma(interrupter.mod);    // May be changed when eeprom is loaded or interrupter.mod is changed via cli
+   
     DDS32_1_Disable_ch(0);
     DDS32_1_Disable_ch(1);
     DDS32_2_Disable_ch(0);
     DDS32_2_Disable_ch(1);
     
-    interrupter_DMA_mode(INTR_DMA_DDS);
-    
+    interrupter_DMA_mode(INTR_DMA_DDS);         // set to synth mode by default
 }
 
 

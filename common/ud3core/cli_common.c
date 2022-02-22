@@ -429,7 +429,7 @@ uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, TERMINA
     uint8 sfflag = system_fault_Read();
     system_fault_Control = 0; //halt tesla coil operation during updates!
     WD_enable(configuration.watchdog);
-    initialize_interrupter();
+    configure_interrupter();
 	initialize_charging();
 	configure_ZCD_to_PWM();
     update_visibilty();
@@ -758,7 +758,7 @@ uint8_t CMD_eeprom(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
         system_fault_Control = 0; //halt tesla coil operation during updates!
 		EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,handle);
         
-        initialize_interrupter();
+        configure_interrupter();
 	    initialize_charging();
 	    configure_ZCD_to_PWM();
 	    system_fault_Control = sfflag;

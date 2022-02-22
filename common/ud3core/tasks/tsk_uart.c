@@ -76,7 +76,7 @@ CY_ISR(isr_uart_rx) {
 			goto end;
 		} else if (!midi_count) {
             if(xStreamBufferSendFromISR(min_port[0].rx, &c, 1, 0)==0){
-                alarm_push(ALM_PRIO_WARN,warn_serial_overrun,ALM_NO_VALUE);   
+                alarm_push(ALM_PRIO_WARN, "COM: Serial buffer overrun",ALM_NO_VALUE);   
             }
 			goto end;
 		}
@@ -132,7 +132,7 @@ void tsk_uart_TaskProc(void *pvParameters) {
 	char c;
 
 	/* `#END` */
-    alarm_push(ALM_PRIO_INFO,warn_task_uart, ALM_NO_VALUE);
+    alarm_push(ALM_PRIO_INFO, "TASK: UART started", ALM_NO_VALUE);
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
 

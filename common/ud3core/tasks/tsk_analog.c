@@ -368,7 +368,7 @@ void ac_precharge_bus_scheme(){
     if(tt.n.bus_status.value == BUS_READY && tt.n.bus_v.value <20){
         tt.n.bus_status.value=BUS_BATT_UV_FLT;
         if(sysfault.bus_uv==0){
-            alarm_push(ALM_PRIO_ALARM,warn_bus_undervoltage,tt.n.bus_v.value);
+            alarm_push(ALM_PRIO_ALARM, "BUS: Undervoltage",tt.n.bus_v.value);
         }
         sysfault.bus_uv=1;
         bus_command=BUS_COMMAND_FAULT;
@@ -386,7 +386,7 @@ void ac_precharge_bus_scheme(){
             }
 		} else if (tt.n.bus_status.value != BUS_READY) {
             if(tt.n.bus_status.value != BUS_CHARGING){
-                alarm_push(ALM_PRIO_INFO,warn_bus_charging, ALM_NO_VALUE);
+                alarm_push(ALM_PRIO_INFO, "BUS: Charging", ALM_NO_VALUE);
             }
             sysfault.charge=1;
 			relay_write_bus(1);
@@ -401,7 +401,7 @@ void ac_dual_meas_scheme(){
 
 void ac_precharge_fixed_delay(){
     if(!relay_read_bus() && !relay_read_charge_end()){
-        alarm_push(ALM_PRIO_INFO,warn_bus_charging, ALM_NO_VALUE);
+        alarm_push(ALM_PRIO_INFO, "BUS: Charging", ALM_NO_VALUE);
         sysfault.charge=1;
         xTimerStart(xCharge_Timer,0);
         relay_write_bus(1);
@@ -413,7 +413,7 @@ void vCharge_Timer_Callback(TimerHandle_t xTimer){
     timer_triggerd=0;
     if(bus_command== BUS_COMMAND_ON){
         if(relay_read_bus()){
-            alarm_push(ALM_PRIO_INFO,warn_bus_ready, ALM_NO_VALUE);
+            alarm_push(ALM_PRIO_INFO, "BUS: Ready", ALM_NO_VALUE);
             relay_write_charge_end(1);
             tt.n.bus_status.value = BUS_READY;
             sysfault.charge=0;
@@ -423,7 +423,7 @@ void vCharge_Timer_Callback(TimerHandle_t xTimer){
         relay_write_bus(0);
         relay_write_charge_end(0);
         sysfault.charge=0;
-        alarm_push(ALM_PRIO_INFO,warn_bus_off, ALM_NO_VALUE);
+        alarm_push(ALM_PRIO_INFO, "BUS: Off", ALM_NO_VALUE);
         tt.n.bus_status.value = BUS_OFF;
     }
 }
@@ -508,7 +508,7 @@ void tsk_analog_TaskProc(void *pvParameters) {
     CyGlobalIntEnable;
 
     
-    alarm_push(ALM_PRIO_INFO,warn_task_analog, ALM_NO_VALUE);
+    alarm_push(ALM_PRIO_INFO,"TASK: Analog started" , ALM_NO_VALUE);
 
 	/* `#END` */
 

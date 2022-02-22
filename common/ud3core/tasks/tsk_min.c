@@ -45,6 +45,7 @@
 
 #include "helper/vms_types.h"
 #include "helper/nvm.h"
+#include "helper/buffer.h"
 #include "ADSREngine.h"
 
 xTaskHandle tsk_min_TaskHandle;
@@ -133,7 +134,7 @@ uint32_t min_time_ms(void){
 void min_reset(uint8_t port){
     SigGen_kill();
     USBMIDI_1_callbackLocalMidiEvent(0, (uint8_t*)kill_msg);   
-    alarm_push(ALM_PRIO_WARN,warn_min_reset,ALM_NO_VALUE);
+    alarm_push(ALM_PRIO_WARN, "COM: MIN reset",ALM_NO_VALUE);
 }
 
 void min_tx_start(uint8_t port){
@@ -208,7 +209,7 @@ void min_command(uint8_t command, uint8_t *min_payload, uint8_t len_payload){
             sysfault.link_state = *min_payload ? pdTRUE : pdFALSE;
             break;
         default:
-            alarm_push(ALM_PRIO_INFO, warn_min_command, command);
+            alarm_push(ALM_PRIO_INFO, "COM: Unknown command", command);
             break;      
     }
 }
@@ -232,31 +233,31 @@ void min_event(uint8_t command, uint8_t *min_payload, uint8_t len_payload){
             min_send_frame(&min_ctx,MIN_ID_EVENT,(uint8_t*)&response,sizeof(response));
             break;
         case EVENT_ETH_INIT_FAIL:
-            alarm_push(ALM_PRIO_INFO, warn_event_eth_init_fail, ALM_NO_VALUE);
+            alarm_push(ALM_PRIO_INFO, "EVENT: Fibernet ETH init fail", ALM_NO_VALUE);
             break;
         case EVENT_ETH_INIT_DONE:
-            alarm_push(ALM_PRIO_INFO, warn_event_eth_init_done, ALM_NO_VALUE);
+            alarm_push(ALM_PRIO_INFO, "EVENT: Fibernet ETH init success", ALM_NO_VALUE);
             break;
         case EVENT_ETH_LINK_UP:
-            alarm_push(ALM_PRIO_INFO, warn_event_eth_link_up, ALM_NO_VALUE);
+            alarm_push(ALM_PRIO_INFO, "EVENT: Fibernet link up", ALM_NO_VALUE);
             break;
         case EVENT_ETH_LINK_DOWN:
-            alarm_push(ALM_PRIO_INFO, warn_event_eth_link_down, ALM_NO_VALUE);
+            alarm_push(ALM_PRIO_INFO, "EVENT: Fibernet link down", ALM_NO_VALUE);
             break;
         case EVENT_ETH_DHCP_SUCCESS:
-            alarm_push(ALM_PRIO_INFO, warn_event_eth_dhcp_success, ALM_NO_VALUE);
+            alarm_push(ALM_PRIO_INFO, "EVENT: DHCP success", ALM_NO_VALUE);
             break;
         case EVENT_ETH_DHCP_FAIL:
-            alarm_push(ALM_PRIO_INFO, warn_event_eth_dhcp_fail, ALM_NO_VALUE);
+            alarm_push(ALM_PRIO_INFO, "EVENT: DHCP fail", ALM_NO_VALUE);
             break;
         case EVENT_FS_CARD_CONNECTED:
-            alarm_push(ALM_PRIO_INFO, warn_event_fs_card_con, ALM_NO_VALUE);
+            alarm_push(ALM_PRIO_INFO, "EVENT: Fibernet SD connected", ALM_NO_VALUE);
             break;
         case EVENT_FS_CARD_REMOVED:
-            alarm_push(ALM_PRIO_INFO, warn_event_fs_card_dis, ALM_NO_VALUE);
+            alarm_push(ALM_PRIO_INFO, "EVENT: Fibernet SD disconnected", ALM_NO_VALUE);
             break;
         default:
-           alarm_push(ALM_PRIO_INFO, warn_min_event, command);
+           alarm_push(ALM_PRIO_INFO, "COM: Unknown event", command);
            break;
     }
 }
@@ -267,31 +268,11 @@ void min_event(uint8_t command, uint8_t *min_payload, uint8_t len_payload){
 #define VMS_WRT_FLUSH      4
 #define VMS_WIRE_SIZE ((12+VMS_MAX_BRANCHES)*4)   //12+4 * 4 bytes
 
-uint32_t wire_to_uint32 (uint8_t * ptr){
-    uint32_t val;
-    val = (*ptr << 24);
-    ptr++;
-    val +=(*ptr << 16);
-    ptr++;
-    val += (*ptr << 8);
-    ptr++;
-    val += *ptr;
-    return val;
-}
-
-uint16_t wire_to_uint16 (uint8_t * ptr){
-    uint16_t val;
-    val = (*ptr << 8);
-    ptr++;
-    val += *ptr;
-    return val;
-}
-
 void write_blk_struct(VMS_BLOCK* blk, uint8_t* min_payload){
-    uint32_t temp = wire_to_uint32(min_payload);
-    blk->uid = temp;
-    min_payload+=4;
-    temp = wire_to_uint32(min_payload);
+    int32_t ind = 0;
+    uint32_t temp;
+    blk->uid = buffer_get_uint32(min_payload, &ind);;
+    temp = buffer_get_uint32(min_payload, &ind);
     if(temp==(uint32)VMS_DIE){
          blk->nextBlocks[0] = VMS_DIE;
     } else {    
@@ -302,91 +283,61 @@ void write_blk_struct(VMS_BLOCK* blk, uint8_t* min_payload){
             blk->nextBlocks[0] = NULL;
         }
     }
-    min_payload+=4;
-    temp = wire_to_uint32(min_payload);
+    temp = buffer_get_uint32(min_payload, &ind);
     if(temp != 0){
         temp--;
         blk->nextBlocks[1] = (VMS_BLOCK*)&VMS_BLKS[temp];
     }else{
         blk->nextBlocks[1] = NULL;
     }
-    min_payload+=4;
-    temp = wire_to_uint32(min_payload);
+    temp = buffer_get_uint32(min_payload, &ind);
     if(temp != 0){
         temp--;
         blk->nextBlocks[2] = (VMS_BLOCK*)&VMS_BLKS[temp];
     }else{
         blk->nextBlocks[2] = NULL;
     }
-    min_payload+=4;
-    temp = wire_to_uint32(min_payload);
+    temp = buffer_get_uint32(min_payload, &ind);
     if(temp != 0){
         temp--;
         blk->nextBlocks[3] = (VMS_BLOCK*)&VMS_BLKS[temp];
     }else{
         blk->nextBlocks[3] = NULL;
     }
-    min_payload+=4;
-    temp = wire_to_uint32(min_payload);
+    temp = buffer_get_uint32(min_payload, &ind);
     if(temp != 0){
         temp--;
         blk->offBlock = (VMS_BLOCK*)&VMS_BLKS[temp];
     }else{
         blk->offBlock = NULL;
     }
-    min_payload+=4;
-    temp = wire_to_uint32(min_payload);
-    blk->behavior = temp;
-    min_payload+=4;
-    temp = wire_to_uint32(min_payload);
-    blk->type = temp;
-    min_payload+=4;
-    temp = wire_to_uint32(min_payload);
-    blk->target = temp;
-    min_payload+=4;
-    temp = wire_to_uint32(min_payload);
-    blk->thresholdDirection = temp;
-    min_payload+=4;
-    temp = wire_to_uint32(min_payload);
-    blk->targetFactor = temp;
-    min_payload+=4;
-    temp = wire_to_uint32(min_payload);
-    blk->param1 = temp;
-    min_payload+=4;
-    temp = wire_to_uint32(min_payload);
-    blk->param2 = temp;
-    min_payload+=4;
-    temp = wire_to_uint32(min_payload);
-    blk->param3 = temp;
-    min_payload+=4;
-    temp = wire_to_uint32(min_payload);
-    blk->period = temp;
-    min_payload+=4;
-    temp = wire_to_uint32(min_payload);
-    blk->flags = temp;
-    
+    blk->behavior = buffer_get_uint32(min_payload, &ind);
+    blk->type = buffer_get_uint32(min_payload, &ind);
+    blk->target = buffer_get_uint32(min_payload, &ind);
+    blk->thresholdDirection = buffer_get_uint32(min_payload, &ind);
+    blk->targetFactor = buffer_get_uint32(min_payload, &ind);
+    blk->param1 = buffer_get_uint32(min_payload, &ind);
+    blk->param2 = buffer_get_uint32(min_payload, &ind);
+    blk->param3 = buffer_get_uint32(min_payload, &ind);
+    blk->period = buffer_get_uint32(min_payload, &ind);
+    blk->flags = buffer_get_uint32(min_payload, &ind);
 }
 
 void write_map_header_struct(MAPTABLE_HEADER* map_header, uint8_t* min_payload){
-    map_header->listEntries = *min_payload;
-    min_payload++;
-    map_header->programNumber = *min_payload;
-    min_payload++;
-    memcpy(map_header->name, min_payload, sizeof(map_header->name));
+    int32_t ind = 0;
+    map_header->listEntries = min_payload[ind++];
+    map_header->programNumber = min_payload[ind++];
+    memcpy(map_header->name, &min_payload[ind], sizeof(map_header->name));
 }
 
 void write_map_entry_struct(MAPTABLE_ENTRY* map_entry, uint8_t* min_payload){
-    map_entry->startNote = *min_payload;
-    min_payload++;
-    map_entry->endNote = *min_payload;
-    min_payload++;
-    map_entry->data.noteFreq = wire_to_uint16(min_payload);
-    min_payload+=2;
-    map_entry->data.targetOT = *min_payload;
-    min_payload++;
-    map_entry->data.flags = *min_payload;
-    min_payload++;
-    uint32_t temp = wire_to_uint32(min_payload);
+    int32_t ind = 0;
+    map_entry->startNote = min_payload[ind++];
+    map_entry->endNote = min_payload[ind++];
+    map_entry->data.noteFreq = buffer_get_uint16(min_payload, &ind);
+    map_entry->data.targetOT = min_payload[ind++];
+    map_entry->data.flags = min_payload[ind++];
+    uint32_t temp = buffer_get_uint32(min_payload, &ind);
     if(temp != 0){
         temp--;
         map_entry->data.VMS_Startblock = (VMS_BLOCK*)&VMS_BLKS[temp];
@@ -394,7 +345,6 @@ void write_map_entry_struct(MAPTABLE_ENTRY* map_entry, uint8_t* min_payload){
         map_entry->data.VMS_Startblock = NULL;
     }
 }
-
 
 void min_vms(uint8_t *min_payload, uint8_t len_payload){
     
@@ -411,7 +361,7 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
     switch (packet_type){
         case VMS_WRT_BLOCK:
             if((len_payload % VMS_WIRE_SIZE) != 0){
-                alarm_push(ALM_PRIO_WARN, warn_min_vms_wrt, len_payload);
+                alarm_push(ALM_PRIO_WARN, "COM: Malformed block write", len_payload);
                 return;
             }
             blk = pvPortMalloc(sizeof(VMS_BLOCK));
@@ -441,7 +391,7 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
                     map_header = NULL;
                 }
             }else{
-                alarm_push(ALM_PRIO_WARN, warn_min_vms_map, len_payload);
+                alarm_push(ALM_PRIO_WARN, "COM: Malformed map write", len_payload);
             }
             break;
         case VMS_WRT_FLUSH:
@@ -501,10 +451,8 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
             return;
         case MIN_ID_WD:
                 if(len_payload==4){
-                	time.remote  = ((uint32_t)min_payload[0]<<24);
-			        time.remote |= ((uint32_t)min_payload[1]<<16);
-			        time.remote |= ((uint32_t)min_payload[2]<<8);
-			        time.remote |= (uint32_t)min_payload[3];
+                    int32_t ind = 0;
+                    time.remote = buffer_get_uint32(min_payload, &ind);
                     time_cb(time.remote);
                 }
                 WD_reset();
@@ -545,7 +493,7 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
             break; 
     }
     if(min_id!=debug_id){
-        alarm_push(ALM_PRIO_INFO, warn_min_id, min_id);
+        alarm_push(ALM_PRIO_INFO, "COM: Unknown MIN ID", min_id);
     }
 }
 
@@ -645,7 +593,7 @@ void tsk_min_TaskProc(void *pvParameters) {
     uint16_t bytes_waiting=0;
     
     uint32_t next_sid_flow = 0;
-    alarm_push(ALM_PRIO_INFO,warn_task_min, ALM_NO_VALUE);
+    alarm_push(ALM_PRIO_INFO, "PCA9685: Malloc failed", ALM_NO_VALUE);
     
     xSemaphoreGive(min_Semaphore);
     

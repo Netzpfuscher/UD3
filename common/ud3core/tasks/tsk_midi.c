@@ -77,7 +77,7 @@ void USBMIDI_1_callbackLocalMidiEvent(uint8 cable, uint8 *midiMsg) {
     uint8_t ret=pdTRUE;
     ret = xQueueSendFromISR(qMIDI_rx, midiMsg, NULL);
 	if(ret==errQUEUE_FULL){
-        alarm_push(ALM_PRIO_WARN,warn_midi_overrun,ALM_NO_VALUE);
+        alarm_push(ALM_PRIO_WARN, "COM: MIDI buffer overrun",ALM_NO_VALUE);
     }
 }
 
@@ -124,7 +124,7 @@ void tsk_midi_TaskProc(void *pvParameters) {
     
        
 		/* `#END` */
-    alarm_push(ALM_PRIO_INFO,warn_task_midi, ALM_NO_VALUE);
+    alarm_push(ALM_PRIO_INFO, "TASK: MIDI started", ALM_NO_VALUE);
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
 

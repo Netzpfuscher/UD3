@@ -306,7 +306,7 @@ void interrupter_update_ext() {
 
 uint8_t callback_ext_interrupter(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     if(configuration.ext_interrupter){
-        alarm_push(ALM_PRIO_WARN,warn_interrupter_ext, configuration.ext_interrupter);
+        alarm_push(ALM_PRIO_WARN, "INT: External interrupter active", configuration.ext_interrupter);
         interrupter_update_ext();
     }else{
         uint8 sfflag = system_fault_Read();

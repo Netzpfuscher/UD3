@@ -54,7 +54,6 @@
  */
 static void prvFreeRTOSSetup( void );
 
-
 int main() {
     
     prvFreeRTOSSetup();
@@ -113,8 +112,7 @@ int main() {
         tsk_hwGauge_init();
     }
     
-    //CyGlobalIntEnable; //enables interrupts
-    alarm_push(ALM_PRIO_INFO, warn_general_startup, ALM_NO_VALUE);
+    alarm_push(ALM_PRIO_INFO, "INFO: UD3 startup", ALM_NO_VALUE);
 	vTaskStartScheduler();
     
 	for (;;) {

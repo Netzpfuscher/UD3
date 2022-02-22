@@ -1,8 +1,7 @@
 /*
  * UD3
  *
- * Copyright (c) 2018 Jens Kerrinnes
- * Copyright (c) 2015 Steve Ward
+ * Copyright (c) 2022 Jens Kerrinnes
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,41 +21,36 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#if !defined(alarmevent_H)
-#define alarmevent_H
-    
-#include <device.h>
-#include "FreeRTOS.h"
-#include "TTerm.h"
-    
-typedef struct __alarms__ {
-uint16_t num;
-uint8_t alarm_level;
-char* message;
-uint32_t timestamp;
-uint32_t value;
-} ALARMS;
+#include "buffer.h"
 
+int16_t buffer_get_int16(const uint8_t *buf, int32_t *ind) {
+	int16_t res =	((uint16_t) buf[*ind]) << 8 |
+					((uint16_t) buf[*ind + 1]);
+	*ind += 2;
+	return res;
+}
 
-    
-BaseType_t ptr_is_in_flash(void* ptr);
-void alarm_push_c(uint8_t level, char* message, uint16_t len, int32_t value);
-void alarm_push(uint8_t level, const char* message, int32_t value);
-uint32_t alarm_get_num();
-void alarm_init();
-uint32_t alarm_get(uint32_t index, ALARMS * alm);
-void alarm_clear();
-uint32_t alarm_pop(ALARMS * alm);
-uint32_t alarm_free(ALARMS * alm);
-uint8_t CMD_alarms(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+uint16_t buffer_get_uint16(const uint8_t *buf, int32_t *ind) {
+	uint16_t res = 	((uint16_t) buf[*ind]) << 8 |
+					((uint16_t) buf[*ind + 1]);
+	*ind += 2;
+	return res;
+}
 
-#define ALM_PRIO_INFO       0
-#define ALM_PRIO_WARN       1
-#define ALM_PRIO_ALARM      2
-#define ALM_PRIO_CRITICAL   3
+int32_t buffer_get_int32(const uint8_t *buf, int32_t *ind) {
+	int32_t res =	((uint32_t) buf[*ind]) << 24 |
+					((uint32_t) buf[*ind + 1]) << 16 |
+					((uint32_t) buf[*ind + 2]) << 8 |
+					((uint32_t) buf[*ind + 3]);
+	*ind += 4;
+	return res;
+}
 
-#define ALM_NO_VALUE        0x80000000
-   
-/* ------------------------------------------------------------------------ */
-#endif
-/* [] END OF FILE */
+uint32_t buffer_get_uint32(const uint8_t *buf, int32_t *ind) {
+	uint32_t res =	((uint32_t) buf[*ind]) << 24 |
+					((uint32_t) buf[*ind + 1]) << 16 |
+					((uint32_t) buf[*ind + 2]) << 8 |
+					((uint32_t) buf[*ind + 3]);
+	*ind += 4;
+	return res;
+}

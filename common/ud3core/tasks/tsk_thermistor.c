@@ -245,7 +245,7 @@ void calib_adc(){
         if(i==3){
             cnt /= 4;
             ADC_therm_SetOffset(cnt);
-            alarm_push(ALM_PRIO_INFO,warn_temp_adc_zero, cnt);
+            alarm_push(ALM_PRIO_INFO, "ADC: Temperature ADC offset", cnt);
         }
     }    
 }
@@ -288,7 +288,7 @@ void tsk_thermistor_TaskProc(void *pvParameters) {
     
 
 	/* `#END` */
-    alarm_push(ALM_PRIO_INFO,warn_task_thermistor, ALM_NO_VALUE);
+    alarm_push(ALM_PRIO_INFO, "TASK: Thermistor started", ALM_NO_VALUE);
 	for (;;) {
         xSemaphoreTake(adc_sem, portMAX_DELAY);
 		/* `#START TASK_LOOP_CODE` */
@@ -297,14 +297,14 @@ void tsk_thermistor_TaskProc(void *pvParameters) {
                 
         if(temp.fault1_cnt == 0){
             if(sysfault.temp1==0){
-                alarm_push(ALM_PRIO_CRITICAL, warn_temp1_fault, tt.n.temp1.value);
+                alarm_push(ALM_PRIO_CRITICAL, "NTC: Temperature Therm1 high", tt.n.temp1.value);
             }
             sysfault.temp1 = 1;
         }
         
         if(temp.fault1_cnt == 0){
             if(sysfault.temp2==0){
-                alarm_push(ALM_PRIO_CRITICAL, warn_temp2_fault, tt.n.temp2.value);
+                alarm_push(ALM_PRIO_CRITICAL, "NTC: Temperature Therm2 high", tt.n.temp2.value);
             }
             sysfault.temp2 = 1;
         }

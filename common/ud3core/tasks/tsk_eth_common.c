@@ -245,7 +245,7 @@ void process_sid(uint8_t* ptr, uint16_t len) {
                 }  
                 int32_t diff = SID_frame.next_frame - l_time;
                 if(diff<-1000){
-                    alarm_push(ALM_PRIO_WARN,warn_sid_old, diff);
+                    alarm_push(ALM_PRIO_WARN,"SID: Old SID frame received", diff);
                 }else{   
                     xQueueSend(qSID,&SID_frame,0);
                 }
@@ -274,7 +274,7 @@ void process_min_sid(uint8_t* ptr, uint16_t len) {
     ptr++;
     
     if(len!=(SID_BYTES*n_frames)){
-        alarm_push(ALM_PRIO_WARN,warn_sid_malformed, ALM_NO_VALUE);
+        alarm_push(ALM_PRIO_WARN,"SID: Malformed SID frame", ALM_NO_VALUE);
         return;
     }
     
@@ -358,7 +358,7 @@ void process_min_sid(uint8_t* ptr, uint16_t len) {
         }  
         int32_t diff = SID_frame.next_frame - l_time;
         if(diff<-1000){
-            alarm_push(ALM_PRIO_WARN,warn_sid_old, diff);
+            alarm_push(ALM_PRIO_WARN,"SID: Old SID frame received", diff);
         }else{   
             xQueueSend(qSID,&SID_frame,0);
         }

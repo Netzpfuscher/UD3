@@ -97,7 +97,7 @@ void tsk_i2c_TaskProc(void *pvParameters) {
     I2C_Start();
     
     PCA9685* pca_ptr = PCA9685_new(0x40);
-    if(pca_ptr==NULL) alarm_push(ALM_PRIO_CRITICAL,warn_PCA9685_malloc, ALM_NO_VALUE);
+    if(pca_ptr==NULL) alarm_push(ALM_PRIO_CRITICAL, "PCA9685: Malloc failed", ALM_NO_VALUE);
     
     gauge_data[0].value = &tt.n.midi_voices.value;
     gauge_data[0].min = 0;
@@ -122,7 +122,7 @@ void tsk_i2c_TaskProc(void *pvParameters) {
     
 	/* `#END` */
 
-    alarm_push(ALM_PRIO_INFO,warn_task_i2c, ALM_NO_VALUE);
+    alarm_push(ALM_PRIO_INFO, "TASK: I2C started", ALM_NO_VALUE);
     
 	for (;;) {
         

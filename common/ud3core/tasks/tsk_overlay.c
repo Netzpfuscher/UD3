@@ -441,13 +441,13 @@ void tsk_overlay_TaskProc(void *pvParameters) {
 	/* `#END` */
     switch(portM->term_mode){
         case PORT_TERM_TT:
-            alarm_push(ALM_PRIO_INFO,warn_task_TT_overlay, portM->num);
+            alarm_push(ALM_PRIO_INFO, "TASK: Overlay started TT", portM->num);
         break;
         case PORT_TERM_MQTT:
-            alarm_push(ALM_PRIO_INFO,warn_task_MQTT_overlay, portM->num);
+            alarm_push(ALM_PRIO_INFO, "TASK: Overlay started MQTT", portM->num);
         break;
         case PORT_TERM_VT100:
-            alarm_push(ALM_PRIO_INFO,warn_task_VT100_overlay, ALM_NO_VALUE);
+            alarm_push(ALM_PRIO_INFO, "TASK: Overlay started VT100", ALM_NO_VALUE);
         break; 
     }
 

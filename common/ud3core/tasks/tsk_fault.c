@@ -96,7 +96,7 @@ void handle_UVLO(void) {
 	//UVLO feedback via system_fault (LED2)
 	if(UVLO_status_Status==0){
         if(sysfault.uvlo==0){
-            alarm_push(ALM_PRIO_CRITICAL,warn_driver_undervoltage, ALM_NO_VALUE);
+            alarm_push(ALM_PRIO_CRITICAL, "DRIVER: Undervoltage", ALM_NO_VALUE);
         }
         sysfault.uvlo=1;
     }else{
@@ -145,7 +145,7 @@ void handle_no_fb(void){
         }
         if(feedback_error_cnt > configuration.max_fb_errors){
             if(sysfault.feedback==0){
-                alarm_push(ALM_PRIO_CRITICAL,warn_feedback_error, feedback_error_cnt);
+                alarm_push(ALM_PRIO_CRITICAL, "FAULT: No Feedback", feedback_error_cnt);
             }
             sysfault.feedback = pdTRUE;          
         }
@@ -159,7 +159,7 @@ void handle_no_fb(void){
 
 void vWD_Timer_Callback(TimerHandle_t xTimer){
     if(sysfault.watchdog==0){
-        alarm_push(ALM_PRIO_CRITICAL, warn_watchdog, ALM_NO_VALUE);
+        alarm_push(ALM_PRIO_CRITICAL, "WD: Watchdog triggered", ALM_NO_VALUE);
     }
     sysfault.watchdog = 1;
     interrupter1_control_Control = 0;
@@ -195,7 +195,7 @@ void tsk_fault_TaskProc(void *pvParameters) {
     
     WD_enable(configuration.watchdog);
     reset_fault();
-    alarm_push(ALM_PRIO_INFO,warn_task_fault, ALM_NO_VALUE);
+    alarm_push(ALM_PRIO_INFO, "TASK: Fault started", ALM_NO_VALUE);
 	/* `#END` */
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */

@@ -637,7 +637,7 @@ uint8_t CMD_udkill(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     	QCW_enable_Control = 0;
     	TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_GREEN);
     	ttprintf("Killbit set\r\n");
-        alarm_push(ALM_PRIO_CRITICAL,warn_kill_set, ALM_NO_VALUE);
+        alarm_push(ALM_PRIO_CRITICAL, "FAULT: Killbit set", ALM_NO_VALUE);
     	TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
         return TERM_CMD_EXIT_SUCCESS;
     }else if(strcmp(args[0], "reset") == 0){
@@ -646,7 +646,7 @@ uint8_t CMD_udkill(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
         system_fault_Control = 0xFF;
         TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_GREEN);
     	ttprintf("Killbit reset\r\n");
-        alarm_push(ALM_PRIO_INFO,warn_kill_reset, ALM_NO_VALUE);
+        alarm_push(ALM_PRIO_INFO, "INFO: Killbit reset", ALM_NO_VALUE);
     	TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
         return TERM_CMD_EXIT_SUCCESS;
     }else if(strcmp(args[0], "get") == 0){

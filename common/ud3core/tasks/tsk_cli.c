@@ -255,13 +255,13 @@ void tsk_cli_TaskProc(void *pvParameters) {
 
     switch(portM->type) {
         case PORT_TYPE_SERIAL:
-            alarm_push(ALM_PRIO_INFO,warn_task_serial_cli, ALM_NO_VALUE);
+            alarm_push(ALM_PRIO_INFO, "TASK: Serial-CLI started", ALM_NO_VALUE);
         break;
         case PORT_TYPE_USB:
-            alarm_push(ALM_PRIO_INFO,warn_task_usb_cli, ALM_NO_VALUE);
+            alarm_push(ALM_PRIO_INFO, "TASK: USB-CLI started", ALM_NO_VALUE);
         break;
         case PORT_TYPE_MIN:
-            alarm_push(ALM_PRIO_INFO,warn_task_min_cli, portM->num);
+            alarm_push(ALM_PRIO_INFO, "TASK: MIN-CLI started", portM->num);
         break;      
     }
 

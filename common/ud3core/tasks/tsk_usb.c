@@ -92,7 +92,7 @@ void tsk_usb_Enable(void) {
 void tsk_usb_Task(void *pvParameters) {
 	uint16 count;
 	uint8 buffer[tsk_usb_BUFFER_LEN];
-    alarm_push(ALM_PRIO_INFO,warn_task_usb, ALM_NO_VALUE);
+    alarm_push(ALM_PRIO_INFO, "TASK: USB started", ALM_NO_VALUE);
 	for (;;) {
 		/* Handle enumeration of USB port */
 		if (USBMIDI_1_IsConfigurationChanged() != 0u) /* Host could send double SET_INTERFACE request */

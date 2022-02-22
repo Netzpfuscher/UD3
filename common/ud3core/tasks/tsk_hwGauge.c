@@ -61,9 +61,9 @@ void tsk_hwGauge_proc(){
     I2C_Start();
     
     pca_ptr = PCA9685_new(0x40);
-    if(pca_ptr==NULL) alarm_push(ALM_PRIO_CRITICAL,warn_PCA9685_malloc, ALM_NO_VALUE);
+    if(pca_ptr==NULL) alarm_push(ALM_PRIO_CRITICAL, "PCA9685: Malloc failed", ALM_NO_VALUE);
     
-    alarm_push(ALM_PRIO_INFO,warn_task_i2c, ALM_NO_VALUE);
+    alarm_push(ALM_PRIO_INFO, "TASK: I2C started", ALM_NO_VALUE);
     
     while(1){
         if(!calibrationActive){

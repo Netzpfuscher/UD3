@@ -302,7 +302,7 @@ void tsk_thermistor_TaskProc(void *pvParameters) {
             sysfault.temp1 = 1;
         }
         
-        if(temp.fault1_cnt == 0){
+        if(temp.fault2_cnt == 0){
             if(sysfault.temp2==0){
                 alarm_push(ALM_PRIO_CRITICAL, "NTC: Temperature Therm2 high", tt.n.temp2.value);
             }

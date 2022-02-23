@@ -30,7 +30,6 @@
 #include "tsk_fault.h"
 #include "tsk_overlay.h"
 #include "tsk_midi.h"
-#include "tsk_i2c.h"
 #include "cli_basic.h"
 #include "alarmevent.h"
 #include "autotune.h"
@@ -100,8 +99,8 @@ static const char * AC_hwGauge[] = {
     "assign",
     "clear",
     "calibrate",
-    "startColor",
     "endColor",
+    "startColor",
     "transition"
 };
 
@@ -281,9 +280,9 @@ void tsk_cli_TaskProc(void *pvParameters) {
 		/* `#START TASK_LOOP_CODE` */
             len = xStreamBufferReceive(portM->rx, &c,sizeof(c), portMAX_DELAY);
             if (xSemaphoreTake(portM->term_block, portMAX_DELAY)) {
-            TERM_processBuffer(&c,len,handle);
-            xSemaphoreGive(portM->term_block);
-        }
+                TERM_processBuffer(&c,len,handle);
+                xSemaphoreGive(portM->term_block);
+            }
 
         /* `#END` */
 	}

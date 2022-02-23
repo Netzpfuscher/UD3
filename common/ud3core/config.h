@@ -34,15 +34,15 @@
 #define STREAMBUFFER_TX_SIZE    512    //bytes  
     
 //Alarm-Event
-#define AE_QUEUE_SIZE 50            //Length of the alarm and event queue
+#define AE_QUEUE_SIZE       50          //Length of the alarm and event queue
     
 //Analog-Task
-#define ADC_BUFFER_CNT  25          //ADC DMA buffer
-#define ADC_SAMPLE_CLK  32000       //Hz
-#define NEW_DATA_RATE_MS ((1.0/(ADC_SAMPLE_CLK/4)) * ADC_BUFFER_CNT)  //ms
-#define CURRENT_PID_HZ ((uint16_t)(1.0 / NEW_DATA_RATE_MS))           //Hz
-#define SAMPLES_COUNT 2048          //How many samples for RMS filter
-#define BUSV_R_BOT 5000UL           //Bus voltage bottom resistor
+#define ADC_BUFFER_CNT      25          //ADC DMA buffer
+#define ADC_SAMPLE_CLK      32000       //Hz
+#define NEW_DATA_RATE_MS    ((1.0/(ADC_SAMPLE_CLK/4)) * ADC_BUFFER_CNT)    //ms
+#define CURRENT_PID_HZ      ((uint16_t)(1.0 / NEW_DATA_RATE_MS))           //Hz
+#define SAMPLES_COUNT       2048             //How many samples for RMS filter
+#define BUSV_R_BOT          5000UL           //Bus voltage bottom resistor
     
 //Synthesizer
 #define N_QUEUE_SID     64          //Size of the SID frame buffer

@@ -159,6 +159,7 @@ static uint8_t CMD_hwGaugeCalibrate_handleInput(TERMINAL_HANDLE * handle, uint16
     switch(c){
         case 'q':
         case 0x03:
+            vStreamBufferDelete(handle->currProgram->inputStream);
             vPortFree(handle->currProgram);
             TERM_removeProgramm(handle);
             calibrationActive = 0;
@@ -221,6 +222,7 @@ static uint8_t CMD_hwGaugeCalibrate_handleInput(TERMINAL_HANDLE * handle, uint16
         case '\r':
             if(calibrationStage == 1){
                 HWGauge_setValue(gaugeToCalibrate, 0);
+                vStreamBufferDelete(handle->currProgram->inputStream);
                 vPortFree(handle->currProgram);
                 TERM_removeProgramm(handle);
                 calibrationActive = 0;

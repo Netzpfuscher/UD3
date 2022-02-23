@@ -52,9 +52,6 @@ xQueueHandle adc_data;
 TimerHandle_t xCharge_Timer;
 
 
-
-
-
 /* ------------------------------------------------------------------------ */
 /*
  * Place user included headers, defines and task global data in the

@@ -113,6 +113,8 @@ uint8_t no_fb_reg_Read();
 #define Disp_BLUE 0
 #define Disp_WHITE 0
 #define Disp_BLACK 0
+#define Disp_OCEAN 0
+#define Disp_ORANGE 0
 
 #define Disp_MemClear(p1)
 #define Disp_DrawRect(p1,p2,p3,p4,p5,p6)
@@ -214,5 +216,78 @@ uint8_t EEPROM_1_ReadByte(uint16 address) ;
 #define I2C_MasterReadByte(I2C_NAK_DATA) 0
 
 #define _putchar(character)
+
+/***************************************
+* API Constants
+***************************************/
+
+#define CY_DMA_INVALID_CHANNEL      0xFFu   /* Invalid Channel ID */
+#define CY_DMA_INVALID_TD           0xFFu   /* Invalid TD */
+#define CY_DMA_END_CHAIN_TD         0xFFu   /* End of chain TD */
+#define CY_DMA_DISABLE_TD           0xFEu
+
+#define CY_DMA_TD_SIZE              0x08u
+
+/* "u" was removed as workaround for Keil compiler bug */
+#define CY_DMA_TD_SWAP_EN           0x80
+#define CY_DMA_TD_SWAP_SIZE4        0x40
+#define CY_DMA_TD_AUTO_EXEC_NEXT    0x20
+#define CY_DMA_TD_TERMIN_EN         0x10
+#define CY_DMA_TD_TERMOUT1_EN       0x08
+#define CY_DMA_TD_TERMOUT0_EN       0x04
+#define CY_DMA_TD_INC_DST_ADR       0x02
+#define CY_DMA_TD_INC_SRC_ADR       0x01
+
+#define CY_DMA_NUMBEROF_TDS         128u
+#define CY_DMA_NUMBEROF_CHANNELS    ((uint8)(CYDEV_DMA_CHANNELS_AVAILABLE))
+
+/* Action register bits */
+#define CY_DMA_CPU_REQ              ((uint8)(1u << 0u))
+#define CY_DMA_CPU_TERM_TD          ((uint8)(1u << 1u))
+#define CY_DMA_CPU_TERM_CHAIN       ((uint8)(1u << 2u))
+
+/* Basic Status register bits */
+#define CY_DMA_STATUS_CHAIN_ACTIVE  ((uint8)(1u << 0u))
+#define CY_DMA_STATUS_TD_ACTIVE     ((uint8)(1u << 1u))
+
+/* DMA controller register error bits */
+#define CY_DMA_BUS_TIMEOUT          (1u << 1u)
+#define CY_DMA_UNPOP_ACC            (1u << 2u)
+#define CY_DMA_PERIPH_ERR           (1u << 3u)
+
+/* Round robin bits */
+#define CY_DMA_ROUND_ROBIN_ENABLE   ((uint8)(1u << 4u))
+
+#define DMA_INVALID_CHANNEL         (CY_DMA_INVALID_CHANNEL)
+#define DMA_INVALID_TD              (CY_DMA_INVALID_TD)
+#define DMA_END_CHAIN_TD            (CY_DMA_END_CHAIN_TD)
+#define DMAC_TD_SIZE                (CY_DMA_TD_SIZE)
+#define TD_SWAP_EN                  (CY_DMA_TD_SWAP_EN)
+#define TD_SWAP_SIZE4               (CY_DMA_TD_SWAP_SIZE4)
+#define TD_AUTO_EXEC_NEXT           (CY_DMA_TD_AUTO_EXEC_NEXT)
+#define TD_TERMIN_EN                (CY_DMA_TD_TERMIN_EN)
+#define TD_TERMOUT1_EN              (CY_DMA_TD_TERMOUT1_EN)
+#define TD_TERMOUT0_EN              (CY_DMA_TD_TERMOUT0_EN)
+#define TD_INC_DST_ADR              (CY_DMA_TD_INC_DST_ADR)
+#define TD_INC_SRC_ADR              (CY_DMA_TD_INC_SRC_ADR)
+#define NUMBEROF_TDS                (CY_DMA_NUMBEROF_TDS)
+#define NUMBEROF_CHANNELS           (CY_DMA_NUMBEROF_CHANNELS)
+#define CPU_REQ                     (CY_DMA_CPU_REQ)
+#define CPU_TERM_TD                 (CY_DMA_CPU_TERM_TD)
+#define CPU_TERM_CHAIN              (CY_DMA_CPU_TERM_CHAIN)
+#define STATUS_CHAIN_ACTIVE         (CY_DMA_STATUS_CHAIN_ACTIVE)
+#define STATUS_TD_ACTIVE            (CY_DMA_STATUS_TD_ACTIVE)
+#define DMAC_BUS_TIMEOUT            (CY_DMA_BUS_TIMEOUT)
+#define DMAC_UNPOP_ACC              (CY_DMA_UNPOP_ACC)
+#define DMAC_PERIPH_ERR             (CY_DMA_PERIPH_ERR)
+#define ROUND_ROBIN_ENABLE          (CY_DMA_ROUND_ROBIN_ENABLE)
+#define DMA_DISABLE_TD              (CY_DMA_DISABLE_TD)
+
+#define DMAC_CFG                    (CY_DMA_CFG_PTR)
+#define DMAC_ERR                    (CY_DMA_ERR_PTR)
+#define DMAC_ERR_ADR                (CY_DMA_ERR_ADR_PTR)
+#define DMAC_CH                     (CY_DMA_CH_STRUCT_PTR)
+#define DMAC_CFGMEM                 (CY_DMA_CFGMEM_STRUCT_PTR)
+#define DMAC_TDMEM                  (CY_DMA_TDMEM_STRUCT_PTR)
 
 #endif

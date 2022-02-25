@@ -205,7 +205,7 @@ int main( void )
 	tsk_sim_Start();
     
     //CyGlobalIntEnable; //enables interrupts
-    alarm_push(ALM_PRIO_INFO, warn_general_startup, ALM_NO_VALUE);
+    alarm_push(ALM_PRIO_INFO, "UD3 started", ALM_NO_VALUE);
 	
 	vTaskStartScheduler();
 	

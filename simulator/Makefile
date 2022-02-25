@@ -38,7 +38,6 @@ SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_duty.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_eth_common.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_fault.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_hwGauge.c
-SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_i2c.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_midi.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_min.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_overlay.c

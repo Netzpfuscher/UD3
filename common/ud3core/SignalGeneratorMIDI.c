@@ -22,12 +22,6 @@
 */
 
 #include "SignalGenerator.h"
-#include "SignalGeneratorMIDI.h"
-#include <device.h>
-#include "tasks/tsk_midi.h"
-#include "telemetry.h"
-#include "interrupter.h"
-#include "qcw.h"
 #include "MidiController.h"
 #include <stdlib.h>
 

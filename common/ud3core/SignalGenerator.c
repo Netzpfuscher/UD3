@@ -368,7 +368,7 @@ void Synthmon_MIDI(TERMINAL_HANDLE * handle){
             ttprintf("Name: %s", map->name);
             
             TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 50);
-            ttprintf("Vol: ",i+1);
+            ttprintf("Vol: ");
 
             uint8_t cnt = (channel[i].volume>>16)/12;
 
@@ -407,8 +407,11 @@ void Synthmon_SID(TERMINAL_HANDLE * handle){
             }
             ttprintf("Ch: %u Freq: %u",i+1,freq);             
             TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 20);
-            ttprintf("Vol: ",i+1);
-            uint8_t cnt = (channel[i].volume>>16)/12;
+            ttprintf("Vol: ");
+            
+            // volume is in 7.16 fixed point format.  Shifting right by 16 results in 7.0 format so 
+            // the volume will be 0 to 127.  Dividing by 12 yields a value of 0 to 10.
+            uint8_t cnt = (channel[i].volume >> 16) / 12;
 
             for(uint8_t w=0;w<10;w++){
                 if(w<cnt){

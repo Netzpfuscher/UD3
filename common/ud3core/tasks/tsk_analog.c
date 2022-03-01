@@ -106,8 +106,15 @@ typedef struct
     uint32_t integral;
 } _i2t;
 
-_i2t i2t;
+_i2t i2t = {
+    .limit = 0,
+    .warning = 0,
+    .warning_level = 60,
+    .leak = 0,
+    .integral = 0
+};
 
+// Called when max_const_i or max_fault_i parameters are changed by user
 void i2t_set_limit(uint32_t const_current, uint32_t ovr_current, uint32_t limit_ms){
     i2t.leak = const_current * const_current;
     i2t.limit= floor((float)((float)limit_ms/NEW_DATA_RATE_MS)*(float)((ovr_current*ovr_current)-i2t.leak));
@@ -123,13 +130,7 @@ void i2t_reset(){
     i2t.integral=0;
 }
 
-void i2t_init(){
-    i2t.integral=0;
-    i2t.warning=0;
-    i2t.leak=0;
-    i2t.warning_level=60;
-}
-
+// Called by calculate_rms() which is called on a timer
 uint8_t i2t_calculate(){
     uint32_t squaredCurrent = (uint32_t)tt.n.batt_i.value * (uint32_t)tt.n.batt_i.value;
     i2t.integral = i2t.integral + squaredCurrent;
@@ -438,7 +439,7 @@ void control_precharge(void) { //this gets called from tsk_analogs.c when the AD
                 ac_precharge_bus_scheme();
             break;
             case AC_DUAL_MEAS_SCHEME:
-                ac_dual_meas_scheme();
+                ac_dual_meas_scheme();      // Not implemented
             break;
             case AC_PRECHARGE_FIXED_DELAY:
                 ac_precharge_fixed_delay();

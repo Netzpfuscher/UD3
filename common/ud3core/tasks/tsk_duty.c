@@ -23,7 +23,7 @@ void tsk_duty_task(void *pvParameters) {
         uint32_t onTime = 0xffffff - OnTimeCounter_ReadCounter();
         uint32_t period = lastTickCount - SG_Timer_ReadCounter();
         
-        OnTimeCounter_WriteCounter(0xfffffff);
+        OnTimeCounter_WriteCounter(0xffffff);
         lastTickCount = SG_Timer_ReadCounter();
         // dutycycle := onTime / period
         // the period is 3,125 times slower

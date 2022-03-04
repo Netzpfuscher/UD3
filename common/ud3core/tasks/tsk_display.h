@@ -37,19 +37,25 @@
     
 #define DISP_MAX_ZONES 10
 
-#define DISP_SRC_OFF            0
-#define DISP_SRC_BUS            1
-#define DISP_SRC_SYNTH          2
+// Used in DISP_ZONE_s.src
+enum DISP_SRC
+{
+    DISP_SRC_OFF   = 0,
+    DISP_SRC_BUS   = 1,
+    DISP_SRC_SYNTH = 2,
     
-#define DISP_SRC_HWG0           9
-#define DISP_SRC_HWG1           10
-#define DISP_SRC_HWG2           11
-#define DISP_SRC_HWG3           12
-#define DISP_SRC_HWG4           13
-#define DISP_SRC_HWG5           14
+    DISP_SRC_HWG0  = 9,
+    DISP_SRC_HWG1  = 10,
+    DISP_SRC_HWG2  = 11,
+    DISP_SRC_HWG3  = 12,
+    DISP_SRC_HWG4  = 13,
+    DISP_SRC_HWG5  = 14,
+   
+    DISP_SRC_WHITE_STATIC = 15,
+    DISP_SRC_COUNT           // Must be last!
+};
     
-#define DISP_SRC_WHITE_STATIC   15
-    
+// Defines the range of LED's for a zone, along with the data source (one of the DISP_ values above)
 typedef struct{
     uint8_t firstLed        : 6;
     uint8_t lastLed         : 6;
@@ -62,6 +68,7 @@ typedef struct{
     uint8_t blue : 5;
 } SMALL_COLOR;
 
+// A zone is a series of consecutive LED's along the strip.
 typedef union{
     DISP_ZONE_s zone[DISP_MAX_ZONES];
     uint16_t data[DISP_MAX_ZONES];
@@ -70,7 +77,7 @@ typedef union{
 extern DISP_ZONE_t DISP_zones;
     
 void tsk_display_Start(void);
-uint32_t DISP_getZoneColor(uint8_t src);
+uint32_t DISP_getZoneColor(enum DISP_SRC src);
 uint8_t CMD_display(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 
 uint32_t smallColorToColor(SMALL_COLOR c);

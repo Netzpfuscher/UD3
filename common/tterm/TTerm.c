@@ -400,13 +400,23 @@ uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle){
             break;
             
         case _VT100_KEY_END:
-            TERM_checkForCopy(handle, TERM_CHECK_COMP_AND_HIST);
-            //TODO move cursor to EOL
+            TERM_checkForCopy(handle, TERM_CHECK_COMP_AND_HIST); //is the user browsing the history right now? if so copy whatever ehs looking at to the entry buffer
+            
+            if(handle->currBufferLength > handle->currBufferPosition){note
+                //move the cursor to the right position
+                TERM_sendVT100Code(handle, _VT100_CURSOR_FORWARD_BY, handle->currBufferLength - handle->currBufferPosition);
+                handle->currBufferPosition = handle->currBufferLength;
+            }
             break;
             
         case _VT100_KEY_POS1:
-            TERM_checkForCopy(handle, TERM_CHECK_COMP_AND_HIST);
-            //TODO move cursor to BOL
+            TERM_checkForCopy(handle, TERM_CHECK_COMP_AND_HIST); //is the user browsing the history right now? if so copy whatever ehs looking at to the entry buffer
+            
+            if(handle->currBufferPosition > 0){
+                //move the cursor to the right position
+                TERM_sendVT100Code(handle, _VT100_CURSOR_BACK_BY, handle->currBufferPosition);
+                handle->currBufferPosition = 0;
+            }
             break;
             
         case _VT100_CURSOR_FORWARD:

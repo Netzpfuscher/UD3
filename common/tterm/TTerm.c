@@ -402,7 +402,7 @@ uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle){
         case _VT100_KEY_END:
             TERM_checkForCopy(handle, TERM_CHECK_COMP_AND_HIST); //is the user browsing the history right now? if so copy whatever ehs looking at to the entry buffer
             
-            if(handle->currBufferLength > handle->currBufferPosition){note
+            if(handle->currBufferLength > handle->currBufferPosition){
                 //move the cursor to the right position
                 TERM_sendVT100Code(handle, _VT100_CURSOR_FORWARD_BY, handle->currBufferLength - handle->currBufferPosition);
                 handle->currBufferPosition = handle->currBufferLength;

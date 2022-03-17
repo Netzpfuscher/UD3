@@ -541,6 +541,7 @@ void init_tt(uint8_t with_chart, TERMINAL_HANDLE * handle){
 uint8_t CMD_status(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     if(argCount==0 || strcmp(args[0], "-?") == 0){
         ttprintf("Usage: status [start|stop]\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
     }
 	
 

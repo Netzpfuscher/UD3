@@ -93,6 +93,9 @@ adc_sample_t *ADC_active_sample_buf = ADC_sample_buf_0;
 FastPID pid_current;
 
 rms_t current_idc;
+rms_t voltage_bus;
+rms_t voltage_batt;
+
 uint8_t ADC_mux_ctl[4] = {0x05, 0x02, 0x03, 0x00};
 
 uint16_t vdriver_lut[9] = {0,3500,7000,10430,13840,17310,20740,24200,27657};
@@ -248,10 +251,10 @@ void calculate_rms(void) {
     for(uint8_t i=0;i<ADC_BUFFER_CNT;i++){
 
 		// read the battery voltage
-		tt.n.batt_v.value = read_bus_mv(ADC_active_sample_buf[i].v_batt) / 1000;
+		tt.n.batt_v.value = read_bus_mv(rms_filter(&voltage_batt, ADC_active_sample_buf[i].v_batt)) / 1000;
 
 		// read the bus voltage
-		tt.n.bus_v.value = read_bus_mv(ADC_active_sample_buf[i].v_bus) / 1000;
+		tt.n.bus_v.value = read_bus_mv(rms_filter(&voltage_bus, ADC_active_sample_buf[i].v_bus)) / 1000;
 
 		// read the battery current
         if(configuration.ct2_type==CT2_TYPE_CURRENT){

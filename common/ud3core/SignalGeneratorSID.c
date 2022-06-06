@@ -90,8 +90,13 @@ void synthcode_SID(uint32_t r){
                 if(sid_frm.gate[i] < channel[i].old_gate) channel[i].adsr_state=ADSR_RELEASE;  //Falling edge
                 sid_frm.pw[i]=sid_frm.pw[i]>>4;
                 channel[i].old_gate = sid_frm.gate[i];
-                channel[i].halfcount = (uint32_t)(SG_CLOCK_HALFCOUNT<<8)/sid_frm.freq_fp8[i];
-                channel[i].freq = SigGen_channel_freq_fp8(i,sid_frm.freq_fp8[i]); 
+                if(sid_frm.freq_fp8[i]){
+                    channel[i].halfcount = (uint32_t)(SG_CLOCK_HALFCOUNT<<8)/sid_frm.freq_fp8[i];
+                    channel[i].freq = SigGen_channel_freq_fp8(i,sid_frm.freq_fp8[i]); 
+                }else{
+                    channel[i].halfcount = 0;
+                    channel[i].freq = 0;  
+                }
             }
             next_frame = sid_frm.next_frame;
         }

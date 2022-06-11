@@ -94,9 +94,11 @@ void synthcode_SID(uint32_t r){
                     channel[i].halfcount = (uint32_t)(SG_CLOCK_HALFCOUNT<<8)/sid_frm.freq_fp8[i];
                     channel[i].freq = SigGen_channel_freq_fp8(i,sid_frm.freq_fp8[i]); 
                 }else{
-                    channel[i].halfcount = 0;
-                    channel[i].freq = 0;  
+                    channel[i].halfcount = 0; 
+                    channel[i].freq = 0;
+                    SigGen_channel_enable(i,0);
                 }
+                
             }
             next_frame = sid_frm.next_frame;
         }

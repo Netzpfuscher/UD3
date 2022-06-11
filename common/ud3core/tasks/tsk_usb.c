@@ -50,6 +50,7 @@ xTaskHandle tsk_usb_TaskHandle;
 uint32_t usb_bytes_rx=0;
 uint32_t usb_bytes_tx=0;
 
+
 /* ======================================================================== */
 void tsk_usb_Start(void) {
 	if (tsk_usb_initVar != 1) {

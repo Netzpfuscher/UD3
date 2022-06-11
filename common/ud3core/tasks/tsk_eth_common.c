@@ -299,11 +299,15 @@ void process_min_sid(uint8_t* ptr, uint16_t len) {
             SID_frame.pw[i] = (SID_frame.pw[i] & 0xff) + ((uint16_t)*ptr << 8);
             ptr++;
             //SID_CR1
-            SID_frame.wave[i] = *ptr & 0x80;
+            SID_frame.wave[i] = bit_is_set(*ptr, 7);
+            SID_frame.gate[i] = bit_is_set(*ptr, 0);
+            
             if(filter.channel[i]==0 || freq_temp > filter.max || freq_temp < filter.min){
                 SID_frame.gate[i]=0;
-            }else{
-                SID_frame.gate[i] = *ptr & 0x01;
+            }
+            if(SID_frame.wave[i] && filter.noise_disable){
+                SID_frame.gate[i] = 0;
+                SID_frame.freq_fp8[i] = 0;
             }
             if(*ptr & 0x08){
                 SID_frame.test[i]=1;

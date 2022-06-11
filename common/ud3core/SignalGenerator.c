@@ -80,8 +80,9 @@ uint8_t callback_synthFilter(parameter_entry * params, uint8_t index, TERMINAL_H
     uint8_t str_size = strlen(configuration.synth_filter);
     uint8_t flag=0;
     
-    filter.min=0;
-    filter.max=20000;
+    filter.min = 0;
+    filter.max = 20000;
+    filter.noise_disable = pdFALSE;
     if(configuration.synth_filter[0]=='\0'){  //No filter
         for(uint8_t i=0;i<16;i++){
             filter.channel[i]=pdTRUE;
@@ -115,6 +116,8 @@ uint8_t callback_synthFilter(parameter_entry * params, uint8_t index, TERMINAL_H
                     flag=1;
                 }
             }  
+        }else if(configuration.synth_filter[i]=='n'){
+            filter.noise_disable = pdTRUE;
         }else if(configuration.synth_filter[i]=='f'){
             if(configuration.synth_filter[i+1]=='>' || configuration.synth_filter[i+1]=='<'){
                 cnt=0;
@@ -147,11 +150,13 @@ uint8_t callback_synthFilter(parameter_entry * params, uint8_t index, TERMINAL_H
     }
 
     for(uint8_t i=0;i<sizeof(filter.channel);i++){
-        ttprintf("Channel %u: %u\r\n",i,filter.channel[i]);
+        ttprintf("Channel %u: ",i);
+        send_signal_state_new(filter.channel[i], pdFALSE, handle);
     }
     ttprintf("Min frequency: %u\r\n",filter.min);
     ttprintf("Max frequency: %u\r\n",filter.max);
-
+    ttprintf("Noise channel disabled: ");
+    send_signal_state_new(filter.noise_disable, pdFALSE, handle);
     return 1;
 }
 

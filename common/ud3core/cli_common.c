@@ -848,31 +848,6 @@ uint8_t CMD_relay(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
 * Signal debugging
 ******************************************************************************/
 
-void send_signal_state(uint8_t signal, uint8_t inverted, TERMINAL_HANDLE * handle){
-    if(inverted) signal = !signal; 
-    if(signal){
-        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_RED);
-        ttprintf("true \r\n");
-        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);  
-    }else{
-        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_GREEN);
-        ttprintf("false\r\n");
-        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);;
-    }
-}
-void send_signal_state_wo(uint8_t signal, uint8_t inverted, TERMINAL_HANDLE * handle){
-    if(inverted) signal = !signal; 
-    if(signal){
-        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_RED);
-        ttprintf("true ");
-        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE); 
-    }else{
-        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_GREEN);
-        ttprintf("false");
-        TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
-    }
-}
-
 void send_signal_state_new(uint8_t signal, uint8_t inverted, TERMINAL_HANDLE * handle){
     if(inverted) signal = !signal; 
     if(signal){

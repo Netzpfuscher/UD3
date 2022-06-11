@@ -44,6 +44,7 @@
     };
     
     struct _filter{
+        uint8_t noise_disable;
         uint16_t min;
         uint16_t max;
         uint8_t channel[N_MIDICHANNEL];

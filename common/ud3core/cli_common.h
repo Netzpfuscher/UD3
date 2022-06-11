@@ -65,6 +65,9 @@ uint8_t CMD_qcw(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 uint8_t CMD_relay(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 uint8_t CMD_reset(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 
+void send_signal_state_new(uint8_t signal, uint8_t inverted, TERMINAL_HANDLE * handle);
+void send_signal_state_wo_new(uint8_t signal, uint8_t inverted, TERMINAL_HANDLE * handle);
+
 extern parameter_entry confparam[];
 volatile uint8_t qcw_reg;
 

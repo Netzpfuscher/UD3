@@ -183,7 +183,7 @@ void init_config(){
 parameter_entry confparam[] = {
     //       Parameter Type ,Visible,"Text   "         , Value ptr                     ,Min     ,Max    ,Div    ,Callback Function           ,Help text
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"pw"              , param.pw                      , 0      ,10000  ,0      ,callback_TRFunction         ,"Pulsewidth [us]")
-    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"pwp"             , param.pwp                     , 0      ,8000   ,10     ,callback_TRPFunction        ,"Pulsewidth [%]")
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"pwp"             , param.pwp                     , 0      ,1000   ,10     ,callback_TRPFunction        ,"Pulsewidth [%]")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"pwd"             , param.pwd                     , 0      ,60000  ,0      ,callback_TRFunction         ,"Pulsewidthdelay")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"bon"             , param.burst_on                , 0      ,1000   ,0      ,callback_BurstFunction      ,"Burst mode ontime [ms] 0=off")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"boff"            , param.burst_off               , 0      ,1000   ,0      ,callback_BurstFunction      ,"Burst mode offtime [ms]")

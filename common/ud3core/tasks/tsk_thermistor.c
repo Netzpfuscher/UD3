@@ -201,14 +201,20 @@ void run_temp_check(TEMP_FAULT * ret) {
             temp_pwm_WriteCompare2(temp2_high? 255 :0);
             break;
     }
-    switch(configuration.temp1_mode){
+    switch(configuration.pid_temp_mode){
         case 0:
             break;
         case 1:
-            temp_pwm_WriteCompare1(255-pid_step(&pid_temp,configuration.temp1_setpoint*128,temp1_fp));
+            temp_pwm_WriteCompare1(255-pid_step(&pid_temp,configuration.pid_temp_set*128,temp1_fp));
             break;
         case 2:
-            temp_pwm_WriteCompare2(255-pid_step(&pid_temp,configuration.temp1_setpoint*128,temp1_fp));
+            temp_pwm_WriteCompare2(255-pid_step(&pid_temp,configuration.pid_temp_set*128,temp1_fp));
+            break;
+        case 3:
+            temp_pwm_WriteCompare1(255-pid_step(&pid_temp,configuration.pid_temp_set*128,temp2_fp));
+            break;
+        case 4:
+            temp_pwm_WriteCompare2(255-pid_step(&pid_temp,configuration.pid_temp_set*128,temp2_fp));
             break;
     }
 	return;
@@ -268,9 +274,10 @@ uint8_t callback_temp_pid(parameter_entry * params, uint8_t index, TERMINAL_HAND
     pid_set_anti_windup(&pid_temp,0,255);
     pid_set_limits(&pid_temp,0,255);
     if(pid_temp._cfg_err==true){
+        ttprintf("PID: Thermistor config error");
         alarm_push(ALM_PRIO_WARN, "PID: Thermistor config error", ALM_NO_VALUE);  
     }
-    return pdPASS;
+    return pdFAIL;
 }
 
 
@@ -336,7 +343,7 @@ void tsk_thermistor_TaskProc(void *pvParameters) {
         xSemaphoreGive(adc_sem);
       
 		/* `#END` */
-        if(configuration.temp1_mode != 0){
+        if(configuration.pid_temp_mode != 0){
             vTaskDelay(100 / portTICK_PERIOD_MS);
         } else {
 		    vTaskDelay(1000 / portTICK_PERIOD_MS);

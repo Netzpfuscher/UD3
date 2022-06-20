@@ -114,7 +114,8 @@ void init_config(){
     configuration.max_tr_duty = 100;
     configuration.max_qcw_duty = 350;
     configuration.temp1_setpoint = 30;
-    configuration.temp1_mode = 0;
+    configuration.pid_temp_set = 45;
+    configuration.pid_temp_mode = 0;
     configuration.pid_temp_p = 0.2;
     configuration.pid_temp_i = 0.2;
     configuration.temp2_setpoint = 30;
@@ -227,9 +228,10 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_tr_duty"     , configuration.max_tr_duty     , 1      ,500    ,10     ,callback_ConfigFunction     ,"Max TR duty cycle [%]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_qcw_duty"    , configuration.max_qcw_duty    , 1      ,500    ,10     ,callback_ConfigFunction     ,"Max QCW duty cycle [%]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"temp1_setpoint"  , configuration.temp1_setpoint  , 0      ,100    ,0      ,NULL                        ,"Setpoint for fan [*C]")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"temp1_mode"      , configuration.temp1_mode      , 0      ,2      ,0      ,NULL                        ,"TH1 setpoint mode  0=disabled 1=PID3 2=PID4")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"temp1_pid_p"     , configuration.pid_temp_p      , 0      ,200    ,0      ,callback_temp_pid           ,"Temperature PI")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"temp1_pid_i"     , configuration.pid_temp_i      , 0      ,200    ,0      ,callback_temp_pid           ,"Temperature PI")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"pid_temp_set"    , configuration.pid_temp_set    , 0      ,100    ,0      ,NULL                        ,"PID temp setpoint")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"pid_temp_mode"   , configuration.pid_temp_mode   , 0      ,4      ,0      ,NULL                        ,"PID temp mode  0=disabled 1=PID3_Temp1 2=PID4_Temp1 3=PID3_Temp2 4=PID4_Temp2")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"pid_temp_p"      , configuration.pid_temp_p      , 0      ,200    ,0      ,callback_temp_pid           ,"Temperature PI")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"pid_temp_i"      , configuration.pid_temp_i      , 0      ,200    ,0      ,callback_temp_pid           ,"Temperature PI")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"temp2_setpoint"  , configuration.temp2_setpoint  , 0      ,100    ,0      ,NULL                        ,"Setpoint for TH2 [*C] 0=disabled")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"temp2_mode"      , configuration.temp2_mode      , 0      ,4      ,0      ,NULL                        ,"TH2 setpoint mode  0=disabled 1=FAN 3=Relay3 4=Relay4")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ps_scheme"       , configuration.ps_scheme       , 0      ,5      ,0      ,callback_ConfigFunction     ,"Power supply scheme")

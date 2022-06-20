@@ -95,8 +95,9 @@ struct config_struct{
     uint16_t max_tr_duty;
     uint16_t max_qcw_duty;
     uint16_t temp1_setpoint;
-    uint8_t temp1_mode;
     uint16_t temp2_setpoint;
+    uint16_t pid_temp_set;
+    uint8_t pid_temp_mode;
     float pid_temp_p;
     float pid_temp_i;
     uint8_t temp2_mode;

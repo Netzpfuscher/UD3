@@ -63,6 +63,7 @@ uint8_t CMD_get(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 uint8_t CMD_set(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 uint8_t CMD_qcw(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 uint8_t CMD_relay(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+uint8_t CMD_pwm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 uint8_t CMD_reset(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 
 void send_signal_state_new(uint8_t signal, uint8_t inverted, TERMINAL_HANDLE * handle);
@@ -94,7 +95,10 @@ struct config_struct{
     uint16_t max_tr_duty;
     uint16_t max_qcw_duty;
     uint16_t temp1_setpoint;
+    uint8_t temp1_mode;
     uint16_t temp2_setpoint;
+    float pid_temp_p;
+    float pid_temp_i;
     uint8_t temp2_mode;
     uint8_t ps_scheme;
     uint8_t autotune_s;

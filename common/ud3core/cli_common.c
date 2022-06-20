@@ -114,6 +114,9 @@ void init_config(){
     configuration.max_tr_duty = 100;
     configuration.max_qcw_duty = 350;
     configuration.temp1_setpoint = 30;
+    configuration.temp1_mode = 0;
+    configuration.pid_temp_p = 0.2;
+    configuration.pid_temp_i = 0.2;
     configuration.temp2_setpoint = 30;
     configuration.temp2_mode = 0;
     configuration.ps_scheme = 2;
@@ -224,6 +227,9 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_tr_duty"     , configuration.max_tr_duty     , 1      ,500    ,10     ,callback_ConfigFunction     ,"Max TR duty cycle [%]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_qcw_duty"    , configuration.max_qcw_duty    , 1      ,500    ,10     ,callback_ConfigFunction     ,"Max QCW duty cycle [%]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"temp1_setpoint"  , configuration.temp1_setpoint  , 0      ,100    ,0      ,NULL                        ,"Setpoint for fan [*C]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"temp1_mode"      , configuration.temp1_mode      , 0      ,2      ,0      ,NULL                        ,"TH1 setpoint mode  0=disabled 1=PID3 2=PID4")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"temp1_pid_p"     , configuration.pid_temp_p      , 0      ,200    ,0      ,callback_temp_pid           ,"Temperature PI")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"temp1_pid_i"     , configuration.pid_temp_i      , 0      ,200    ,0      ,callback_temp_pid           ,"Temperature PI")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"temp2_setpoint"  , configuration.temp2_setpoint  , 0      ,100    ,0      ,NULL                        ,"Setpoint for TH2 [*C] 0=disabled")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"temp2_mode"      , configuration.temp2_mode      , 0      ,4      ,0      ,NULL                        ,"TH2 setpoint mode  0=disabled 1=FAN 3=Relay3 4=Relay4")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ps_scheme"       , configuration.ps_scheme       , 0      ,5      ,0      ,callback_ConfigFunction     ,"Power supply scheme")
@@ -267,6 +273,7 @@ void eeprom_load(TERMINAL_HANDLE * handle){
     qcw_regenerate_ramp();
     init_telemetry();
     callback_pid(confparam,0,handle);
+    callback_temp_pid(confparam,0,handle);
     callback_ext_interrupter(confparam,0,handle);
 }
 
@@ -833,11 +840,37 @@ uint8_t CMD_relay(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     }
     
     if(r_number == 3){
-        Relay3_Write(value);
+        temp_pwm_WriteCompare1(value ? 255 : 0);
         return TERM_CMD_EXIT_SUCCESS;
     }
     if(r_number == 4){
-        Relay4_Write(value);
+        temp_pwm_WriteCompare2(value ? 255 : 0);
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    return TERM_CMD_EXIT_SUCCESS;
+}
+
+/*****************************************************************************
+* Switches the user relay 3 or 4
+******************************************************************************/
+uint8_t CMD_pwm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+    if(argCount<2 || strcmp(args[0], "-?") == 0){
+        ttprintf("Usage: pwm 3/4 [0-255]\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    
+    uint8_t pwm_number = atoi(args[0]);
+    uint8_t value = atoi(args[1]);
+    if(value > 255){
+        value = 255;
+    }
+    
+    if(pwm_number == 3){
+        temp_pwm_WriteCompare1(value);
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    if(pwm_number == 4){
+        temp_pwm_WriteCompare2(value);
         return TERM_CMD_EXIT_SUCCESS;
     }
     return TERM_CMD_EXIT_SUCCESS;

@@ -29,6 +29,7 @@
 #include "tsk_thermistor.h"
 #include "tsk_fault.h"
 #include "alarmevent.h"
+#include "helper/FastPID.h"
 
 /* RTOS includes. */
 #include "FreeRTOS.h"
@@ -39,6 +40,8 @@
 xTaskHandle tsk_thermistor_TaskHandle;
 uint8 tsk_thermistor_initVar = 0u;
 
+FastPID pid_temp;
+
 SemaphoreHandle_t adc_sem;
 
 enum fan_mode{
@@ -46,7 +49,7 @@ enum fan_mode{
     FAN_TEMP1_TEMP2 = 1,
     FAN_NOT_USED = 2,
     FAN_TEMP2_RELAY3 = 3,
-    FAN_TEMP2_RELAY4 = 4
+    FAN_TEMP2_RELAY4 = 4,
 };
 
 typedef struct{
@@ -127,7 +130,7 @@ void initialize_thermistor(void) {
 	IDAC_therm_Start();
 	ADC_therm_Start();
     Therm_Mux_Start();
-	
+	temp_pwm_Start();
 }
 
 int32_t get_temp_128(int32_t counts) {
@@ -155,9 +158,10 @@ int32_t get_temp_counts(uint8_t channel){
 
 void run_temp_check(TEMP_FAULT * ret) {
 	//this function looks at all the thermistor temperatures, compares them against limits and returns any faults
-
-    tt.n.temp1.value = get_temp_128(get_temp_counts(THERM_1)) / 128;
-    tt.n.temp2.value = get_temp_128(get_temp_counts(THERM_2)) / 128;
+    int32_t temp1_fp = get_temp_128(get_temp_counts(THERM_1));
+    int32_t temp2_fp = get_temp_128(get_temp_counts(THERM_2));
+    tt.n.temp1.value = temp1_fp / 128;
+    tt.n.temp2.value = temp2_fp / 128;
 
 	// check for faults
 	if (tt.n.temp1.value > configuration.temp1_max && configuration.temp1_max) {
@@ -181,23 +185,32 @@ void run_temp_check(TEMP_FAULT * ret) {
     switch(configuration.temp2_mode){
         case FAN_NORMAL:
             Fan_Write(temp1_high);
-        break;
+            break;
         case FAN_TEMP1_TEMP2:
             Fan_Write( (temp1_high || temp2_high) ? 1 : 0);
-        break;
+            break;
         case FAN_NOT_USED:
             
-        break;
+            break;
         case FAN_TEMP2_RELAY3:
             Fan_Write(temp1_high);
-            Relay3_Write(temp2_high);
-        break;
+            temp_pwm_WriteCompare1(temp2_high? 255 :0);
+            break;
         case FAN_TEMP2_RELAY4:
             Fan_Write(temp1_high);
-            Relay4_Write(temp2_high);
-        break;
+            temp_pwm_WriteCompare2(temp2_high? 255 :0);
+            break;
     }
-
+    switch(configuration.temp1_mode){
+        case 0:
+            break;
+        case 1:
+            temp_pwm_WriteCompare1(255-pid_step(&pid_temp,configuration.temp1_setpoint*128,temp1_fp));
+            break;
+        case 2:
+            temp_pwm_WriteCompare2(255-pid_step(&pid_temp,configuration.temp1_setpoint*128,temp1_fp));
+            break;
+    }
 	return;
 }
 
@@ -250,6 +263,17 @@ void calib_adc(){
     }    
 }
 
+uint8_t callback_temp_pid(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
+    pid_new(&pid_temp,configuration.pid_temp_p,configuration.pid_temp_i,0,10,8,false);
+    pid_set_anti_windup(&pid_temp,0,255);
+    pid_set_limits(&pid_temp,0,255);
+    if(pid_temp._cfg_err==true){
+        alarm_push(ALM_PRIO_WARN, "PID: Thermistor config error", ALM_NO_VALUE);  
+    }
+    return pdPASS;
+}
+
+
 /* `#END` */
 /* ------------------------------------------------------------------------ */
 /*
@@ -286,6 +310,7 @@ void tsk_thermistor_TaskProc(void *pvParameters) {
     temp.fault1_cnt = TEMP_FAULT_COUNTER_MAX;
     temp.fault2_cnt = TEMP_FAULT_COUNTER_MAX;
     
+    callback_temp_pid(NULL,0,NULL);
 
 	/* `#END` */
     alarm_push(ALM_PRIO_INFO, "TASK: Thermistor started", ALM_NO_VALUE);
@@ -311,8 +336,11 @@ void tsk_thermistor_TaskProc(void *pvParameters) {
         xSemaphoreGive(adc_sem);
       
 		/* `#END` */
-
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
+        if(configuration.temp1_mode != 0){
+            vTaskDelay(100 / portTICK_PERIOD_MS);
+        } else {
+		    vTaskDelay(1000 / portTICK_PERIOD_MS);
+        }
 	}
 }
 /* ------------------------------------------------------------------------ */

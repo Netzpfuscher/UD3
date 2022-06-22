@@ -173,7 +173,7 @@ void SigGen_channel_enable(uint8_t ch, uint32_t ena){
             break;
         case 3:
             if(ena) DDS32_2_Enable_ch(1); else DDS32_2_Disable_ch(1);
-            break;
+            break;   
     }
  }
 
@@ -229,12 +229,11 @@ void SigGen_noise(uint8_t ch, uint32_t ena, uint32_t rnd){
 }
 
 void SigGen_setNoteTPR(uint8_t voice, uint32_t freqTenths){
-    SigGen_limit();
-            
     Midi_voice[voice].freqCurrent = freqTenths;
     channel[voice].freq = (freqTenths / 10);
-
     
+    SigGen_limit();
+
     uint32_t freq = ((channel[voice].freq)<<8) + ((0xFF *  (freqTenths % 10)) / 10);
     if(freqTenths != 0){
         channel[voice].halfcount = (SG_CLOCK_HALFCOUNT<<14) / (freq<<6);
@@ -301,18 +300,19 @@ void SigGen_limit(){
         if(Midi_voice[c].otCurrent){
             tt.n.midi_voices.value++;
         }
+        
         uint32_t out = Midi_voice[c].otCurrent<<12;
-        interrupter_set_pw_vol(c, out_pw, out);
-        channel[c].volume = out;
+        
         SigGen_channel_enable(c, out);
+        channel[c].volume = out;
+        
+        interrupter_set_pw_vol(c, out_pw, out);
     }
 }
 
 void SigGen_init(){
-    
     SigGen_SID_init();
     
-
     for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
         channel[ch].volume=0;
         channel[ch].freq=0;
@@ -433,8 +433,6 @@ void Synthmon_SID(TERMINAL_HANDLE * handle){
     }
     ttprintf("\r\n");
     TERM_sendVT100Code(handle, _VT100_CURSOR_ENABLE,0);
-    
-    
 }
 
 
@@ -449,6 +447,7 @@ uint8_t CMD_SynthMon(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
 }
 
 void SigGen_kill(){
+	interrupter1_control_Control = 0b0000;
     for (uint8_t ch = 0; ch < N_CHANNEL; ch++) {
         channel[ch].volume=0;
         channel[ch].freq=0;

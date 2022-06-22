@@ -49,6 +49,7 @@ uint8 tsk_display_initVar = 0u;
 #include "cli_common.h"
 #include "tsk_priority.h"
 #include "tsk_hwGauge.h"
+#include "alarmevent.h"
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */
@@ -68,7 +69,19 @@ DISP_ZONE_t DISP_zones;
 static bool selectionActive = false;    // 
 static uint32_t selectionStage = 0;     // Stage 0=set zones[sectionToSelect].firstLed, stage 1 sets .lastLed
 static uint32_t sectionToSelect = 0;    // The zone currently being configured
-static uint16_t selectionBackup;        // Cached original data in case user cancels configuration
+static uint32_t selectionBackup;        // Cached original data in case user cancels configuration
+
+uint8_t callback_display(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
+    alarm_push(ALM_PRIO_INFO, "DISPLAY: configuration loaded", ALM_NO_VALUE);
+    
+    for(uint8_t currGauge = 0; currGauge < NUM_HWGAUGE; currGauge++){
+        if(DISP_zones.zone[currGauge].version > DISP_CURRVERSION) continue; //TODO better do something...
+        
+        if(DISP_zones.zone[currGauge].version < DISP_CURRVERSION); //TODO do something else?
+    }
+    
+    return 1;
+}
 
 void tsk_display_TaskProc(void *pvParameters) {
 	/*
@@ -95,7 +108,7 @@ void tsk_display_TaskProc(void *pvParameters) {
     Disp_Trigger(1);
 
 	for (;;) {
-		vTaskDelay(10 / portTICK_PERIOD_MS);
+		vTaskDelay(2 / portTICK_PERIOD_MS);
         if(selectionActive) continue;
         
         // Clear the display and draw each zone of lights.  A zone is a series of consecutive LED's along the strip.
@@ -129,6 +142,24 @@ uint32_t DISP_getZoneColor(enum DISP_SRC src){
     case DISP_SRC_HWG0 ... DISP_SRC_HWG5:
         return HWGauge_getGaugeColor(src - DISP_SRC_HWG0);
         break;
+        
+    case DISP_SRC_RED_STATIC:
+        return Disp_RED;
+        
+    case DISP_SRC_GREEN_STATIC:
+        return Disp_GREEN;
+        
+    case DISP_SRC_BLUE_STATIC:
+        return Disp_BLUE;
+        
+    case DISP_SRC_CYAN_STATIC:
+        return Disp_CYAN;
+        
+    case DISP_SRC_MAGENTA_STATIC:
+        return Disp_MAGENTA;
+        
+    case DISP_SRC_YELLOW_STATIC:
+        return Disp_YELLOW;
         
     case DISP_SRC_WHITE_STATIC:
         return Disp_WHITE;
@@ -184,7 +215,7 @@ static uint8_t CMD_displaySelect_handleInput(TERMINAL_HANDLE * handle, uint16_t 
             vPortFree(handle->currProgram);
             TERM_removeProgramm(handle);
             selectionActive = false;
-            DISP_zones.data[sectionToSelect] = selectionBackup; // Discard changes, restore original
+            DISP_zones.rawData[sectionToSelect] = selectionBackup; // Discard changes, restore original
             ttprintf("\r\n\n%sSelection Canceled!%s\r\n\n", TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_RED), TERM_getVT100Code(_VT100_RESET, 0));
             return TERM_CMD_EXIT_SUCCESS;
         
@@ -258,6 +289,45 @@ void DISP_usage(TERMINAL_HANDLE * handle){
     ttprintf("       number = 0-%d\r\n", DISP_MAX_ZONES);
 }
 
+static uint32_t findZone(char * name){
+    
+    if(strcmp(name, "off") == 0){
+        return DISP_SRC_OFF;
+    }else if(strcmp(name, "bus") == 0){
+        return DISP_SRC_BUS;
+    }else if(strcmp(name, "synth") == 0){
+        return DISP_SRC_SYNTH;
+    }else if(strcmp(name, "gauge0") == 0){
+        return DISP_SRC_HWG0;
+    }else if(strcmp(name, "gauge1") == 0){
+        return DISP_SRC_HWG1;
+    }else if(strcmp(name, "gauge2") == 0){
+        return DISP_SRC_HWG2;
+    }else if(strcmp(name, "gauge3") == 0){
+        return DISP_SRC_HWG3;
+    }else if(strcmp(name, "gauge4") == 0){
+        return DISP_SRC_HWG4;
+    }else if(strcmp(name, "gauge5") == 0){
+        return DISP_SRC_HWG5;
+    }else if(strcmp(name, "white") == 0){
+        return DISP_SRC_WHITE_STATIC;
+    }else if(strcmp(name, "red") == 0){
+        return DISP_SRC_RED_STATIC;
+    }else if(strcmp(name, "green") == 0){
+        return DISP_SRC_GREEN_STATIC;
+    }else if(strcmp(name, "blue") == 0){
+        return DISP_SRC_BLUE_STATIC;
+    }else if(strcmp(name, "cyan") == 0){
+        return DISP_SRC_CYAN_STATIC;
+    }else if(strcmp(name, "magenta") == 0){
+        return DISP_SRC_MAGENTA_STATIC;
+    }else if(strcmp(name, "yellow") == 0){
+        return DISP_SRC_YELLOW_STATIC;
+    }
+    
+    return DISP_SRC_OFF;
+}
+
 // Interactively configures the first and last LED for the zones.
 uint8_t CMD_display(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     uint8_t returnCode = TERM_CMD_EXIT_SUCCESS;
@@ -270,7 +340,13 @@ uint8_t CMD_display(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     // Assign the source of the data (one of the DISP_SRC_ values) to zone[number]
 	if(strcmp(args[0], "assign") == 0 && (argCount == 3)){
         uint8_t section = atoi(args[1]);
+        
+        
         uint8_t src = atoi(args[2]);
+        if(src == 0){
+            src = findZone(args[2]);
+        }
+        
         if(section < DISP_MAX_ZONES && src <= DISP_SRC_COUNT){
             DISP_zones.zone[section].src = src;
             ttprintf("Assigned section %d to src %d\r\n", section, src);
@@ -296,7 +372,7 @@ uint8_t CMD_display(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
             prog->inputHandler = CMD_displaySelect_handleInput;
             TERM_sendVT100Code(handle, _VT100_RESET, 0); TERM_sendVT100Code(handle, _VT100_CURSOR_POS1, 0);
             returnCode = TERM_CMD_EXIT_PROC_STARTED;
-            selectionBackup = DISP_zones.data[sectionToSelect]; // In case user cancels calibration
+            selectionBackup = DISP_zones.rawData[sectionToSelect]; // In case user cancels calibration
             selectionActive = true;
             sectionToSelect = section;
             TERM_attachProgramm(handle, prog);

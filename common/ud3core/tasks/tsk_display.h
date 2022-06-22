@@ -32,10 +32,13 @@
 /* `#START USER_TYPES_AND_DEFINES` */
 #include <device.h>
 #include "TTerm.h"
+#include "cli_basic.h"
 
 /* `#END` */
     
 #define DISP_MAX_ZONES 10
+    
+#define DISP_CURRVERSION 1
 
 // Used in DISP_ZONE_s.src
 enum DISP_SRC
@@ -52,14 +55,21 @@ enum DISP_SRC
     DISP_SRC_HWG5  = 14,
    
     DISP_SRC_WHITE_STATIC = 15,
+    DISP_SRC_RED_STATIC = 16,
+    DISP_SRC_GREEN_STATIC = 17,
+    DISP_SRC_BLUE_STATIC = 18,
+    DISP_SRC_CYAN_STATIC = 19,
+    DISP_SRC_MAGENTA_STATIC = 20,
+    DISP_SRC_YELLOW_STATIC = 21,
     DISP_SRC_COUNT           // Must be last!
 };
     
 // Defines the range of LED's for a zone, along with the data source (one of the DISP_ values above)
 typedef struct{
-    uint8_t firstLed        : 6;
-    uint8_t lastLed         : 6;
-    uint8_t src             : 4;
+    uint8_t version;
+    uint8_t firstLed;
+    uint8_t lastLed;
+    uint8_t src;
 } DISP_ZONE_s;
 
 typedef struct{
@@ -71,7 +81,7 @@ typedef struct{
 // A zone is a series of consecutive LED's along the strip.
 typedef union{
     DISP_ZONE_s zone[DISP_MAX_ZONES];
-    uint16_t data[DISP_MAX_ZONES];
+    uint16_t rawData[(sizeof(DISP_ZONE_s) * DISP_MAX_ZONES) / 2];
 } DISP_ZONE_t;
 
 extern DISP_ZONE_t DISP_zones;
@@ -79,6 +89,7 @@ extern DISP_ZONE_t DISP_zones;
 void tsk_display_Start(void);
 uint32_t DISP_getZoneColor(enum DISP_SRC src);
 uint8_t CMD_display(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+uint8_t callback_display(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 
 uint32_t smallColorToColor(SMALL_COLOR c);
 

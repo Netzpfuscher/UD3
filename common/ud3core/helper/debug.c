@@ -81,6 +81,7 @@ uint8_t CMD_debug(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     if(argCount==0 || strcmp(args[0], "-?") == 0){
         ttprintf(   "Usage: debug [id]\r\n"
                     "debug min\r\n"
+                    "debug error\r\n"
                     "debug fn\r\n");
         return TERM_CMD_EXIT_SUCCESS;
     } 
@@ -88,13 +89,18 @@ uint8_t CMD_debug(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     if(strcmp(args[0], "min") == 0){
         print_min_debug(handle);
         return TERM_CMD_EXIT_SUCCESS;
-	}
-    if(strcmp(args[0], "fn") == 0){
+	}else  if(strcmp(args[0], "error") == 0){
+        min_ctx.transport_fifo.sn_max++;
+        ttprintf("injected one fifo offset\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+	}else if(strcmp(args[0], "fn") == 0){
         print_debug(handle,MIN_ID_DEBUG,pdTRUE);
         return TERM_CMD_EXIT_SUCCESS;
-	}
-    uint8_t id = atoi(args[0]);
-    print_debug(handle,id,pdFALSE);
+	}else{
+        uint8_t id = atoi(args[0]);
+        print_debug(handle,id,pdFALSE);
+    }
+    
     return TERM_CMD_EXIT_SUCCESS;
 }
 

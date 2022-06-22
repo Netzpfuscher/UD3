@@ -132,8 +132,7 @@ uint32_t min_time_ms(void){
 }
 
 void min_reset(uint8_t port){
-    SigGen_kill();
-    USBMIDI_1_callbackLocalMidiEvent(0, (uint8_t*)kill_msg);   
+    //USBMIDI_1_callbackLocalMidiEvent(0, (uint8_t*)kill_msg);   
     alarm_push(ALM_PRIO_WARN, "COM: MIN reset",ALM_NO_VALUE);
 }
 

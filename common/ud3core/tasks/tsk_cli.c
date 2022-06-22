@@ -106,8 +106,24 @@ static const char * AC_hwGauge[] = {
 
 static const char * AC_display[] = {
     "assign",
+    "blue",
+    "bus",
     "clear",
-    "select"
+    "cyan",
+    "gauge0",
+    "gauge1",
+    "gauge2",
+    "gauge3",
+    "gauge4",
+    "gauge5",
+    "green",
+    "magenta",
+    "off",
+    "red",
+    "select",
+    "synth",
+    "white",
+    "yellow"
 };
 
 static const char * AC_eeprom[] = {

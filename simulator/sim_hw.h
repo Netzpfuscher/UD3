@@ -108,6 +108,10 @@ uint8_t no_fb_reg_Read();
 #define Comp_1_Start()
 #define ADC_Start()
 
+#define temp_pwm_WriteCompare1(compare)
+#define temp_pwm_WriteCompare2(compare)
+#define temp_pwm_Start()
+
 #define Disp_GREEN 0
 #define Disp_RED 0
 #define Disp_BLUE 0
@@ -115,6 +119,9 @@ uint8_t no_fb_reg_Read();
 #define Disp_BLACK 0
 #define Disp_OCEAN 0
 #define Disp_ORANGE 0
+#define Disp_CYAN 0
+#define Disp_MAGENTA 0
+#define Disp_YELLOW 0
 
 #define Disp_MemClear(p1)
 #define Disp_DrawRect(p1,p2,p3,p4,p5,p6)

@@ -2,6 +2,8 @@
 
 
 #include "FreeRTOS.h"
+#include "SignalGeneratorSID.h"
+#include "qcw.h"
 #include "task.h"
 #include "queue.h"
 
@@ -14,16 +16,24 @@
 #include "clock.h"
 #include "SignalGenerator.h"
 
+#define MAX_BUS_CHARGE 4000
+
 static int bus_charge = 0;
 static int bus_i = 0;
 
 static void populate_buffer(adc_sample_t* ptr){
-	if(tt.n.bus_status.value == BUS_CHARGING){
-		if(bus_charge<4000) bus_charge+=((4000-bus_charge)/100);
-	}else if(tt.n.bus_status.value == BUS_OFF){
-		if(bus_charge>0) bus_charge-=((bus_charge)/100);
-		
-	}
+    if (tt.n.bus_status.value == BUS_READY) {
+        bus_charge = MAX_BUS_CHARGE;
+    } else {
+        int const bus_target = tt.n.bus_status.value == BUS_OFF ? 0 : MAX_BUS_CHARGE;
+        if(bus_charge != bus_target) {
+            int const old_bus_charge = bus_charge;
+            bus_charge += (bus_target - bus_charge)/100;
+            if (bus_charge == old_bus_charge) {
+                bus_charge += (bus_charge > bus_target) ? -1 : 1;
+            }
+        }
+    }
 	
 	if(interrupter.mode!=INTR_MODE_OFF){
 		float temp = (((55000 - param.pwd)/1000) * param.pwp)/10;

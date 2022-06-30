@@ -1,3 +1,11 @@
+// Feature test macro to enable various functions related to pseudo terminals
+#define _XOPEN_SOURCE 600
+#include <sys/select.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <poll.h>
 #include "UART.h"
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -7,7 +15,10 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
+#include "console.h"
 #include <errno.h>
+#include <termios.h>
+#include <unistd.h>
 
 
 #define BUFFER_FAIL     0
@@ -97,11 +108,26 @@ typedef struct __sck__
 	struct sockaddr_in cliAddr;
 	int cliAddrLen;
 	struct sockaddr_in servAddr;
+
+	int pseudo_terminal;
 }sck;
 
+#define TTY_SYMLINK "/tmp/ud3sim-uart"
+
+int setup_pseudo_serial() {
+	// Set up pseudo terminal
+	int const pseudo_port = posix_openpt(O_RDWR | O_NONBLOCK);
+	grantpt(pseudo_port);
+	unlockpt(pseudo_port);
+	// Create symlink at fixed path for convienience (ptsname will vary between runs)
+	remove(TTY_SYMLINK);
+	symlink(ptsname(pseudo_port), TTY_SYMLINK);
+	// I think you're supposed to set a bunch of flags on the PTY here (baudrate, XON/XOFF, and so on), but it seems to
+	// work fine with the defaults.
+	return pseudo_port;
+}
 
 void tsk_udp_rx(void *pvParameters) {
-	
 	sck* ip = pvParameters;
 	
 	ip->rc = -1;
@@ -116,7 +142,7 @@ void tsk_udp_rx(void *pvParameters) {
 	}
 	
 	
-	
+	ip->pseudo_terminal = setup_pseudo_serial();
 	/* Lokalen Server Port bind(en) */
 	ip->servAddr.sin_family = AF_INET;
 	ip->servAddr.sin_addr.s_addr = htonl (INADDR_ANY);
@@ -130,10 +156,23 @@ void tsk_udp_rx(void *pvParameters) {
 	
 
 	while(1){
-	
-		int len = recvfrom(ip->sock, r_buffer, sizeof(r_buffer), 0,
-							   (struct sockaddr *)&ip->cliAddr,
-							   &ip->cliAddrLen);
+		vTaskDelay(1);
+		struct pollfd polls[2] = {
+			{ip->pseudo_terminal, POLLIN, 0},
+			{ip->sock, POLLIN, 0},
+		};
+		int rc = poll(polls, 2, -1);
+		if (rc <= 0) {
+			continue;
+		}
+		int len = -1;
+		if (polls[0].revents & POLLIN) {
+			len = read(ip->pseudo_terminal, r_buffer, sizeof(r_buffer));
+		} else if (polls[1].revents & POLLIN) {
+			len = recvfrom(ip->sock, r_buffer, sizeof(r_buffer), 0,
+			                       (struct sockaddr *)&ip->cliAddr,
+			                       &ip->cliAddrLen);
+		}
 		//console_print("str %s\n",strerror(errno));
 		if(len!=-1){
 			r_buffer[len] = '\0';
@@ -141,9 +180,8 @@ void tsk_udp_rx(void *pvParameters) {
 			//		inet_ntoa(ip->cliAddr.sin_addr));
 			for(uint32_t i=0;i<len;i++){
 				BufferIn(r_buffer[i]);
-			}				
+			}
 		}
-		vTaskDelay(1);
 		
 	}
 	
@@ -166,8 +204,8 @@ void tsk_udp_tx(void *pvParameters) {
 	
 		
 		if(xQueueReceive( xframes,&to_send, 1 )){
-			//console_print("Frame: %u\n", to_send.len);
 			sendto(ip->sock, to_send.data, to_send.len, 0, (struct sockaddr *)&ip->cliAddr,sizeof(ip->cliAddr));
+			write(ip->pseudo_terminal, to_send.data, to_send.len);
 		}
 		
 		

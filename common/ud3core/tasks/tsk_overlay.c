@@ -170,8 +170,8 @@ void init_telemetry(){
     tt.n.temp1.min = 0;
     tt.n.temp1.offset = 0;
     tt.n.temp1.unit = TT_UNIT_C;
-    tt.n.temp1.divider = 1;
-    tt.n.temp1.high_res = pdFALSE;
+    tt.n.temp1.divider = 10;
+    tt.n.temp1.high_res = pdTRUE;
     tt.n.temp1.resend_time = TT_SLOW;
     tt.n.temp1.chart = 1;
     tt.n.temp1.gauge = 1;
@@ -181,8 +181,8 @@ void init_telemetry(){
     tt.n.temp2.min = 0;
     tt.n.temp2.offset = 0;
     tt.n.temp2.unit = TT_UNIT_C;
-    tt.n.temp2.divider = 1;
-    tt.n.temp2.high_res = pdFALSE;
+    tt.n.temp2.divider = 10;
+    tt.n.temp2.high_res = pdTRUE;
     tt.n.temp2.resend_time = TT_SLOW;
     tt.n.temp2.chart = TT_NO_TELEMETRY;
     tt.n.temp2.gauge = TT_NO_TELEMETRY;
@@ -284,10 +284,10 @@ void show_overlay_100ms(TERMINAL_HANDLE * handle){
     	ttprintf("Battery Voltage:   %4iV", tt.n.batt_v.value);
 
     	TERM_setCursorPos(handle, row_pos + 3, col_pos + 1);
-    	ttprintf("Temp 1:          %4i *C", tt.n.temp1.value);
+    	ttprintf("Temp 1:          %4i.%i *C", tt.n.temp1.value/10, tt.n.temp1.value%10);
 
     	TERM_setCursorPos(handle, row_pos + 4, col_pos + 1);
-    	ttprintf("Temp 2:          %4i *C", tt.n.temp2.value);
+    	ttprintf("Temp 2:          %4i.%i *C", tt.n.temp2.value/10, tt.n.temp2.value%10);
 
     	TERM_setCursorPos(handle, row_pos + 5, col_pos + 1);
         ttprintf("Bus status: ");
@@ -394,7 +394,7 @@ void show_overlay_400ms(TERMINAL_HANDLE * handle) {
             send_status(tt.n.bus_status.value!=BUS_OFF,
                         interrupter.mode!=INTR_MODE_OFF,
                         configuration.ps_scheme!=AC_NO_RELAY_BUS_SCHEME,
-                        sysfault.interlock,
+                        system_fault_Control?0:1,
                         handle);
         }
     }

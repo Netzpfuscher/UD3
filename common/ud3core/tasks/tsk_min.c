@@ -429,19 +429,12 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
         case MIN_ID_MIDI:
             switch(param.synth){
                 case SYNTH_OFF:
-       
                     break;
                 case SYNTH_MIDI:
                     process_midi(min_payload,len_payload);     
                     break;
-                case SYNTH_SID:
-                    process_sid(min_payload, len_payload);
-                    break;
                 case SYNTH_MIDI_QCW:
                     process_midi(min_payload,len_payload);     
-                    break;
-                case SYNTH_SID_QCW:
-                    process_sid(min_payload, len_payload);
                     break;
             }
             return;
@@ -628,20 +621,20 @@ void tsk_min_TaskProc(void *pvParameters) {
             for(i=0;i<NUM_MIN_CON;i++){
                  
                 poll_UART();
-                if(socket_info[i].socket==SOCKET_DISCONNECTED) goto end;   
-                
-                uint16_t eth_bytes=xStreamBufferBytesAvailable(min_port[i].tx);
-                if(eth_bytes){
-                    bytes_waiting+=eth_bytes;
-                    if(eth_bytes>LOCAL_UART_BUFFER_SIZE) eth_bytes = LOCAL_UART_BUFFER_SIZE;
-                    if(min_queue_has_space_for_frame(&min_ctx,eth_bytes)){
-                        bytes_cnt = xStreamBufferReceive(min_port[i].tx, buffer, eth_bytes, 0);
-                        if(bytes_cnt){
-                            min_queue_frame(&min_ctx,i,buffer,bytes_cnt);
+                if(socket_info[i].socket!=SOCKET_DISCONNECTED){   
+                    uint16_t eth_bytes=xStreamBufferBytesAvailable(min_port[i].tx);
+                    if(eth_bytes){
+                        bytes_waiting+=eth_bytes;
+                        if(eth_bytes>LOCAL_UART_BUFFER_SIZE) eth_bytes = LOCAL_UART_BUFFER_SIZE;
+                        if(min_queue_has_space_for_frame(&min_ctx,eth_bytes)){
+                            bytes_cnt = xStreamBufferReceive(min_port[i].tx, buffer, eth_bytes, 0);
+                            if(bytes_cnt){
+                                min_queue_frame(&min_ctx,i,buffer,bytes_cnt);
+                            }
                         }
                     }
                 }
-                end:;
+                
             }
             xSemaphoreGive(min_Semaphore);
             if(bytes_waiting==0){

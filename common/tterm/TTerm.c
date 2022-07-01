@@ -276,7 +276,7 @@ unsigned isACIILetter(char c){
 
 void TERM_printBootMessage(TERMINAL_HANDLE * handle){
     TERM_sendVT100Code(handle, _VT100_RESET, 0); TERM_sendVT100Code(handle, _VT100_CURSOR_POS1, 0); TERM_sendVT100Code(handle, _VT100_WRAP_OFF, 0);
-    ttprintfEcho("\r\n\n\n%s\r\n", TERM_startupText1);
+    ttprintfEcho("\33[?7l\r\n\n\n%s\r\n", TERM_startupText1);
     ttprintfEcho("%s\r\n", TERM_startupText2);
     ttprintfEcho("%s\r\n", TERM_startupText3);
     

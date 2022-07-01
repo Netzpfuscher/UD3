@@ -160,18 +160,20 @@ void run_temp_check(TEMP_FAULT * ret) {
 	//this function looks at all the thermistor temperatures, compares them against limits and returns any faults
     int32_t temp1_fp = get_temp_128(get_temp_counts(THERM_1));
     int32_t temp2_fp = get_temp_128(get_temp_counts(THERM_2));
-    tt.n.temp1.value = temp1_fp / 128;
-    tt.n.temp2.value = temp2_fp / 128;
+    int32_t temp1 = temp1_fp / 128;
+    int32_t temp2 = temp2_fp / 128;
+    tt.n.temp1.value = (temp1_fp*10) / 128;
+    tt.n.temp2.value = (temp2_fp*10) / 128;
 
 	// check for faults
-	if (tt.n.temp1.value > configuration.temp1_max && configuration.temp1_max) {
+	if (temp1 > configuration.temp1_max && configuration.temp1_max) {
         if(ret->fault1_cnt){
             ret->fault1_cnt--;
         }
 	}else{
         ret->fault1_cnt = TEMP_FAULT_COUNTER_MAX;
     }
-	if (tt.n.temp2.value > configuration.temp2_max && configuration.temp2_max) {
+	if (temp2 > configuration.temp2_max && configuration.temp2_max) {
 		if(ret->fault2_cnt){
             ret->fault2_cnt--;
         }
@@ -179,8 +181,8 @@ void run_temp_check(TEMP_FAULT * ret) {
         ret->fault2_cnt = TEMP_FAULT_COUNTER_MAX;
     }
     
-    uint_fast8_t temp1_high = (tt.n.temp1.value > configuration.temp1_setpoint);
-    uint_fast8_t temp2_high = (tt.n.temp2.value > configuration.temp2_setpoint);
+    uint_fast8_t temp1_high = (temp1 > configuration.temp1_setpoint);
+    uint_fast8_t temp2_high = (temp2 > configuration.temp2_setpoint);
 
     switch(configuration.temp2_mode){
         case FAN_NORMAL:

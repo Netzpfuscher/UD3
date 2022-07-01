@@ -985,7 +985,7 @@ uint8_t CMD_signals(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         ttprintf("\r\n");
         TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
         ttprintf("                                    \r");
-        ttprintf("Temp 1: %i*C Temp 2: %i*C\r\n", tt.n.temp1.value, tt.n.temp2.value);
+        ttprintf("Temp 1: %i.%i*C Temp 2: %i.%i*C\r\n", tt.n.temp1.value/10, tt.n.temp1.value%10, tt.n.temp2.value/10, tt.n.temp2.value%10);
         ttprintf("                                    \r");
         ttprintf("Vbus: %u mV Vbatt: %u mV\r\n", ADC_CountsTo_mVolts(ADC_active_sample_buf[0].v_bus),ADC_CountsTo_mVolts(ADC_active_sample_buf[0].v_batt));
         ttprintf("                                    \r");

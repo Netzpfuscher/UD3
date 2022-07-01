@@ -25,7 +25,6 @@
   
    
     void process_midi(uint8_t* ptr, uint16_t len);
-    void process_sid(uint8_t* ptr, uint16_t len);
     void process_min_sid(uint8_t* ptr, uint16_t len);
     
 

@@ -51,3 +51,5 @@ ComponentUpdateLog.txt
 *.cyprj.*
 *.cywrk.*
 *.v2
+simulator/build
+simulator/eeprom.txt

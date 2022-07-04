@@ -332,9 +332,7 @@ void VMS_addBlockToList(VMS_BLOCK * block, SynthVoice * voice){
     data->targetVoice = voice;
     data->period = block->period;
     data->nextRunTime = SYS_getTime();
-    
-    int32_t param1 = VMS_getParam(block, voice, 1);
-    
+
     switch(block->type){
         case VMS_SIN:
             data->data = pvPortMalloc(sizeof(SINE_DATA));

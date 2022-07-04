@@ -198,6 +198,11 @@ uint8_t CMD_ramp(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         }
         return TERM_CMD_EXIT_SUCCESS;
     } else if(strcmp(args[0], "draw") == 0){
+        port_str * ptr = handle->port;
+        if(ptr->term_mode == PORT_TERM_VT100){
+            ttprintf("Command only available with Teslaterm\r\n");
+            return TERM_CMD_EXIT_SUCCESS;
+        }
         tsk_overlay_chart_stop();
         send_chart_clear(handle);
         CHART temp;

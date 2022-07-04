@@ -124,7 +124,7 @@ void synthcode_SID(uint32_t r){
         if(channel[ch].volume > 0 && channel[ch].freq){
             tt.n.midi_voices.value++;
             if(sid_frm.wave[ch]){
-                interrupter_set_pw_vol(ch,sid_frm.master_pw,channel[ch].volume/2);
+                interrupter_set_pw_vol(ch,sid_frm.master_pw,channel[ch].volume/configuration.noise_vol_div);
             }else{
                 interrupter_set_pw_vol(ch,sid_frm.master_pw,channel[ch].volume);
             }

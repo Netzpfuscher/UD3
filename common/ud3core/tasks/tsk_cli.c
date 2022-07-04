@@ -175,6 +175,7 @@ static const char * AC_set_get[] = {
     "max_tr_pw",
     "min_enable",
     "min_tr_current",
+    "noise_div",
     "offtime",
     "pca9685",
     "pid_curr_i",

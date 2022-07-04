@@ -144,6 +144,8 @@ void init_config(){
     configuration.pca9685 = 0;
     configuration.max_fb_errors = 0;
     
+    configuration.noise_vol_div = 2;
+    
     configuration.ntc_b = 3977;
     configuration.ntc_r25 = 10000;
     
@@ -203,6 +205,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_max"         , param.qcw_max                 , 0      ,255    ,0      ,callback_rampFunction       ,"QCW Ramp end value")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_repeat"      , param.qcw_repeat              , 0      ,1000   ,0      ,NULL                        ,"QCW pulse repeat time [ms] <100=single shot")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"synth"           , param.synth                   , 0      ,2      ,0      ,callback_SynthFunction      ,"0=off 1=MIDI 2=SID")    
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"noise_div"       , configuration.noise_vol_div   , 1      ,1000   ,0      ,NULL                        ,"Noise volume divider")    
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"watchdog"        , configuration.watchdog        , 0      ,1      ,0      ,callback_ConfigFunction     ,"Watchdog Enable")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"watchdog_timeout", configuration.watchdog_timeout, 1      ,10000  ,0      ,callback_ConfigFunction     ,"Watchdog timeout [ms]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_tr_pw"       , configuration.max_tr_pw       , 0      ,10000  ,0      ,callback_ConfigFunction     ,"Maximum TR PW [uSec]")

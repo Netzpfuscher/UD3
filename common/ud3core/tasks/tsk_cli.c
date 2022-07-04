@@ -319,6 +319,7 @@ void tsk_cli_Start(void) {
 
         usb_port.type = PORT_TYPE_USB;
         usb_port.term_mode = PORT_TERM_VT100;
+        usb_port.term_send_alarms = false;
         usb_port.term_block = xSemaphoreCreateBinary();
         usb_port.rx = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
         usb_port.tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,64);
@@ -366,6 +367,7 @@ void tsk_cli_Start(void) {
                 min_port[i].type = PORT_TYPE_MIN;
                 min_port[i].num = i;
                 min_port[i].term_mode = PORT_TERM_VT100;
+                min_port[i].term_send_alarms = false;
                 min_port[i].term_block = xSemaphoreCreateBinary();
                 min_port[i].rx = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
                 min_port[i].tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,256);
@@ -379,6 +381,7 @@ void tsk_cli_Start(void) {
             min_port[0].type = PORT_TYPE_SERIAL;
             min_port[0].num = 0;
             min_port[0].term_mode = PORT_TERM_VT100;
+            min_port[0].term_send_alarms = false;
             min_port[0].term_block = xSemaphoreCreateBinary();
             min_port[0].rx = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
             min_port[0].tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,1);

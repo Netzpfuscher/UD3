@@ -354,7 +354,7 @@ void show_overlay_100ms(TERMINAL_HANDLE * handle){
         }
         
 
-        if(portM->term_mode==PORT_TERM_MQTT){
+        if(portM->term_send_alarms){
              ALARMS temp;
             if(alarm_pop(&temp)==pdPASS){
                 send_event(&temp,handle);
@@ -544,8 +544,10 @@ uint8_t CMD_status(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         return TERM_CMD_EXIT_SUCCESS;
     }
 	
-
+    port_str * ptr = handle->port;
+    
 	if(strcmp(args[0], "start") == 0){
+        ptr->term_mode = PORT_TERM_VT100;
 		start_overlay_task(handle);
         return TERM_CMD_EXIT_SUCCESS;
 	}
@@ -562,7 +564,13 @@ uint8_t CMD_tterm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         return TERM_CMD_EXIT_SUCCESS;
     }
     port_str * ptr = handle->port;
+    ptr->term_send_alarms = false;
     
+    if(argCount>1){
+            if(strcmp(args[1], "alarm") == 0){
+            ptr->term_send_alarms = true;
+            }
+        }
 	if(strcmp(args[0], "start") == 0){
         ptr->term_mode = PORT_TERM_TT;
         init_tt(pdTRUE,handle);
@@ -570,6 +578,7 @@ uint8_t CMD_tterm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     }
     if(strcmp(args[0], "mqtt") == 0){
         ptr->term_mode = PORT_TERM_MQTT;
+        ptr->term_send_alarms = true;
         init_tt(pdFALSE,handle);
         return TERM_CMD_EXIT_SUCCESS;
     }

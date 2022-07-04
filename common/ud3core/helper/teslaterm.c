@@ -13,7 +13,6 @@
 uint8_t gaugebuf[] = {0xFF,0x04, TT_GAUGE,0x00,0x00,0x00};
 uint8_t buf32[] = {0xFF,0x06, TT_GAUGE32,0x00,0x00,0x00,0x00,0x00};
 uint8_t chartbuf[] = {0xFF,0x04, TT_CHART,0x00,0x00,0x00};
-uint8_t statusbuf[] = {0xFF,0x06, TT_STATUS, 0x00, 0x00, 0x00, 0x00,0x00};
 const uint8_t chartdraw[] = {0xFF,0x02, TT_CHART_DRAW,0x00};
 const uint8_t chartclear[] = {0xFF,0x02, TT_CHART_CLEAR,0x00};
 
@@ -241,14 +240,19 @@ void send_chart_text_center(int16_t x, int16_t y, uint8_t color, uint8_t size, c
     ttprintf("%s",text);
 }
 
+
+
 void send_status(uint8_t bus_active, uint8_t transient_active, uint8_t bus_controlled,uint8_t killbit ,TERMINAL_HANDLE * handle) {
-    statusbuf[2] = TT_STATUS;
-	statusbuf[3] = bus_active|(transient_active<<1)|(bus_controlled<<2)|(killbit<<3);
-	statusbuf[4] = configuration.max_tr_pw;
-	statusbuf[5] = configuration.max_tr_pw >> 8;
-	statusbuf[6] = configuration.max_tr_prf;
-	statusbuf[7] = configuration.max_tr_prf >> 8;
-    ttprintb(statusbuf, sizeof(statusbuf));
+    uint8_t buf[8];
+    buf[0] = 0xFF;
+    buf[1] = sizeof(buf)-2;
+    buf[2] = TT_STATUS;
+	buf[3] = bus_active|(transient_active<<1)|(bus_controlled<<2)|(killbit<<3);
+	buf[4] = configuration.max_tr_pw;
+	buf[5] = configuration.max_tr_pw >> 8;
+	buf[6] = configuration.max_tr_prf;
+	buf[7] = configuration.max_tr_prf >> 8;
+    ttprintb(buf, sizeof(buf));
 }
 
 void tt_chart_init(CHART *chart, TERMINAL_HANDLE * handle){

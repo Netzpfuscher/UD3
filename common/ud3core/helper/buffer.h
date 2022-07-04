@@ -31,6 +31,4 @@ uint16_t buffer_get_uint16(const uint8_t *buf, int32_t *ind);
 int32_t buffer_get_int32(const uint8_t *buf, int32_t *ind);
 uint32_t buffer_get_uint32(const uint8_t *buf, int32_t *ind);   
     
-    
-    
 #endif /* BUFFER_H_ */

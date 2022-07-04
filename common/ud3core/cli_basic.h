@@ -88,6 +88,7 @@ struct port_struct {
     uint8_t type;
     uint8_t num;
     uint8_t term_mode;
+    uint8_t term_send_alarms;
     StreamBufferHandle_t tx;
     StreamBufferHandle_t rx;
     xSemaphoreHandle term_block;

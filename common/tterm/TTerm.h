@@ -251,7 +251,7 @@ void TERM_sendVT100Code(TERMINAL_HANDLE * handle, uint16_t cmd, uint8_t var);
 const char * TERM_getVT100Code(uint16_t cmd, uint8_t var);
 uint16_t TERM_countArgs(const char * data, uint16_t dataLength);
 uint8_t TERM_interpretCMD(char * data, uint16_t dataLength, TERMINAL_HANDLE * handle);
-uint8_t TERM_seperateArgs(char * data, uint16_t dataLength, char ** buff);
+uint16_t TERM_seperateArgs(char * data, uint16_t dataLength, char ** buff);
 void TERM_checkForCopy(TERMINAL_HANDLE * handle, COPYCHECK_MODE mode);
 void TERM_printDebug(TERMINAL_HANDLE * handle, char * format, ...);
 void TERM_removeProgramm(TERMINAL_HANDLE * handle);

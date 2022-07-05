@@ -82,6 +82,7 @@ TERMINAL_HANDLE * TERM_createNewHandle(TermPrintHandler printFunction, unsigned 
         
         TERM_addCommand(CMD_help, "help", "Displays this help message", 0, &TERM_cmdListHead);
         TERM_addCommand(CMD_cls, "cls", "Clears the screen", 0, &TERM_cmdListHead);
+        TERM_addCommand(CMD_testCommandHandler, "test", "Test input", 0, &TERM_cmdListHead);
         //TERM_addCommand(CMD_reset, "reset", "resets the fibernet", 0, &TERM_cmdListHead);
         
         REGISTER_apps(&TERM_cmdListHead);
@@ -662,7 +663,7 @@ uint8_t TERM_interpretCMD(char * data, uint16_t dataLength, TERMINAL_HANDLE * ha
     return TERM_CMD_EXIT_NOT_FOUND;
 }
 
-uint8_t TERM_seperateArgs(char * data, uint16_t dataLength, char ** buff){
+uint16_t TERM_seperateArgs(char * data, uint16_t dataLength, char ** buff){
     uint8_t count = 0;
     uint8_t currPos = 0;
     unsigned quoteMark = 0;
@@ -701,7 +702,7 @@ uint8_t TERM_seperateArgs(char * data, uint16_t dataLength, char ** buff){
                 break;
         }
     }
-    if(quoteMark) TERM_ARGS_ERROR_STRING_LITERAL;
+    if(quoteMark) return TERM_ARGS_ERROR_STRING_LITERAL;
     return count;
 }
 
@@ -744,7 +745,7 @@ uint16_t TERM_countArgs(const char * data, uint16_t dataLength){
                 break;
         }
     }
-    if(quoteMark) TERM_ARGS_ERROR_STRING_LITERAL;
+    if(quoteMark) return TERM_ARGS_ERROR_STRING_LITERAL;
     return count;
 }
 

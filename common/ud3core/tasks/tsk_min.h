@@ -63,7 +63,7 @@ void MIN_print(void * port, char * format, ...);
 void tsk_min_Start(void);
 void min_reset_flow(void);
 extern struct _socket_info socket_info[NUM_MIN_CON];
-extern struct _time time;
+extern struct _time min_time;
 extern uint32_t uart_bytes_rx;
 extern uint32_t uart_bytes_tx;
 /*

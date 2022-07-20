@@ -99,38 +99,42 @@ void LED4_Write(uint8_t val){
 	led[3]=val;
 }
 
-uint8_t DDS32_1_en[2];
-uint32_t DDS32_1_freq[2];
+uint8_t DDS32_en[4] = {};
+uint32_t DDS32_freq[4] = {};
 void DDS32_1_Enable_ch(uint8_t ch){
-	DDS32_1_en[ch]=1;
+	DDS32_en[ch]=1;
 }
 void DDS32_1_Disable_ch(uint8_t ch){
-	DDS32_1_en[ch]=0;
+	DDS32_en[ch]=0;
 }
-uint8_t DDS32_2_en[2];
-uint32_t DDS32_2_freq[2];
 void DDS32_2_Enable_ch(uint8_t ch){
-	DDS32_2_en[ch]=1;
+	DDS32_en[2+ch]=1;
 }
 void DDS32_2_Disable_ch(uint8_t ch){
-	DDS32_2_en[ch]=0;
+	DDS32_en[2+ch]=0;
 }
 
 uint32_t DDS32_1_SetFrequency_FP8(uint8_t ch,uint32_t freq){
-	DDS32_1_freq[ch]=freq;
+	DDS32_freq[ch]=freq;
 	return freq>>8;
 }
 uint32_t DDS32_2_SetFrequency_FP8(uint8_t ch,uint32_t freq){
-	DDS32_2_freq[ch]=freq;
+	DDS32_freq[2+ch]=freq;
 	return freq>>8;
 }
+
+uint32_t DDS32_noise[4] = {};
 void DDS32_1_WriteRand0(uint32_t rnd){
+    DDS32_noise[0] = rnd;
 }
 void DDS32_1_WriteRand1(uint32_t rnd){
+    DDS32_noise[1] = rnd;
 }
 void DDS32_2_WriteRand0(uint32_t rnd){
+    DDS32_noise[2] = rnd;
 }
 void DDS32_2_WriteRand1(uint32_t rnd){
+    DDS32_noise[3] = rnd;
 }
 
 

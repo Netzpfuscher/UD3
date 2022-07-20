@@ -54,7 +54,6 @@ enum interrupter_DMA{
 enum interrupter_mode{
     INTR_MODE_OFF=0,
     INTR_MODE_TR,
-    INTR_MODE_BURST,
     INTR_MODE_BLOCKED
 };
 

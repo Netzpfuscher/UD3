@@ -585,7 +585,7 @@ void tsk_min_TaskProc(void *pvParameters) {
     uint16_t bytes_waiting=0;
     
     uint32_t next_sid_flow = 0;
-    alarm_push(ALM_PRIO_INFO, "PCA9685: Malloc failed", ALM_NO_VALUE);
+    alarm_push(ALM_PRIO_INFO, "TASK: MIN started", ALM_NO_VALUE);
     
     xSemaphoreGive(min_Semaphore);
     

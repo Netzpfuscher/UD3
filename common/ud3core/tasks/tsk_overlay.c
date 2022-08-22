@@ -360,10 +360,9 @@ void show_overlay_100ms(TERMINAL_HANDLE * handle){
                 send_event(&temp,handle);
                 alarm_free(&temp);
             }
-        }else{
-            if(chart){
-                send_chart_draw(handle);
-            }
+        }
+        if(chart){
+            send_chart_draw(handle);
         }
     }
 	

@@ -80,7 +80,11 @@ typedef struct
 
 interrupter_params interrupter;
 
-extern uint16 ch_prd[4], ch_cmp[4];
+extern uint16_t ch_prd[4], ch_cmp[4];
+// These are only exposed for use in the simulator, do not use in actual UD3 code!
+extern uint16_t int1_prd, int1_cmp;
+extern uint8_t int1_dma_Chan;
+extern uint8_t ch_dma_Chan[N_CHANNEL];
 
 void initialize_interrupter(void);
 void configure_interrupter();

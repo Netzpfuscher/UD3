@@ -84,6 +84,7 @@
 #include "tasks/tsk_hwGauge.h"
 #include "tasks/tsk_duty.h"
 #include "tsk_sim.h"
+#include "tsk_audio.h"
 
 
 /*
@@ -203,7 +204,8 @@ int main( void )
 	
 	console_print("Simulation init...\n");
 	tsk_sim_Start();
-    
+	tsk_audio_Start();
+
     //CyGlobalIntEnable; //enables interrupts
     alarm_push(ALM_PRIO_INFO, "UD3 started", ALM_NO_VALUE);
 	

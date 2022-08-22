@@ -33,6 +33,7 @@
 
 #include <FreeRTOS.h>
 #include <semphr.h>
+#include <stdlib.h>
 
 SemaphoreHandle_t xStdioMutex;
 StaticSemaphore_t xStdioMutexBuffer;
@@ -40,7 +41,7 @@ StaticSemaphore_t xStdioMutexBuffer;
 void console_init(void)
 {
     xStdioMutex = xSemaphoreCreateMutex();
-	system("stty -echo");
+	system("stty -echo erase ''");
 }
 
 void console_print(const char *fmt, ...)

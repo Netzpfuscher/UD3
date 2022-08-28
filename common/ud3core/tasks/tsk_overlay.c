@@ -253,10 +253,18 @@ void recalc_telemetry_limits(){
     tt.n.batt_v.max = configuration.r_top / 1000;
     tt.n.primary_i.max = ((5000ul * configuration.ct1_ratio) / configuration.ct1_burden)/100;
     tt.n.bus_v.max = configuration.r_top / 1000;
-    tt.n.batt_i.max = ((configuration.ct2_ratio * 50) / configuration.ct2_burden);
     tt.n.temp1.max = configuration.temp1_max;
     tt.n.temp2.max = configuration.temp2_max;
-    tt.n.avg_power.max = ((configuration.r_top / 1000) * ((configuration.ct2_ratio * 50) / configuration.ct2_burden)) / tt.n.avg_power.divider;
+    uint16_t max_current;
+    if(configuration.ct2_type==CT2_TYPE_CURRENT){
+        max_current = (configuration.ct2_ratio * 50) / configuration.ct2_burden;
+    } else {
+        uint32_t max_relative = 5000 - configuration.ct2_offset;
+        uint32_t reference_relative = configuration.ct2_voltage - configuration.ct2_offset;
+        max_current = max_relative * configuration.ct2_current / (reference_relative * 10);
+    }
+    tt.n.batt_i.max = max_current;
+    tt.n.avg_power.max = ((configuration.r_top / 1000) * max_current) / tt.n.avg_power.divider;
     tt.n.dutycycle.max = configuration.max_tr_duty/10;
 }
 

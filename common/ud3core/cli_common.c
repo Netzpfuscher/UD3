@@ -309,6 +309,17 @@ void update_visibilty(void){
 
 // clang-format on
 
+void init_tt_if_enabled(TERMINAL_HANDLE* handle) {
+    if (portM->term_mode!=PORT_TERM_VT100) {
+        uint8_t include_chart;
+        if (portM->term_mode==PORT_TERM_TT) {
+            include_chart = pdTRUE;
+        } else {
+            include_chart = pdFALSE;
+        }
+        init_tt(include_chart,handle);
+    }
+}
 
 /*****************************************************************************
 * Callback for invert option UART
@@ -376,15 +387,7 @@ uint8_t callback_TTupdateFunction(parameter_entry * params, uint8_t index, TERMI
     
     system_fault_Control = sfflag;
     
-    if (portM->term_mode!=PORT_TERM_VT100) {
-        uint8_t include_chart;
-        if (portM->term_mode==PORT_TERM_TT) {
-            include_chart = pdTRUE;
-        } else {
-            include_chart = pdFALSE;
-        }
-        init_tt(include_chart,handle);
-    }
+    init_tt_if_enabled(handle);
 	return 1;
 }
 
@@ -453,6 +456,8 @@ uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, TERMINA
     reconfig_charge_timer();
     
     recalc_telemetry_limits();
+
+    init_tt_if_enabled(handle);
     
 	system_fault_Control = sfflag;
     return 1;

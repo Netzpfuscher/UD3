@@ -516,6 +516,22 @@ void stop_overlay_task(TERMINAL_HANDLE * handle){
     }
 }
 
+void send_chart_config_for(TELE * chart, TERMINAL_HANDLE * handle){
+    if(chart->high_res){
+        send_chart_config32(chart->chart, chart->min, chart->max, chart->offset, chart->divider, chart->unit, chart->name, handle);
+    }else{
+        send_chart_config(chart->chart, chart->min, chart->max, chart->offset, chart->unit, chart->name, handle);
+    }
+}
+
+void send_gauge_config_for(TELE * gauge, TERMINAL_HANDLE * handle){
+    if(gauge->high_res){
+        send_gauge_config32(gauge->gauge, gauge->min, gauge->max, gauge->divider, gauge->name, handle);
+    }else{
+        send_gauge_config(gauge->gauge, gauge->min, gauge->max, gauge->name, handle);
+    }
+}
+
 /*****************************************************************************
 * Initializes the teslaterm telemetry
 * Spawns the overlay task for telemetry stream generation
@@ -524,18 +540,10 @@ void init_tt(uint8_t with_chart, TERMINAL_HANDLE * handle){
     
     for(uint32_t i = 0;i<N_TELE;i++){
         if(tt.a[i].gauge!=TT_NO_TELEMETRY){
-            if(tt.a[i].high_res){
-                send_gauge_config32(tt.a[i].gauge, tt.a[i].min, tt.a[i].max, tt.a[i].divider, tt.a[i].name, handle);
-            }else{
-                send_gauge_config(tt.a[i].gauge, tt.a[i].min, tt.a[i].max, tt.a[i].name, handle);
-            }
+            send_gauge_config_for(tt.a + i, handle);
         }
         if(tt.a[i].chart!=TT_NO_TELEMETRY && with_chart){
-            if(tt.a[i].high_res){
-                send_chart_config32(tt.a[i].chart, tt.a[i].min, tt.a[i].max, tt.a[i].offset, tt.a[i].divider, tt.a[i].unit, tt.a[i].name, handle);
-            }else{
-                send_chart_config(tt.a[i].chart, tt.a[i].min, tt.a[i].max, tt.a[i].offset, tt.a[i].unit, tt.a[i].name, handle);
-            }
+            send_chart_config_for(tt.a + i, handle);
         }
     }
 
@@ -686,11 +694,7 @@ uint8_t CMD_telemetry(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         }else{
             tt.a[cnt].gauge = n;
             ttprintf("OK\r\n");
-            if(tt.a[cnt].high_res){
-                    send_gauge_config32(n,tt.a[cnt].min,tt.a[cnt].max,tt.a[cnt].divider,tt.a[cnt].name,handle);
-            }else{
-                    send_gauge_config(n,tt.a[cnt].min,tt.a[cnt].max,tt.a[cnt].name,handle);
-            }
+            send_gauge_config_for(tt.a + cnt, handle);
         }
         return TERM_CMD_EXIT_SUCCESS;
 
@@ -725,7 +729,7 @@ uint8_t CMD_telemetry(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         }else{
             tt.a[cnt].chart = n;
             ttprintf("OK\r\n");
-            send_chart_config(n,tt.a[cnt].min,tt.a[cnt].max,tt.a[cnt].offset,tt.a[cnt].unit,tt.a[cnt].name,handle);
+            send_chart_config_for(tt.a + cnt, handle);
         }
         return TERM_CMD_EXIT_SUCCESS;
 

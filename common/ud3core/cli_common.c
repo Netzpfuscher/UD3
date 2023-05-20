@@ -268,7 +268,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdFALSE,"d_calib"         , vdriver_lut                   , 0      ,0      ,0      ,NULL                        ,"For voltage measurement")
     ADD_PARAM(PARAM_CONFIG  ,pdFALSE,"hwGauge_cfg"     , hwGauges.rawData              , 0      ,0      ,0      ,callback_hwGauge            ,"gauge configs, configure with the \"hwGauge\" command")
     ADD_PARAM(PARAM_CONFIG  ,pdFALSE,"display_cfg"     , DISP_zones.rawData            , 0      ,0      ,0      ,callback_display            ,"display/led configs, configure with the \"display\" command")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"vdrive"          , configuration.vdrive          , 11     ,19     ,0      ,callback_ConfigFunction     ,"Change Vdrive voltage (digipot)")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"vdrive"          , configuration.vdrive          , 10     ,24     ,0      ,callback_ConfigFunction     ,"Change Vdrive voltage (digipot)")
 };
 
 
@@ -465,7 +465,7 @@ uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, TERMINA
     
     recalc_telemetry_limits();
     
-    dcdc_ena_Write(0); //enable DCDC
+    dcdc_ena_Write(1); //enable DCDC
 	system_fault_Control = sfflag;
     return 1;
 }

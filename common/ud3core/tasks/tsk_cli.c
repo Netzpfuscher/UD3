@@ -209,6 +209,7 @@ static const char * AC_set_get[] = {
     "tune_pw",
     "tune_start",
     "ud_name",
+    "vdrive",
     "watchdog"
 };
 

@@ -39,13 +39,15 @@ void digipot_write(uint8_t value){
     
     CyDelayUs(1);
     
-    for(uint32_t i=0;i<sizeof(uint8_t);i++){
+    for(uint32_t i=0;i<8;i++){
         
         digipot_clk_Write(0);
         
         bit_to_write = (value >> bit_shift) & 0x01;
         
         digipot_data_Write(bit_to_write);
+        
+        CyDelayUs(1); 
         
         digipot_clk_Write(1);
         
@@ -54,15 +56,21 @@ void digipot_write(uint8_t value){
         CyDelayUs(1); 
     }
     
+    digipot_clk_Write(0);
+    digipot_data_Write(0);
+    
     digipot_ncs_Write(1); //deselect digipot
     
 }
 
 void digipot_set_voltage(float voltage){
     
-    float data=0.0f;
+    float r_pot = (voltage * R_DCDC_BOTTOM - 0.8 * R_DCDC_BOTTOM - 0.8 * R_DCDC_TOP) / -voltage + 0.8;
     
-    data = ((0.8 * (R_DCDC_BOTTOM + R_DCDC_TOP)-R_DCDC_BOTTOM) / (R_DIGIPOT * (1.0 - 0.8 / voltage))) * 255.0;
+    float data = 255.0 - 255.0 / R_DIGIPOT * r_pot;
+    
+    if(data > 255.0) data = 255.0;
+    if(data < 0.0) data = 0.0;
     
     digipot_write(data);
     

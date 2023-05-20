@@ -128,6 +128,7 @@ struct config_struct{
     uint16_t idac;
     uint16_t noise_vol_div;
     char synth_filter[32];
+    float vdrive;
 };
 typedef struct config_struct cli_config;
 

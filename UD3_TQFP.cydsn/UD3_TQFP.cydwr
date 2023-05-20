@@ -1990,17 +1990,20 @@
       <Data key="8ecba497-612c-422e-8426-91832f4dc07d" value="GD2B" />
       <Data key="9ddc42ab-facd-495c-962a-8d45bfc4862c" value="Vdriver" />
       <Data key="13d5721e-017e-4f36-866d-01a4b6a3504a" value="Ibus" />
+      <Data key="42a69613-7e63-4dba-a260-65eb97f2b91b" value="digipot_data" />
       <Data key="52f31aa9-2f0a-497d-9a1f-1424095e13e6" value="LED1" />
       <Data key="64d2766f-7fd2-455b-88c8-2fabd65c34c4" value="GD1A" />
       <Data key="83b2fde2-60ad-45b6-9e5c-cb3baa6e3f9a" value="SCLK" />
       <Data key="83fc8610-854c-47f6-b3ec-8847b2c290d3" value="RX_422_EN" />
       <Data key="148b98ce-4cb2-4224-a960-686bb0c691b9" value="Pin_1" />
       <Data key="299df0a5-d2ed-4b72-b3d7-ae900bca29ed" value="CTout" />
+      <Data key="411f99db-5ed2-4369-9793-9bae11298441" value="digipot_cs" />
       <Data key="549a4e41-b717-44bb-b13e-c01052667238" value="Relay3" />
       <Data key="958e9411-0a95-4df9-865e-f68273cf2d90" value="Vin" />
       <Data key="6400ba9d-054d-4648-a80b-c36ed9080f64" value="CT_SEC" />
       <Data key="6533b513-81b1-46af-8e19-d98fd9cc0e1c/16a808f6-2e13-45b9-bce0-b001c8655113" value="ADC_peak_Bypass" />
       <Data key="22863ebe-a37b-476f-b252-6e49a8c00b12" value="SDA_1" />
+      <Data key="64771f96-2472-47b5-997d-0adfb7ac011f" value="dcdc_ena" />
       <Data key="183169da-5db0-456e-85f3-54d1ef93695d" value="TP6" />
       <Data key="1425177d-0d0e-4468-8bcc-e638e5509a9b" value="MISO" />
       <Data key="77715107-f8d5-47e5-a629-0fb83101ac6b" value="Track" />
@@ -2016,7 +2019,7 @@
       <Data key="df864acb-3838-45e6-8b11-23d8f35057fe" value="Relay2" />
       <Data key="e4c8597c-026f-4cf9-a17f-7d69962e088d" value="LED2" />
       <Data key="e92e0d69-8885-4c0d-a0b4-208d2aa95cb7" value="therm1" />
-      <Data key="e851a3b9-efb8-48be-bbb8-b303b216c393" value="ETH_CSN" />
+      <Data key="e851a3b9-efb8-48be-bbb8-b303b216c393" value="digipot_clk" />
       <Data key="ed092b9b-d398-4703-be89-cebf998501f6" value="MOSI" />
       <Data key="ef67386f-6004-4f68-bee5-5150f41b270c" value="GD2A" />
       <Data key="efe99b71-ea8e-4255-954e-cd80c2ccf46e" value="TP1" />
@@ -5255,6 +5258,11 @@
         <Data key="Port Format" value="4,2" />
       </Group>
     </Group>
+    <Group key="42a69613-7e63-4dba-a260-65eb97f2b91b">
+      <Group key="0">
+        <Data key="Port Format" value="4,5" />
+      </Group>
+    </Group>
     <Group key="52f31aa9-2f0a-497d-9a1f-1424095e13e6">
       <Group key="0">
         <Data key="Port Format" value="12,0" />
@@ -5285,6 +5293,11 @@
         <Data key="Port Format" value="2,5" />
       </Group>
     </Group>
+    <Group key="411f99db-5ed2-4369-9793-9bae11298441">
+      <Group key="0">
+        <Data key="Port Format" value="4,6" />
+      </Group>
+    </Group>
     <Group key="549a4e41-b717-44bb-b13e-c01052667238">
       <Group key="0">
         <Data key="Port Format" value="1,6" />
@@ -5308,6 +5321,11 @@
     <Group key="22863ebe-a37b-476f-b252-6e49a8c00b12">
       <Group key="0">
         <Data key="Port Format" value="5,2" />
+      </Group>
+    </Group>
+    <Group key="64771f96-2472-47b5-997d-0adfb7ac011f">
+      <Group key="0">
+        <Data key="Port Format" value="4,3" />
       </Group>
     </Group>
     <Group key="183169da-5db0-456e-85f3-54d1ef93695d">
@@ -5377,7 +5395,7 @@
     </Group>
     <Group key="e851a3b9-efb8-48be-bbb8-b303b216c393">
       <Group key="0">
-        <Data key="Port Format" value="5,1" />
+        <Data key="Port Format" value="4,4" />
       </Group>
     </Group>
     <Group key="ed092b9b-d398-4703-be89-cebf998501f6">

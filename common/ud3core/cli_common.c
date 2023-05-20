@@ -56,6 +56,8 @@
 #include "qcw.h"
 #include "system.h"
 
+#include "helper/digipot.h"
+
 
 #define UNUSED_VARIABLE(N) \
 	do {                   \
@@ -150,6 +152,8 @@ void init_config(){
     configuration.ntc_r25 = 10000;
     
     configuration.idac = 185;
+    
+    configuration.vdrive = 15.0f;
     
     interrupter.mod = INTR_MOD_PW;
     
@@ -264,6 +268,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdFALSE,"d_calib"         , vdriver_lut                   , 0      ,0      ,0      ,NULL                        ,"For voltage measurement")
     ADD_PARAM(PARAM_CONFIG  ,pdFALSE,"hwGauge_cfg"     , hwGauges.rawData              , 0      ,0      ,0      ,callback_hwGauge            ,"gauge configs, configure with the \"hwGauge\" command")
     ADD_PARAM(PARAM_CONFIG  ,pdFALSE,"display_cfg"     , DISP_zones.rawData            , 0      ,0      ,0      ,callback_display            ,"display/led configs, configure with the \"display\" command")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"vdrive"          , configuration.vdrive          , 11     ,19     ,0      ,callback_ConfigFunction     ,"Change Vdrive voltage (digipot)")
 };
 
 
@@ -282,6 +287,7 @@ void eeprom_load(TERMINAL_HANDLE * handle){
     callback_pid(confparam,0,handle);
     callback_temp_pid(confparam,0,handle);
     callback_ext_interrupter(confparam,0,handle);
+    callback_ConfigFunction(confparam,0,handle);
 }
 
 
@@ -445,6 +451,11 @@ uint8_t callback_baudrateFunction(parameter_entry * params, uint8_t index, TERMI
 uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     uint8 sfflag = system_fault_Read();
     system_fault_Control = 0; //halt tesla coil operation during updates!
+    
+    dcdc_ena_Write(0); //disable DCDC
+    
+    digipot_set_voltage(configuration.vdrive);
+    
     WD_enable(configuration.watchdog);
     configure_interrupter();
 	initialize_charging();
@@ -454,6 +465,7 @@ uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, TERMINA
     
     recalc_telemetry_limits();
     
+    dcdc_ena_Write(0); //enable DCDC
 	system_fault_Control = sfflag;
     return 1;
 }

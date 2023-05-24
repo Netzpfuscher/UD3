@@ -93,8 +93,23 @@ void WD_reset_from_ISR(){
 
 
 void handle_UVLO(void) {
+    // read the driver voltage
+    tt.n.driver_v.value = read_driver_mv(ADC_active_sample_buf[0].v_driver);
+    
+    uint8_t undervoltage = pdFALSE;
+    
+    if(configuration.uvlo_analog){  //Analog UVLO
+        if(tt.n.driver_v.value < configuration.uvlo_analog){
+            undervoltage = pdTRUE;   
+        }
+    }else{  //Digital UVLO
+        if(UVLO_Read() == 0){
+            undervoltage = pdTRUE;
+        }
+    }
+    
 	//UVLO feedback via system_fault (LED2)
-	if(UVLO_status_Status==0){
+	if(undervoltage){
         if(sysfault.uvlo==0){
             alarm_push(ALM_PRIO_CRITICAL, "DRIVER: Undervoltage", ALM_NO_VALUE);
         }
@@ -117,11 +132,18 @@ void reset_fault(){
 
 void handle_FAULT(void) {
 	//UVLO feedback via system_fault (LED2)
-	uint8_t flag=1;
+	uint8_t flag = system_fault_Control;
+    
     for(uint8_t i=0;i<sizeof(SYSFAULT);i++){
         if(((uint8_t*)&sysfault)[i]) flag = 0; //Sysfault is active low
     }
     system_fault_Control = flag;
+    
+    if(system_fault_Control){
+        LED_sysfault_Write(LED_OFF);
+    }else{
+        LED_sysfault_Write(LED_ON);
+    }
 }
 
 
@@ -201,7 +223,7 @@ void tsk_fault_TaskProc(void *pvParameters) {
 		/* `#START TASK_LOOP_CODE` */
 		handle_UVLO();
         handle_FAULT();
-        LED4_Write(LED4_OFF);
+        LED_com_Write(LED_OFF);
         handle_no_fb();
 		/* `#END` */
 		vTaskDelay(FAULT_LOOP_SPEED_MS / portTICK_PERIOD_MS);

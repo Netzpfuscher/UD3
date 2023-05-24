@@ -77,8 +77,9 @@ uint8_t callback_VisibleFunction(parameter_entry * params, uint8_t index, TERMIN
 uint8_t callback_MchFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_MchCopyFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_ivoUART(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+uint8_t callback_ivoLED(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 
-void update_ivo_uart();
+void update_ivo();
 
 cli_config configuration;
 cli_parameter param;
@@ -145,6 +146,8 @@ void init_config(){
     configuration.ext_interrupter = 0;
     configuration.pca9685 = 0;
     configuration.max_fb_errors = 0;
+    configuration.ivo_led = 0;
+    configuration.uvlo_analog = 0;
     
     configuration.noise_vol_div = 2;
     
@@ -179,7 +182,7 @@ void init_config(){
     param.qcw_ramp = 200;
     
     i2t_set_limit(configuration.max_const_i,configuration.max_fault_i,10000);
-    update_ivo_uart();
+    update_ivo();
     
     ramp.changed = pdTRUE;
     qcw_regenerate_ramp();
@@ -269,6 +272,8 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdFALSE,"hwGauge_cfg"     , hwGauges.rawData              , 0      ,0      ,0      ,callback_hwGauge            ,"gauge configs, configure with the \"hwGauge\" command")
     ADD_PARAM(PARAM_CONFIG  ,pdFALSE,"display_cfg"     , DISP_zones.rawData            , 0      ,0      ,0      ,callback_display            ,"display/led configs, configure with the \"display\" command")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"vdrive"          , configuration.vdrive          , 10     ,24     ,0      ,callback_ConfigFunction     ,"Change Vdrive voltage (digipot)")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ivo_led"         , configuration.ivo_led         , 0      ,1      ,0      ,callback_ivoLED             ,"LED invert option")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"uvlo_analog"     , configuration.uvlo_analog     , 0      ,32000  ,1000   ,NULL                        ,"UVLO from ADC 0=GPIO UVLO")
 };
 
 
@@ -277,7 +282,7 @@ void eeprom_load(TERMINAL_HANDLE * handle){
     EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,handle);
     if(param.offtime<3) param.offtime=3;
     i2t_set_limit(configuration.max_const_i,configuration.max_fault_i,10000);
-    update_ivo_uart();
+    update_ivo();
     update_visibilty();
     uart_baudrate(configuration.baudrate);
     callback_synthFilter(NULL,0, handle);
@@ -320,27 +325,36 @@ void update_visibilty(void){
 * Callback for invert option UART
 ******************************************************************************/
 
-void update_ivo_uart(){
-    IVO_UART_Control=UART_IVO_NONE;
+void update_ivo(){
     switch(configuration.ivo_uart){
     case UART_IVO_NONE:
+        clear_bit(IVO_Control, IVO_UART_TX_BIT);
+        clear_bit(IVO_Control, IVO_UART_RX_BIT);
         break;
     case UART_IVO_TX:
-        set_bit(IVO_UART_Control,1);
+        set_bit(IVO_Control, IVO_UART_TX_BIT);
+        clear_bit(IVO_Control, IVO_UART_RX_BIT);
         break;
     case UART_IVO_RX:
-        set_bit(IVO_UART_Control,0);
+        set_bit(IVO_Control, IVO_UART_RX_BIT);
+        clear_bit(IVO_Control, IVO_UART_TX_BIT);
         break;
     case UART_IVO_RX_TX:
-        set_bit(IVO_UART_Control,0);
-        set_bit(IVO_UART_Control,1);
+        set_bit(IVO_Control, IVO_UART_RX_BIT);
+        set_bit(IVO_Control, IVO_UART_TX_BIT);
         break;
+    }  
+    if(configuration.ivo_led){
+        set_bit(IVO_Control, IVO_LED_BIT);
+    }else{
+        clear_bit(IVO_Control, IVO_LED_BIT);
     }
+    
 }
 
 uint8_t callback_ivoUART(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     if(configuration.ivo_uart == UART_IVO_NONE || configuration.ivo_uart == UART_IVO_TX || configuration.ivo_uart == UART_IVO_RX || configuration.ivo_uart == UART_IVO_RX_TX){
-        update_ivo_uart();   
+        update_ivo();   
         return 1;
     }else{
         ttprintf("Only the folowing combinations are allowed\r\n");
@@ -350,6 +364,11 @@ uint8_t callback_ivoUART(parameter_entry * params, uint8_t index, TERMINAL_HANDL
         ttprintf("11 = rx and tx inverted\r\n");
         return 0;
     }
+}
+
+uint8_t callback_ivoLED(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
+    update_ivo();
+    return 1;
 }
 
 
@@ -933,7 +952,7 @@ uint8_t CMD_signals(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         ttprintf("Signal state [CTRL+C] for quit:\r\n");
         ttprintf("**************************\r\n");
         ttprintf("UVLO pin: ");
-        send_signal_state_wo_new(UVLO_status_Status,pdTRUE,handle);
+        send_signal_state_wo_new(UVLO_Read(), pdTRUE, handle);
         ttprintf(" Crystal clock: ");
         #ifndef SIMULATOR
         send_signal_state_new((CY_GET_XTND_REG8((void CYFAR *)CYREG_FASTCLK_XMHZ_CSR) & 0x80u),pdTRUE,handle);

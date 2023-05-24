@@ -105,6 +105,7 @@ void i2t_reset();
 void reconfig_charge_timer();
 uint8_t callback_pid(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 extern adc_sample_t *ADC_active_sample_buf;
+uint16_t read_driver_mv(uint16_t raw_adc);
 
 extern adc_sample_t ADC_sample_buf_0[ADC_BUFFER_CNT];
 extern adc_sample_t ADC_sample_buf_1[ADC_BUFFER_CNT];

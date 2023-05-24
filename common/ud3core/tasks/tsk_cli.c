@@ -160,6 +160,7 @@ static const char * AC_set_get[] = {
     "d_calib",
     "ena_display",
     "ena_ext_int",
+    "ivo_led",
     "ivo_uart",
     "lead_time",
     "max_const_i",
@@ -209,6 +210,7 @@ static const char * AC_set_get[] = {
     "tune_pw",
     "tune_start",
     "ud_name",
+    "uvlo_analog",
     "vdrive",
     "watchdog"
 };

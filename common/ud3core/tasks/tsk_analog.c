@@ -266,8 +266,6 @@ void calculate_rms(void) {
 		tt.n.avg_power.value = tt.n.batt_i.value * tt.n.bus_v.value / 10;
 	}
     
-    // read the driver voltage
-    tt.n.driver_v.value = read_driver_mv(ADC_active_sample_buf[0].v_driver);
     tt.n.primary_i.value = CT1_Get_Current(CT_PRIMARY);
     
     if(configuration.max_dc_curr){

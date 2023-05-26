@@ -269,6 +269,7 @@ uint8_t CMD_qcw(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         }else{
             qcw_regenerate_ramp();
 		    qcw_start();
+            qcw_reg = 1;
             ttprintf("QCW single shot\r\n");
         }
 		

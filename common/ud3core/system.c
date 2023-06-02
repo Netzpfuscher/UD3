@@ -29,3 +29,11 @@ const char * SYS_getTaskStateString(eTaskState state){
             return "invalid";
     }
 }
+
+uint8_t SYS_detect_hw_rev(void){
+    
+    
+    
+    
+    return 0;   
+}

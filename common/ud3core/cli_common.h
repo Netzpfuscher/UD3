@@ -131,6 +131,7 @@ struct config_struct{
     uint16_t uvlo_analog;
     char synth_filter[32];
     float vdrive;
+    uint8_t hw_rev;
 };
 typedef struct config_struct cli_config;
 

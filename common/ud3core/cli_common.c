@@ -158,6 +158,8 @@ void init_config(){
     
     configuration.vdrive = 15.0f;
     
+    configuration.hw_rev = SYS_detect_hw_rev();
+    
     interrupter.mod = INTR_MOD_PW;
     
     param.pw = 0;
@@ -274,6 +276,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"vdrive"          , configuration.vdrive          , 10     ,24     ,0      ,callback_ConfigFunction     ,"Change Vdrive voltage (digipot)")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ivo_led"         , configuration.ivo_led         , 0      ,1      ,0      ,callback_ivoLED             ,"LED invert option")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"uvlo_analog"     , configuration.uvlo_analog     , 0      ,32000  ,1000   ,NULL                        ,"UVLO from ADC 0=GPIO UVLO")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"hw_rev"          , configuration.hw_rev          , 0      ,1      ,0      ,callback_ConfigFunction     ,"Hardware revision 0=3.0 1=3.1")
 };
 
 
@@ -315,6 +318,8 @@ void update_visibilty(void){
             set_visibility(confparam,CONF_SIZE, "ct2_offset",pdTRUE);
         break;
     }
+    
+    set_visibility(confparam, CONF_SIZE, "vdrive", configuration.hw_rev > 0 ? pdTRUE : pdFALSE);   
 
 }
 
@@ -471,9 +476,10 @@ uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, TERMINA
     uint8 sfflag = system_fault_Read();
     system_fault_Control = 0; //halt tesla coil operation during updates!
     
-    dcdc_ena_Write(0); //disable DCDC
-    
-    digipot_set_voltage(configuration.vdrive);
+    if(configuration.hw_rev > 0){
+        dcdc_ena_Write(0); //disable DCDC
+        digipot_set_voltage(configuration.vdrive);
+    }
     
     WD_enable(configuration.watchdog);
     configure_interrupter();
@@ -484,7 +490,9 @@ uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, TERMINA
     
     recalc_telemetry_limits();
     
-    dcdc_ena_Write(1); //enable DCDC
+    if(configuration.hw_rev > 0){
+        dcdc_ena_Write(1); //enable DCDC
+    }
 	system_fault_Control = sfflag;
     return 1;
 }

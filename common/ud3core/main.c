@@ -48,6 +48,7 @@
 #include "tasks/tsk_display.h"
 #include "tasks/tsk_hwGauge.h"
 #include "tasks/tsk_duty.h"
+#include "tasks/tsk_hypervisor.h"
 
 /*
  * Installs the RTOS interrupt handlers and starts the peripherals.
@@ -114,6 +115,8 @@ int main() {
     if(configuration.pca9685){
         tsk_hwGauge_init();
     }
+    
+    tsk_hypervisor_Start();
     
     alarm_push(ALM_PRIO_INFO, "INFO: UD3 startup", ALM_NO_VALUE);
 	vTaskStartScheduler();

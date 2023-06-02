@@ -40,6 +40,8 @@
 xTaskHandle tsk_fault_TaskHandle;
 uint8 tsk_fault_initVar = 0u;
 
+volatile uint8_t is_fault = 0;
+
 
 #define FAULT_LOOP_SPEED_MS 50
 #define FB_ERROR_TIME 1000 / FAULT_LOOP_SPEED_MS
@@ -126,6 +128,11 @@ void reset_fault(){
     for(uint8_t i=0;i<sizeof(SYSFAULT);i++){
         ((uint8_t*)&sysfault)[i]=0;
     }
+    is_fault = 0;
+}
+
+uint8_t tsk_fault_is_fault(){
+    return is_fault;   
 }
 
 
@@ -142,6 +149,7 @@ void handle_FAULT(void) {
     if(system_fault_Control){
         LED_sysfault_Write(LED_OFF);
     }else{
+        is_fault = pdTRUE;
         LED_sysfault_Write(LED_ON);
     }
 }

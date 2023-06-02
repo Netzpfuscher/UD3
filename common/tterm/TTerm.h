@@ -117,7 +117,7 @@ enum color{
 
 #define TERM_HISTORYSIZE 16
 #define TERM_INPUTBUFFER_SIZE 128
-
+#define TTERM_ESC_SEQ_BUFFER_SIZE 16
                         
 #define TERM_ARGS_ERROR_STRING_LITERAL 0xffff
 
@@ -176,6 +176,7 @@ typedef uint8_t (* TermAutoCompHandler)(TERMINAL_HANDLE * handle, void * params)
 typedef struct{
     TaskHandle_t task;
     TermCommandInputHandler inputHandler;
+    uint8_t raw_input;
     StreamBufferHandle_t inputStream;
     char ** args;
     uint8_t argCount;
@@ -211,7 +212,7 @@ struct __TERMINAL_HANDLE__{
     uint32_t currHistoryWritePosition;
     uint32_t currHistoryReadPosition;
     uint8_t currEscSeqPos;
-    uint8_t escSeqBuff[16];
+    uint8_t escSeqBuff[TTERM_ESC_SEQ_BUFFER_SIZE];
     unsigned echoEnabled;
     TermCommandDescriptor * cmdListHead;
     TermErrorPrinter errorPrinter;

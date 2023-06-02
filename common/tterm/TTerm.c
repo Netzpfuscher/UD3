@@ -154,121 +154,110 @@ void TERM_printDebug(TERMINAL_HANDLE * handle, char * format, ...){
 uint8_t TERM_processBuffer(uint8_t * data, uint16_t length, TERMINAL_HANDLE * handle){
     uint16_t currPos = 0;
     for(;currPos < length; currPos++){
-        //ttprintfEcho("checking 0x%02x\r\n", data[currPos]);
-        switch(handle->currEscSeqPos){
-            case ESC_IDLE:
-                if(data[currPos] == _CODE_ESC){     //ESC for V100 control sequences
-                    handle->currEscSeqPos = ESC_START;
-                }else{
-                    TERM_handleInput(data[currPos], handle);
-                }
-                break;
-            case ESC_START:
-                switch(data[currPos]){
-                    case '[':
-                        handle->escSeqBuff[handle->currEscSeqPos] = data[currPos];
-                        handle->currEscSeqPos++;
-                       break;
-                    case 'c':
-                        handle->currEscSeqPos = ESC_IDLE;
-                        TERM_handleInput(_VT100_RESET, handle);
-                        break;
-                    case _CODE_ESC:
-                        handle->currEscSeqPos = ESC_START;
-                        break;
-                    default:
-                        handle->currEscSeqPos = ESC_IDLE;
-                        TERM_handleInput(_CODE_ESC, handle);
-                        TERM_handleInput(data[currPos], handle);
-                        break;
-                }
-                break;
-            default:
-                if(isACIILetter(data[currPos])){
-                    switch (data[currPos]){
-                        case 'n':
-                            if(handle->currEscSeqPos == 2){
-                                if(handle->escSeqBuff[0] == '5'){        //Query device status
-                                }else if(handle->escSeqBuff[0] == '6'){  //Query cursor position
-                                }
-                            }    
-                            break;
-                        case 'c': //Query device code
-                            if(handle->currEscSeqPos == 1);
-                            break;
-                        case 'F': //end
-                            if(handle->currEscSeqPos == 1){
-                                TERM_handleInput(_VT100_KEY_END, handle);
-                            }
-                            break;
-                        case 'H': //pos1
-                            if(handle->currEscSeqPos == 1){
-                                TERM_handleInput(_VT100_KEY_POS1, handle);
-                            }
-                            break;
-                        case 'C': //cursor forward
-                            if(handle->currEscSeqPos > 1){              
-                                handle->escSeqBuff[handle->currEscSeqPos] = 0;
-                            }else{
-                                TERM_handleInput(_VT100_CURSOR_FORWARD, handle);
-                            }
-                            break;
-                        case 'D': //cursor backward
-                            if(handle->currEscSeqPos > 1){                 
-                                handle->escSeqBuff[handle->currEscSeqPos] = 0;
-                            }else{
-                                TERM_handleInput(_VT100_CURSOR_BACK, handle);
-                            }
-                            break; 
-                        case 'A': //cursor up
-                            if(handle->currEscSeqPos > 1){                 
-                                handle->escSeqBuff[handle->currEscSeqPos] = 0;
-                            }else{
-                                TERM_handleInput(_VT100_CURSOR_UP, handle);
-                            }
-                            break;
-                        case 'B': //cursor down
-                            if(handle->currEscSeqPos > 1){                 
-                                handle->escSeqBuff[handle->currEscSeqPos] = 0;
-                            }else{
-                                TERM_handleInput(_VT100_CURSOR_DOWN, handle);
-                            }
-                            break;
-                        case 'Z': //shift tab or ident request(at least from exp.; didn't find any official spec containing this)
-                            TERM_handleInput(_VT100_BACKWARDS_TAB, handle);
-                            break;
-                        case '~': //Tilde the end of a special key command (Esc[{keyID}~)
-                            switch(handle->escSeqBuff[1]){
-                                case 0x32:
-                                    TERM_handleInput(_VT100_KEY_INS, handle);
-                                    break;
-                                case 0x33:
-                                    TERM_handleInput(_VT100_KEY_DEL, handle);
-                                    break;
-                                case 0x35:
-                                    TERM_handleInput(_VT100_KEY_PAGE_UP, handle);
-                                    break;
-                                case 0x36:
-                                    TERM_handleInput(_VT100_KEY_PAGE_DOWN, handle);
-                                    break;
-                                default:
-                                    TERM_handleInput(_VT100_INVALID, handle);
-                                    break;
-                            }
-                            break;
-                        default: //others
-                            handle->escSeqBuff[handle->currEscSeqPos+1] = 0;
-                            break;
-                    }
-                    handle->currEscSeqPos = ESC_IDLE;
-                }else{
-                    handle->escSeqBuff[handle->currEscSeqPos] = data[currPos];
-                    handle->currEscSeqPos++;
-                }
-                break;
-        }
+
+    	if(handle->currProgram != NULL && handle->currProgram->raw_input == 1){
+    		TERM_handleInput(data[currPos], handle);
+    	}else{
+    	//ttprintfEcho("checking 0x%02x\r\n", data[currPos]);
+			if(handle->currEscSeqPos != 0xff){
+				if(handle->currEscSeqPos == 0){
+					if(data[currPos] == '['){
+						if(handle->currEscSeqPos < TTERM_ESC_SEQ_BUFFER_SIZE){
+							handle->escSeqBuff[handle->currEscSeqPos] = data[currPos];
+							handle->currEscSeqPos++;
+						}
+					}else{
+						switch(data[currPos]){
+							case 'c':
+								handle->currEscSeqPos = 0xff;
+								TERM_handleInput(_VT100_RESET, handle);
+								break;
+							case 0x1b:
+								handle->currEscSeqPos = 0;
+								break;
+							default:
+								handle->currEscSeqPos = 0xff;
+								TERM_handleInput(0x1b, handle);
+								TERM_handleInput(data[currPos], handle);
+								break;
+						}
+					}
+				}else{
+					if(isACIILetter(data[currPos])){
+						if(data[currPos] == 'n'){
+							if(handle->currEscSeqPos == 2){
+								if(handle->escSeqBuff[0] == '5'){        //Query device status
+								}else if(handle->escSeqBuff[0] == '6'){  //Query cursor position
+								}
+							}
+						}else if(data[currPos] == 'c'){
+							if(handle->currEscSeqPos == 1){              //Query device code
+							}
+						}else if(data[currPos] == 'F'){
+							if(handle->currEscSeqPos == 1){              //end
+								TERM_handleInput(_VT100_KEY_END, handle);
+							}
+						}else if(data[currPos] == 'H'){
+							if(handle->currEscSeqPos == 1){              //pos1
+								TERM_handleInput(_VT100_KEY_POS1, handle);
+							}
+						}else if(data[currPos] == 'C'){                      //cursor forward
+							if(handle->currEscSeqPos > 1){
+								handle->escSeqBuff[handle->currEscSeqPos] = 0;
+							}else{
+								TERM_handleInput(_VT100_CURSOR_FORWARD, handle);
+							}
+						}else if(data[currPos] == 'D'){                      //cursor backward
+							if(handle->currEscSeqPos > 1){
+								handle->escSeqBuff[handle->currEscSeqPos] = 0;
+							}else{
+								TERM_handleInput(_VT100_CURSOR_BACK, handle);
+							}
+						}else if(data[currPos] == 'A'){                      //cursor up
+							if(handle->currEscSeqPos > 1){
+								handle->escSeqBuff[handle->currEscSeqPos] = 0;
+							}else{
+								TERM_handleInput(_VT100_CURSOR_UP, handle);
+							}
+						}else if(data[currPos] == 'B'){                      //cursor down
+							if(handle->currEscSeqPos > 1){
+								handle->escSeqBuff[handle->currEscSeqPos] = 0;
+							}else{
+								TERM_handleInput(_VT100_CURSOR_DOWN, handle);
+							}
+						}else if(data[currPos] == 'Z'){                      //shift tab or ident request(at least from exp.; didn't find any official spec containing this)
+							TERM_handleInput(_VT100_BACKWARDS_TAB, handle);
+
+						}else if(data[currPos] == '~'){                      //Tilde the end of a special key command (Esc[{keyID}~)
+							if(handle->escSeqBuff[1] == 0x32){            //insert
+								TERM_handleInput(_VT100_KEY_INS, handle);
+							}else if(handle->escSeqBuff[1] == 0x33){      //delete
+								TERM_handleInput(_VT100_KEY_DEL, handle);
+							}else if(handle->escSeqBuff[1] == 0x35){      //page up
+								TERM_handleInput(_VT100_KEY_PAGE_UP, handle);
+							}else if(handle->escSeqBuff[1] == 0x36){      //page down
+								TERM_handleInput(_VT100_KEY_PAGE_DOWN, handle);
+							}else{
+								TERM_handleInput(_VT100_INVALID, handle);
+							}
+						}else{                      //others
+							handle->escSeqBuff[handle->currEscSeqPos+1] = 0;
+						}
+						handle->currEscSeqPos = 0xff;
+					}else{
+						handle->escSeqBuff[handle->currEscSeqPos++] = data[currPos];
+					}
+				}
+			}else{
+				if(data[currPos] == 0x1B){     //ESC for V100 control sequences
+					handle->currEscSeqPos = 0;
+				}else{
+					TERM_handleInput(data[currPos], handle);
+				}
+			}
+    	}
     }
-    return 0;
+    return length;
 }
 
 unsigned isACIILetter(char c){
@@ -328,19 +317,16 @@ uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle){
         
         (*handle->errorPrinter)(handle, currRetCode);
         
-        if(c == 0x03){
-            ttprintfEcho("^C");
-        }
         return 1;
     }
     
     switch(c){
         case '\r':      //enter
-        case 0x0a:
             TERM_checkForCopy(handle, TERM_CHECK_COMP_AND_HIST);
             
             if(handle->currBufferLength != 0){
-                ttprintfEcho("\r\n");
+                ttprintfEcho("\r\n", handle->inputBuffer);
+
                 if(handle->historyBuffer[handle->currHistoryWritePosition] != 0){
                     vPortFree(handle->historyBuffer[handle->currHistoryWritePosition]);
                     handle->historyBuffer[handle->currHistoryWritePosition] = 0;
@@ -365,15 +351,18 @@ uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle){
             break;
             
         case 0x03:      //CTRL+c
-            //TODO reset current buffer
-            ttprintfEcho("^C");
+        	handle->currBufferPosition=0;
+        	handle->currBufferLength=0;
+        	handle->inputBuffer[0]=0;
+        	TERM_sendVT100Code(handle, _VT100_ERASE_LINE, 0);
+        	ttprintfEcho("\r%s@%s>", handle->currUserName, TERM_DEVICE_NAME);
             break;
-            
+        case 0x0a: 		//LF
         case 0x08:      //backspace (used by xTerm)
         case 0x7f:      //DEL       (used by hTerm)
         case _VT100_KEY_DEL:
             TERM_checkForCopy(handle, TERM_CHECK_COMP_AND_HIST);
-            
+
             if(handle->currBufferPosition < handle->currBufferLength && c == _VT100_KEY_DEL){
                 handle->currBufferPosition ++;
                 TERM_sendVT100Code(handle, _VT100_CURSOR_FORWARD, 0);
@@ -385,7 +374,7 @@ uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle){
 
             if(handle->inputBuffer[handle->currBufferPosition] != 0){      //check if we are at the end of our command
                 //we are somewhere in the middle -> move back existing characters
-                strsft(handle->inputBuffer, handle->currBufferPosition - 1, -1);    
+                strsft(handle->inputBuffer, handle->currBufferPosition - 1, -1);
                 ttprintfEcho("\x08");   
                 TERM_sendVT100Code(handle, _VT100_ERASE_LINE_END, 0);
                 ttprintfEcho("%s", &handle->inputBuffer[handle->currBufferPosition - 1]);
@@ -401,23 +390,23 @@ uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle){
             break;
             
         case _VT100_KEY_END:
-            TERM_checkForCopy(handle, TERM_CHECK_COMP_AND_HIST); //is the user browsing the history right now? if so copy whatever ehs looking at to the entry buffer
-            
-            if(handle->currBufferLength > handle->currBufferPosition){
-                //move the cursor to the right position
-                TERM_sendVT100Code(handle, _VT100_CURSOR_FORWARD_BY, handle->currBufferLength - handle->currBufferPosition);
-                handle->currBufferPosition = handle->currBufferLength;
-            }
+        	TERM_checkForCopy(handle, TERM_CHECK_COMP_AND_HIST); //is the user browsing the history right now? if so copy whatever ehs looking at to the entry buffer
+
+			if(handle->currBufferLength > handle->currBufferPosition){
+				//move the cursor to the right position
+				TERM_sendVT100Code(handle, _VT100_CURSOR_FORWARD_BY, handle->currBufferLength - handle->currBufferPosition);
+				handle->currBufferPosition = handle->currBufferLength;
+			}
             break;
             
         case _VT100_KEY_POS1:
-            TERM_checkForCopy(handle, TERM_CHECK_COMP_AND_HIST); //is the user browsing the history right now? if so copy whatever ehs looking at to the entry buffer
-            
-            if(handle->currBufferPosition > 0){
-                //move the cursor to the right position
-                TERM_sendVT100Code(handle, _VT100_CURSOR_BACK_BY, handle->currBufferPosition);
-                handle->currBufferPosition = 0;
-            }
+        	TERM_checkForCopy(handle, TERM_CHECK_COMP_AND_HIST); //is the user browsing the history right now? if so copy whatever ehs looking at to the entry buffer
+
+			if(handle->currBufferPosition > 0){
+				//move the cursor to the right position
+				TERM_sendVT100Code(handle, _VT100_CURSOR_BACK_BY, handle->currBufferPosition);
+				handle->currBufferPosition = 0;
+			}
             break;
             
         case _VT100_CURSOR_FORWARD:
@@ -498,7 +487,13 @@ uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle){
             }else{
                 TERM_sendVT100Code(handle, _VT100_ERASE_LINE, 0);
                 unsigned printQuotationMarks = strchr(handle->autocompleteBuffer[handle->currAutocompleteCount - 1], ' ') != 0;
-                ttprintfEcho(printQuotationMarks ? "\r%s@%s>%.*s\"%s\"" : "\r%s@%s>%.*s%s", handle->currUserName, TERM_DEVICE_NAME, handle->autocompleteStart, handle->inputBuffer, handle->autocompleteBuffer[handle->currAutocompleteCount - 1]);
+                
+                //workaround for inconsistent printf behaviour when using %.*s with length 0
+                if(handle->autocompleteStart == 0){
+                    ttprintfEcho(printQuotationMarks ? "\r%s@%s>\"%s\"" : "\r%s@%s>%s", handle->currUserName, TERM_DEVICE_NAME, handle->autocompleteBuffer[handle->currAutocompleteCount - 1]);
+                }else{
+                    ttprintfEcho(printQuotationMarks ? "\r%s@%s>%.*s\"%s\"" : "\r%s@%s>%.*s%s", handle->currUserName, TERM_DEVICE_NAME, handle->autocompleteStart, handle->inputBuffer, handle->autocompleteBuffer[handle->currAutocompleteCount - 1]);
+                }
             }
             break;
             
@@ -528,32 +523,43 @@ uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle){
            
         case 32 ... 126:
             TERM_checkForCopy(handle, TERM_CHECK_COMP_AND_HIST);
-            
-            //TODO check for string length overflow
-            
-            if(handle->inputBuffer[handle->currBufferPosition] != 0){      //check if we are at the end of our command
-                strsft(handle->inputBuffer, handle->currBufferPosition, 1);   
-                handle->inputBuffer[handle->currBufferPosition] = c; 
-                TERM_sendVT100Code(handle, _VT100_ERASE_LINE_END, 0);
-                ttprintfEcho("%s", &handle->inputBuffer[handle->currBufferPosition]);
-                TERM_sendVT100Code(handle, _VT100_CURSOR_BACK_BY, handle->currBufferLength - handle->currBufferPosition);
-                handle->currBufferLength ++;
-                handle->currBufferPosition ++;
-            }else{
-                
-                //we are at the end -> just delete the current one
-                handle->inputBuffer[handle->currBufferPosition++] = c;
-                handle->inputBuffer[handle->currBufferPosition] = 0;
-                handle->currBufferLength ++;
-                ttprintfEcho("%c", c);
-            }
+
+			//TODO check for string length overflow
+
+			if(handle->inputBuffer[handle->currBufferPosition] != 0 && handle->currBufferLength < TERM_INPUTBUFFER_SIZE -2){      //check if we are at the end of our command
+				strsft(handle->inputBuffer, handle->currBufferPosition, 1);
+				handle->inputBuffer[handle->currBufferPosition] = c;
+				TERM_sendVT100Code(handle, _VT100_ERASE_LINE_END, 0);
+				ttprintfEcho("%s", &handle->inputBuffer[handle->currBufferPosition]);
+				TERM_sendVT100Code(handle, _VT100_CURSOR_BACK_BY, handle->currBufferLength - handle->currBufferPosition);
+				handle->currBufferLength ++;
+				handle->currBufferPosition ++;
+			}else{
+
+				//we are at the end -> just delete the current one
+				handle->inputBuffer[handle->currBufferPosition++] = c;
+				handle->inputBuffer[handle->currBufferPosition] = 0;
+				handle->currBufferLength ++;
+				if(handle->currBufferPosition < TERM_INPUTBUFFER_SIZE -1){
+					ttprintfEcho("%c", c);
+				}
+			}
+
+
+			if(handle->currBufferPosition > TERM_INPUTBUFFER_SIZE -2){
+				handle->currBufferPosition = TERM_INPUTBUFFER_SIZE -2;
+			}
+			if(handle->currBufferLength > TERM_INPUTBUFFER_SIZE -2){
+				handle->currBufferLength = TERM_INPUTBUFFER_SIZE -2;
+			}
+
             break;
             
         default:
             TERM_printDebug(handle, "unknown code received: 0x%02x\r\n", c);
             break;
     }
-    return 0;
+    return 1;
 }
 
 void TERM_checkForCopy(TERMINAL_HANDLE * handle, COPYCHECK_MODE mode){

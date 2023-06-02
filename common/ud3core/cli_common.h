@@ -132,6 +132,7 @@ struct config_struct{
     char synth_filter[32];
     float vdrive;
     uint8_t hw_rev;
+    uint8_t autostart;
 };
 typedef struct config_struct cli_config;
 

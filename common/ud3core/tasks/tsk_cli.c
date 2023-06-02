@@ -142,6 +142,7 @@ static const char * AC_nvm[] = {
 };
 
 static const char * AC_set_get[] = {
+    "autostart",
     "autotune_s",
     "baudrate",
     "boff",
@@ -160,6 +161,7 @@ static const char * AC_set_get[] = {
     "d_calib",
     "ena_display",
     "ena_ext_int",
+    "hw_rev",
     "ivo_led",
     "ivo_uart",
     "lead_time",

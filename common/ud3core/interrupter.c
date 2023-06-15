@@ -169,10 +169,8 @@ void initialize_interrupter(void) {
     configure_interrupter();
 }
 
-// Called whenever an interrupter-related param is changed oe eeprom is loaded.
-void configure_interrupter()
-{
-    // Safe defaults in case anything fails.
+void interrupter_init_safe(){
+        // Safe defaults in case anything fails.
   	int1_prd = 65000;
 	int1_cmp = 64999;
 
@@ -180,6 +178,15 @@ void configure_interrupter()
 	interrupter1_WritePeriod(int1_prd);
 	interrupter1_WriteCompare1(int1_cmp);      // pwm1 will be true for one clock, then false.  int1_prd - int1_cmp is the on time for the pulse.
   	interrupter1_WriteCompare2(int1_prd);      // pwm2 will be false for one clock then true
+  
+}
+
+// Called whenever an interrupter-related param is changed oe eeprom is loaded.
+void configure_interrupter()
+{
+
+    //Init interrupter to some safe values
+    interrupter_init_safe();
 
     // The minimum interrupter period for transient mode in clock ticks (which are equal to microseconds here).
 	params.min_tr_prd = INTERRUPTER_CLK_FREQ / configuration.max_tr_prf;
@@ -197,7 +204,8 @@ void configure_interrupter()
 }
 
 
-void interrupter_DMA_mode(uint8_t mode){
+void interrupter_DMA_mode(enum interrupter_DMA mode){
+    interrupter.dma_mode = mode;
     switch(mode){
         case INTR_DMA_TR:
             CyDmaChDisable(ch_dma_Chan[0]);

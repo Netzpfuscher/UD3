@@ -149,6 +149,8 @@ void init_config(){
     configuration.ivo_led = 0;
     configuration.uvlo_analog = 0;
     
+    configuration.min_fb_current = 88;
+    
     configuration.noise_vol_div = 2;
     
     configuration.ntc_b = 3977;
@@ -279,6 +281,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"uvlo_analog"     , configuration.uvlo_analog     , 0      ,32000  ,1000   ,NULL                        ,"UVLO from ADC 0=GPIO UVLO")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"hw_rev"          , configuration.hw_rev          , 0      ,1      ,0      ,callback_ConfigFunction     ,"Hardware revision 0=3.0 1=3.1")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"autostart"       , configuration.autostart       , 0      ,1      ,0      ,NULL                        ,"Autostart")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"min_fb_current"  , configuration.min_fb_current  , 0      ,255    ,0      ,callback_ConfigFunction     ,"Autostart")
 };
 
 
@@ -402,7 +405,8 @@ uint8_t callback_TTupdateFunction(parameter_entry * params, uint8_t index, TERMI
         if(configuration.max_qcw_current>max_current_cmp) configuration.max_qcw_current = max_current_cmp;
     }
     uint8 sfflag = system_fault_Read();
-    system_fault_Control = 0; //halt tesla coil operation during updates!
+    
+    sysflt_set(pdTRUE); //halt tesla coil operation during updates!
     
     configure_ZCD_to_PWM();
     
@@ -476,7 +480,7 @@ uint8_t callback_baudrateFunction(parameter_entry * params, uint8_t index, TERMI
 ******************************************************************************/
 uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     uint8 sfflag = system_fault_Read();
-    system_fault_Control = 0; //halt tesla coil operation during updates!
+    sysflt_set(pdTRUE); //halt tesla coil operation during updates!
     
     if(configuration.hw_rev > 0){
         dcdc_ena_Write(0); //disable DCDC
@@ -701,7 +705,7 @@ uint8_t CMD_udkill(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     }else if(strcmp(args[0], "reset") == 0){
         interrupter_unkill();
         reset_fault();
-        system_fault_Control = 0xFF;
+        sysflt_clr(pdTRUE); 
         TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_GREEN);
     	ttprintf("Killbit reset\r\n");
         alarm_push(ALM_PRIO_INFO, "INFO: Killbit reset", ALM_NO_VALUE);
@@ -803,26 +807,22 @@ uint8_t CMD_eeprom(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     }
     EEPROM_1_UpdateTemperature();
 	uint8 sfflag = system_fault_Read();
-	system_fault_Control = 0; //halt tesla coil operation during updates!
+	sysflt_set(pdTRUE); //halt tesla coil operation during updates!
+    
 	if(strcmp(args[0], "save") == 0){
         EEPROM_check_hash(confparam,PARAM_SIZE(confparam),handle);
 	    EEPROM_write_conf(confparam, PARAM_SIZE(confparam),0, handle);
-
-		system_fault_Control = sfflag;
-		return TERM_CMD_EXIT_SUCCESS;
-	}
-	if(strcmp(args[0], "load") == 0){
-        uint8 sfflag = system_fault_Read();
-        system_fault_Control = 0; //halt tesla coil operation during updates!
+        
+	}else if(strcmp(args[0], "load") == 0){
 		EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,handle);
         
         configure_interrupter();
 	    initialize_charging();
 	    configure_ZCD_to_PWM();
-	    system_fault_Control = sfflag;
-		return TERM_CMD_EXIT_SUCCESS;
 	}
-    return TERM_CMD_EXIT_SUCCESS;
+    
+    system_fault_Control = sfflag;
+	return TERM_CMD_EXIT_SUCCESS;
 }
 
 /*****************************************************************************
@@ -963,9 +963,9 @@ uint8_t CMD_signals(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         ttprintf("**************************\r\n");
         ttprintf("UVLO pin: ");
         send_signal_state_wo_new(UVLO_Read(), pdTRUE, handle);
-        ttprintf(" Crystal clock: ");
+        ttprintf(" Clock failure: ");
         #ifndef SIMULATOR
-        send_signal_state_new((CY_GET_XTND_REG8((void CYFAR *)CYREG_FASTCLK_XMHZ_CSR) & 0x80u),pdTRUE,handle);
+        send_signal_state_new(!(CY_GET_XTND_REG8((void CYFAR *)CYREG_FASTCLK_XMHZ_CSR) & 0x80u),pdTRUE,handle);
         #else
         send_signal_state_new(1,pdTRUE,handle);
         #endif

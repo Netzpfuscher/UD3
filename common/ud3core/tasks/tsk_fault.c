@@ -66,6 +66,7 @@ uint8 tsk_fault_initVar = 0u;
 
 TimerHandle_t xWD_Timer;
 SYSFAULT sysfault;
+uint32_t switch_without_fb = 0;
 
 
 void WD_enable(uint8_t enable){
@@ -90,6 +91,9 @@ void WD_reset_from_ISR(){
     }
 }
 
+void set_switch_without_fb(uint32_t en){
+    switch_without_fb = en ? 0 : 0b10;
+}
 
 void handle_UVLO(void) {
     // read the driver voltage
@@ -128,10 +132,18 @@ void reset_fault(){
 }
 
 uint8_t tsk_fault_is_fault(){
-    return system_fault_Control ? pdFALSE : pdTRUE;   
+    return (system_fault_Control & 0b1) ? pdFALSE : pdTRUE;   
 }
 
+void sysflt_set(uint32_t wait){
+    system_fault_Control = (switch_without_fb & 0b10);
+    if(wait) CyDelayUs(500); //TODO evaluate delay time
+}
 
+void sysflt_clr(uint32_t wait){
+    system_fault_Control = (switch_without_fb & 0b10) | 0b1;
+    if(wait) CyDelayUs(500); //TODO evaluate delay time
+}
 
 void handle_FAULT(void) {
 	//UVLO feedback via system_fault (LED2)
@@ -140,12 +152,12 @@ void handle_FAULT(void) {
     for(uint8_t i=0;i<sizeof(SYSFAULT);i++){
         if(((uint8_t*)&sysfault)[i]) flag = 0; //Sysfault is active low
     }
-    system_fault_Control = flag;
+    system_fault_Control = (switch_without_fb & 0b10) | (flag & 0b1);
     
-    if(system_fault_Control){
-        LED_sysfault_Write(LED_OFF);
-    }else{
+    if(tsk_fault_is_fault()){
         LED_sysfault_Write(LED_ON);
+    }else{
+        LED_sysfault_Write(LED_OFF);
     }
 }
 
@@ -156,18 +168,18 @@ void handle_no_fb(void){
     tt.n.fres.value = (5000000ul / time);
     static uint8_t fb_error_timer=FB_ERROR_TIME;
     
+    if(no_fb_reg_Read()){
+        feedback_error_cnt++;
+        fb_error_timer=FB_ERROR_TIME;
+    }else{
+        fb_error_timer--;
+        if(fb_error_timer==0){
+            fb_error_timer = 20;
+            feedback_error_cnt = 0;
+        }
+    }
     
     if(configuration.max_fb_errors){
-        if(no_fb_reg_Read()){
-            feedback_error_cnt++;
-            fb_error_timer=FB_ERROR_TIME;
-        }else{
-            fb_error_timer--;
-            if(fb_error_timer==0){
-                fb_error_timer = 20;
-                feedback_error_cnt = 0;
-            }
-        }
         if(feedback_error_cnt > configuration.max_fb_errors){
             if(sysfault.feedback==0){
                 alarm_push(ALM_PRIO_CRITICAL, "FAULT: No Feedback", feedback_error_cnt);

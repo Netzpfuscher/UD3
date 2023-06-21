@@ -133,6 +133,7 @@ struct config_struct{
     float vdrive;
     uint8_t hw_rev;
     uint8_t autostart;
+    uint8_t min_fb_current;
 };
 typedef struct config_struct cli_config;
 

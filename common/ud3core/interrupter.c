@@ -318,7 +318,7 @@ uint8_t callback_ext_interrupter(parameter_entry * params, uint8_t index, TERMIN
         interrupter_update_ext();
     }else{
         uint8 sfflag = system_fault_Read();
-        system_fault_Control = 0; //halt tesla coil operation during updates!
+        sysflt_set(pdFALSE); //halt tesla coil operation during updates!
         interrupter1_control_Control = 0b0000;
         system_fault_Control = sfflag;
     }
@@ -327,7 +327,7 @@ uint8_t callback_ext_interrupter(parameter_entry * params, uint8_t index, TERMIN
 
 uint8_t callback_interrupter_mod(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     uint8 sfflag = system_fault_Read();
-    system_fault_Control = 0; //halt tesla coil operation during updates!
+    sysflt_set(pdFALSE); //halt tesla coil operation during updates!
     interrupter_reconf_dma(interrupter.mod);
     if(interrupter.mode!=INTR_MODE_OFF){
         interrupter_DMA_mode(INTR_DMA_TR);

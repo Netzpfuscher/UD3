@@ -115,14 +115,16 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
         return 0;
     }
     
+    enum interrupter_DMA original_dma_mode = interrupter.dma_mode;
+    uint16 original_freq;
+	uint8 original_lock_cycles;
+    
     interrupter_DMA_mode(INTR_DMA_TR);
 
 	CT_MUX_Select(channel);
 	//units for frequency are 0.1kHz (so 1000 = 100khz).  Pulsewidth in uS
 	uint16 f;
 	uint8 n;
-	uint16 original_freq;
-	uint8 original_lock_cycles;
 	char buffer[60];
 	float current_buffer = 0;
 
@@ -171,6 +173,8 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 	configuration.start_cycles = original_lock_cycles;
 	configure_ZCD_to_PWM();
 	CT_MUX_Select(CT_PRIMARY);
+    interrupter_init_safe();
+    interrupter_DMA_mode(original_dma_mode);
 
 	//search max current
 	uint16_t max_curr = 1;
@@ -252,7 +256,6 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 	ttprintf("\r\nFound Peak at: %i00Hz\r\n", freq_resp->freq[max_curr_num]);
     uint16_t temp = freq_resp->freq[max_curr_num];
     vPortFree(freq_resp);
-    interrupter_DMA_mode(INTR_DMA_DDS);
     return temp;
 }
 

@@ -165,7 +165,7 @@ void configure_ZCD_to_PWM(void) {
 	ZCDref_Data = 25;
     
     //write value for minimum feedback current
-	float FB_THRSH_DAC_value = ((((float)configuration.min_fb_current / (float)configuration.ct1_ratio) * configuration.ct1_burden) / (DAC_VOLTS_PER_STEP * 10)) * 4;
+	float FB_THRSH_DAC_value = ((((float)configuration.min_fb_current / (float)configuration.ct1_ratio) * configuration.ct1_burden) / (DAC_VOLTS_PER_STEP * 10));
 	if (FB_THRSH_DAC_value > 255) {
 		FB_THRSH_DAC_value = 255;
 	}

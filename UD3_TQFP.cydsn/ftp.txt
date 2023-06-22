@@ -1,5 +1,4 @@
-quit
-open 192.168.1.15
+open 192.168.1.137
 root
 root
 put CortexM3\ARM_GCC_541\Release\UD3_TQFP.cyacd image.cyacd

@@ -32,6 +32,7 @@
 #include "helper/teslaterm.h"
 #include "cli_common.h"
 #include "interrupter.h"
+#include "telemetry.h"
 #include "tasks/tsk_analog.h"
 #include "tasks/tsk_overlay.h"
 #include "tasks/tsk_cli.h"
@@ -60,6 +61,8 @@ uint8_t CMD_tune(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     
     
     ttprintf("Warning: The bridge will switch hard, make sure that the bus voltage is appropriate\r\n");
+    uint32_t busVolts = tt.n.bus_v.value / tt.n.bus_v.divider;
+    if(busVolts > 50) ttprintf("%s%sTHE BUS VOLTAGE IS PRETTY HIGH (%dV), MAKE SURE YOU KNOW WHAT YOU'RE DOING%s\r\n", TERM_getVT100Code(_VT100_BACKGROUND_COLOR, _VT100_RED), TERM_getVT100Code(_VT100_BLINK, 0), busVolts, TERM_getVT100Code(_VT100_RESET_ATTRIB, 0));
     ttprintf("Press [y] to proceed\r\n");
     port_str * ptr = handle->port;
     
@@ -67,6 +70,7 @@ uint8_t CMD_tune(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         ttprintf("Tune aborted\r\n");
         return TERM_CMD_EXIT_SUCCESS;
     }
+    
     if(ptr->term_mode == PORT_TERM_TT){
         tsk_overlay_chart_stop();
         send_chart_clear(handle);
@@ -117,6 +121,8 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
     
     enum interrupter_DMA original_dma_mode = interrupter.dma_mode;
     uint16 original_freq;
+	uint16 original_current;
+	uint16 original_max_fb_errors;
 	uint8 original_lock_cycles;
     
     interrupter_DMA_mode(INTR_DMA_TR);
@@ -128,14 +134,23 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 	char buffer[60];
 	float current_buffer = 0;
 
-	
-
 	if (F_min > F_max) {
 		return 0;
 	}
+    
 	//store the original setting, restore it after the sweep
 	original_freq = configuration.start_freq;
+	original_current = configuration.min_fb_current;
 	original_lock_cycles = configuration.start_cycles;
+	original_max_fb_errors = configuration.max_fb_errors;
+    
+    //set configuration of fb current detector to ignore missing feedback
+	configuration.start_cycles = 0;
+	configuration.max_fb_errors = 0;
+    
+    //we also need to prevent pwm switching to feedback, for this we set the threshold current to a very high value. 
+    //If the current increases to this level pulseskipping would start to happen (and the IGBTs probably die :P) so it's not going to affect the operation of the tune command
+	configuration.min_fb_current = configuration.max_tr_current;
 
 	//max_response = 0;
 	for (f = 0; f < ROWS; f++) {
@@ -150,7 +165,6 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 		freq_resp->freq[f] = (((F_max - F_min) * (f + 1)) >> 7) + F_min;
 
 		configuration.start_freq = freq_resp->freq[f];
-		configuration.start_cycles = 120;
 		configure_ZCD_to_PWM();
 
 		for (n = 0; n < configuration.autotune_s; n++) {
@@ -168,13 +182,16 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 	}
 	ttprintf("\r\n");
 
-	//restore original frequency
+	//restore original configuration
 	configuration.start_freq = original_freq;
 	configuration.start_cycles = original_lock_cycles;
+	configuration.min_fb_current = original_current;
+	configuration.max_fb_errors = original_max_fb_errors;
+    
 	configure_ZCD_to_PWM();
 	CT_MUX_Select(CT_PRIMARY);
-    interrupter_init_safe();
-    interrupter_DMA_mode(original_dma_mode);
+	interrupter_init_safe();
+	interrupter_DMA_mode(original_dma_mode);
 
 	//search max current
 	uint16_t max_curr = 1;
@@ -186,7 +203,7 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 		}
 	}
 
-	//Draw Diagram
+	//Draw Diagram TODO: y axis scale :)
 
     if(portM->term_mode == PORT_TERM_VT100){
         braille_malloc(handle);

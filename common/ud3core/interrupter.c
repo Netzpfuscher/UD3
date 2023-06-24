@@ -292,11 +292,13 @@ void interrupter_oneshot(uint32_t pw, uint32_t vol) {
 void interrupter_update_ext() {
 
 	ct1_dac_val[0] = params.max_tr_cl_dac_val;
-    uint32_t pw = param.pw;
     
-    if (pw > configuration.max_tr_pw) {
-		pw = configuration.max_tr_pw;
-	}
+    uint32_t pw = configuration.max_tr_pw;
+    //uint32_t pw = param.pw;
+    
+    //if (pw > configuration.max_tr_pw) {
+	//	pw = configuration.max_tr_pw;
+	//}
 
     uint16_t prd = param.offtime + pw;
 	/* Update Interrupter PWMs with new period/pw */

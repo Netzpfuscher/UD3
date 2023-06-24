@@ -330,6 +330,17 @@ void update_visibilty(void){
 
 // clang-format on
 
+void init_tt_if_enabled(TERMINAL_HANDLE* handle) {
+    if (portM->term_mode!=PORT_TERM_VT100) {
+        uint8_t include_chart;
+        if (portM->term_mode==PORT_TERM_TT) {
+            include_chart = pdTRUE;
+        } else {
+            include_chart = pdFALSE;
+        }
+        init_tt(include_chart,handle);
+    }
+}
 
 /*****************************************************************************
 * Callback for invert option UART
@@ -412,15 +423,7 @@ uint8_t callback_TTupdateFunction(parameter_entry * params, uint8_t index, TERMI
     
     system_fault_Control = sfflag;
     
-    if (portM->term_mode!=PORT_TERM_VT100) {
-        uint8_t include_chart;
-        if (portM->term_mode==PORT_TERM_TT) {
-            include_chart = pdTRUE;
-        } else {
-            include_chart = pdFALSE;
-        }
-        init_tt(include_chart,handle);
-    }
+    init_tt_if_enabled(handle);
 	return 1;
 }
 
@@ -495,6 +498,8 @@ uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, TERMINA
     reconfig_charge_timer();
     
     recalc_telemetry_limits();
+
+    init_tt_if_enabled(handle);
     
     if(configuration.hw_rev > 0){
         dcdc_ena_Write(1); //enable DCDC
@@ -566,10 +571,10 @@ uint8_t con_minstat(TERMINAL_HANDLE * handle){
         ttprintf("%sSequence mismatch drop: %lu\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0),min_ctx.transport_fifo.sequence_mismatch_drop);
         ttprintf("%sMax frames in buffer  : %u\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0),min_ctx.transport_fifo.n_frames_max);
         ttprintf("%sCRC errors            : %u\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0),min_ctx.transport_fifo.crc_fails);
-        ttprintf("%sRemote Time           : %u\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0),time.remote);
+        ttprintf("%sRemote Time           : %u\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0),min_time.remote);
         ttprintf("%sLocal Time            : %u\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0),l_time);
-        ttprintf("%sDiff Time             : %i\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0),time.diff);
-        ttprintf("%sResync count          : %u\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0),time.resync);
+        ttprintf("%sDiff Time             : %i\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0),min_time.diff);
+        ttprintf("%sResync count          : %u\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0),min_time.resync);
     }
     TERM_sendVT100Code(handle, _VT100_CURSOR_ENABLE,0);
     return 1; 

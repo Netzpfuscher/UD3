@@ -170,12 +170,15 @@ typedef uint16_t uint16;
 extern uint8_t IVO_UART_Control;
 
 
+extern uint8_t DDS32_en[4];
 void DDS32_1_Enable_ch(uint8_t ch);
 void DDS32_2_Enable_ch(uint8_t ch);
+extern uint32_t DDS32_freq[4];
 void DDS32_1_Disable_ch(uint8_t ch);
 void DDS32_2_Disable_ch(uint8_t ch);
 uint32_t DDS32_1_SetFrequency_FP8(uint8_t ch,uint32_t freq);
 uint32_t DDS32_2_SetFrequency_FP8(uint8_t ch,uint32_t freq);
+extern uint32_t DDS32_noise[4];
 void DDS32_1_WriteRand0(uint32_t rnd);
 void DDS32_1_WriteRand1(uint32_t rnd);
 void DDS32_2_WriteRand0(uint32_t rnd);

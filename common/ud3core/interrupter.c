@@ -470,47 +470,29 @@ void vBurst_Timer_Callback(TimerHandle_t xTimer){
 ******************************************************************************/
 uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle) {
     if(interrupter.mode!=INTR_MODE_OFF){
-        if(interrupter.xBurst_Timer==NULL && param.burst_on > 0){
+        if(interrupter.xBurst_Timer==NULL && param.burst_off > 0){
             interrupter.burst_state = BURST_ON;
             interrupter.xBurst_Timer = xTimerCreate("Bust-Tmr", param.burst_on / portTICK_PERIOD_MS, pdFALSE,(void * ) 0, vBurst_Timer_Callback);
             if(interrupter.xBurst_Timer != NULL){
                 xTimerStart(interrupter.xBurst_Timer, 0);
                 ttprintf("Burst Enabled\r\n");
-                interrupter.mode=INTR_MODE_BURST;
+                interrupter.mode=INTR_MODE_TR;
             }else{
                 interrupter.pw = 0;
                 ttprintf("Cannot create burst Timer\r\n");
                 interrupter.mode=INTR_MODE_OFF;
             }
-        }else if(interrupter.xBurst_Timer!=NULL && !param.burst_on){
-            if (interrupter.xBurst_Timer != NULL) {
-    			if(xTimerDelete(interrupter.xBurst_Timer, 200 / portTICK_PERIOD_MS) != pdFALSE){
-    			    interrupter.xBurst_Timer = NULL;
-                    interrupter.burst_state = BURST_ON;
-                    interrupter.pw =0;
-                    update_interrupter();
-                    interrupter.mode=INTR_MODE_TR;
-                    ttprintf("\r\nBurst Disabled\r\n");
-                }else{
-                    ttprintf("Cannot delete burst Timer\r\n");
-                    interrupter.burst_state = BURST_ON;
-                }
-            }
         }else if(interrupter.xBurst_Timer!=NULL && !param.burst_off){
-            if (interrupter.xBurst_Timer != NULL) {
-    			if(xTimerDelete(interrupter.xBurst_Timer, 200 / portTICK_PERIOD_MS) != pdFALSE){
-    			    interrupter.xBurst_Timer = NULL;
-                    interrupter.burst_state = BURST_ON;
-                    interrupter.pw =param.pw;
-                    update_interrupter();
-                    interrupter.mode=INTR_MODE_TR;
-                    ttprintf("\r\nBurst Disabled\r\n");
-                }else{
-                    ttprintf("Cannot delete burst Timer\r\n");
-                    interrupter.burst_state = BURST_ON;
-                }
+            if(xTimerDelete(interrupter.xBurst_Timer, 200 / portTICK_PERIOD_MS) != pdFALSE){
+                interrupter.xBurst_Timer = NULL;
+                interrupter.burst_state = BURST_ON;
+                update_interrupter();
+                interrupter.mode=INTR_MODE_TR;
+                ttprintf("\r\nBurst Disabled\r\n");
+            }else{
+                ttprintf("Cannot delete burst Timer\r\n");
+                interrupter.burst_state = BURST_ON;
             }
-
         }
     }
 	return pdPASS;

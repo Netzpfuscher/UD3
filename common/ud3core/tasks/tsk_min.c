@@ -69,7 +69,7 @@ SemaphoreHandle_t min_Semaphore;
 #include "helper/printf.h" 
 
 struct min_context min_ctx;
-struct _time time;
+struct _time min_time;
 
 uint32_t uart_bytes_rx=0;
 uint32_t uart_bytes_tx=0;
@@ -147,15 +147,15 @@ void min_tx_finished(uint8_t port){
 	#endif
 }
 void time_cb(uint32_t remote_time){
-    time.remote = remote_time;
-    time.diff_raw = time.remote-l_time;
-    time.diff = average(&sample,time.diff_raw);
-    if(time.diff>1000 ||time.diff<-1000){
-        clock_set(time.remote);
-        time.resync++;   
+    min_time.remote = remote_time;
+    min_time.diff_raw = min_time.remote-l_time;
+    min_time.diff = average(&sample,min_time.diff_raw);
+    if(min_time.diff>1000 ||min_time.diff<-1000){
+        clock_set(min_time.remote);
+        min_time.resync++;
         //clock_reset_inc();
     }else{
-        clock_trim(time.diff);
+        clock_trim(min_time.diff);
     }   
 }
 
@@ -444,8 +444,8 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
         case MIN_ID_WD:
                 if(len_payload==4){
                     int32_t ind = 0;
-                    time.remote = buffer_get_uint32(min_payload, &ind);
-                    time_cb(time.remote);
+                    min_time.remote = buffer_get_uint32(min_payload, &ind);
+                    time_cb(min_time.remote);
                 }
                 WD_reset();
             return;
@@ -585,7 +585,7 @@ void tsk_min_TaskProc(void *pvParameters) {
     uint16_t bytes_waiting=0;
     
     uint32_t next_sid_flow = 0;
-    alarm_push(ALM_PRIO_INFO, "PCA9685: Malloc failed", ALM_NO_VALUE);
+    alarm_push(ALM_PRIO_INFO, "TASK: MIN started", ALM_NO_VALUE);
     
     xSemaphoreGive(min_Semaphore);
     

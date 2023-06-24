@@ -51,5 +51,6 @@ Acknowledgements
 Many thanks to all of the open source software libraries used in UD3!
 
 * [MIN-Protocol](https://github.com/min-protocol/min)
-* [ntshell](https://cubeatsystems.com/ntshell/)
+* [VMS Synthesizer](https://github.com/TMaxElectronics/MidiStick_Firmware)
+* [TTerm](https://github.com/TMaxElectronics/TTerm)
 * [FreeRTOS](https://www.freertos.org/)

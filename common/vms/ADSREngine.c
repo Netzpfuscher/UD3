@@ -354,7 +354,8 @@ void VMS_nextBlock(VMS_listDataObject * data, unsigned blockSet){
             if(block->nextBlocks[c] == VMS_DIE){
                 return;
             }
-            if(ptr_is_in_ram(block->nextBlocks[c]) || ptr_is_in_flash(block->nextBlocks[c])) VMS_addBlockToList(block->nextBlocks[c], voice);
+            if(block->nextBlocks[c])
+                VMS_addBlockToList(block->nextBlocks[c], voice);
         }
     }else{
         if(block->offBlock != 0){

@@ -253,10 +253,18 @@ void recalc_telemetry_limits(){
     tt.n.batt_v.max = configuration.r_top / 1000;
     tt.n.primary_i.max = ((5000ul * configuration.ct1_ratio) / configuration.ct1_burden)/100;
     tt.n.bus_v.max = configuration.r_top / 1000;
-    tt.n.batt_i.max = ((configuration.ct2_ratio * 50) / configuration.ct2_burden);
     tt.n.temp1.max = configuration.temp1_max;
     tt.n.temp2.max = configuration.temp2_max;
-    tt.n.avg_power.max = ((configuration.r_top / 1000) * ((configuration.ct2_ratio * 50) / configuration.ct2_burden)) / tt.n.avg_power.divider;
+    uint16_t max_current;
+    if(configuration.ct2_type==CT2_TYPE_CURRENT){
+        max_current = (configuration.ct2_ratio * 50) / configuration.ct2_burden;
+    } else {
+        uint32_t max_relative = 5000 - configuration.ct2_offset;
+        uint32_t reference_relative = configuration.ct2_voltage - configuration.ct2_offset;
+        max_current = max_relative * configuration.ct2_current / (reference_relative * 10);
+    }
+    tt.n.batt_i.max = max_current;
+    tt.n.avg_power.max = ((configuration.r_top / 1000) * max_current) / tt.n.avg_power.divider;
     tt.n.dutycycle.max = configuration.max_tr_duty/10;
 }
 
@@ -360,10 +368,9 @@ void show_overlay_100ms(TERMINAL_HANDLE * handle){
                 send_event(&temp,handle);
                 alarm_free(&temp);
             }
-        }else{
-            if(chart){
-                send_chart_draw(handle);
-            }
+        }
+        if(chart){
+            send_chart_draw(handle);
         }
     }
 	
@@ -509,6 +516,22 @@ void stop_overlay_task(TERMINAL_HANDLE * handle){
     }
 }
 
+void send_chart_config_for(TELE * chart, TERMINAL_HANDLE * handle){
+    if(chart->high_res){
+        send_chart_config32(chart->chart, chart->min, chart->max, chart->offset, chart->divider, chart->unit, chart->name, handle);
+    }else{
+        send_chart_config(chart->chart, chart->min, chart->max, chart->offset, chart->unit, chart->name, handle);
+    }
+}
+
+void send_gauge_config_for(TELE * gauge, TERMINAL_HANDLE * handle){
+    if(gauge->high_res){
+        send_gauge_config32(gauge->gauge, gauge->min, gauge->max, gauge->divider, gauge->name, handle);
+    }else{
+        send_gauge_config(gauge->gauge, gauge->min, gauge->max, gauge->name, handle);
+    }
+}
+
 /*****************************************************************************
 * Initializes the teslaterm telemetry
 * Spawns the overlay task for telemetry stream generation
@@ -517,18 +540,10 @@ void init_tt(uint8_t with_chart, TERMINAL_HANDLE * handle){
     
     for(uint32_t i = 0;i<N_TELE;i++){
         if(tt.a[i].gauge!=TT_NO_TELEMETRY){
-            if(tt.a[i].high_res){
-                send_gauge_config32(tt.a[i].gauge, tt.a[i].min, tt.a[i].max, tt.a[i].divider, tt.a[i].name, handle);
-            }else{
-                send_gauge_config(tt.a[i].gauge, tt.a[i].min, tt.a[i].max, tt.a[i].name, handle);
-            }
+            send_gauge_config_for(tt.a + i, handle);
         }
         if(tt.a[i].chart!=TT_NO_TELEMETRY && with_chart){
-            if(tt.a[i].high_res){
-                send_chart_config32(tt.a[i].chart, tt.a[i].min, tt.a[i].max, tt.a[i].offset, tt.a[i].divider, tt.a[i].unit, tt.a[i].name, handle);
-            }else{
-                send_chart_config(tt.a[i].chart, tt.a[i].min, tt.a[i].max, tt.a[i].offset, tt.a[i].unit, tt.a[i].name, handle);
-            }
+            send_chart_config_for(tt.a + i, handle);
         }
     }
 
@@ -679,11 +694,7 @@ uint8_t CMD_telemetry(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         }else{
             tt.a[cnt].gauge = n;
             ttprintf("OK\r\n");
-            if(tt.a[cnt].high_res){
-                    send_gauge_config32(n,tt.a[cnt].min,tt.a[cnt].max,tt.a[cnt].divider,tt.a[cnt].name,handle);
-            }else{
-                    send_gauge_config(n,tt.a[cnt].min,tt.a[cnt].max,tt.a[cnt].name,handle);
-            }
+            send_gauge_config_for(tt.a + cnt, handle);
         }
         return TERM_CMD_EXIT_SUCCESS;
 
@@ -718,7 +729,7 @@ uint8_t CMD_telemetry(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         }else{
             tt.a[cnt].chart = n;
             ttprintf("OK\r\n");
-            send_chart_config(n,tt.a[cnt].min,tt.a[cnt].max,tt.a[cnt].offset,tt.a[cnt].unit,tt.a[cnt].name,handle);
+            send_chart_config_for(tt.a + cnt, handle);
         }
         return TERM_CMD_EXIT_SUCCESS;
 

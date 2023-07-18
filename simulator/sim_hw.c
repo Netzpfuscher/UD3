@@ -4,6 +4,7 @@
 #include "telemetry.h"
 
 uint8_t ZCDref_Data=0;
+uint8_t FB_THRSH_DAC_Data=0;
 
 uint8_t system_fault_Control=0;
 uint8_t system_fault_Read(){
@@ -14,6 +15,7 @@ uint8_t system_fault_Read(){
 uint8_t interrupter1_control_Control=0;
 uint8_t QCW_enable_Control=0;
 uint8_t IVO_UART_Control=0;
+uint8_t IVO_Control=0;
 
 int16_t ADC_peak_GetResult16(){
 	return 0;
@@ -86,10 +88,10 @@ uint8_t  no_fb_reg_Read(){
 }
 
 uint8_t led[4];
-void LED1_Write(uint8_t val){
+void LED_com_Write(uint8_t val){
 	led[0]=val;
 }
-void LED2_Write(uint8_t val){
+void LED_sysfault_Write(uint8_t val){
 	led[1]=val;
 }
 void LED3_Write(uint8_t val){

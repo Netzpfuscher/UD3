@@ -73,7 +73,7 @@ uint8_t CMD_tune(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     
     if(ptr->term_mode == PORT_TERM_TT){
         tsk_overlay_chart_stop();
-        send_chart_clear(handle);
+        send_chart_clear(handle, "Tuning");
         
     }
     ttprintf("Start sweep:\r\n");

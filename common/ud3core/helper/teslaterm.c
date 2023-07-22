@@ -14,7 +14,6 @@ uint8_t gaugebuf[] = {0xFF,0x04, TT_GAUGE,0x00,0x00,0x00};
 uint8_t buf32[] = {0xFF,0x06, TT_GAUGE32,0x00,0x00,0x00,0x00,0x00};
 uint8_t chartbuf[] = {0xFF,0x04, TT_CHART,0x00,0x00,0x00};
 const uint8_t chartdraw[] = {0xFF,0x02, TT_CHART_DRAW,0x00};
-const uint8_t chartclear[] = {0xFF,0x02, TT_CHART_CLEAR,0x00};
 
 const char *units[]={
     "",
@@ -153,8 +152,11 @@ void send_gauge_config32(uint8_t gauge, int32_t min, int32_t max, int32_t div ,c
     ttprintb(text,bytes);
 }
 
-void send_chart_clear(TERMINAL_HANDLE * handle){
+void send_chart_clear(TERMINAL_HANDLE * handle, char * title){
+    uint8_t chartclear[3] = {0xFF,0x00, TT_CHART_CLEAR};
+    chartclear[1] = strlen(title)+sizeof(chartclear)-2;
     ttprintb(chartclear,sizeof(chartclear)); 
+    ttprintf("%s", title);
 }
 
 void send_chart_line(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint8_t color, TERMINAL_HANDLE * handle){

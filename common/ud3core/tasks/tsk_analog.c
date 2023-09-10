@@ -225,9 +225,9 @@ void init_rms_filter(rms_t *ptr, uint16_t init_val) {
 	ptr->sum_squares = 1UL * SAMPLES_COUNT * init_val * init_val;
 }
 
-uint16_t rms_filter(rms_t *ptr, uint16_t sample) {
+uint16_t rms_filter(rms_t *ptr, int16_t sample) {
 	ptr->sum_squares -= ptr->sum_squares / SAMPLES_COUNT;
-	ptr->sum_squares += (uint32_t)sample * sample;
+	ptr->sum_squares += (int32_t)sample * sample;
 	if (ptr->rms == 0)
 		ptr->rms = 1; /* do not divide by zero */
 	ptr->rms = (ptr->rms + ptr->sum_squares / SAMPLES_COUNT / ptr->rms) / 2;
@@ -260,7 +260,7 @@ void calculate_rms(void) {
         if(configuration.ct2_type==CT2_TYPE_CURRENT){
 		    tt.n.batt_i.value = (((uint32_t)rms_filter(&current_idc, ADC_active_sample_buf[i].i_bus) * params.idc_ma_count) / 100);
         }else{
-            tt.n.batt_i.value = ((((int32_t)rms_filter(&current_idc, ADC_active_sample_buf[i].i_bus)-params.ct2_offset_cnt) * params.idc_ma_count) / 100);
+            tt.n.batt_i.value = ((((int32_t)rms_filter(&current_idc, ADC_active_sample_buf[i].i_bus-params.ct2_offset_cnt)) * params.idc_ma_count) / 100);
         }
 
 		tt.n.avg_power.value = tt.n.batt_i.value * tt.n.bus_v.value / 10;

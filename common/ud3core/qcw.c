@@ -204,7 +204,7 @@ uint8_t CMD_ramp(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
             return TERM_CMD_EXIT_SUCCESS;
         }
         tsk_overlay_chart_stop();
-        send_chart_clear(handle);
+        send_chart_clear(handle, "QCW ramp");
         CHART temp;
         temp.height = RAMP_CHART_HEIGHT;
         temp.width = RAMP_CHART_WIDTH;

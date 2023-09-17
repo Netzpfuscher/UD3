@@ -6,6 +6,7 @@
 
 #define SIMULATOR
 extern uint8_t ZCDref_Data;
+extern uint8_t FB_THRSH_DAC_Data;
 
 int16_t ADC_peak_GetResult16();
 int32_t ADC_peak_CountsTo_mVolts(int32_t counts);
@@ -107,6 +108,7 @@ uint8_t no_fb_reg_Read();
 #define Sample_Hold_1_Start()
 #define Comp_1_Start()
 #define ADC_Start()
+#define FB_THRSH_DAC_Start()
 
 #define temp_pwm_WriteCompare1(compare)
 #define temp_pwm_WriteCompare2(compare)
@@ -153,13 +155,14 @@ void CyGetUniqueId(uint32_t * val);
 extern uint8_t system_fault_Control;
 extern uint8_t interrupter1_control_Control;
 extern uint8_t QCW_enable_Control;
+extern uint8_t IVO_Control;
 
-#define UVLO_status_Status 1
+#define UVLO_Read() 1
 
 void USBMIDI_1_callbackLocalMidiEvent(uint8_t cable, uint8_t *midiMsg);
 
-void LED1_Write(uint8_t val);
-void LED2_Write(uint8_t val);
+void LED_com_Write(uint8_t val);
+void LED_sysfault_Write(uint8_t val);
 void LED3_Write(uint8_t val);
 void LED4_Write(uint8_t val);
 
@@ -185,6 +188,7 @@ void DDS32_2_WriteRand0(uint32_t rnd);
 void DDS32_2_WriteRand1(uint32_t rnd);
 #define DDS32_1_Start()
 #define DDS32_2_Start()
+#define Opamp_1_Start()
 
 extern uint16_t ADC_therm_Offset;
 void Therm_Mux_Select(uint8_t ch);
@@ -192,6 +196,10 @@ uint16_t ADC_therm_GetResult16();
 
 void Relay3_Write(uint8_t val);
 void Relay4_Write(uint8_t val);
+#define dcdc_ena_Write(val)
+#define digipot_clk_Write(val)
+#define digipot_data_Write(val)
+#define digipot_ncs_Write(val)
 uint8_t Relay3_Read();
 uint8_t Relay4_Read();
 

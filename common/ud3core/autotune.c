@@ -32,6 +32,7 @@
 #include "helper/teslaterm.h"
 #include "cli_common.h"
 #include "interrupter.h"
+#include "tasks/tsk_fault.h"
 #include "telemetry.h"
 #include "tasks/tsk_analog.h"
 #include "tasks/tsk_overlay.h"
@@ -73,7 +74,7 @@ uint8_t CMD_tune(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     
     if(ptr->term_mode == PORT_TERM_TT){
         tsk_overlay_chart_stop();
-        send_chart_clear(handle);
+        send_chart_clear(handle, "Tuning");
         
     }
     ttprintf("Start sweep:\r\n");
@@ -182,12 +183,14 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 	}
 	ttprintf("\r\n");
 
+	//clear feedback errors caused by tuning
+	feedback_error_cnt = 0;
 	//restore original configuration
 	configuration.start_freq = original_freq;
 	configuration.start_cycles = original_lock_cycles;
 	configuration.min_fb_current = original_current;
 	configuration.max_fb_errors = original_max_fb_errors;
-    
+
 	configure_ZCD_to_PWM();
 	CT_MUX_Select(CT_PRIMARY);
 	interrupter_init_safe();

@@ -142,6 +142,7 @@ static const char * AC_nvm[] = {
 };
 
 static const char * AC_set_get[] = {
+    "autostart",
     "autotune_s",
     "baudrate",
     "boff",
@@ -160,6 +161,8 @@ static const char * AC_set_get[] = {
     "d_calib",
     "ena_display",
     "ena_ext_int",
+    "hw_rev",
+    "ivo_led",
     "ivo_uart",
     "lead_time",
     "max_const_i",
@@ -174,6 +177,7 @@ static const char * AC_set_get[] = {
     "max_tr_prf",
     "max_tr_pw",
     "min_enable",
+    "min_fb_current",
     "min_tr_current",
     "noise_div",
     "offtime",
@@ -209,6 +213,8 @@ static const char * AC_set_get[] = {
     "tune_pw",
     "tune_start",
     "ud_name",
+    "uvlo_analog",
+    "vdrive",
     "watchdog"
 };
 

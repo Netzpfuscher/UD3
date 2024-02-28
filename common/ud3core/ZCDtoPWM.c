@@ -25,6 +25,7 @@
 #include "ZCDtoPWM.h"
 #include "cli_common.h"
 #include "interrupter.h"
+#include "tasks/tsk_fault.h"
 #include <device.h>
 #include <math.h>
 
@@ -47,6 +48,8 @@ void initialize_ZCD_to_PWM(void) {
 	//initialize the DACs
 	CT1_dac_Start();
 	ZCDref_Start();
+	FB_THRSH_DAC_Start();
+    Opamp_1_Start();
 
 	//start the feedback filter block
 	FB_Filter_Start();
@@ -113,9 +116,11 @@ void configure_ZCD_to_PWM(void) {
 	if (configuration.start_cycles == 0) {
 		ZCD_counter_WritePeriod(1);
 		ZCD_counter_WriteCompare(1);
+        set_switch_without_fb(pdTRUE);
 	} else {
 		ZCD_counter_WritePeriod(configuration.start_cycles * 2);
 		ZCD_counter_WriteCompare(4);
+        set_switch_without_fb(pdFALSE);
 	}
     
     uint32_t lead_time_temp;
@@ -127,6 +132,7 @@ void configure_ZCD_to_PWM(void) {
 	params.pwm_top = round(pwm_start_prd_temp * 2);								  //top value for FB capture and pwm generators to avoid ULF crap
 	params.pwma_start_prd = params.pwm_top - lead_time_temp;
 	params.pwma_start_cmp = params.pwm_top - pwm_start_prd_temp + 4; //untested, was just 4;
+    
 	params.pwmb_start_prd = round(pwm_start_prd_temp); //experimental start up mode, 2 cycles of high frequency to start things up but stay ahead of the game.
 	params.pwmb_start_cmp = 4;
 	params.pwmb_start_psb_val = 15;				   //config.psb_start_val;// params.pwmb_start_prd>>3;
@@ -157,6 +163,14 @@ void configure_ZCD_to_PWM(void) {
 
 	//set reference voltage for zero current detector comparators
 	ZCDref_Data = 25;
+    
+    //write value for minimum feedback current
+	float FB_THRSH_DAC_value = ((((float)configuration.min_fb_current / (float)configuration.ct1_ratio) * configuration.ct1_burden) / (DAC_VOLTS_PER_STEP * 10));
+	if (FB_THRSH_DAC_value > 255) {
+		FB_THRSH_DAC_value = 255;
+	}
+    
+    FB_THRSH_DAC_Data = (uint8_t) FB_THRSH_DAC_value;
 }
 
 /* [] END OF FILE */

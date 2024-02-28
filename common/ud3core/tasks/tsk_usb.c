@@ -122,7 +122,7 @@ void tsk_usb_Task(void *pvParameters) {
 				count = USBMIDI_1_GetAll(buffer);
 				if (count != 0u) {
 					/* insert data in to Receive FIFO */
-                    LED4_Write(LED4_ON);
+                    LED_com_Write(LED_ON);
                     usb_bytes_rx+=count;
                     xStreamBufferSend(usb_port.rx, &buffer,count, 0);
 				}
@@ -143,7 +143,7 @@ void tsk_usb_Task(void *pvParameters) {
 				 */
                 count = xStreamBufferReceive(usb_port.tx,&buffer,tsk_usb_BUFFER_LEN,0);
 				/* Send data back to host */
-                LED4_Write(LED4_ON);
+                LED_com_Write(LED_ON);
                 usb_bytes_tx+=count;
 				USBMIDI_1_PutData(buffer, count);
 

@@ -401,7 +401,7 @@ void show_overlay_400ms(TERMINAL_HANDLE * handle) {
             send_status(tt.n.bus_status.value!=BUS_OFF,
                         interrupter.mode!=INTR_MODE_OFF,
                         configuration.ps_scheme!=AC_NO_RELAY_BUS_SCHEME,
-                        system_fault_Control?0:1,
+                        (tsk_fault_is_fault()) ? 1 : 0,
                         handle);
         }
     }

@@ -48,6 +48,7 @@
 #include "tasks/tsk_display.h"
 #include "tasks/tsk_hwGauge.h"
 #include "tasks/tsk_duty.h"
+#include "tasks/tsk_hypervisor.h"
 
 /*
  * Installs the RTOS interrupt handlers and starts the peripherals.
@@ -61,7 +62,7 @@ int main() {
     
     prvFreeRTOSSetup();
     alarm_init();
-	system_fault_Control = 0; //this should suppress any start-up sparking until the system is ready
+	sysflt_set(pdFALSE); //this should suppress any start-up sparking until the system is ready
 	init_config();
     EEPROM_1_Start();
 	SG_Timer_Start();
@@ -87,7 +88,7 @@ int main() {
 	//calls that must always happen after updating the configuration/settings
 	configure_ZCD_to_PWM();
     
-    LED4_Write(LED4_ON);
+    LED_com_Write(LED_ON);
 	
 
 	//Starting Tasks
@@ -114,6 +115,8 @@ int main() {
     if(configuration.pca9685){
         tsk_hwGauge_init();
     }
+    
+    tsk_hypervisor_Start();
     
     alarm_push(ALM_PRIO_INFO, "INFO: UD3 startup", ALM_NO_VALUE);
 	vTaskStartScheduler();

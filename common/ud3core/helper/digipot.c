@@ -22,55 +22,56 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#if !defined(tsk_fault_TASK_H)
-#define tsk_fault_TASK_H
+#include "digipot.h"
+#include "FreeRTOS.h"
+#include "task.h"
 
-/*
- * Add user task definitions, types, includes and other things in the below
- * merge region to customize the task.
- */
-/* `#START USER_TYPES_AND_DEFINES` */
-#include <device.h>
+#define R_DCDC_TOP 82000.0
+#define R_DCDC_BOTTOM 2700.0
+#define R_DIGIPOT 5000.0
 
-/* `#END` */
-
-typedef struct __sysfault__ {
-uint8_t uvlo;
-uint8_t temp1;    
-uint8_t temp2;
-uint8_t fuse;    
-uint8_t charge;
-uint8_t watchdog;
-uint8_t update;    
-uint8_t bus_uv;   
-uint8_t interlock;
-uint8_t link_state;
-uint8_t feedback;
-} SYSFAULT;
-
-extern SYSFAULT sysfault;
-
-extern uint32_t feedback_error_cnt;
+void digipot_write(uint8_t value){
+ 
+    uint8_t bit_to_write=0;
+    uint8_t bit_shift = 7;
     
-void tsk_fault_Start(void);
-void WD_enable(uint8_t enable);
-void reset_fault();
-void WD_reset();
-void WD_reset_from_ISR();
-void sysflt_set(uint32_t wait);
-void sysflt_clr(uint32_t wait);
-void set_switch_without_fb(uint32_t en);
+    digipot_ncs_Write(0); //select digipot
+    
+    CyDelayUs(1);
+    
+    for(uint32_t i=0;i<8;i++){
+        
+        digipot_clk_Write(0);
+        
+        bit_to_write = (value >> bit_shift) & 0x01;
+        
+        digipot_data_Write(bit_to_write);
+        
+        CyDelayUs(1); 
+        
+        digipot_clk_Write(1);
+        
+        bit_shift--;
+        
+        CyDelayUs(1); 
+    }
+    
+    digipot_clk_Write(0);
+    digipot_data_Write(0);
+    
+    digipot_ncs_Write(1); //deselect digipot
+    
+}
 
-uint8_t tsk_fault_is_fault();
-
-/*
- * Add user function prototypes in the below merge region to add user
- * functionality to the task definition.
- */
-/* `#START USER_TASK_PROTOS` */
-
-/* `#END` */
-
-/* ------------------------------------------------------------------------ */
-#endif
-/* [] END OF FILE */
+void digipot_set_voltage(float voltage){
+    
+    float r_pot = (voltage * R_DCDC_BOTTOM - 0.8 * R_DCDC_BOTTOM - 0.8 * R_DCDC_TOP) / -voltage + 0.8;
+    
+    float data = 255.0 - 255.0 / R_DIGIPOT * r_pot;
+    
+    if(data > 255.0) data = 255.0;
+    if(data < 0.0) data = 0.0;
+    
+    digipot_write(data);
+    
+}

@@ -73,8 +73,8 @@
 
 #define LED_TYPE_COUNT     5
 
-#define LED_OFF            0
-#define LED_ON             1
+//#define LED_OFF            0
+//#define LED_ON             1
 #define LED_BLINK          2
 
 #define AUX_AUDIO          0

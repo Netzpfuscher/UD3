@@ -75,6 +75,7 @@ typedef struct
     enum interrupter_mode mode;
     enum interrupter_burst burst_state;
     enum interrupter_modulation mod;
+    enum interrupter_DMA dma_mode;
     TimerHandle_t xBurst_Timer;
 } interrupter_params;
 
@@ -94,7 +95,8 @@ void interrupter_oneshot(uint32_t pw, uint32_t vol);
 void interrupter_update_ext();
 void interrupter_set_pw(uint8_t ch, uint16_t pw);
 void interrupter_set_pw_vol(uint8_t ch, uint16_t pw, uint32_t vol);
-void interrupter_DMA_mode(uint8_t mode);
+void interrupter_DMA_mode(enum interrupter_DMA mode);
+void interrupter_init_safe();
 
 uint8_t callback_ext_interrupter(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);

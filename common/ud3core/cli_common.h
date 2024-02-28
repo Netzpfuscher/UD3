@@ -127,7 +127,13 @@ struct config_struct{
     uint16_t ntc_r25;
     uint16_t idac;
     uint16_t noise_vol_div;
+    uint8_t ivo_led;
+    uint16_t uvlo_analog;
     char synth_filter[32];
+    float vdrive;
+    uint8_t hw_rev;
+    uint8_t autostart;
+    uint8_t min_fb_current;
 };
 typedef struct config_struct cli_config;
 

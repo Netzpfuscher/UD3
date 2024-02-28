@@ -51,15 +51,14 @@
 
 #define RELAY1_INVERTED 0
 #define RELAY2_INVERTED 0
-#define LED4_INVERTED   0
 
-#if LED4_INVERTED
-    #define LED4_ON  0
-    #define LED4_OFF 1
-#else
-    #define LED4_ON  1
-    #define LED4_OFF 0
-#endif
+#define LED_ON  (configuration.ivo_led ? 0 : 1)
+#define LED_OFF (configuration.ivo_led ? 1 : 0)
+
+#define IVO_UART_RX_BIT  0
+#define IVO_UART_TX_BIT  1
+#define IVO_LED_BIT      2
+
 
     
 #endif

@@ -372,7 +372,14 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
         case VMS_WRT_MAP_HEADER:
             map_header = pvPortMalloc(sizeof(MAPTABLE_HEADER)); 
             write_map_header_struct(map_header, min_payload);
-            map_entry = pvPortMalloc(sizeof(MAPTABLE_ENTRY) * map_header->listEntries);
+            if (map_header->listEntries != 0) {
+                map_entry = pvPortMalloc(sizeof(MAPTABLE_ENTRY) * map_header->listEntries);
+            } else {
+                nvm_write_buffer(last_write_index, (uint8_t*)map_header, sizeof(MAPTABLE_HEADER));
+                last_write_index += sizeof(MAPTABLE_HEADER);
+                vPortFree(map_header);
+                map_header = NULL;
+            }
             n_map_entry = 0;
             break;
         case VMS_WRT_MAP_DATA:

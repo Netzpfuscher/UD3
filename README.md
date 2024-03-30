@@ -7,6 +7,10 @@ This is the firmware for the UD3 Teslacoil driver. It is originally developed by
 
 It controls everything on a DRSSTC or a QCW. The interrupter is embedded in the UD3 (Classic Mode / MIDI / SID(C64) / QCW Ramp / QCW MIDI / QCW SID)
 
+Support
+--------
+[Discord](https://discord.gg/vb7gfvA9)
+
 Features
 --------
 

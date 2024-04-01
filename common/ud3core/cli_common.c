@@ -129,7 +129,7 @@ void init_config(){
     configuration.baudrate = 460800;
     configuration.r_top = 500000;
     strncpy(configuration.ud_name,"UD3-Tesla", sizeof(configuration.ud_name));
-    strncpy(configuration.synth_filter,"f<0f>20000", sizeof(configuration.ud_name));  //No filter
+    strncpy(configuration.synth_filter,"f<0f>20000", sizeof(configuration.synth_filter));  //No filter
     configuration.minprot = pdFALSE;
     configuration.max_const_i = 0;
     configuration.max_fault_i = 250;

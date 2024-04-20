@@ -9,7 +9,7 @@ It controls everything on a DRSSTC or a QCW. The interrupter is embedded in the 
 
 Support
 --------
-[Discord](https://discord.gg/vb7gfvA9)
+[Discord](https://discord.gg/ZKQQA6aHqx)
 
 Features
 --------

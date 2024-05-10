@@ -63,7 +63,13 @@ uint8_t USBMIDI_1_DataIsReady(){
 }
 
 uint16_t USBMIDI_1_GetAll(uint8_t * buffer){
-	*buffer = c;
+	if (c == '\n') {
+		// TTerm treats \n as backspace. Since none of the "usual" terminals send it this does not matter outside the
+		// simulator, and in the sim we just special-case it to send the "correct" \r instead
+		*buffer = '\r';
+	} else {
+		*buffer = c;
+	}
 	return 1;
 }
 	

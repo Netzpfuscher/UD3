@@ -68,7 +68,7 @@ void * pvPortMalloc( size_t xWantedSize )
 
     #if ( configUSE_MALLOC_FAILED_HOOK == 1 )
         {
-            if( pvReturn == NULL )
+            if( pvReturn == NULL && xWantedSize > 0 )
             {
                 extern void vApplicationMallocFailedHook( void );
                 vApplicationMallocFailedHook();

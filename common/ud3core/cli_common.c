@@ -149,7 +149,12 @@ void init_config(){
     configuration.ivo_led = 0;
     configuration.uvlo_analog = 0;
     
-    configuration.min_fb_current = 88;
+    configuration.min_fb_current = 25;
+    
+    configuration.compressor_attac = 20;
+    configuration.compressor_sustain = 44;
+    configuration.compressor_release = 20;
+    configuration.compressor_maxDutyOffset = 64;
     
     configuration.noise_vol_div = 2;
     
@@ -166,8 +171,7 @@ void init_config(){
     interrupter.mod = INTR_MOD_PW;
     
     param.pw = 0;
-    param.pwp = 0;
-    param.pwd = 50000;
+    param.vol = 0;
     param.burst_on = 0;
     param.burst_off = 500;
     param.tune_start = 400;
@@ -179,7 +183,7 @@ void init_config(){
     param.qcw_repeat = 500;
     param.transpose = 0;
     param.mch = 0;
-    param.synth = SYNTH_MIDI;
+    param.synth = SYNTH_OFF;
     
     param.qcw_holdoff = 0;
     param.qcw_max = 255;
@@ -201,22 +205,22 @@ void init_config(){
 
 parameter_entry confparam[] = {
     //       Parameter Type ,Visible,"Text   "         , Value ptr                     ,Min     ,Max    ,Div    ,Callback Function           ,Help text
-    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"pw"              , param.pw                      , 0      ,10000  ,0      ,callback_TRFunction         ,"Pulsewidth [us]")
-    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"pwp"             , param.pwp                     , 0      ,1000   ,10     ,callback_TRPFunction        ,"Pulsewidth [%]")
-    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"pwd"             , param.pwd                     , 0      ,60000  ,0      ,callback_TRFunction         ,"Pulsewidthdelay")
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"pw"              , param.pw                      , 0      ,10000  ,0      ,callback_PWFunction         ,"Pulsewidth [us]")
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"pwd"             , param.pwd                     , 0      ,60000  ,0      ,callback_PWFunction         ,"Pulse Period [us]")
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"vol"             , param.vol                     , 0      ,32767  ,0      ,callback_VolFunction         ,"Volume [0-0xffff]")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"bon"             , param.burst_on                , 0      ,1000   ,0      ,callback_BurstFunction      ,"Burst mode ontime [ms] 0=off")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"boff"            , param.burst_off               , 0      ,1000   ,0      ,callback_BurstFunction      ,"Burst mode offtime [ms]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"tune_start"      , param.tune_start              , 5      ,5000   ,10     ,callback_TuneFunction       ,"Start frequency [kHz]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"tune_end"        , param.tune_end                , 5      ,5000   ,10     ,callback_TuneFunction       ,"End frequency [kHz]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"tune_pw"         , param.tune_pw                 , 0      ,800    ,0      ,NULL                        ,"Tune pulsewidth")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"tune_delay"      , param.tune_delay              , 1      ,200    ,0      ,NULL                        ,"Tune delay")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"offtime"         , param.offtime                 , 3      ,250    ,0      ,NULL                        ,"Offtime for MIDI")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"offtime"         , param.offtime                 , 3      ,250    ,0      ,callback_PWFunction         ,"Offtime for MIDI")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_ramp"        , param.qcw_ramp                , 1      ,10000  ,100    ,callback_rampFunction       ,"QCW Ramp inc/125us")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_offset"      , param.qcw_offset              , 0      ,255    ,0      ,callback_rampFunction       ,"QCW Ramp start value")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_hold"        , param.qcw_holdoff             , 0      ,255    ,0      ,callback_rampFunction       ,"QCW Ramp time to start ramp [125 us]")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_max"         , param.qcw_max                 , 0      ,255    ,0      ,callback_rampFunction       ,"QCW Ramp end value")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_repeat"      , param.qcw_repeat              , 0      ,1000   ,0      ,NULL                        ,"QCW pulse repeat time [ms] <100=single shot")
-    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"synth"           , param.synth                   , 0      ,2      ,0      ,callback_SynthFunction      ,"0=off 1=MIDI 2=SID")    
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"synth"           , param.synth                   , 0      ,3      ,0      ,callback_SynthFunction      ,"0=off 1=MIDI 2=SID 3=TR")    
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"noise_div"       , configuration.noise_vol_div   , 1      ,1000   ,0      ,NULL                        ,"Noise volume divider")    
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"watchdog"        , configuration.watchdog        , 0      ,1      ,0      ,callback_ConfigFunction     ,"Watchdog Enable")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"watchdog_timeout", configuration.watchdog_timeout, 1      ,10000  ,0      ,callback_ConfigFunction     ,"Watchdog timeout [ms]")
@@ -267,7 +271,6 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_dc_curr"     , configuration.max_dc_curr     , 0      ,2000   ,10     ,callback_pid                ,"Maximum DC-Bus current [A] 0=off")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ena_ext_int"     , configuration.ext_interrupter , 0      ,2      ,0      ,callback_ext_interrupter    ,"Enable external interrupter 2=inverted")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"qcw_coil"        , configuration.is_qcw          , 0      ,1      ,0      ,NULL                        ,"Is QCW 1=true 0=false")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"vol_mod"         , interrupter.mod               , 0      ,1      ,0      ,callback_interrupter_mod    ,"0=pw 1=current modulation")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"pca9685"         , configuration.pca9685         , 0      ,1      ,0      ,NULL                        ,"0=off 1=on")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_fb_errors"   , configuration.max_fb_errors   , 0      ,60000  ,0      ,NULL                        ,"0=off, number of feedback errors per second to sysfault")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ntc_b"           , configuration.ntc_b           , 0      ,10000  ,0      ,callback_ntc                ,"NTC beta [k]")
@@ -281,9 +284,12 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"uvlo_analog"     , configuration.uvlo_analog     , 0      ,32000  ,1000   ,NULL                        ,"UVLO from ADC 0=GPIO UVLO")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"hw_rev"          , configuration.hw_rev          , 0      ,1      ,0      ,callback_ConfigFunction     ,"Hardware revision 0=3.0 1=3.1")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"autostart"       , configuration.autostart       , 0      ,1      ,0      ,NULL                        ,"Autostart")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"min_fb_current"  , configuration.min_fb_current  , 0      ,255    ,0      ,callback_ConfigFunction     ,"Autostart")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"min_fb_current"  , configuration.min_fb_current  , 0      ,255    ,0      ,callback_ConfigFunction     ,"Current at which to switch to feedback")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"comp_attac"      , configuration.compressor_attac  , 0      ,255    ,0      ,NULL                        ,"Compressor Attac Setting")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"comp_sustain"    , configuration.compressor_sustain  , 0      ,255    ,0      ,NULL                        ,"Compressor Sustain Setting")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"comp_release"    , configuration.compressor_release  , 0      ,255    ,0      ,NULL                        ,"Compressor Release Setting")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"comp_dutyOffset" , configuration.compressor_maxDutyOffset  , 0      ,255    ,0      ,NULL                        ,"Maximum Dutycycle offset before hard limit")
 };
-
 
    
 void eeprom_load(TERMINAL_HANDLE * handle){

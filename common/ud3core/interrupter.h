@@ -30,6 +30,7 @@ Its a 16 bit PWM clocked at 1MHz, so thats 1uS per count.
 #ifndef INTERRUPTER_H
 #define INTERRUPTER_H
 
+#include <stdint.h>
 #include <device.h>
 #include "cli_basic.h"
 #include "timers.h"
@@ -43,7 +44,7 @@ Its a 16 bit PWM clocked at 1MHz, so thats 1uS per count.
 #define int1_dma_DST_BASE (CYDEV_PERIPH_BASE)
     
     
-#define MAX_VOL (128<<16)
+#define MAX_VOL INT16_MAX
 #define MIN_VOL 0
     
 enum interrupter_DMA{
@@ -85,13 +86,14 @@ extern uint16_t ch_prd[4], ch_cmp[4];
 // These are only exposed for use in the simulator, do not use in actual UD3 code!
 extern uint16_t int1_prd, int1_cmp;
 extern uint8_t int1_dma_Chan;
-extern uint8_t ch_dma_Chan[N_CHANNEL];
 
 void initialize_interrupter(void);
 void configure_interrupter();
-void update_interrupter();
+void interrupter_updateTR();
 void ramp_control(void);
 void interrupter_oneshot(uint32_t pw, uint32_t vol);
+void interrupter_oneshotRaw(uint32_t pw_us, uint32_t dacValue_counts);
+
 void interrupter_update_ext();
 void interrupter_set_pw(uint8_t ch, uint16_t pw);
 void interrupter_set_pw_vol(uint8_t ch, uint16_t pw, uint32_t vol);
@@ -100,13 +102,19 @@ void interrupter_init_safe();
 
 uint8_t callback_ext_interrupter(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
-uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
-uint8_t callback_TRPFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+uint8_t callback_PWFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+uint8_t callback_VolFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_interrupter_mod(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 
 
 void interrupter_kill(void);
 
 void interrupter_unkill(void);
+
+
+uint8_t CMD_SynthMon(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+    
+uint8_t callback_synthFilter(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+uint8_t callback_SynthFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 
 #endif

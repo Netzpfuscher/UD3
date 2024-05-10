@@ -30,6 +30,9 @@
 #include "qcw.h"
 #include <stdlib.h>
 
+
+CHANNEL channel[N_CHANNEL];
+
 xQueueHandle qSID;
 struct sid_f sid_frm;
 
@@ -45,7 +48,6 @@ void SigGen_SID_init(){
 static inline void compute_adsr_sid(uint8_t ch){
     switch (channel[ch].adsr_state){
             case ADSR_ATTACK:
-                SigGen_channel_enable(ch,1);
                 channel[ch].volume+=attack_env[sid_frm.attack[ch]];
                 if(channel[ch].volume>=MAX_VOL){
                     channel[ch].volume=MAX_VOL;
@@ -67,7 +69,6 @@ static inline void compute_adsr_sid(uint8_t ch){
                 if(channel[ch].volume<=0){
                     channel[ch].volume=0;
                     channel[ch].adsr_state=ADSR_IDLE;
-                    SigGen_channel_enable(ch,0);
                 }
             break;
         }
@@ -84,19 +85,22 @@ void synthcode_SID(uint32_t r){
         if(xQueueReceiveFromISR(qSID,&sid_frm,0)){
             last_frame=l_time;
             for(uint8_t i=0;i<SID_CHANNELS;i++){
+                
                 if(sid_frm.gate[i] > channel[i].old_gate) {
                     channel[i].adsr_state=ADSR_ATTACK;  //Rising edge
                 }
+                
                 if(sid_frm.gate[i] < channel[i].old_gate) channel[i].adsr_state=ADSR_RELEASE;  //Falling edge
+                
                 sid_frm.pw[i]=sid_frm.pw[i]>>4;
                 channel[i].old_gate = sid_frm.gate[i];
                 if(sid_frm.freq_fp8[i]){
                     channel[i].halfcount = (uint32_t)(SG_CLOCK_HALFCOUNT<<8)/sid_frm.freq_fp8[i];
-                    channel[i].freq = SigGen_channel_freq_fp8(i,sid_frm.freq_fp8[i]); 
+                    channel[i].freq = sid_frm.freq_fp8[i] >> 8;//SigGen_channel_freq_fp8(i,sid_frm.freq_fp8[i]); 
                 }else{
                     channel[i].halfcount = 0; 
                     channel[i].freq = 0;
-                    SigGen_channel_enable(i,0);
+                    //SigGen_channel_enable(i,0);
                 }
                 
             }
@@ -104,6 +108,7 @@ void synthcode_SID(uint32_t r){
         }
     }
     
+    //did the last frame expire a long time ago without us getting a new one? If so kill the output
     if((l_time - last_frame)>100){
      next_frame = l_time;
      last_frame = l_time;
@@ -111,7 +116,7 @@ void synthcode_SID(uint32_t r){
             channel[i].volume = 0;
             channel[i].adsr_state = ADSR_IDLE;
             channel[i].old_gate=0;
-            SigGen_channel_enable(i,0);
+            //SigGen_channel_enable(i,0);
         }   
     }
     
@@ -124,19 +129,19 @@ void synthcode_SID(uint32_t r){
         if(channel[ch].volume > 0 && channel[ch].freq){
             tt.n.midi_voices.value++;
             if(sid_frm.wave[ch]){
-                interrupter_set_pw_vol(ch,sid_frm.master_pw,channel[ch].volume/configuration.noise_vol_div);
+                //interrupter_set_pw_vol(ch,sid_frm.master_pw,channel[ch].volume/configuration.noise_vol_div);
             }else{
-                interrupter_set_pw_vol(ch,sid_frm.master_pw,channel[ch].volume);
+                //interrupter_set_pw_vol(ch,sid_frm.master_pw,channel[ch].volume);
             }
 
             if(sid_frm.test[ch]){
-                SigGen_noise(ch, 1 ,0);  //Not for noise only to set accu to 0
+                //SigGen_noise(ch, 1 ,0);  //Not for noise only to set accu to 0
             }
 
             if (sid_frm.wave[ch] && (r / channel[ch].halfcount) % 2 > 0) {
                 flag=1;
 			}  
-            if(flag > channel[ch].old_flag) SigGen_noise(ch, sid_frm.wave[ch],rnd);
+            //if(flag > channel[ch].old_flag) SigGen_noise(ch, sid_frm.wave[ch],rnd);
             channel[ch].old_flag = flag;
         }
 	}

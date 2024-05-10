@@ -24,6 +24,8 @@
 
 #if !defined(tsk_midi_TASK_H)
 #define tsk_midi_TASK_H
+    
+#define N_MIDICHANNEL 16
 
 /*
  * Add user task definitions, types, includes and other things in the below

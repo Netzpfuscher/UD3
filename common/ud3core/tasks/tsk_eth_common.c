@@ -102,13 +102,14 @@ void process_min_sid(uint8_t* ptr, uint16_t len) {
             SID_frame.wave[i] = bit_is_set(*ptr, 7);
             SID_frame.gate[i] = bit_is_set(*ptr, 0);
             
-            if(filter.channel[i]==0 || freq_temp > filter.max || freq_temp < filter.min || freq_temp == 0){
+            //TODO reimplement this?
+            /*if(filter.channel[i]==0 || freq_temp > filter.max || freq_temp < filter.min || freq_temp == 0){
                 SID_frame.gate[i]=0;
             }
             if(SID_frame.wave[i] && filter.noise_disable){
                 SID_frame.gate[i] = 0;
                 SID_frame.freq_fp8[i] = 0;
-            }
+            }*/
             if(*ptr & 0x08){
                 SID_frame.test[i]=1;
             }else{

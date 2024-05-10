@@ -1,0 +1,9 @@
+[submodule "common/Modules/RingBuffer"]
+	path = common/Modules/RingBuffer
+	url = https://github.com/TMaxElectronics/RingBuffer.git
+[submodule "common/Modules/DLL"]
+	path = common/Modules/DLL
+	url = https://github.com/TMaxElectronics/DLL
+[submodule "common/Modules/utilH"]
+	path = common/Modules/utilH
+	url = https://github.com/TMaxElectronics/utilH

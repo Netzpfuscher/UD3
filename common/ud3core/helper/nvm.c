@@ -22,6 +22,8 @@
 */
 
 #include "nvm.h"
+#include "NoteMapper.h"
+#include "VMS.h"
 #include "stdlib.h"
 
 
@@ -34,16 +36,16 @@
 
 
 #ifndef SIMULATOR
-    const volatile uint8_t* NVM_mapMem = (uint8_t*)NVM_START_ADDR; 
+    const volatile uint8_t * NVM_mapMem = (uint8_t*)NVM_START_ADDR; 
     const volatile uint8_t * NVM_blockMem = (uint8_t*)(NVM_START_ADDR + MAPMEM_SIZE);
-    const VMS_BLOCK* VMS_BLKS = (VMS_BLOCK*)(NVM_START_ADDR + MAPMEM_SIZE);
+    const volatile VMS_Block_t * NVM_blocks = (VMS_Block_t *)(NVM_START_ADDR + MAPMEM_SIZE);
 #else
     
     uint8_t flash_pages[128][256];
     
     uint8_t * NVM_mapMem = (uint8_t*)flash_pages;
     uint8_t * NVM_blockMem = (uint8_t*)(((uint8_t*)flash_pages) + MAPMEM_SIZE);
-    VMS_BLOCK* VMS_BLKS = (VMS_BLOCK*)(((uint8_t*)flash_pages) + MAPMEM_SIZE);
+    VMS_Block_t* NVM_blocks = (VMS_Block_t*)(((uint8_t*)flash_pages) + MAPMEM_SIZE);
     
     uint8_t CyWriteRowData(uint8_t arr_n, uint16_t page, uint8_t* page_content){
         page -= NVM_START_PAGE;
@@ -138,25 +140,15 @@ uint8_t nvm_write_buffer(uint16_t index, uint8_t* buffer, int32_t len){
     return pdPASS;
 }
 
-void VMS_init_blk(VMS_BLOCK* blk){
-    blk->uid = 0;
-    blk->nextBlocks[0] = NO_BLK;
-    blk->nextBlocks[1] = NO_BLK;
-    blk->nextBlocks[2] = NO_BLK;
-    blk->nextBlocks[3] = NO_BLK;
-    blk->behavior = NORMAL;
-    blk->type = VMS_LIN;
-    blk->target = maxOnTime;
-    blk->thresholdDirection = RISING;
-    blk->targetFactor = 0;
-    blk->param1 = 0;
-    blk->param2 = 0;
-    blk->param3 = 0;
-    blk->period = 0;
-    blk->flags = 0; 
+void VMS_init_blk(VMS_Block_t* blk){
+    memset(blk, 0xff, sizeof(VMS_Block_t));
 }
 
-void VMS_print_blk(TERMINAL_HANDLE* handle, VMS_BLOCK* blk, uint8_t indent){
+void VMS_print_blk(TERMINAL_HANDLE* handle, VMS_Block_t* blk, uint8_t indent){
+    /*
+    
+    //TODO reimplement this
+    
     ttprintf("%*sBlock ID: %u @ 0x%08X\r\n", indent, "", blk->uid, blk);
     indent++;
     for(int i=0;i<VMS_MAX_BRANCHES;i++){
@@ -293,10 +285,14 @@ void VMS_print_blk(TERMINAL_HANDLE* handle, VMS_BLOCK* blk, uint8_t indent){
     ttprintf("%*sParam 3: %i\r\n", indent, "", blk->param3);
     ttprintf("%*sPeriod: %u\r\n", indent, "", blk->period);
     ttprintf("%*sFlags: 0x%08X\r\n\r\n", indent, "", blk->flags);
- 
+ */
 }
 
-MAPTABLE_HEADER* VMS_print_map(TERMINAL_HANDLE* handle, MAPTABLE_HEADER* map){
+MAPTABLE_HEADER_t* VMS_print_map(TERMINAL_HANDLE* handle, MAPTABLE_HEADER_t* map){
+    /*
+    //TODO reimplement this
+    
+    
     ttprintf("\r\nProgram: %u - %s\r\n", map->programNumber, map->name);
     MAPTABLE_ENTRY* ptr = (MAPTABLE_ENTRY*)(map+1);
     for(uint32_t i=0;i<map->listEntries;i++){
@@ -313,13 +309,14 @@ MAPTABLE_HEADER* VMS_print_map(TERMINAL_HANDLE* handle, MAPTABLE_HEADER* map){
         return map;
     }else{
         return NULL;
-    }
+    }*/
+    return NULL;
 }
 
-uint32_t nvm_get_blk_cnt(const VMS_BLOCK* blk){
+uint32_t nvm_get_blk_cnt(const VMS_Block_t* blk){
     uint32_t cnt=0;
     while(1){
-        if(blk->uid==0) break;
+        if(!VMS_isBlockValid(blk)) break;
         blk++;
         cnt++;
     }
@@ -334,7 +331,7 @@ uint8_t CMD_nvm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     }
     
     if(strcmp(args[0], "maps") == 0){
-        MAPTABLE_HEADER* map = (MAPTABLE_HEADER*) NVM_mapMem;
+        MAPTABLE_HEADER_t* map = (MAPTABLE_HEADER_t*) NVM_mapMem;
     
         while(map){
             map = VMS_print_map(handle, map);
@@ -343,11 +340,11 @@ uint8_t CMD_nvm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     }
     
     if(strcmp(args[0], "blocks") == 0){
-        uint32_t n_blocks = nvm_get_blk_cnt(VMS_BLKS);
+        uint32_t n_blocks = nvm_get_blk_cnt(NVM_blocks);
         ttprintf("NVM block count: %u\r\n", n_blocks);
         
         for(uint32_t i=0;i<n_blocks;i++){
-            VMS_print_blk(handle, (VMS_BLOCK*)&VMS_BLKS[i], 4);
+            VMS_print_blk(handle, &NVM_blocks[i], 4);
         }
         return TERM_CMD_EXIT_SUCCESS;
     }

@@ -134,13 +134,18 @@ struct config_struct{
     uint8_t hw_rev;
     uint8_t autostart;
     uint8_t min_fb_current;
-};
+    
+    uint8_t compressor_attac;
+    uint8_t compressor_sustain;
+    uint8_t compressor_release;
+    uint8_t compressor_maxDutyOffset;
+}; 
 typedef struct config_struct cli_config;
 
 struct parameter_struct{
     uint16_t    pw;
-    uint16_t    pwp;
-	uint16_t    pwd;
+    uint16_t    pwd;
+    uint16_t    vol;
     uint16_t    tune_start;
     uint16_t    tune_end;
     uint16_t    tune_pw;

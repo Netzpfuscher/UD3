@@ -26,9 +26,33 @@
     #include <stdint.h>
     #include "SignalGenerator.h"
     
+    #define SID_CHANNELS 3
+    
     void synthcode_SID(uint32_t r);
     void synthcode_QSID(uint32_t r);
     void SigGen_SID_init();
+    
+    
+    enum ADSR{
+    ADSR_IDLE = 0,
+    ADSR_PENDING,
+    ADSR_ATTACK,
+    ADSR_DECAY,
+    ADSR_SUSTAIN,
+    ADSR_RELEASE,
+    };
+    
+    typedef struct __channel__ {
+	int32_t volume;	// Volume (0 - 127) 7bit.16bit
+    uint16_t halfcount;
+    uint32_t freq;
+    uint8_t adsr_state;
+    uint8_t old_gate;
+    uint8_t noise;
+    uint8_t  old_flag;
+    } CHANNEL;
+    
+    extern CHANNEL channel[N_CHANNEL];
     
     struct sid_f{
     uint32_t freq_fp8[SID_CHANNELS];

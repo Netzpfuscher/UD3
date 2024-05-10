@@ -252,7 +252,11 @@ uint8_t CMD_qcw(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         ttprintf("Usage: qcw [start|stop]\r\n");
         return TERM_CMD_EXIT_SUCCESS;
     }
-        
+    
+    ttprintf("QCW MODE SUPPORT TEMPORARILY REMOVED!\r\n");
+    
+    /*
+    //TODO reimplement
 	if(strcmp(args[0], "start") == 0){
         
         SigGen_switch_synth(SYNTH_MIDI);
@@ -285,6 +289,6 @@ uint8_t CMD_qcw(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
 		ttprintf("QCW Disabled\r\n");
         SigGen_switch_synth(param.synth);
 		return TERM_CMD_EXIT_SUCCESS;
-	}
+	}*/
 	return TERM_CMD_EXIT_SUCCESS;
 }

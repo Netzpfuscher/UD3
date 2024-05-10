@@ -43,10 +43,11 @@
 #include "TTerm.h"
 #include "cli_basic.h"
 
-#include "helper/vms_types.h"
 #include "helper/nvm.h"
 #include "helper/buffer.h"
-#include "ADSREngine.h"
+#include "NoteMapper.h"
+#include "VMS.h"
+#include "VMSWrapper.h"
 
 xTaskHandle tsk_min_TaskHandle;
 uint8 tsk_min_initVar = 0u;
@@ -94,6 +95,22 @@ typedef struct {
 	int32_t last;
 	int32_t samples[ITEMS];
 } average_buff;
+
+typedef struct {
+    uint32_t id;
+    VMS_Block_t block;
+} VMS_WIRE_DATA_t;
+
+typedef struct {
+    uint32_t id;
+    MAPTABLE_HEADER_t header;
+} MAP_HEADER_WIRE_DATA_t;
+
+typedef struct {
+    uint32_t id;
+    MAPTABLE_ENTRY_t entry;
+} MAP_ENTRY_WIRE_DATA_t;
+
 
 average_buff sample;
 
@@ -173,20 +190,20 @@ void process_synth(uint8_t *min_payload, uint8_t len_payload){
         case SYNTH_CMD_FLUSH:
             if(qSID!=NULL){
                 xQueueReset(qSID);
-                SigGen_kill();
+                SigGen_killAudio();
             }
             break;
         case SYNTH_CMD_SID:
             param.synth=SYNTH_SID;
-            SigGen_switch_synth(SYNTH_SID);
+            SigGen_switchSynthMode(SYNTH_SID);
             break;
         case SYNTH_CMD_MIDI:
             param.synth=SYNTH_MIDI;
-            SigGen_switch_synth(SYNTH_MIDI);
+            SigGen_switchSynthMode(SYNTH_MIDI);
             break;
         case SYNTH_CMD_OFF:
             param.synth=SYNTH_OFF;
-            SigGen_switch_synth(SYNTH_OFF);
+            SigGen_switchSynthMode(SYNTH_OFF);
             break;
   }
 }
@@ -265,85 +282,7 @@ void min_event(uint8_t command, uint8_t *min_payload, uint8_t len_payload){
 #define VMS_WRT_MAP_HEADER 2
 #define VMS_WRT_MAP_DATA   3
 #define VMS_WRT_FLUSH      4
-#define VMS_WIRE_SIZE ((12+VMS_MAX_BRANCHES)*4)   //12+4 * 4 bytes
-
-void write_blk_struct(VMS_BLOCK* blk, uint8_t* min_payload){
-    int32_t ind = 0;
-    uint32_t temp;
-    blk->uid = buffer_get_uint32(min_payload, &ind);;
-    temp = buffer_get_uint32(min_payload, &ind);
-    if(temp==(uint32)VMS_DIE){
-         blk->nextBlocks[0] = VMS_DIE;
-    } else {    
-        if(temp != 0){
-            temp--;
-            blk->nextBlocks[0] = (VMS_BLOCK*)&VMS_BLKS[temp];
-        }else{
-            blk->nextBlocks[0] = NULL;
-        }
-    }
-    temp = buffer_get_uint32(min_payload, &ind);
-    if(temp != 0){
-        temp--;
-        blk->nextBlocks[1] = (VMS_BLOCK*)&VMS_BLKS[temp];
-    }else{
-        blk->nextBlocks[1] = NULL;
-    }
-    temp = buffer_get_uint32(min_payload, &ind);
-    if(temp != 0){
-        temp--;
-        blk->nextBlocks[2] = (VMS_BLOCK*)&VMS_BLKS[temp];
-    }else{
-        blk->nextBlocks[2] = NULL;
-    }
-    temp = buffer_get_uint32(min_payload, &ind);
-    if(temp != 0){
-        temp--;
-        blk->nextBlocks[3] = (VMS_BLOCK*)&VMS_BLKS[temp];
-    }else{
-        blk->nextBlocks[3] = NULL;
-    }
-    temp = buffer_get_uint32(min_payload, &ind);
-    if(temp != 0){
-        temp--;
-        blk->offBlock = (VMS_BLOCK*)&VMS_BLKS[temp];
-    }else{
-        blk->offBlock = NULL;
-    }
-    blk->behavior = buffer_get_uint32(min_payload, &ind);
-    blk->type = buffer_get_uint32(min_payload, &ind);
-    blk->target = buffer_get_uint32(min_payload, &ind);
-    blk->thresholdDirection = buffer_get_uint32(min_payload, &ind);
-    blk->targetFactor = buffer_get_uint32(min_payload, &ind);
-    blk->param1 = buffer_get_uint32(min_payload, &ind);
-    blk->param2 = buffer_get_uint32(min_payload, &ind);
-    blk->param3 = buffer_get_uint32(min_payload, &ind);
-    blk->period = buffer_get_uint32(min_payload, &ind);
-    blk->flags = buffer_get_uint32(min_payload, &ind);
-}
-
-void write_map_header_struct(MAPTABLE_HEADER* map_header, uint8_t* min_payload){
-    int32_t ind = 0;
-    map_header->listEntries = min_payload[ind++];
-    map_header->programNumber = min_payload[ind++];
-    memcpy(map_header->name, &min_payload[ind], sizeof(map_header->name));
-}
-
-void write_map_entry_struct(MAPTABLE_ENTRY* map_entry, uint8_t* min_payload){
-    int32_t ind = 0;
-    map_entry->startNote = min_payload[ind++];
-    map_entry->endNote = min_payload[ind++];
-    map_entry->data.noteFreq = buffer_get_uint16(min_payload, &ind);
-    map_entry->data.targetOT = min_payload[ind++];
-    map_entry->data.flags = min_payload[ind++];
-    uint32_t temp = buffer_get_uint32(min_payload, &ind);
-    if(temp != 0){
-        temp--;
-        map_entry->data.VMS_Startblock = (VMS_BLOCK*)&VMS_BLKS[temp];
-    }else{
-        map_entry->data.VMS_Startblock = NULL;
-    }
-}
+#define VMS_WIRE_SIZE (sizeof(VMS_WIRE_DATA_t)) 
 
 void min_vms(uint8_t *min_payload, uint8_t len_payload){
     
@@ -351,9 +290,10 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
     min_payload++;
     len_payload--;
     
-    VMS_BLOCK* blk;
-    static MAPTABLE_HEADER* map_header;
-    static MAPTABLE_ENTRY* map_entry;
+    
+    static MAP_HEADER_WIRE_DATA_t* map_header;
+    static MAPTABLE_ENTRY_t* map_entries;
+    static MAP_ENTRY_WIRE_DATA_t* map_entry;
     static uint8_t n_map_entry=0;
     static uint16_t last_write_index=0;
     
@@ -363,37 +303,39 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
                 alarm_push(ALM_PRIO_WARN, "COM: Malformed block write", len_payload);
                 return;
             }
-            blk = pvPortMalloc(sizeof(VMS_BLOCK));
-            write_blk_struct(blk, min_payload);           
-            nvm_write_buffer(MAPMEM_SIZE + (sizeof(VMS_BLOCK) * (blk->uid-1)), (uint8_t*)blk, sizeof(VMS_BLOCK));
-            vPortFree(blk);
-            blk=NULL;
+            
+            //convert wire byte to vms stuff
+            VMS_WIRE_DATA_t * data = (VMS_WIRE_DATA_t *) min_payload;
+            nvm_write_buffer(MAPMEM_SIZE + (sizeof(VMS_Block_t) * (data->id)), (uint8_t*) &(data->block), sizeof(VMS_Block_t));
+            
             break;
         case VMS_WRT_MAP_HEADER:
-            map_header = pvPortMalloc(sizeof(MAPTABLE_HEADER)); 
-            write_map_header_struct(map_header, min_payload);
+            map_header = (MAP_HEADER_WIRE_DATA_t*) min_payload;
             if (map_header->listEntries != 0) {
-                map_entry = pvPortMalloc(sizeof(MAPTABLE_ENTRY) * map_header->listEntries);
+                map_entries = pvPortMalloc(sizeof(MAPTABLE_ENTRY_t) * map_header->listEntries);
             } else {
                 nvm_write_buffer(last_write_index, (uint8_t*)map_header, sizeof(MAPTABLE_HEADER));
                 last_write_index += sizeof(MAPTABLE_HEADER);
-                vPortFree(map_header);
                 map_header = NULL;
             }
             n_map_entry = 0;
             break;
         case VMS_WRT_MAP_DATA:
-            if(map_header != NULL || map_entry != NULL){
-                write_map_entry_struct(&map_entry[n_map_entry], min_payload);
+            if(map_header != NULL || map_entries != NULL){
+                
+                //copy the data 
+                map_entry = (MAP_ENTRY_WIRE_DATA_t*) min_payload;
+                memcpy(&map_entries[n_map_entry], &(map_entry->entry), sizeof(MAP_ENTRY_WIRE_DATA_t));
                 n_map_entry++;
-                if(n_map_entry == map_header->listEntries){
-                    nvm_write_buffer(last_write_index, (uint8_t*)map_header, sizeof(MAPTABLE_HEADER));
-                    last_write_index += sizeof(MAPTABLE_HEADER);
-                    nvm_write_buffer(last_write_index, (uint8_t*)map_entry, sizeof(MAPTABLE_ENTRY) * map_header->listEntries);
-                    last_write_index += sizeof(MAPTABLE_ENTRY) * map_header->listEntries;
-                    vPortFree(map_entry);
+                
+                if(n_map_entry == map_header->header.listEntries){
+                    nvm_write_buffer(last_write_index, (uint8_t*)map_header, sizeof(MAPTABLE_HEADER_t));
+                    last_write_index += sizeof(MAPTABLE_HEADER_t);
+                    nvm_write_buffer(last_write_index, (uint8_t*)map_entries, sizeof(MAPTABLE_ENTRY_t) * map_header->header.listEntries);
+                    last_write_index += sizeof(MAPTABLE_ENTRY_t) * map_header->header.listEntries;
+                    vPortFree(map_entries);
                     vPortFree(map_header);
-                    map_entry = NULL;
+                    map_entries = NULL;
                     map_header = NULL;
                 }
             }else{
@@ -403,12 +345,12 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
         case VMS_WRT_FLUSH:
             last_write_index=0;
             nvm_flush();
-            vPortFree(map_entry);
+            vPortFree(map_entries);
             vPortFree(map_header);
             for(uint8_t i=0;i<NUM_MIN_CON;i++){
                 if(socket_info[i].socket==SOCKET_CONNECTED){
                     TERMINAL_HANDLE* handle = min_handle[i];
-                    ttprintf("\r\n VMS-Block write finished: %u\r\n", nvm_get_blk_cnt(VMS_BLKS));
+                    ttprintf("\r\n VMS-Block write finished: %u\r\n", nvm_get_blk_cnt((VMS_Block_t*) NVM_blockMem));
                     
                     ttprintfEcho("\r\n\r\n%s@%s>", handle->currUserName, TERM_DEVICE_NAME);
                 }

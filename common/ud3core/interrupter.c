@@ -1,4 +1,4 @@
-/*
+ /*
  * UD3
  *
  * Copyright (c) 2018 Jens Kerrinnes
@@ -27,24 +27,23 @@
 #include "ZCDtoPWM.h"
 #include "autotune.h"
 #include "SignalGenerator.h"
+#include "DutyCompressor.h"
 #include "cli_common.h"
 #include "qcw.h"
 #include "tasks/tsk_fault.h"
 #include "tasks/tsk_midi.h"
+#include "VMSWrapper.h"
 
 #include <device.h>
 #include <math.h>
 
 uint16_t int1_prd, int1_cmp;
-uint16_t ch_prd[N_CHANNEL], ch_cmp[N_CHANNEL];
-uint8_t ch_cur[N_CHANNEL];
 
 void interrupter_kill(void){
     sysfault.interlock = 1;
-    interrupter.mode = INTR_MODE_OFF;
-    interrupter.pw =0;
+    SigGen_killAudio();
     param.pw=0;
-    update_interrupter();
+    interrupter_updateTR();
 }
 
 void interrupter_unkill(void){
@@ -53,7 +52,6 @@ void interrupter_unkill(void){
 
 uint8 int1_dma_Chan;
 
-
 #define N_TD 4
 uint8 ch_dma_Chan[N_CHANNEL];
 uint8_t ch_dma_TD[N_CHANNEL][N_TD];
@@ -61,53 +59,6 @@ uint8_t ch_dma_TD[N_CHANNEL][N_TD];
 #define MODULATION_CUR_BYTES 1
 #define MODULATION_PW_BYTES  8
 #define MODULATION_REQUEST_PER_BURST  1
-
-void interrupter_reconf_dma(enum interrupter_modulation mod){
-    if(mod==INTR_MOD_PW){
-        
-    ch_dma_Chan[0] = Ch1_DMA_DmaInitialize(MODULATION_PW_BYTES, MODULATION_REQUEST_PER_BURST,
-										   HI16(CYDEV_SRAM_BASE), HI16(CYDEV_PERIPH_BASE));
-    ch_dma_Chan[1] = Ch2_DMA_DmaInitialize(MODULATION_PW_BYTES, MODULATION_REQUEST_PER_BURST,
-										   HI16(CYDEV_SRAM_BASE), HI16(CYDEV_PERIPH_BASE));
-    ch_dma_Chan[2] = Ch3_DMA_DmaInitialize(MODULATION_PW_BYTES, MODULATION_REQUEST_PER_BURST,
-										   HI16(CYDEV_SRAM_BASE), HI16(CYDEV_PERIPH_BASE));
-    ch_dma_Chan[3] = Ch4_DMA_DmaInitialize(MODULATION_PW_BYTES, MODULATION_REQUEST_PER_BURST,
-										   HI16(CYDEV_SRAM_BASE), HI16(CYDEV_PERIPH_BASE));
-    for(uint8_t ch=0;ch<N_CHANNEL;ch++){
-        CyDmaTdSetConfiguration(ch_dma_TD[ch][0], 2, ch_dma_TD[ch][1], TD_AUTO_EXEC_NEXT);
-	    CyDmaTdSetConfiguration(ch_dma_TD[ch][1], 2, ch_dma_TD[ch][2], TD_AUTO_EXEC_NEXT);
-	    CyDmaTdSetConfiguration(ch_dma_TD[ch][2], 2, ch_dma_TD[ch][3], TD_AUTO_EXEC_NEXT);
-	    CyDmaTdSetConfiguration(ch_dma_TD[ch][3], 2, ch_dma_TD[ch][0], Ch1_DMA__TD_TERMOUT_EN);  
-        
-        CyDmaTdSetAddress(ch_dma_TD[ch][0], LO16((uint32)&ch_prd[ch]), LO16((uint32)interrupter1_PERIOD_LSB_PTR));
-    	CyDmaTdSetAddress(ch_dma_TD[ch][1], LO16((uint32)&ch_cmp[ch]), LO16((uint32)interrupter1_COMPARE1_LSB_PTR));
-    	CyDmaTdSetAddress(ch_dma_TD[ch][2], LO16((uint32)&ch_prd[ch]), LO16((uint32)interrupter1_COMPARE2_LSB_PTR));
-    	CyDmaTdSetAddress(ch_dma_TD[ch][3], LO16((uint32)&ch_prd[ch]), LO16((uint32)interrupter1_COUNTER_LSB_PTR));
-        
-        CyDmaChSetInitialTd(ch_dma_Chan[ch], ch_dma_TD[ch][0]);
-    }
-    
-    }else if(mod==INTR_MOD_CUR){
-    
-    ch_dma_Chan[0] = Ch1_DMA_DmaInitialize(MODULATION_CUR_BYTES, MODULATION_REQUEST_PER_BURST,
-										   HI16(CYDEV_SRAM_BASE), HI16(CYDEV_SRAM_BASE));
-    ch_dma_Chan[1] = Ch2_DMA_DmaInitialize(MODULATION_CUR_BYTES, MODULATION_REQUEST_PER_BURST,
-										   HI16(CYDEV_SRAM_BASE), HI16(CYDEV_SRAM_BASE));
-    ch_dma_Chan[2] = Ch3_DMA_DmaInitialize(MODULATION_CUR_BYTES, MODULATION_REQUEST_PER_BURST,
-										   HI16(CYDEV_SRAM_BASE), HI16(CYDEV_SRAM_BASE));
-    ch_dma_Chan[3] = Ch4_DMA_DmaInitialize(MODULATION_CUR_BYTES, MODULATION_REQUEST_PER_BURST,
-										   HI16(CYDEV_SRAM_BASE), HI16(CYDEV_SRAM_BASE));
-    
-    for(uint8_t ch=0;ch<N_CHANNEL;ch++){
-        CyDmaTdSetConfiguration(ch_dma_TD[ch][0], 1, ch_dma_TD[ch][0], Ch1_DMA__TD_TERMOUT_EN);
-        
-        CyDmaTdSetAddress(ch_dma_TD[ch][0], LO16((uint32)&ch_cur[ch]), LO16((uint32)&ct1_dac_val[0]));
-        
-        CyDmaChSetInitialTd(ch_dma_Chan[ch], ch_dma_TD[ch][0]);
-    }
-        
-    }
-}
 
 // Adds an alarm with the specified message to the alarm queue and stops the UD3
 // TODO: Make this a global function so it can be used everywhere resources and memory are allocated.
@@ -118,8 +69,9 @@ void critical_error(const char *message, int32_t val) {
 
 // One-time initialization of the interrupter components (called once at system startup)
 void initialize_interrupter(void) {
-	//over current detection
-	//    OCD_StartEx(OCD_ISR);
+    //initialize both signal generator and duty compressor
+    SigGen_init();
+    Comp_init();
 
 	//initialize the PWM generators for safe PW and PRD
 	int1_prd = 65000;   // An arbitrary large number to count down from
@@ -154,23 +106,15 @@ void initialize_interrupter(void) {
 	CyDmaTdSetAddress(int1_dma_TD[3], LO16((uint32)&int1_prd), LO16((uint32)interrupter1_COUNTER_LSB_PTR));
 	CyDmaChSetInitialTd(int1_dma_Chan, int1_dma_TD[0]);
     
-    //Allocate memory for DDS DMA TDs
-    for(uint8_t ch=0;ch<N_CHANNEL;ch++){
-        for(uint8_t i=0;i<N_TD;i++){
-            ch_dma_TD[ch][i] = CyDmaTdAllocate();
-            if(ch_dma_TD[ch][i] ==  DMA_INVALID_TD)
-                critical_error("CyDmaTdAllocate failure DDS", i);
-         }
-    }
-
-    DDS32_1_Start();
-    DDS32_2_Start();
-
+    CyDmaChEnable(int1_dma_Chan, 1);
+    
     configure_interrupter();
 }
 
 void interrupter_init_safe(){
         // Safe defaults in case anything fails.
+    interrupter_kill();
+   
   	int1_prd = 65000;
 	int1_cmp = 64999;
 
@@ -181,7 +125,7 @@ void interrupter_init_safe(){
   
 }
 
-// Called whenever an interrupter-related param is changed oe eeprom is loaded.
+// Called whenever an interrupter-related param is changed or eeprom is loaded.
 void configure_interrupter()
 {
 
@@ -193,83 +137,13 @@ void configure_interrupter()
     
     // Disable interrupter
     interrupter.mode = INTR_MODE_OFF;
-    interrupter_reconf_dma(interrupter.mod);    // May be changed when eeprom is loaded or interrupter.mod is changed via cli
-   
-    DDS32_1_Disable_ch(0);
-    DDS32_1_Disable_ch(1);
-    DDS32_2_Disable_ch(0);
-    DDS32_2_Disable_ch(1);
-    
-    interrupter_DMA_mode(INTR_DMA_DDS);         // set to synth mode by default
 }
-
-
-void interrupter_DMA_mode(enum interrupter_DMA mode){
-    interrupter.dma_mode = mode;
-    switch(mode){
-        case INTR_DMA_TR:
-            CyDmaChDisable(ch_dma_Chan[0]);
-            CyDmaChDisable(ch_dma_Chan[1]);
-            CyDmaChDisable(ch_dma_Chan[2]);
-            CyDmaChDisable(ch_dma_Chan[3]);
-            CyDmaChEnable(int1_dma_Chan, 1);
-        break;
-        case INTR_DMA_DDS:
-            if(interrupter.mod == INTR_MOD_PW){
-                CyDmaChDisable(int1_dma_Chan);
-            }else{
-                CyDmaChEnable(int1_dma_Chan, 1);
-            }
-            CyDmaChEnable(ch_dma_Chan[0], 1);
-            CyDmaChEnable(ch_dma_Chan[1], 1);
-            CyDmaChEnable(ch_dma_Chan[2], 1);
-            CyDmaChEnable(ch_dma_Chan[3], 1);
-        break;
-    }
-}
-
-void interrupter_set_pw(uint8_t ch, uint16_t pw){
-    if(ch<N_CHANNEL){
-        ct1_dac_val[0] = params.max_tr_cl_dac_val;
-        uint16_t prd = param.offtime + pw;
-        ch_prd[ch] = prd - 3;
-        ch_cmp[ch] = prd - pw - 3; 
-    }
-}
-
-void interrupter_set_pw_vol(uint8_t ch, uint16_t pw, uint32_t vol){
-    if(ch<N_CHANNEL){
-        
-        if(pw>configuration.max_tr_pw) pw = configuration.max_tr_pw;
-        
-        if(interrupter.mod==INTR_MOD_PW){
-            if(vol>MAX_VOL)vol=MAX_VOL;
-            uint32_t temp = ((uint32_t)pw*(vol>>6))>>17;
-            if(temp > configuration.max_tr_pw) temp = configuration.max_tr_pw;
-            uint16_t prd = param.offtime + temp;
-            ch_prd[ch] = prd - 3;
-            ch_cmp[ch] = prd - temp - 3; 
-        }else{
-            if (vol < MAX_VOL) {
-        		ch_cur[ch] = params.min_tr_cl_dac_val + ((vol * params.diff_tr_cl_dac_val) >> 23);
-                if(ch_cur[ch]>params.max_tr_cl_dac_val) ch_cur[ch] = params.max_tr_cl_dac_val;
-        	} else {
-        		ch_cur[ch] = params.max_tr_cl_dac_val;
-        	}
-            uint16_t prd = param.offtime + pw;
-            int1_prd = prd - 3;
-	        int1_cmp = prd - pw - 3;
-        }
-    }
-}
-
-
 
 void interrupter_oneshot(uint32_t pw, uint32_t vol) {
-    if(sysfault.interlock) return;
+    if(sysfault.interlock || configuration.ext_interrupter) return;
     
 	if (vol < MAX_VOL) {
-		ct1_dac_val[0] = params.min_tr_cl_dac_val + ((vol * params.diff_tr_cl_dac_val) >> 23);
+		ct1_dac_val[0] = params.min_tr_cl_dac_val + ((vol * params.diff_tr_cl_dac_val) >> 15);
         if(ct1_dac_val[0] > params.max_tr_cl_dac_val) ct1_dac_val[0] = params.max_tr_cl_dac_val;
 	} else {
 		ct1_dac_val[0] = params.max_tr_cl_dac_val;
@@ -288,19 +162,52 @@ void interrupter_oneshot(uint32_t pw, uint32_t vol) {
     CyGlobalIntEnable;
 }
 
+void interrupter_oneshotRaw(uint32_t pw_us, uint32_t dacValue_counts) {
+    //is sysfault triggered?
+    if(sysfault.interlock || configuration.ext_interrupter) return;
+    
+    //is the output already on?
+    //TODO add this check either in hardware or software
+        
+    //is the set current still valid?
+	if (dacValue_counts > params.max_tr_cl_dac_val) {
+		dacValue_counts = params.max_tr_cl_dac_val;
+	}
+    
+    //update dac value
+    ct1_dac_val[0] = dacValue_counts;
+    
+    //is the period still valid?
+	if (pw_us > configuration.max_tr_pw) {
+		pw_us = configuration.max_tr_pw;
+	}
+    
+    //compute period and compare register values
+	uint16_t prd = param.offtime + pw_us;
+    
+	CyGlobalIntDisable;
+    
+    //update int timer value
+	int1_prd = prd - 3;
+	int1_cmp = prd - pw_us - 3;
+    
+    //trigger pulse
+	interrupter1_control_Control = 0b0001;
+	interrupter1_control_Control = 0b0000;
+    CyGlobalIntEnable;
+}
+
 
 void interrupter_update_ext() {
 
 	ct1_dac_val[0] = params.max_tr_cl_dac_val;
     
+    //set the pulsewidth timer to the maximum the coil can do
     uint32_t pw = configuration.max_tr_pw;
-    //uint32_t pw = param.pw;
     
-    //if (pw > configuration.max_tr_pw) {
-	//	pw = configuration.max_tr_pw;
-	//}
-
+    //TODO is this actually necessary? We would only be enforcing this offtime when the interrupter off signal comes from the timer itself
     uint16_t prd = param.offtime + pw;
+    
 	/* Update Interrupter PWMs with new period/pw */
 	CyGlobalIntDisable;
 	int1_prd = prd - 3;
@@ -309,7 +216,7 @@ void interrupter_update_ext() {
     if(configuration.ext_interrupter==1){
 	    interrupter1_control_Control = 0b1100;
     }else{
-        interrupter1_control_Control = 0b0100;
+        interrupter1_control_Control = 0b0000;
     }
     CyGlobalIntEnable;
 }
@@ -328,85 +235,38 @@ uint8_t callback_ext_interrupter(parameter_entry * params, uint8_t index, TERMIN
 }
 
 uint8_t callback_interrupter_mod(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
-    uint8 sfflag = system_fault_Read();
-    sysflt_set(pdFALSE); //halt tesla coil operation during updates!
-    interrupter_reconf_dma(interrupter.mod);
-    if(interrupter.mode!=INTR_MODE_OFF){
-        interrupter_DMA_mode(INTR_DMA_TR);
-    }else{
-        interrupter_DMA_mode(INTR_DMA_DDS);
-    }
+    //modulation change no longer supported!
     
-    system_fault_Control = sfflag;
     return pdPASS;
 }
 
-void update_interrupter() {
+void interrupter_updateTR() {
+    //are we in tr mode?
+    if(param.synth != SYNTH_TR) return;
     
-	/* Check if PW = 0, this indicates that the interrupter should be shut off */
-	if (interrupter.pw == 0 || sysfault.interlock) {
-		interrupter1_control_Control = 0b0000;
-        return;
-	}
-    uint16_t limited_pw;
-    
-	/* Check the pulsewidth command */
-	if (interrupter.pw > configuration.max_tr_pw) {
-		interrupter.pw = configuration.max_tr_pw;
-	}
+    //interrupter no longer generates pulses itself, thats all done by siggen. So instead of updating the hardware we just update siggen with the new TR parameters
+    int32_t frequency_dHz = 10000000 / param.pwd;
+    SigGen_setVoiceTR(1, param.pw, MAX_VOL, frequency_dHz, param.burst_on * 1000, (param.burst_on == 0) ? 0 : param.burst_off * 1000);
+}
 
-	/* Check that the period is long enough to meet restrictions, if not, scale it */
-	if (interrupter.prd < params.min_tr_prd) {
-		interrupter.prd = params.min_tr_prd;
-	}
-	/* Compute the duty cycle and mod the PW if required */
-	limited_pw = (uint32_t)((uint32_t)interrupter.pw * 1000ul) / interrupter.prd; //gives duty cycle as 0.1% increment
-	if (limited_pw > configuration.max_tr_duty - param.temp_duty) {
-		limited_pw = (uint32_t)(configuration.max_tr_duty - param.temp_duty) * (uint32_t)interrupter.prd / 1000ul;
-	} else {
-		limited_pw = interrupter.pw;
-	}
-	ct1_dac_val[0] = params.max_tr_cl_dac_val;
-    
-    
-	/* Update interrupter registers */
-	CyGlobalIntDisable;
-	if (interrupter.pw != 0) {
-		int1_prd = interrupter.prd - 3;
-		int1_cmp = interrupter.prd - limited_pw - 3;
-		if (interrupter1_control_Control == 0) {
-			interrupter1_control_Control = 0b0011;
-			interrupter1_control_Control = 0b0010;
-		}
-	}
-	CyGlobalIntEnable;
+//synth parameter was changed => update siggen mode
+uint8_t callback_SynthFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
+    SigGen_switchSynthMode(param.synth);
+    return 1;
 }
 
 /*****************************************************************************
 * Callback if a transient mode parameter is changed
 * Updates the interrupter hardware
 ******************************************************************************/
-uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle) {
+uint8_t callback_PWFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle) {
     
-    uint32_t temp = (1000 * param.pw) / configuration.max_tr_pw;
-    param.pwp = temp;
-    
-    switch(interrupter.mode){
-        case INTR_MODE_OFF:
-        
-        break;
-        case INTR_MODE_TR:
-        	interrupter.pw = param.pw;
-        	interrupter.prd = param.pwd;
-            update_interrupter();
-        break;
-        default:
-            if(configuration.ext_interrupter  && param.synth == SYNTH_OFF){
-                interrupter_update_ext();
-            }else if (param.synth == SYNTH_MIDI || param.synth == SYNTH_MIDI_QCW){
-                SigGen_limit();
-            }
-        break; 
+   if(configuration.ext_interrupter){
+        interrupter_update_ext();
+    }else if(param.synth == SYNTH_TR){
+        interrupter_updateTR();
+    }else if(param.synth == SYNTH_MIDI){
+        VMSW_pulseWidthChangeHandler();
     }
 
 	return pdPASS;
@@ -416,87 +276,16 @@ uint8_t callback_TRFunction(parameter_entry * params, uint8_t index, TERMINAL_HA
 * Callback if a transient mode parameter is changed (percent ontime)
 * Updates the interrupter hardware
 ******************************************************************************/
-uint8_t callback_TRPFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle) {
-    
-    uint32_t temp;
-    temp = (configuration.max_tr_pw * param.pwp) / 1000;
-    param.pw = temp;
-    
-    interrupter.pw = param.pw;
-    
-    if (param.synth == SYNTH_MIDI || param.synth == SYNTH_MIDI_QCW){
-        SigGen_limit();
-    }
-    
-	if (interrupter.mode!=INTR_MODE_OFF) {
-		update_interrupter();
-	}
-    if(configuration.ext_interrupter){
-        interrupter_update_ext();
-    }
-    
+uint8_t callback_VolFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle) {
+    SigGen_setMasterVol(param.vol);
 	return pdPASS;
-}
-
-/*****************************************************************************
-* Timer callback for burst mode
-******************************************************************************/
-void vBurst_Timer_Callback(TimerHandle_t xTimer){
-    uint16_t bon_lim;
-    uint16_t boff_lim;
-    if(interrupter.burst_state == BURST_ON){
-        interrupter.pw = 0;
-        update_interrupter();
-        interrupter.burst_state = BURST_OFF;
-        if(!param.burst_off){
-            boff_lim=2;
-        }else{
-            boff_lim=param.burst_off;
-        }
-        xTimerChangePeriod( xTimer, boff_lim / portTICK_PERIOD_MS, 0 );
-    }else{
-        interrupter.pw = param.pw;
-        update_interrupter();
-        interrupter.burst_state = BURST_ON;
-        if(!param.burst_on){
-            bon_lim=2;
-        }else{
-            bon_lim=param.burst_on;
-        }
-        xTimerChangePeriod( xTimer, bon_lim / portTICK_PERIOD_MS, 0 );
-    }
 }
 
 /*****************************************************************************
 * Callback if a burst mode parameter is changed
 ******************************************************************************/
 uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle) {
-    if(interrupter.mode!=INTR_MODE_OFF){
-        if(interrupter.xBurst_Timer==NULL && param.burst_off > 0){
-            interrupter.burst_state = BURST_ON;
-            interrupter.xBurst_Timer = xTimerCreate("Bust-Tmr", param.burst_on / portTICK_PERIOD_MS, pdFALSE,(void * ) 0, vBurst_Timer_Callback);
-            if(interrupter.xBurst_Timer != NULL){
-                xTimerStart(interrupter.xBurst_Timer, 0);
-                ttprintf("Burst Enabled\r\n");
-                interrupter.mode=INTR_MODE_TR;
-            }else{
-                interrupter.pw = 0;
-                ttprintf("Cannot create burst Timer\r\n");
-                interrupter.mode=INTR_MODE_OFF;
-            }
-        }else if(interrupter.xBurst_Timer!=NULL && !param.burst_off){
-            if(xTimerDelete(interrupter.xBurst_Timer, 200 / portTICK_PERIOD_MS) != pdFALSE){
-                interrupter.xBurst_Timer = NULL;
-                interrupter.burst_state = BURST_ON;
-                update_interrupter();
-                interrupter.mode=INTR_MODE_TR;
-                ttprintf("\r\nBurst Disabled\r\n");
-            }else{
-                ttprintf("Cannot delete burst Timer\r\n");
-                interrupter.burst_state = BURST_ON;
-            }
-        }
-    }
+    interrupter_updateTR();
 	return pdPASS;
 }
 
@@ -513,39 +302,136 @@ uint8_t CMD_tr(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     }
     
     if(strcmp(args[0], "start") == 0){
-        interrupter_DMA_mode(INTR_DMA_TR);
+        //switch synth to tr mode
+        param.synth = SYNTH_TR;
+        SigGen_switchSynthMode(param.synth);
         
-        interrupter.pw = param.pw;
-		interrupter.prd = param.pwd;
-        update_interrupter();
-
-		interrupter.mode=INTR_MODE_TR;
-        
-        callback_BurstFunction(NULL, 0, handle);
+        interrupter_updateTR();
         
 		ttprintf("Transient Enabled\r\n");
        
-        return TERM_CMD_EXIT_SUCCESS;
-    }
-
-	if(strcmp(args[0], "stop") == 0){
-        SigGen_switch_synth(param.synth);
-        if (interrupter.xBurst_Timer != NULL) {
-			if(xTimerDelete(interrupter.xBurst_Timer, 100 / portTICK_PERIOD_MS) != pdFALSE){
-			    interrupter.xBurst_Timer = NULL;
-                interrupter.burst_state = BURST_ON;
-            }
-        }
-
+    }else if(strcmp(args[0], "stop") == 0){
+        //switch synth off
+        param.synth = SYNTH_OFF;
+        SigGen_switchSynthMode(param.synth);
+        
         ttprintf("Transient Disabled\r\n");    
  
-		interrupter.pw = 0;
-		update_interrupter();
-        if(configuration.ext_interrupter) interrupter_update_ext();
-		interrupter.mode=INTR_MODE_OFF;
-		
-		return TERM_CMD_EXIT_SUCCESS;
 	}
     return TERM_CMD_EXIT_SUCCESS;
 }
 
+
+
+void Synthmon_MIDI(TERMINAL_HANDLE * handle){
+    //TODO reimplement
+    /*
+    uint32_t freq=0;
+    
+    TERM_sendVT100Code(handle, _VT100_CURSOR_DISABLE,0);
+    TERM_sendVT100Code(handle, _VT100_CLS,0);
+    ttprintf("Synthesizer monitor    [CTRL+C] for quit\r\n");
+    ttprintf("-----------------------------------------------------------\r\n");
+    while(Term_check_break(handle,100)){
+        TERM_setCursorPos(handle, 3,1);
+        
+        for(uint8_t i=0;i<N_CHANNEL;i++){
+
+            freq= Midi_voice[i].freqCurrent/10;
+            uint8_t noteOrigin=Midi_voice[i].currNoteOrigin;
+            
+            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 0);
+            ttprintf("Ch:   ");
+            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 0);
+            ttprintf("Ch: %u", i+1);
+            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 7);
+            ttprintf("Freq:      ");
+            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 7);
+            ttprintf("Freq: %u", freq);
+            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 20);
+            ttprintf("Prog:   ");
+            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 20);
+            ttprintf("Prog: %u", channelData[noteOrigin].currProgramm);
+    
+            MAPTABLE_HEADER* map = MAPPER_findHeader(channelData[noteOrigin].currProgramm);
+            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 28);
+            ttprintf("Name:                  ", map->name);
+            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 28);
+            ttprintf("Name: %s", map->name);
+            
+            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 50);
+            ttprintf("Vol: ");
+
+            uint8_t cnt = (channel[i].volume>>16)/12;
+
+            for(uint8_t w=0;w<10;w++){
+                if(w<cnt){
+                    ttprintf("o");
+                }else{
+                    ttprintf(" ");
+                }
+            }
+            ttprintf("\r\n");
+        }
+    }
+    ttprintf("\r\n");
+    TERM_sendVT100Code(handle, _VT100_CURSOR_ENABLE,0);    
+    */
+}
+
+void Synthmon_SID(TERMINAL_HANDLE * handle){
+    //TODO reimplement
+    /*
+    uint32_t freq=0;
+    
+    TERM_sendVT100Code(handle, _VT100_CURSOR_DISABLE,0);
+    TERM_sendVT100Code(handle, _VT100_CLS,0);
+    ttprintf("Synthesizer monitor    [CTRL+C] for quit\r\n");
+    ttprintf("-----------------------------------------------------------\r\n");
+    while(Term_check_break(handle,100)){
+        TERM_setCursorPos(handle, 3,1);
+        
+        for(uint8_t i=0;i<SID_CHANNELS;i++){
+            ttprintf("Ch:   Freq:      \r");
+            if(channel[i].volume>0){
+                freq=channel[i].freq;
+            }else{
+                freq=0;
+            }
+            ttprintf("Ch: %u Freq: %u",i+1,freq);             
+            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 20);
+            ttprintf("Vol: ");
+            
+            // volume is in 7.16 fixed point format.  Shifting right by 16 results in 7.0 format so 
+            // the volume will be 0 to 127.  Dividing by 12 yields a value of 0 to 10.
+            uint8_t cnt = (channel[i].volume >> 16) / 12;
+
+            for(uint8_t w=0;w<10;w++){
+                if(w<cnt){
+                    ttprintf("o");
+                }else{
+                    ttprintf(" ");
+                }
+            }
+            ttprintf("\r\n");
+        }
+    }
+    ttprintf("\r\n");
+    TERM_sendVT100Code(handle, _VT100_CURSOR_ENABLE,0);*/
+}
+
+
+
+uint8_t CMD_SynthMon(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+    if(param.synth == SYNTH_SID || param.synth == SYNTH_SID_QCW) Synthmon_SID(handle);
+    if(param.synth == SYNTH_MIDI || param.synth == SYNTH_MIDI_QCW) Synthmon_MIDI(handle);
+    if(param.synth == 0){
+        ttprintf("\r\nNo synthesizer active\r\n");   
+    }
+    return TERM_CMD_EXIT_SUCCESS;
+}
+
+uint8_t callback_synthFilter(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
+    //filter no longer used
+    return 1;
+}

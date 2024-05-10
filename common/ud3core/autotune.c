@@ -126,7 +126,8 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 	uint16 original_max_fb_errors;
 	uint8 original_lock_cycles;
     
-    interrupter_DMA_mode(INTR_DMA_TR);
+    //TODO figure out if this still works
+    //interrupter_DMA_mode(INTR_DMA_TR);
 
 	CT_MUX_Select(channel);
 	//units for frequency are 0.1kHz (so 1000 = 100khz).  Pulsewidth in uS
@@ -172,7 +173,7 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 
 			//command a one shot
 
-			interrupter_oneshot(pulsewidth, MAX_VOL);
+			interrupter_oneshot(pulsewidth, configuration.max_tr_current);
 
 			vTaskDelay(delay / portTICK_PERIOD_MS);
 
@@ -194,7 +195,7 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 	configure_ZCD_to_PWM();
 	CT_MUX_Select(CT_PRIMARY);
 	interrupter_init_safe();
-	interrupter_DMA_mode(original_dma_mode);
+	//interrupter_DMA_mode(original_dma_mode);
 
 	//search max current
 	uint16_t max_curr = 1;

@@ -2159,6 +2159,7 @@
       <Data key="4107d955-094b-44ec-b878-732d04118082" value="ZCD_Debug" />
       <Data key="6400ba9d-054d-4648-a80b-c36ed9080f64" value="CT_SEC" />
       <Data key="6533b513-81b1-46af-8e19-d98fd9cc0e1c/16a808f6-2e13-45b9-bce0-b001c8655113" value="ADC_peak_Bypass" />
+      <Data key="7032b027-bddc-4ad3-a771-6f617c94d2f5" value="DEBUG_ILIM" />
       <Data key="22863ebe-a37b-476f-b252-6e49a8c00b12" value="SDA_1" />
       <Data key="64771f96-2472-47b5-997d-0adfb7ac011f" value="dcdc_ena" />
       <Data key="183169da-5db0-456e-85f3-54d1ef93695d" value="TP6" />
@@ -5638,6 +5639,11 @@
     <Group key="6533b513-81b1-46af-8e19-d98fd9cc0e1c/16a808f6-2e13-45b9-bce0-b001c8655113">
       <Group key="0">
         <Data key="Port Format" value="0,4" />
+      </Group>
+    </Group>
+    <Group key="7032b027-bddc-4ad3-a771-6f617c94d2f5">
+      <Group key="0">
+        <Data key="Port Format" value="3,7" />
       </Group>
     </Group>
     <Group key="22863ebe-a37b-476f-b252-6e49a8c00b12">

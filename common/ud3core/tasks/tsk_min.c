@@ -311,11 +311,11 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
             break;
         case VMS_WRT_MAP_HEADER:
             map_header = (MAP_HEADER_WIRE_DATA_t*) min_payload;
-            if (map_header->listEntries != 0) {
-                map_entries = pvPortMalloc(sizeof(MAPTABLE_ENTRY_t) * map_header->listEntries);
+            if (map_header->header.listEntries != 0) {
+                map_entries = pvPortMalloc(sizeof(MAPTABLE_ENTRY_t) * map_header->header.listEntries);
             } else {
-                nvm_write_buffer(last_write_index, (uint8_t*)map_header, sizeof(MAPTABLE_HEADER));
-                last_write_index += sizeof(MAPTABLE_HEADER);
+                nvm_write_buffer(last_write_index, (uint8_t*)&(map_header->header), sizeof(MAPTABLE_HEADER_t));
+                last_write_index += sizeof(MAPTABLE_HEADER_t);
                 map_header = NULL;
             }
             n_map_entry = 0;

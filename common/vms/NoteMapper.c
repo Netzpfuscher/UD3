@@ -175,10 +175,6 @@ void Mapper_noteOnEventHandler(uint32_t output, uint32_t note, uint32_t velocity
             
             //TODO ?
         }
-
-        if(data->flags & MAP_ENA_PITCHBEND){
-            MIDIPROC_SCALE_PITCHBEND(targetFrequency, channel);
-        }
         
         VMSW_startNote(output, data->startblockID, note, channel, targetOnTime_us, targetVolume, targetFrequency, data->flags, baseVolume, velocity);
     }

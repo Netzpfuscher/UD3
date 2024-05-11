@@ -72,6 +72,8 @@ void initialize_interrupter(void) {
     //initialize both signal generator and duty compressor
     SigGen_init();
     Comp_init();
+    
+    Opamp_2_Start();
 
 	//initialize the PWM generators for safe PW and PRD
 	int1_prd = 65000;   // An arbitrary large number to count down from

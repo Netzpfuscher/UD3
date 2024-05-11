@@ -77,7 +77,7 @@ void VMSW_startNote(uint32_t output, uint32_t startBlockID, uint32_t sourceNote,
     if(targetFrequency == 0 || targetVolume == 0) return;
     
     //TODO remove this hack once portamento works...
-    flags &= !MAP_ENA_PORTAMENTO;
+    flags &= ~MAP_ENA_PORTAMENTO;
     
     //find voice to play the sound
     uint32_t targetVoice = VMSW_getNextVoice(sourceNote, output, sourceChannel);
@@ -94,8 +94,28 @@ void VMSW_startNote(uint32_t output, uint32_t startBlockID, uint32_t sourceNote,
     uint32_t freqLast = vData->freqLast;
     memset(&voiceData[output][targetVoice], 0, sizeof(VMS_VoiceData_t));
     
+    //this is already a factor, no factor value needed. Current value <=> currentFactor
+    vData->freqLast = freqLast;
+    vData->portamentoTarget = 0;
+    vData->portamentoCurrent = (flags & MAP_ENA_PORTAMENTO) ? VMS_UNITY_FACTOR : 0;
+    
     vData->freqTarget = targetFrequency;
-    vData->freqCurrent = (flags & MAP_ENA_PORTAMENTO) ? freqLast : targetFrequency;
+    
+    //apply frequency effects
+    uint32_t newFrequency = targetFrequency;
+    
+    //pitchbend
+    if(flags & MAP_ENA_PITCHBEND) newFrequency = MIDIPROC_SCALE_PITCHBEND(newFrequency, vData->sourceChannel);
+    
+    //portamento, check if we need to apply it first though
+    if(flags & MAP_ENA_PORTAMENTO){ 
+        int32_t difference = (int32_t) freqLast - (int32_t) vData->freqTarget;
+        difference = (difference * (vData->portamentoCurrent>>4)) / 62500; 
+        newFrequency += difference;
+    }
+    
+    //and finally apply that frequency
+    vData->freqCurrent = newFrequency;
     vData->freqFactor = 1000000;
     
     vData->volumeTarget = targetVolume;
@@ -106,11 +126,6 @@ void VMSW_startNote(uint32_t output, uint32_t startBlockID, uint32_t sourceNote,
     vData->onTimeFactor = 1000000;
     
     vData->noiseTarget = 35000; //TODO make this better? idk a fixed value here might be bad especially for low notes, as the period change is relatively minor in relation to the overall period, maybe make this depended on the freq
-    
-    //this is already a factor, no factor value needed. Current value <=> currentFactor
-    vData->freqLast = freqLast;
-    vData->portamentoTarget = 0;
-    vData->portamentoCurrent = (flags & MAP_ENA_PORTAMENTO) ? VMS_UNITY_FACTOR : 0;
     
     vData->startTime = xTaskGetTickCount();
     vData->sourceChannel = sourceChannel;
@@ -282,11 +297,11 @@ void VMSW_setKnownValue(KNOWN_VALUE ID, int32_t value, uint32_t output, uint32_t
             
             //pitchbend
             
-            newFrequency = MIDIPROC_SCALE_PITCHBEND(newFrequency, vData->sourceChannel);
+            if(vData->flags & MAP_ENA_PITCHBEND) newFrequency = MIDIPROC_SCALE_PITCHBEND(newFrequency, vData->sourceChannel);
             
             //portamento, check if we need to apply it first though
             if(vData->portamentoCurrent != 0){ 
-                int32_t difference = (int32_t) vData->freqLast - (int32_t) vData->freqCurrent;
+                int32_t difference = (int32_t) vData->freqLast - (int32_t) vData->freqTarget;
                 difference = (difference * (vData->portamentoCurrent>>4)) / 62500; 
                 newFrequency += difference;
             }
@@ -409,7 +424,6 @@ void VMSW_panicHandler(){
     VMS_returnSemaphore();
 }
 
-//TODO add check for the pitchbend enabled flag in the mapentry
 void VMSW_bendHandler(uint32_t channel){
     VMS_getSemaphore();
     //check all notes. Find which ones need to be updated
@@ -420,32 +434,11 @@ void VMSW_bendHandler(uint32_t channel){
             
             if(vData->sourceChannel == channel && (vData->on > 0)){
                 //call VMSW_setKnownValue to trigger a value recalculation
-                //VMSW_setKnownValue(frequency, voiceData[voiceId].freqFactor, currVoice);
 
                 //is pitchbend enabled on the current voice? If not just skip calculations
                 if(!(vData->flags & MAP_ENA_PITCHBEND)) continue;
-
-                //calculate current frequency
-                uint32_t newFrequency = vData->freqTarget;
-
-                //apply frequency effects
-
-                //pitchbend
-                newFrequency = MIDIPROC_SCALE_PITCHBEND(newFrequency, vData->sourceChannel);
-
-                //portamento, check if we need to apply it first though
-                if(vData->portamentoCurrent != 0){ 
-                    int32_t difference = (int32_t) vData->freqLast - (int32_t) vData->freqCurrent;
-                    difference = (difference * (vData->portamentoCurrent>>4)) / 62500; 
-                    newFrequency += difference;
-                }
-
-                //and finally, the currentfreqFactor
-                if(vData->freqFactor != 1000000) newFrequency = (newFrequency * (vData->freqFactor>>4)) / 62500;
-
-                vData->freqCurrent = newFrequency;
-
-                SigGen_setVoiceVMS(currVoice, 1, vData->onTimeCurrent, vData->volumeCurrent, vData->freqCurrent, vData->noiseCurrent, 0, 0);
+                
+                VMSW_setKnownValue(frequency, vData->freqFactor, currOutput, currVoice);
             }
         }
     }

@@ -39,7 +39,7 @@
 #define MIDIPROC_VERSION 1
 
 //frequency scaler macros
-#define MIDIPROC_SCALE_PITCHBEND(FREQ, CHANNEL) ((FREQ * MidiProcessor_getBendFactor(CHANNEL)) >> 16)
+#define MIDIPROC_SCALE_PITCHBEND(FREQ, CHANNEL) ((FREQ * MidiProcessor_getBendFactor(CHANNEL)) >> 13)
 
 //volume scaler macros
 #define MIDIPROC_SCALE_VOLUME(VOLUME, CHANNEL) (((VOLUME * MidiProcessor_getVolume(CHANNEL)) / 0x7f)

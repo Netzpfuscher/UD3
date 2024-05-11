@@ -82,7 +82,7 @@ static void resetChannelData(uint32_t channel){
     memset(channelDescriptors[channel].parameters, 0, 128);
     channelDescriptors[channel].parameters[MIDI_CC_VOLUME] = MIDI_VOLUME_MAX;
 
-    channelDescriptors[channel].bendFactor = 1<<16;
+    channelDescriptors[channel].bendFactor = 1<<13;
     channelDescriptors[channel].bendRangeRaw = 0;
     channelDescriptors[channel].bendRange = 2.0;
 
@@ -159,7 +159,7 @@ void MidiProcessor_processCmd(uint32_t cable, uint32_t channel, uint32_t cmd, ui
         
         //calculate the factor that frequencies need to be multiplied with and convert to fixed point. Resolution is 8/24. ( (float) 0x10000 is equal to << 16, for a maximum frequency of ~25.000)
         float bendOffset = (float) bendParameter / 8192.0;
-        channelDescriptors[channel].bendFactor = (uint32_t) (powf(2, (bendOffset * (float) channelDescriptors[channel].bendRange) / 12.0) * (float) 0x10000);
+        channelDescriptors[channel].bendFactor = (uint32_t) (powf(2, (bendOffset * (float) channelDescriptors[channel].bendRange) / 12.0) * (float) 8192);
 
         //call bendHandler to tweak already playing notes
         Mapper_bendHandler(channel);

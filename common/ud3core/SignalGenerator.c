@@ -45,7 +45,7 @@ static uint32_t isOutputInErrorState = 0;
 
 static void SigGen_task(void * params);
 
-static AuxMode_t masterVolume = MAX_VOL;
+static uint32_t masterVolume = MAX_VOL;
 static uint8_t synthMode = SYNTH_OFF;
 
 //current pulse the timer is waiting to run
@@ -221,7 +221,7 @@ uint8_t divder = 0xff;
 
 static void SigGen_setVoiceParams(uint32_t voice, uint32_t enabled, int32_t pulseWidth, int32_t volume, int32_t frequencyTenths, int32_t noiseAmplitude, int32_t burstOn_us, int32_t burstOff_us){
     IsOkToPrint = 1;
-    if(--divder == 0) TERM_printDebug(min_handle[1], "set voice param: %d en=%d freq=%d pw=%d vol=%d burstOn=%d burstOff=%d\r\n", voice, enabled, frequencyTenths, pulseWidth, volume, burstOn_us, burstOff_us);
+    //if(--divder == 0) TERM_printDebug(min_handle[1], "set voice param: %d en=%d freq=%d pw=%d vol=%d burstOn=%d burstOff=%d\r\n", voice, enabled, frequencyTenths, pulseWidth, volume, burstOn_us, burstOff_us);
     taskData->voice[voice].enabled = enabled && (volume != 0) && (frequencyTenths != 0);
     
     if(!taskData->voice[voice].enabled || masterVolume == 0){ 
@@ -354,6 +354,9 @@ void SigGen_limit(){
         onTime = (onTime * ontimeScale) >> 15;
         taskData->voice[currVoice].limitedPulseWidth_us = onTime;
         taskData->voice[currVoice].limitedPeriod = taskData->voice[currVoice].period;
+        
+        //make sure to reset the counter to prevent a previously played lower note from slowing down any future ones
+        if(taskData->voice[currVoice].counter > taskData->voice[currVoice].limitedPeriod) taskData->voice[currVoice].counter = taskData->voice[currVoice].limitedPeriod;
         
         //is HPV enabled? if so we need to scale that too
         if(taskData->voice[currVoice].hpvCount != 0 && taskData->voice[currVoice].noiseAmplitude == 0){
@@ -634,7 +637,9 @@ static void SigGen_task(void * callData){
                 if(synthMode == SYNTH_TR && currVoice >= 1) break;
                 
                 int32_t currentMinimumPeriod = (pulseWidth + param.offtime);
+                
                 if(data->voice[currVoice].limitedEnabled){ 
+                    //would the note pulse occur within the pulse or during the holdoff time after it?
                     if(data->voice[currVoice].counter < currentMinimumPeriod){ 
                         
                         data->voice[currVoice].counter += data->voice[currVoice].limitedPeriod;
@@ -651,8 +656,8 @@ static void SigGen_task(void * callData){
                         //did this timer already trigger during this pulse length? If so we just skip it
                         if(!data->voice[currVoice].alreadyTriggered){
                             //no => add the pulse volume to the current one
-                            pulseVolume += data->voice[currVoice].hpvVolume;
-                            if(pulseWidth < data->voice[currVoice].limitedHpvPulseWidth_us) pulseWidth = data->voice[currVoice].limitedHpvPulseWidth_us;
+                            pulseVolume += data->voice[currVoice].pulseVolume;
+                        if(pulseWidth < data->voice[currVoice].limitedPulseWidth_us) pulseWidth = data->voice[currVoice].limitedPulseWidth_us;
 
                             //block timer for this iteration
                             data->voice[currVoice].alreadyTriggered = 1;

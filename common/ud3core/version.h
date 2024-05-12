@@ -26,7 +26,7 @@
 #define version_H
 
 static const char* version[]= {
-    "protocol=2.0",
+    "protocol=3.0",
     "build_time="__DATE__";"__TIME__,
     "timebase=1000",
     "time_count=up",

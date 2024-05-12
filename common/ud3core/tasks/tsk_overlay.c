@@ -241,7 +241,7 @@ void init_telemetry(){
     tt.n.dutycycle.unit = TT_UNIT_PERCENT;
     tt.n.dutycycle.divider = 10;
     tt.n.dutycycle.high_res = pdTRUE;
-    tt.n.dutycycle.resend_time = TT_SLOW;
+    tt.n.dutycycle.resend_time = TT_FAST;
     tt.n.dutycycle.chart = TT_NO_TELEMETRY;
     tt.n.dutycycle.gauge = 6;
     

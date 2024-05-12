@@ -107,6 +107,7 @@
         volatile uint32_t period;
         volatile uint32_t onTime;
         volatile uint32_t current;
+        volatile uint32_t sourceVoices;
     } volatile SigGen_pulseData_t;
 
     typedef struct{
@@ -126,6 +127,8 @@
         uint32_t trBurstOffTime;
         
     } volatile SigGen_taskData_t;
+    
+    extern uint32_t VoiceFlags[];
 
     typedef enum {AUXMODE_AUDIO_OUT, AUXMODE_E_STOP} AuxMode_t;
 

@@ -2147,6 +2147,7 @@
       <Data key="42a69613-7e63-4dba-a260-65eb97f2b91b" value="digipot_data" />
       <Data key="52f31aa9-2f0a-497d-9a1f-1424095e13e6" value="LED_int" />
       <Data key="56ba5125-3143-4766-89f3-e551bc17bfa5" value="debug_int_out" />
+      <Data key="61e7ffa6-88b2-4fba-8808-24e15a8bee6c" value="Pin_1" />
       <Data key="64d2766f-7fd2-455b-88c8-2fabd65c34c4" value="GD1A" />
       <Data key="83b2fde2-60ad-45b6-9e5c-cb3baa6e3f9a" value="SCLK" />
       <Data key="83fc8610-854c-47f6-b3ec-8847b2c290d3" value="RX_422_EN" />
@@ -5579,6 +5580,11 @@
     <Group key="56ba5125-3143-4766-89f3-e551bc17bfa5">
       <Group key="0">
         <Data key="Port Format" value="4,0" />
+      </Group>
+    </Group>
+    <Group key="61e7ffa6-88b2-4fba-8808-24e15a8bee6c">
+      <Group key="0">
+        <Data key="Port Format" value="4,7" />
       </Group>
     </Group>
     <Group key="64d2766f-7fd2-455b-88c8-2fabd65c34c4">

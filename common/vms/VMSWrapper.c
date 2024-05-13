@@ -446,8 +446,6 @@ void VMSW_bendHandler(uint32_t channel){
 }
 
 void VMSW_volumeChangeHandler(uint32_t channel){
-    TERM_printDebug(min_handle[1], "volume change ch=%d vol=%d\r\n", channel, MidiProcessor_getVolume(channel));
-    
     VMS_getSemaphore();
     
     for(uint32_t currOutput = 0; currOutput < SIGGEN_OUTPUTCOUNT; currOutput++){

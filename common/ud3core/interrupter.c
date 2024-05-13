@@ -33,6 +33,8 @@
 #include "tasks/tsk_fault.h"
 #include "tasks/tsk_midi.h"
 #include "VMSWrapper.h"
+#include "SidProcessor.h"
+#include "MidiProcessor.h"
 
 #include <device.h>
 #include <math.h>
@@ -253,6 +255,9 @@ void interrupter_updateTR() {
 
 //synth parameter was changed => update siggen mode
 uint8_t callback_SynthFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
+    //this also needs to reset both vms and sid
+    SidProcessor_resetSid();
+    MidiProcessor_resetMidi();
     SigGen_switchSynthMode(param.synth);
     return 1;
 }

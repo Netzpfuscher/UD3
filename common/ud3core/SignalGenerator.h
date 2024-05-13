@@ -39,8 +39,6 @@
         SYNTH_MIDI_QCW=4,
         SYNTH_SID_QCW=5,
     };
-    
-    extern xQueueHandle qSID;
 
     #include "RingBuffer/include/RingBuffer.h"
 
@@ -54,7 +52,7 @@
 
     #define SIGGEN_PULSEBUFFER_SIZE 128
     #define SIGGEN_MIN_OT 10    //TODO evaluate this... maybe make it bigger
-    #define SIGGEN_MIN_PERIOD 100    //TODO evaluate this...
+    #define SIGGEN_MIN_PERIOD 1000    //TODO evaluate this...
 
     #define SIGGEN_PARAM_AUX_R_MODE 0
     #define SIGGEN_DEFAULT_PARAM_AUX_R_MODE AUXMODE_AUDIO_OUT
@@ -108,6 +106,7 @@
         volatile uint32_t onTime;
         volatile uint32_t current;
         volatile uint32_t sourceVoices;
+        volatile uint32_t editedVoices;
     } volatile SigGen_pulseData_t;
 
     typedef struct{

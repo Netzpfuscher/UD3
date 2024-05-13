@@ -23,8 +23,6 @@
 #include <stdlib.h>
 #include <limits.h>
 
-#include "SignalGeneratorSID.h"
-
 #include "clock.h"
 #include "qcw.h"
 #include "ZCDtoPWM.h"
@@ -37,6 +35,7 @@
 #include "RingBuffer/include/RingBuffer.h"
 #include "interrupter.h"
 #include "tasks/tsk_cli.h"
+#include "telemetry.h"
 
 
 static SigGen_taskData_t * taskData;
@@ -59,9 +58,14 @@ static volatile uint32_t voicesToEradicate = 0;
 
 #define SIGGEN_MS_TO_PERIOD_COUNT(X) X * 32000
 #define SIGGEN_US_TO_PERIOD_COUNT(X) X * 32
+#define SIGGEN_PERIOD_COUNT_TO_US(X) X >> 5 // >> 5 = /32
 #define SIGGEN_US_TO_OT_COUNT(X) X
 #define SIGGEN_VOLUME_TO_CURRENT_DAC_VALUE(X) (params.min_tr_cl_dac_val + ((X * params.diff_tr_cl_dac_val) >> 15))
 
+#define SIGGEN_CLEAR_LONG_PULSE 0x8000
+#define SIGGEN_ERADICATE_REQUIRED 0xff  //TODO maybe make this dynamic? Depending on the voice count we might need more than 8 bits for the flags
+
+#define SIGGEN_LONG_DELAY_THRESHOLD_ms 5
 
 #define SigGen_isTimerRunning() (interrupterTimebase_ReadControlRegister() & interrupterTimebase_CTRL_ENABLE)
 #define SigGen_startTimer() interrupterTimebase_WriteControlRegister(interrupterTimebase_ReadControlRegister() | interrupterTimebase_CTRL_ENABLE); SigGen_enableTimerISR();
@@ -79,23 +83,11 @@ uint32_t IsOkToPrint = 0;
 CY_ISR(isr_synth) {
     uint32_t r = SG_Timer_ReadCounter();
     
-    
     clock_tick();
     if(qcw_reg){
         qcw_handle();
         return;
     }
-    switch(param.synth){
-        case SYNTH_SID:
-            synthcode_SID(r);
-            break;
-        case SYNTH_SID_QCW:
-            synthcode_QSID(r);
-            break;
-        default:
-            break;
-    }
-    
 }
     
 CY_ISR(SigGen_PulseTimerISR){
@@ -255,9 +247,12 @@ static void SigGen_setVoiceParams(uint32_t voice, uint32_t enabled, int32_t puls
     //is the voice switching on?
     if(!taskData->voice[voice].enabled && willBeOn){
         //yes voice was off before and will be on after this. Check pulsebuffer length
-        if(taskData->bufferLengthInCounts > SIGGEN_MS_TO_PERIOD_COUNT(10)){
+        if(taskData->bufferLengthInCounts > SIGGEN_MS_TO_PERIOD_COUNT(SIGGEN_LONG_DELAY_THRESHOLD_ms)){
             //pulsebuffer is massive at the moment and will cause a long delay, trigger print
-            TERM_printDebug(min_handle[1], "lag! %d Count=%d\r\n", --divder, RingBuffer_getDataCount(taskData->pulseBuffer));
+            //TERM_printDebug(min_handle[1], "lag! %d Count=%d\r\n", --divder, RingBuffer_getDataCount(taskData->pulseBuffer));
+            
+            //have something to do a a-b comparison with without rebuilding anything
+            if(param.burst_off != 0) voicesToEradicate |= SIGGEN_CLEAR_LONG_PULSE;
         }
         
         //also reset the timebase for the note
@@ -267,7 +262,7 @@ static void SigGen_setVoiceParams(uint32_t voice, uint32_t enabled, int32_t puls
     }else if(taskData->voice[voice].enabled && !willBeOn){
         //yes switching off => make sure to remove any remaining pulses from the buffer if its long
         //why only if its long? Well because a short buffer will mean a non-noticeable short lag which we can ignore to prevent unneccessary cpu usage :)
-        if(taskData->bufferLengthInCounts > SIGGEN_MS_TO_PERIOD_COUNT(2)){
+        if(taskData->bufferLengthInCounts > SIGGEN_MS_TO_PERIOD_COUNT(SIGGEN_LONG_DELAY_THRESHOLD_ms)){
             taskENTER_CRITICAL();
             voicesToEradicate |= VoiceFlags[voice];
             taskEXIT_CRITICAL();
@@ -277,7 +272,11 @@ static void SigGen_setVoiceParams(uint32_t voice, uint32_t enabled, int32_t puls
     taskData->voice[voice].enabled = willBeOn;
     
     if(!taskData->voice[voice].enabled || masterVolume == 0){ 
+        taskData->voice[voice].enabled = 0;
         taskData->voice[voice].limitedEnabled = 0;
+        
+        //make sure to update the duty limiter
+        SigGen_limit();
 		return;
 	}
     
@@ -328,29 +327,9 @@ void SigGen_setHyperVoiceVMS(uint32_t voice, uint32_t count, uint32_t pulseWidth
     SigGen_setHyperVoiceParams(voice, count, pulseWidth, volume, phase);
 }
 
-//TODO implement writing sid as previously used in stickfigurator sid write
-/*private void generateAndWriteVoiceSettings(Synth device2) {
-
-	int[] freq = new int[4];
-	int[] volume = new int[4];
-	int[] noise = new int[4];
-	int[] hyperVCount = new int[4];
-	int[] hyperVPhase = new int[4];
-
-	freq[0] = device2.sidV1Enabled ? chip.ch1.getFreq() : 0;           
-	volume[0] = device2.sidV1Enabled ? chip.ch1.getVolume() : 0;
-	noise[0] = chip.ch1.getNoise();     //noise ? 80 : 0                          
-	
-	if(chip.ch1.square && hpvEn && chip.ch1.PulseWidth != 2048) { hyperVCount[0] = 2; hyperVPhase[0] = chip.ch1.PulseWidth >> 4; }
-	if(chip.ch2.square && hpvEn && chip.ch2.PulseWidth != 2048) { hyperVCount[1] = 2; hyperVPhase[1] = chip.ch2.PulseWidth >> 4; }
-	if(chip.ch3.square && hpvEn && chip.ch3.PulseWidth != 2048) { hyperVCount[2] = 2; hyperVPhase[2] = chip.ch3.PulseWidth >> 4; }
-	
-	device.commander.writeRaw(freq[0], volume[0], noise[0], freq[1], volume[1], noise[1], chip.ch3Off ? 0 : freq[2], chip.ch3Off ? 0 : volume[2], noise[2], 0, 0, 0, hyperVCount[0], hyperVPhase[0], hyperVCount[1], hyperVPhase[1], hyperVCount[2], hyperVPhase[2], 0, 0);
-}*/
-
 void SigGen_setVoiceSID(uint32_t voice, uint32_t enabled, int32_t pulseWidth, int32_t volume, int32_t frequencyTenths, int32_t noiseAmplitude){
     if(synthMode != SYNTH_SID) return;
-    //SigGen_setVoiceParams(voice, enabled, pulseWidth, volume, frequencyTenths, noiseAmplitude);
+    SigGen_setVoiceParams(voice, enabled, pulseWidth, volume, frequencyTenths, noiseAmplitude, 0, 0);
 }
 
 void SigGen_setVoiceTR(uint32_t enabled, int32_t pulseWidth, int32_t volume, int32_t frequencyTenths, int32_t burstOn_us, int32_t burstOff_us){
@@ -358,6 +337,84 @@ void SigGen_setVoiceTR(uint32_t enabled, int32_t pulseWidth, int32_t volume, int
     
     //TR mode always uses voice 0 without noise
     SigGen_setVoiceParams(0, enabled, pulseWidth, volume, frequencyTenths, 0, burstOn_us, burstOff_us);
+}
+
+//function that finds the pulse that makes the buffer extremely long and removes it aswell as any pulses after it
+static void SigGen_trimBuffer(){
+    
+    //start by scanning until we find a pulse that will remain unchanged. During this the timer must be disabled and later re-enabled if it was on
+    uint32_t isr = SigGen_isTimerISREnabled();
+    SigGen_disableTimerISR();
+        
+        
+    //go through all pulses currently waiting in the buffer and check if they originate from the voice thats switched off
+    uint32_t pulsesToScan = RingBuffer_getDataCount(taskData->pulseBuffer);
+    RingBuffer_startIndexedPeek(taskData->pulseBuffer);
+    int32_t pulseFound = 0;
+    
+    //also keep track of how long we have until we need to have the next pulse available
+    //TODO figure out what would happen if this just rolled over, would we detect that successfully?
+    int32_t timeToNextPulse_us = (interrupterTimebase_ReadCounter() < SIGGEN_US_TO_PERIOD_COUNT(50)) ? 0 : SIGGEN_PERIOD_COUNT_TO_US(interrupterTimebase_ReadCounter());
+    
+    //TODO check if the pulse thats waiting for the timer trigger right now is perhaps a long one too
+    /*if(SigGen_isTimerRunning() && (readPulse.sourceVoices & voicesToRemove)){
+        readPulse.current = 0;
+    }*/
+    
+    SigGen_pulseData_t * pulse = NULL;
+    for(uint32_t i = 0; i < pulsesToScan; i++){
+        
+        //try to read a pulse
+        if((pulse = RingBuffer_indexedPeek(taskData->pulseBuffer, i)) != NULL){
+            //pulse was read successfully => increment index
+            
+            //would we have enough time to write new pulses into the buffer if we delete this one? If so, did we already find the long pulse or is the current one the start of the trouble?
+            if((timeToNextPulse_us > SIGGEN_MIN_PERIOD) && (pulseFound || pulse->period > SIGGEN_MS_TO_PERIOD_COUNT(SIGGEN_LONG_DELAY_THRESHOLD_ms))){
+                pulseFound = 1;
+                
+                //remove the current pulse from the buffer 
+                uint32_t timeToRewind_us = SIGGEN_PERIOD_COUNT_TO_US(pulse->period);
+                
+                taskData->bufferLengthInCounts -= pulse->period;
+                
+                //TERM_printDebug(min_handle[1], "removing pulse length now %d\r\n", taskData->bufferLengthInCounts);
+                
+                //find which voices had their counter changed by this pulse
+                for(uint32_t currVoice = 0; currVoice < SIGGEN_VOICECOUNT; currVoice++){
+                    //was this one modified? Is it even still on?
+                    if(pulse->editedVoices & VoiceFlags[currVoice] && taskData->voice[currVoice].limitedEnabled){
+                        //yes on and was modified => rewind the time
+                        taskData->voice[currVoice].counter += timeToRewind_us;
+                        if(taskData->voice[currVoice].counter > taskData->voice[currVoice].period) taskData->voice[currVoice].counter -= taskData->voice[currVoice].period;
+                        
+                        //also check if either burst or hpv needs rewinding
+                        //TODO evaluate if we could somehow reasonably modify the HPV Count
+                        //TODO evaluate likelyhood of this happening after features were turned off/switched on
+                        
+                        //re-increment burst timer if burst is active
+                        if(taskData->voice[currVoice].burstPeriod != 0) taskData->voice[currVoice].burstCounter += timeToRewind_us;
+                        if(taskData->voice[currVoice].burstCounter > taskData->voice[currVoice].burstPeriod) taskData->voice[currVoice].burstCounter -= taskData->voice[currVoice].burstPeriod;
+                        
+                        //re-increment hpv timer if hpv is active 
+                        //TODO actually figure out if this works... might not since we usually reset the hpv timer on triggering of the main pulse
+                        if(taskData->voice[currVoice].currHPVDivider == 0) taskData->voice[currVoice].currHPVCounter += timeToRewind_us;
+                        if(taskData->voice[currVoice].currHPVCounter > taskData->voice[currVoice].period) taskData->voice[currVoice].currHPVCounter -= taskData->voice[currVoice].period;
+                        
+                        
+                        //and finally make pulse invalid
+                        pulse->period = 0;
+                    }
+                }
+            }else{
+                timeToNextPulse_us += SIGGEN_PERIOD_COUNT_TO_US(pulse->period);
+            }
+        }
+    }
+    
+    //and finally reenable the timer
+    //TODO evaluate what happens if we actually deleted everything in the buffer
+    //one bad case would be the intterupt firing right after this and the buffer being empty. At this point we would fail to keep the timebase correct
+    if(isr) SigGen_enableTimerISR();
 }
 
 //Function to clear the pulsebuffer of pulses from a voice thats no longer active
@@ -371,6 +428,11 @@ static void SigGen_cleanseBuffer(uint32_t voicesToRemove){
     uint32_t pulsesToScan = RingBuffer_getDataCount(taskData->pulseBuffer);
     RingBuffer_startIndexedPeek(taskData->pulseBuffer);
     int32_t delayToAdd = 0;
+    
+    //check if the timer is currently running and if the pulse thats waiting is from the voice to eradicate
+    if(SigGen_isTimerRunning() && (readPulse.sourceVoices & voicesToRemove)){
+        readPulse.current = 0;
+    }
     
     for(uint32_t i = 0; i < pulsesToScan; i++){
         
@@ -387,8 +449,8 @@ static void SigGen_cleanseBuffer(uint32_t voicesToRemove){
                 
                 //invalidate pulse to make the timer skip it and load another
                 pulse->period = 0;
-                
-                TERM_printDebug(min_handle[1], "Remove %d\r\n", i);
+            
+                pulse->onTime = 100;
                 
                 i++;
             }else{
@@ -460,10 +522,16 @@ void SigGen_limit(){
         //TODO perhaps add duty limiter active flag?
     }
     
+    //reset active voice count
+    tt.n.midi_voices.value = 0;
+    
     //TODO evaluate if this is thread safe, if not make it so (as requested by the captain)
     for(uint32_t currVoice = 0; currVoice < SIGGEN_VOICECOUNT; currVoice++){
         //if a voice is disabled we don't need to change anything
-        if(!taskData->voice[currVoice].enabled) continue;
+        if(!taskData->voice[currVoice].enabled){ 
+            taskData->voice[currVoice].limitedEnabled = 0;
+            continue;
+        }
         
         //linearly scale the ontime down
         uint32_t onTime = taskData->voice[currVoice].pulseWidth_us;
@@ -486,6 +554,9 @@ void SigGen_limit(){
         }
         
         taskData->voice[currVoice].limitedEnabled = taskData->voice[currVoice].enabled;
+        
+        //at this point the voice must be on => increment voice count
+        tt.n.midi_voices.value ++;
     }
 }
 
@@ -560,6 +631,8 @@ void SigGen_killAudio(){
     RingBuffer_flush(taskData->pulseBuffer);
     taskData->bufferLengthInCounts = 0;
     SigGen_enableTimerISR();
+    
+    tt.n.midi_voices.value = 0;
 }
 
 volatile uint32_t adding = 0;
@@ -584,10 +657,17 @@ static void SigGen_task(void * callData){
         
         //check if any pulses need to be removed
         if(voicesToEradicate != 0){
-            TERM_printDebug(min_handle[1], "eradicate=%01x\r\n", voicesToEradicate);
             taskENTER_CRITICAL();
-            SigGen_cleanseBuffer(voicesToEradicate);
+            if(voicesToEradicate & SIGGEN_CLEAR_LONG_PULSE){
+                SigGen_trimBuffer();
+            }
+            
+            if(voicesToEradicate & SIGGEN_ERADICATE_REQUIRED){
+                SigGen_cleanseBuffer(voicesToEradicate);
+            }
+            
             voicesToEradicate = 0;
+            
             taskEXIT_CRITICAL();
         }
         
@@ -654,6 +734,7 @@ static void SigGen_task(void * callData){
             int32_t pulseVolume = 0;
             int32_t pulseWidth = 0;
             uint32_t pulseSource = 0;
+            uint32_t editedSources = 0;
 
             //now the voice of which the timer expires next is indexed by nextVoice, propagate the current time to that point (aka decrease all other time counters by the delay to the next pulse)
             for(uint32_t currVoice = 0; currVoice < SIGGEN_VOICECOUNT; currVoice++){
@@ -661,6 +742,9 @@ static void SigGen_task(void * callData){
                 if(synthMode == SYNTH_TR && currVoice >= 1) break;
                 
                 if(data->voice[currVoice].limitedEnabled){ 
+                    //remember that we edited this voice
+                    editedSources |= VoiceFlags[currVoice];
+                    
                     //decrement frequency timer
                     data->voice[currVoice].counter -= timeToNextPulse;
                     
@@ -847,7 +931,7 @@ static void SigGen_task(void * callData){
             currPulse.onTime = SIGGEN_US_TO_OT_COUNT(pulseWidth);
             currPulse.current = SIGGEN_VOLUME_TO_CURRENT_DAC_VALUE(pulseVolume);
             currPulse.sourceVoices = pulseSource;
-        
+            currPulse.editedVoices = editedSources;
             
             //write it into the buffer
             if(RingBuffer_write(data->pulseBuffer, &currPulse, 1, 0) != 1){
@@ -874,11 +958,14 @@ static void SigGen_task(void * callData){
                 
                 if(readPulse.period < SIGGEN_MIN_PERIOD) readPulse.period = SIGGEN_MIN_PERIOD;
                 
+                //reset counter to trigger asap
+                interrupterTimebase_WriteCounter(0);
+                
                 //load timer registers
                 interrupterTimebase_WriteCompare(readPulse.period);
-    
-                //reset counter to trigger asap
-                interrupterTimebase_WriteCounter(readPulse.period-SIGGEN_MIN_PERIOD);
+                
+                //clear the irq incase its still pending
+                interrupterIRQ_ClearPending();
                 
                 //and finally re-enable the timer
                 SigGen_startTimer();

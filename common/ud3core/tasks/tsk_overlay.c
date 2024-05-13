@@ -55,6 +55,7 @@
 #include "helper/printf.h"
 #include "ZCDtoPWM.h"
 #include "TTerm.h"
+#include "SignalGenerator.h"
 
 
 
@@ -399,7 +400,7 @@ void show_overlay_400ms(TERMINAL_HANDLE * handle) {
 
         if(portM->term_mode!=PORT_TERM_MQTT){
             send_status(tt.n.bus_status.value!=BUS_OFF,
-                        interrupter.mode!=INTR_MODE_OFF,
+                        param.synth == SYNTH_TR,
                         configuration.ps_scheme!=AC_NO_RELAY_BUS_SCHEME,
                         (tsk_fault_is_fault()) ? 1 : 0,
                         handle);

@@ -28,9 +28,7 @@ static void resetChannelData(uint32_t channel);
 static MidiFilterHandle_t * filters[SIGGEN_OUTPUTCOUNT];
 
 void MidiProcessor_init(){
-    /*ConMan_addParameter("stereoPosition", sizeof(uint32_t), MidiProcessor_configCallback, (void*) MIDIPROC_PARAM_STERO_POS, MIDIPROC_VERSION);
-    ConMan_addParameter("stereoWidth", sizeof(uint32_t), MidiProcessor_configCallback, (void*) MIDIPROC_PARAM_STERO_WIDTH, MIDIPROC_VERSION);
-    ConMan_addParameter("stereoSlope", sizeof(uint32_t), MidiProcessor_configCallback, (void*) MIDIPROC_PARAM_STERO_SLOPE, MIDIPROC_VERSION);*/
+    //TODO add stereo parameters to the UD3
     
     //initialize midi filters
     for(uint32_t i = 0; i < SIGGEN_OUTPUTCOUNT; i++){
@@ -92,6 +90,19 @@ static void resetChannelData(uint32_t channel){
     //channelDescriptors[channel].programm = 0; 
 }
 
+void MidiProcessor_resetMidi(){
+    //reset all midi data
+    
+    VMSW_panicHandler();
+    SigGen_killAudio();
+    
+    //TODO evaluate if this should affect all channels:
+    //reset all bend factors
+    for(uint32_t killChannel = 0;killChannel < 16; killChannel++){
+        resetChannelData(killChannel);
+    }
+}
+
 void MidiProcessor_processCmd(uint32_t cable, uint32_t channel, uint32_t cmd, uint32_t param1, uint32_t param2){
     if(cmd == MIDI_CMD_NOTE_OFF){
         for(uint32_t i = 0; i < SIGGEN_OUTPUTCOUNT; i++){
@@ -120,16 +131,8 @@ void MidiProcessor_processCmd(uint32_t cable, uint32_t channel, uint32_t cmd, ui
         
         //now check if we need to do anything with the data we received
         if(param1 == MIDI_CC_ALL_SOUND_OFF || param1 == MIDI_CC_ALL_NOTES_OFF || param1 == MIDI_CC_RESET_ALL_CONTROLLERS){ //Midi panic, and sometimes used by programms when you press the "stop" button
-            
             //user pressed either the stop or midi panic button. Make sure to kill the output and reset anything else live midi related
-            VMSW_panicHandler();
-            SigGen_killAudio();
-            
-            //TODO evaluate if this should affect all channels:
-            //reset all bend factors
-            for(uint32_t killChannel = 0;killChannel < 16; killChannel++){
-                resetChannelData(killChannel);
-            }
+            MidiProcessor_resetMidi();
             
         }else if(param1 == MIDI_CC_VOLUME){
             //send volume_change event to the mapper

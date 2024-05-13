@@ -26,6 +26,7 @@
 #include <cytypes.h>
 
 #include "tsk_min.h"
+#include "tsk_sid.h"
 #include "tsk_midi.h"
 #include "tsk_uart.h"
 #include "tsk_cli.h"
@@ -36,6 +37,7 @@
 #include "clock.h"
 #include "version.h"
 #include "SignalGenerator.h"
+#include "SidProcessor.h"
 
 #include "helper/printf.h"
 #include "helper/debug.h"
@@ -189,8 +191,7 @@ void process_synth(uint8_t *min_payload, uint8_t len_payload){
     switch(*min_payload++){
         case SYNTH_CMD_FLUSH:
             if(qSID!=NULL){
-                xQueueReset(qSID);
-                SigGen_killAudio();
+                SidProcessor_resetSid();
             }
             break;
         case SYNTH_CMD_SID:

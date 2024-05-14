@@ -17,11 +17,11 @@
 static DLLObject * VMS_listHead = 0;
 
 static void VMS_removeBlockFromList(VMS_listDataObject * target);
-static unsigned VMS_hasReachedThreshold(VMS_Block_t * block, int32_t factor, int32_t targetFactor, int32_t param1);
-static int32_t VMS_getParam(VMS_Block_t * block, uint32_t voiceId, uint8_t param);
+static unsigned VMS_hasReachedThreshold(const VMS_Block_t * block, int32_t factor, int32_t targetFactor, int32_t param1);
+//static int32_t VMS_getParam(VMS_Block_t * block, uint32_t voiceId, uint8_t param);
 static void VMS_nextBlock(VMS_listDataObject * data, uint32_t blockSet);
-static DIRECTION VMS_getThresholdDirection(VMS_Block_t * block, int32_t param1);
-static int32_t VMS_getParameter(uint8_t param, VMS_Block_t * block, uint32_t voiceId, uint32_t outputId);
+static DIRECTION VMS_getThresholdDirection(const VMS_Block_t * block, int32_t param1);
+static int32_t VMS_getParameter(uint8_t param, const VMS_Block_t * block, uint32_t voiceId, uint32_t outputId);
 static unsigned VMS_calculateValue(VMS_listDataObject * data);
 
 SemaphoreHandle_t vmsSemaphore = NULL;
@@ -90,7 +90,7 @@ void VMS_removeBlocksWithTargetVoice(uint32_t targetVoice){
     }
 }
 
-uint32_t VMS_isBlockValid(VMS_Block_t * block){
+uint32_t VMS_isBlockValid(const VMS_Block_t * block){
     //was a NULL pointer given or is the block in unfilled memory?
     if(block == NULL || block->flags == VMS_FLAG_BLOCK_INVALID) return 0;
     
@@ -102,7 +102,7 @@ uint32_t VMS_isBlockValid(VMS_Block_t * block){
     return 1;
 }
 
-void VMS_addBlockToList(VMS_Block_t * block, uint32_t output, uint32_t voiceId){
+void VMS_addBlockToList(const VMS_Block_t * block, uint32_t output, uint32_t voiceId){
     //add a block to the dll
     
     //is it valid?
@@ -124,6 +124,8 @@ void VMS_addBlockToList(VMS_Block_t * block, uint32_t output, uint32_t voiceId){
             data->data = pvPortMalloc(sizeof(SINE_DATA));
             memset(data->data, 0, sizeof(SINE_DATA));
             break;
+        default:
+            break;
     }
     
     //add it to the list
@@ -144,7 +146,7 @@ void VMS_killBlocks(){
     }
 }
 
-static unsigned VMS_hasReachedThreshold(VMS_Block_t * block, int32_t factor, int32_t targetFactor, int32_t param1){
+static unsigned VMS_hasReachedThreshold(const VMS_Block_t * block, int32_t factor, int32_t targetFactor, int32_t param1){
     //check if the block has reached its target value
     
     //is it a VMS_JUMP block? If so just return 1, as it immediately sets the target value anyway
@@ -155,7 +157,7 @@ static unsigned VMS_hasReachedThreshold(VMS_Block_t * block, int32_t factor, int
     //first check if p1 is even variable
     if(block->flags & VMS_FLAG_ISVARIABLE_PARAM1){
         //yes => load range parameters
-        RangeParameters * range = &block->param1;
+        RangeParameters * range = (RangeParameters *)&block->param1;
         
         //is the source pTime? If so just say we reached the end of the block
         if(range->sourceId == pTime) return 1;
@@ -169,6 +171,8 @@ static unsigned VMS_hasReachedThreshold(VMS_Block_t * block, int32_t factor, int
             return factor <= targetFactor;
         case NONE:
             return 0;
+        case ANY:
+            return 0;
     }
     
     return 1;
@@ -181,6 +185,8 @@ static void VMS_removeBlockFromList(VMS_listDataObject * target){
     switch(target->block->type){
         case VMS_SIN:
             vPortFree(target->data);
+            break;
+        default:
             break;
     }
     
@@ -197,7 +203,7 @@ static void VMS_nextBlock(VMS_listDataObject * data, uint32_t blockSet){
     
     uint32_t outputId = data->targetOutputIndex;
     uint32_t voiceId = data->targetVoiceIndex;
-    VMS_Block_t * block = data->block;
+    const VMS_Block_t * block = data->block;
     
     //which one of the two sets do we need?
     if(blockSet == VMS_BLOCKSET_NEXTBLOCKS){
@@ -234,7 +240,7 @@ static unsigned VMS_calculateValue(VMS_listDataObject * data){
     //run VMS calculations
     uint32_t outputId = data->targetOutputIndex;
     uint32_t voiceId = data->targetVoiceIndex;
-    VMS_Block_t * block = data->block;
+    const VMS_Block_t * block = data->block;
     
     //first check if the block needs to be killed because of a noteOff/noteOn event
     if(block->behavior == NORMAL){
@@ -297,6 +303,8 @@ static unsigned VMS_calculateValue(VMS_listDataObject * data){
         case VMS_JUMP:
             currFactor = targetFactor;
             break;
+        case VMS_INVALID:
+            break;
     }
     
     //did the factor reach the designated target threshold?
@@ -314,7 +322,7 @@ static unsigned VMS_calculateValue(VMS_listDataObject * data){
 }
 
 //TODO evaluate refactoring :3
-static int32_t VMS_getParameter(uint8_t param, VMS_Block_t * block, uint32_t outputId, uint32_t voiceId){
+static int32_t VMS_getParameter(uint8_t param, const VMS_Block_t * block, uint32_t outputId, uint32_t voiceId){
     //load a parameter from the block in flash, or compute it from a known value if the flag is set for it
     
     RangeParameters * range = NULL;//&block->param1;
@@ -323,7 +331,7 @@ static int32_t VMS_getParameter(uint8_t param, VMS_Block_t * block, uint32_t out
     switch(param){
         case 1:
             if(block->flags & VMS_FLAG_ISVARIABLE_PARAM1){
-                range = &block->param1;
+                range = (RangeParameters *)&block->param1;
             }else{
                 return block->param1;
             }
@@ -331,7 +339,7 @@ static int32_t VMS_getParameter(uint8_t param, VMS_Block_t * block, uint32_t out
             
         case 2:
             if(block->flags & VMS_FLAG_ISVARIABLE_PARAM1){
-                range = &block->param2;
+                range = (RangeParameters *)&block->param2;
             }else{
                 return block->param2;
             }
@@ -339,7 +347,7 @@ static int32_t VMS_getParameter(uint8_t param, VMS_Block_t * block, uint32_t out
             
         case 3:
             if(block->flags & VMS_FLAG_ISVARIABLE_PARAM1){
-                range = &block->param3;
+                range = (RangeParameters *)&block->param3;
             }else{
                 return block->param3;
             }
@@ -347,7 +355,7 @@ static int32_t VMS_getParameter(uint8_t param, VMS_Block_t * block, uint32_t out
             
         case 4:
             if(block->flags & VMS_FLAG_ISVARIABLE_PARAM1){
-                range = &block->targetFactor;
+                range = (RangeParameters *)&block->targetFactor;
             }else{
                 return block->targetFactor;
             }
@@ -416,9 +424,10 @@ static int32_t VMS_getParameter(uint8_t param, VMS_Block_t * block, uint32_t out
         case 3:
             return ret;
     }
+    return 0;
 }
 
-static DIRECTION VMS_getThresholdDirection(VMS_Block_t * block, int32_t param1){
+static DIRECTION VMS_getThresholdDirection(const VMS_Block_t * block, int32_t param1){
     //get the direction in which the threshold needs to be checked depending on the type of block, and the parameter 1
     switch(block->type){
         case VMS_EXP:
@@ -555,7 +564,7 @@ void VMS_convertFromLegacyBlockWith63Bytes(VMS_Block_t * dst, VMS_LEGAYBLOCK_t *
     dst->param3 = src->param3;
     
     //here is the workaround. We convert the uint32_t flags field to an array of four uint8_t, then only access the first three of that
-    uint8_t * flagsBytes = &src->flags;
+    uint8_t * flagsBytes = (uint8_t *)&src->flags;
     dst->flags = flagsBytes[0] | (flagsBytes[1] << 8) | (flagsBytes[2] << 16);
     
     //did we get a sustain block?

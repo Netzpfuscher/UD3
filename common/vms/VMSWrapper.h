@@ -12,13 +12,13 @@ void VMSW_init();
 void VMSW_stopNote(uint32_t output, uint32_t note, uint32_t channel);
 void VMSW_startNote(uint32_t output, uint32_t startBlockID, uint32_t sourceNote, uint32_t sourceChannel, uint32_t targetOnTime, uint32_t targetVolume, uint32_t targetFrequency, uint32_t flags, uint32_t baseVolume, uint32_t baseVelocity);
 
-extern inline uint32_t VMSW_getSrcChannel(uint32_t output, uint32_t index);
+extern uint32_t VMSW_getSrcChannel(uint32_t output, uint32_t index);
 
-extern inline VMS_Block_t * VMSW_getBlockPtr(uint32_t index);
+extern const VMS_Block_t * VMSW_getBlockPtr(uint32_t index);
 
 uint32_t VMSW_isAnyVoiceOn();
-extern inline uint32_t VMSW_isVoiceOn(uint32_t output, uint32_t index);
-extern inline uint32_t VMSW_isVoiceActive(uint32_t output, uint32_t index);
+extern uint32_t VMSW_isVoiceOn(uint32_t output, uint32_t index);
+extern uint32_t VMSW_isVoiceActive(uint32_t output, uint32_t index);
 
 void VMSW_panicHandler();
 void VMSW_bendHandler(uint32_t channel);

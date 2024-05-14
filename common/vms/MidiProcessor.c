@@ -106,7 +106,7 @@ void MidiProcessor_resetMidi(){
 void MidiProcessor_processCmd(uint32_t cable, uint32_t channel, uint32_t cmd, uint32_t param1, uint32_t param2){
     if(cmd == MIDI_CMD_NOTE_OFF){
         for(uint32_t i = 0; i < SIGGEN_OUTPUTCOUNT; i++){
-            MidiFilter_eventHandler(filters[i], MIDI_EVT_NOTEOFF, channel, param1, NULL, NULL);
+            MidiFilter_eventHandler(filters[i], MIDI_EVT_NOTEOFF, channel, param1, (uint32_t)NULL, (uint32_t)NULL);
         }
         //send noteOff event to mapper
         
@@ -120,7 +120,7 @@ void MidiProcessor_processCmd(uint32_t cable, uint32_t channel, uint32_t cmd, ui
         }else{
             //no, volume == 0. Either the volume modifiers are 0 or the note velocity is 0. A velocity of 0 is sometimes used instead of noteOff
             for(uint32_t i = 0; i < SIGGEN_OUTPUTCOUNT; i++){
-                MidiFilter_eventHandler(filters[i], MIDI_EVT_NOTEOFF, channel, param1, NULL, NULL);
+                MidiFilter_eventHandler(filters[i], MIDI_EVT_NOTEOFF, channel, param1, (uint32_t)NULL, (uint32_t)NULL);
             }
             //send noteOff event to mapper
         }

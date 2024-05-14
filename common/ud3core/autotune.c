@@ -113,8 +113,7 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
         ttprintf("Malloc failed\r\n");
         return 0;
     }
-    
-    enum interrupter_DMA original_dma_mode = interrupter.dma_mode;
+
     uint16 original_freq;
 	uint16 original_current;
 	uint16 original_max_fb_errors;

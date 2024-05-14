@@ -85,7 +85,7 @@ struct _VMS_VoiceData_t_{
 struct _VMS_listDataObject_{
     uint32_t targetOutputIndex;
     uint32_t targetVoiceIndex;
-    VMS_Block_t * block;
+    const VMS_Block_t * block;
     void * data;
     
     DIRECTION thresholdDirection;
@@ -136,9 +136,9 @@ typedef struct{
 } __attribute__ ((packed))  VMS_LEGAYBLOCK_t;
 
 void VMS_removeBlocksWithTargetVoice(uint32_t targetVoice);
-uint32_t VMS_isBlockValid(VMS_Block_t * block);
+uint32_t VMS_isBlockValid(const VMS_Block_t * block);
 void VMS_killBlocks();
-void VMS_addBlockToList(VMS_Block_t * block, uint32_t output, uint32_t voiceId);
+void VMS_addBlockToList(const VMS_Block_t * block, uint32_t output, uint32_t voiceId);
 void VMS_run();
 void VMS_getSemaphore();
 void VMS_returnSemaphore();

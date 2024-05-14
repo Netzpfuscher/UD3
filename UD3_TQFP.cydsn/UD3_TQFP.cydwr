@@ -2176,6 +2176,7 @@
       <Data key="d5c222a8-f340-47f3-b3e2-82b5110cc0f6" value="TRIG" />
       <Data key="d1817f9f-1083-43a0-873b-9935f73c2a53" value="TP4" />
       <Data key="df864acb-3838-45e6-8b11-23d8f35057fe" value="Relay2" />
+      <Data key="e1dcb2cc-a420-4dfc-8b00-6decf046b5ea" value="DEBUG_ILIM_1" />
       <Data key="e4c8597c-026f-4cf9-a17f-7d69962e088d" value="LED_sysfault" />
       <Data key="e92e0d69-8885-4c0d-a0b4-208d2aa95cb7" value="therm1" />
       <Data key="e851a3b9-efb8-48be-bbb8-b303b216c393" value="digipot_clk" />
@@ -5579,7 +5580,7 @@
     </Group>
     <Group key="56ba5125-3143-4766-89f3-e551bc17bfa5">
       <Group key="0">
-        <Data key="Port Format" value="4,0" />
+        <Data key="Port Format" value="4,1" />
       </Group>
     </Group>
     <Group key="61e7ffa6-88b2-4fba-8808-24e15a8bee6c">
@@ -5649,7 +5650,7 @@
     </Group>
     <Group key="7032b027-bddc-4ad3-a771-6f617c94d2f5">
       <Group key="0">
-        <Data key="Port Format" value="3,7" />
+        <Data key="Port Format" value="5,3" />
       </Group>
     </Group>
     <Group key="22863ebe-a37b-476f-b252-6e49a8c00b12">

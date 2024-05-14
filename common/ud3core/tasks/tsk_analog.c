@@ -90,8 +90,6 @@ adc_sample_t ADC_sample_buf_0[ADC_BUFFER_CNT];
 adc_sample_t ADC_sample_buf_1[ADC_BUFFER_CNT];
 adc_sample_t *ADC_active_sample_buf = ADC_sample_buf_0;
 
-FastPID pid_current;
-
 rms_t current_idc;
 rms_t voltage_bus;
 rms_t voltage_batt;
@@ -100,72 +98,6 @@ uint8_t ADC_mux_ctl[4] = {0x05, 0x02, 0x03, 0x00};
 
 uint16_t vdriver_lut[9] = {0,3500,7000,10430,13840,17310,20740,24200,27657};
 
-typedef struct
-{
-    uint32_t limit;
-    uint32_t warning;
-    uint8_t warning_level;
-    uint32_t leak;
-    uint32_t integral;
-} _i2t;
-
-_i2t i2t = {
-    .limit = 0,
-    .warning = 0,
-    .warning_level = 60,
-    .leak = 0,
-    .integral = 0
-};
-
-// Called when max_const_i or max_fault_i parameters are changed by user
-void i2t_set_limit(uint32_t const_current, uint32_t ovr_current, uint32_t limit_ms){
-    i2t.leak = const_current * const_current;
-    i2t.limit= floor((float)((float)limit_ms/NEW_DATA_RATE_MS)*(float)((ovr_current*ovr_current)-i2t.leak));
-    i2t_set_warning(i2t.warning_level);
-}
-
-void i2t_set_warning(uint8_t percent){
-    i2t.warning_level = percent;
-    i2t.warning = floor((float)i2t.limit*((float)percent/100.0));
-}
-
-void i2t_reset(){
-    i2t.integral=0;
-}
-
-// Called by calculate_rms() which is called on a timer
-uint8_t i2t_calculate(){
-    uint32_t squaredCurrent = (uint32_t)tt.n.batt_i.value * (uint32_t)tt.n.batt_i.value;
-    i2t.integral = i2t.integral + squaredCurrent;
-	if(i2t.integral > i2t.leak)
-	{
-		i2t.integral -= i2t.leak;
-	}
-	else
-	{
-		i2t.integral = 0;
-	}
-    
-    tt.n.i2t_i.value=(100*(i2t.integral>>8))/(i2t.limit>>8);
-    
-    if(i2t.integral < i2t.warning)
-	{
-		return I2T_NORMAL;
-	}
-	else
-	{
-		if(i2t.integral < i2t.limit)
-		{
-			return I2T_WARNING;
-		}
-		else
-		{
-            i2t.integral=i2t.limit;
-			return I2T_LIMIT;
-		}
-	}
-  
-}
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */
@@ -202,22 +134,14 @@ uint16_t read_driver_mv(uint16_t raw_adc){
     return driver_voltage;
 }
 
-uint32_t CT1_Get_Current(uint8_t channel) {
+uint32_t CT1_Get_Current() {
     int32_t counts = ADC_peak_GetResult16();
-	if (channel == CT_PRIMARY) {
-		return ((ADC_peak_CountsTo_mVolts(counts) * configuration.ct1_ratio) / configuration.ct1_burden) / 100;
-	} else {
-		return ((ADC_peak_CountsTo_mVolts(counts) * configuration.ct3_ratio) / configuration.ct3_burden) / 100;
-	}
+	return ((ADC_peak_CountsTo_mVolts(counts) * configuration.ct1_ratio) / configuration.ct1_burden) / 100;
 }
 
-float CT1_Get_Current_f(uint8_t channel) {
+float CT1_Get_Current_f() {
     int32_t counts = ADC_peak_GetResult16();
-	if (channel == CT_PRIMARY) {
-		return ((float)(ADC_peak_CountsTo_Volts(counts) * 10) / (float)(configuration.ct1_burden) * configuration.ct1_ratio);
-	} else {
-		return ((float)(ADC_peak_CountsTo_Volts(counts) * 10) / (float)(configuration.ct3_burden) * configuration.ct3_ratio);
-	}
+	return ((float)(ADC_peak_CountsTo_Volts(counts) * 10) / (float)(configuration.ct1_burden) * configuration.ct1_ratio);
 }
 
 void init_rms_filter(rms_t *ptr, uint16_t init_val) {
@@ -247,7 +171,6 @@ uint16_t average_filter(uint32_t *ptr, uint16_t sample) {
 
 void calculate_rms(void) {
     
-    static uint16_t old_curr_setpoint=0;
     for(uint8_t i=0;i<ADC_BUFFER_CNT;i++){
 
 		// read the battery voltage
@@ -267,35 +190,8 @@ void calculate_rms(void) {
 	}
     
     tt.n.primary_i.value = CT1_Get_Current(CT_PRIMARY);
-    
-    if(configuration.max_dc_curr){
-        param.temp_duty = configuration.max_tr_duty-pid_step(&pid_current,configuration.max_dc_curr,tt.n.batt_i.value);
-        if(param.temp_duty != old_curr_setpoint){
-            if(interrupter.mode == INTR_MODE_TR){
-                //TODO reimplement this...? whatever it does xD
-                //update_interrupter();
-            }else{
-                SigGen_limit();
-            }
-        }
-        old_curr_setpoint = param.temp_duty;
-    }
-    
-    if(configuration.max_const_i){  //Only do i2t calculation if enabled
-        switch (i2t_calculate()){
-            case I2T_LIMIT:
-                sysfault.fuse=1;
-                interrupter_kill();   
-                break;
-            case I2T_WARNING:
-                sysfault.fuse=0;
-                break;
-            case I2T_NORMAL:
-                sysfault.fuse=0;
-                break;      
-        }
-    }
-    
+      
+   
 	control_precharge();
 
 }
@@ -303,8 +199,6 @@ void calculate_rms(void) {
 
 
 void initialize_analogs(void) {
-	
-	CT_MUX_Start();
     ADC_peak_Start();
 	Sample_Hold_1_Start();
 	Comp_1_Start();
@@ -339,8 +233,6 @@ void initialize_analogs(void) {
     
 
 	ADC_data_ready_StartEx(ADC_data_ready_ISR);
-
-	CT_MUX_Select(CT_PRIMARY);
 
 	init_rms_filter(&current_idc, INITIAL);
     
@@ -464,15 +356,6 @@ void reconfig_charge_timer(){
     }
 }
 
-uint8_t callback_pid(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
-    pid_new(&pid_current,configuration.pid_curr_p,configuration.pid_curr_i,0,CURRENT_PID_HZ,10,false);
-    pid_set_anti_windup(&pid_current,0,configuration.max_tr_duty);
-    pid_set_limits(&pid_current,0,configuration.max_tr_duty);
-    if(pid_current._cfg_err==true){
-        ttprintf("PID value error\r\n");   
-    }
-    return pdPASS;
-}
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */

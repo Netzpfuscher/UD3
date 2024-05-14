@@ -47,7 +47,7 @@
 #define OFFSET_X 20
 #define OFFSET_Y 20
 
-uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint8_t channel, uint8_t delay, TERMINAL_HANDLE * handle);
+uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint8_t delay, TERMINAL_HANDLE * handle);
 
 
 /*****************************************************************************
@@ -55,8 +55,8 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 * and makes a second run with +-6kHz around the peak
 ******************************************************************************/
 uint8_t CMD_tune(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
-    if(argCount==0 || strcmp(args[0], "-?") == 0){
-        ttprintf("Usage: tune [prim|sec]\r\n");
+    if(strcmp(args[0], "-?") == 0){
+        ttprintf("Usage: tune\r\n");
         return TERM_CMD_EXIT_SUCCESS;
     }
     
@@ -78,16 +78,10 @@ uint8_t CMD_tune(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         
     }
     ttprintf("Start sweep:\r\n");
-    if(strcmp(args[0], "prim") == 0){
-    	run_adc_sweep(param.tune_start, param.tune_end, param.tune_pw, CT_PRIMARY, param.tune_delay, handle);
-        ttprintf("Type cls to go back to normal telemtry chart\r\n");
-        return TERM_CMD_EXIT_SUCCESS;
-    }
-    if(strcmp(args[0], "sec") == 0){
-        run_adc_sweep(param.tune_start, param.tune_end, param.tune_pw, CT_SECONDARY, param.tune_delay, handle);
-        ttprintf("Type cls to go back to normal telemetry chart\r\n");
-        return TERM_CMD_EXIT_SUCCESS;;
-    }
+
+	run_adc_sweep(param.tune_start, param.tune_end, param.tune_pw, param.tune_delay, handle);
+    ttprintf("Type cls to go back to normal telemtry chart\r\n");
+
     return TERM_CMD_EXIT_SUCCESS;
 }
 
@@ -111,7 +105,7 @@ struct freq_struct {
     uint16_t freq[ROWS];
 };
 
-uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint8_t channel, uint8_t delay, TERMINAL_HANDLE * handle) {
+uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint8_t delay, TERMINAL_HANDLE * handle) {
 
     freq_str *freq_resp;
     freq_resp = pvPortMalloc(sizeof(freq_str));
@@ -129,7 +123,6 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
     //TODO figure out if this still works
     //interrupter_DMA_mode(INTR_DMA_TR);
 
-	CT_MUX_Select(channel);
 	//units for frequency are 0.1kHz (so 1000 = 100khz).  Pulsewidth in uS
 	uint16 f;
 	uint8 n;
@@ -177,7 +170,7 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 
 			vTaskDelay(delay / portTICK_PERIOD_MS);
 
-			current_buffer += CT1_Get_Current_f(channel);
+			current_buffer += CT1_Get_Current_f();
 		}
 		freq_resp->curr[f] = round(current_buffer / (float)configuration.autotune_s * 10);
 		ttprintf("Frequency: %i00Hz Current: %4i,%iA     \r", freq_resp->freq[f], freq_resp->curr[f] / 10, freq_resp->curr[f] % 10);
@@ -193,7 +186,6 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 	configuration.max_fb_errors = original_max_fb_errors;
 
 	configure_ZCD_to_PWM();
-	CT_MUX_Select(CT_PRIMARY);
 	interrupter_init_safe();
 	//interrupter_DMA_mode(original_dma_mode);
 

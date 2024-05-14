@@ -80,9 +80,7 @@ static void SigGen_setVoiceParams(uint32_t voice, uint32_t enabled, int32_t puls
 
 uint32_t IsOkToPrint = 0;
 
-CY_ISR(isr_synth) {
-    uint32_t r = SG_Timer_ReadCounter();
-    
+CY_ISR(isr_synth) {   
     clock_tick();
     if(qcw_reg){
         qcw_handle();

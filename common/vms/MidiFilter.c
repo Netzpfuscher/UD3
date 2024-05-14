@@ -35,6 +35,8 @@ void MidiFilter_eventHandler(MidiFilterHandle_t * handle, MidiEventType_t evt, u
         case MIDI_EVT_NOTEOFF:
             Mapper_noteOffEventHandler(handle->targetOutput, param1, channel);
             break;
+        case MIDI_EVT_NULL:
+            break;
     }
 
 }

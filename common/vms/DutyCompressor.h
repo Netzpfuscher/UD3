@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 void Comp_init();
-extern inline uint32_t Comp_getGain();
-extern inline uint32_t Comp_getMaxDutyOffset();
+extern uint32_t Comp_getGain();
+extern uint32_t Comp_getMaxDutyOffset();
 
 #endif

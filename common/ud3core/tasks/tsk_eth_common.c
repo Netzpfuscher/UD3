@@ -80,15 +80,11 @@ void process_min_sid(uint8_t* ptr, uint16_t len) {
     
     SIDFrame_t SID_frame;
     
-    uint16_t flags[N_SIDCHANNEL];
-    
     //TODO add filter stuff?
     
     //uint16_t master_pw; //TODO: whats this used for?
-    uint32_t next_frame;
 
     while(n_frames){
-        uint16_t dutycycle=0;
         uint32_t freq_tempFp8;
         for(uint32_t i = 0;i<N_SIDCHANNEL;i++){
             //SID_FREQLO1

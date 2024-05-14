@@ -17,14 +17,14 @@
 #include "cli_common.h"
 #include "helper/nvm.h"
 #include "TTerm.h"
-#include "Tasks/tsk_cli.h"
+#include "tasks/tsk_cli.h"
 
 static VMS_VoiceData_t ** voiceData;
 
 static uint32_t VMSW_getNextVoice(uint32_t note, uint32_t output, uint32_t channel);
 static void VMSW_task(void * params);
 
-static uint32_t blockMemSize = VMS_DEFAULT_BLOCKMEM_SIZE;
+//static uint32_t blockMemSize = VMS_DEFAULT_BLOCKMEM_SIZE;
 static uint32_t blockMemBlockCount = VMS_DEFAULT_BLOCKMEM_SIZE/sizeof(VMS_Block_t);
 
 uint32_t VMSW_getBlockMemSizeInBlocks(){
@@ -190,7 +190,7 @@ uint32_t VMSW_isAnyVoiceOn(){
     return 0;
 }
 
-inline VMS_Block_t * VMSW_getBlockPtr(uint32_t index){
+inline const VMS_Block_t * VMSW_getBlockPtr(uint32_t index){
     if(index == VMS_BLOCKID_DEFATTACK) return &VMS_DEFAULT_ATTAC;
     if(index == VMS_BLOCKID_DEFSUSTAIN) return &VMS_DEFAULT_SUSTAIN;
     if(index == VMS_BLOCKID_DEFRELEASE) return &VMS_DEFAULT_RELEASE;
@@ -249,6 +249,8 @@ int32_t VMSW_getKnownValue(KNOWN_VALUE ID, uint32_t output, uint32_t voiceId){
             
         case CC_102 ... CC_119:
             return MidiProcessor_getCCValue(VMSW_getSrcChannel(output, voiceId), ID - CC_102);
+        default:
+            return 0;
     }
     return 0;
 }

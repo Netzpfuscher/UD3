@@ -145,7 +145,7 @@ void VMS_init_blk(VMS_Block_t* blk){
     memset(blk, 0xff, sizeof(VMS_Block_t));
 }
 
-void VMS_print_blk(TERMINAL_HANDLE* handle, VMS_Block_t* blk, uint8_t indent){
+void VMS_print_blk(TERMINAL_HANDLE* handle, const VMS_Block_t* blk, uint8_t indent){
 /*    ttprintf("%*sBlock ID: %u @ 0x%08X\r\n", indent, "", id, blk);
     indent++;
     for(int i=0;i<VMS_MAX_BRANCHES;i++){

@@ -109,10 +109,8 @@ void init_config(){
     configuration.temp2_max = 40;
     configuration.ct1_ratio = 600;
     configuration.ct2_ratio = 1000;
-    configuration.ct3_ratio = 30;
     configuration.ct1_burden = 33;
     configuration.ct2_burden = 500;
-    configuration.ct3_burden = 33;
     configuration.lead_time = 200;
     configuration.start_freq = 630;
     configuration.start_cycles = 3;
@@ -130,10 +128,7 @@ void init_config(){
     configuration.baudrate = 460800;
     configuration.r_top = 500000;
     strncpy(configuration.ud_name,"UD3-Tesla", sizeof(configuration.ud_name));
-    strncpy(configuration.synth_filter,"f<0f>20000", sizeof(configuration.synth_filter));  //No filter
     configuration.minprot = pdFALSE;
-    configuration.max_const_i = 0;
-    configuration.max_fault_i = 250;
     configuration.ct2_type = CT2_TYPE_CURRENT;
     configuration.ct2_voltage = 4000;
     configuration.ct2_offset = 0;
@@ -141,9 +136,6 @@ void init_config(){
     configuration.chargedelay = 1000;
     configuration.ivo_uart = UART_IVO_NONE;
     configuration.enable_display = 0;
-    configuration.pid_curr_p = 50;
-    configuration.pid_curr_i = 5;
-    configuration.max_dc_curr = 0;
     configuration.ext_interrupter = 0;
     configuration.pca9685 = 0;
     configuration.max_fb_errors = 0;
@@ -156,8 +148,6 @@ void init_config(){
     configuration.compressor_sustain = 44;
     configuration.compressor_release = 20;
     configuration.compressor_maxDutyOffset = 64;
-    
-    configuration.noise_vol_div = 2;
     
     configuration.ntc_b = 3977;
     configuration.ntc_r25 = 10000;
@@ -182,8 +172,6 @@ void init_config(){
     param.offtime = 3;
     
     param.qcw_repeat = 500;
-    param.transpose = 0;
-    param.mch = 0;
     param.synth = SYNTH_OFF;
     
     param.qcw_holdoff = 0;
@@ -191,7 +179,6 @@ void init_config(){
     param.qcw_offset = 0;
     param.qcw_ramp = 200;
     
-    i2t_set_limit(configuration.max_const_i,configuration.max_fault_i,10000);
     update_ivo();
     
     ramp.changed = pdTRUE;
@@ -222,14 +209,8 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_max"         , param.qcw_max                 , 0      ,255    ,0      ,callback_rampFunction       ,"QCW Ramp end value")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_repeat"      , param.qcw_repeat              , 0      ,1000   ,0      ,NULL                        ,"QCW pulse repeat time [ms] <100=single shot")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"synth"           , param.synth                   , 0      ,3      ,0      ,callback_SynthFunction      ,"0=off 1=MIDI 2=SID 3=TR")    
-    
-    
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"sid_hpv_enabled" , SID_filterData.hpvEnabledGlobally, 0      ,1      ,0      ,NULL                     ,"use hpv for playing square sid voices")    
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"sid_noise_volume", SID_filterData.noiseVolume    , 0      ,MAX_VOL,0      ,NULL                        ,"sid music volume [0-MAX_VOL] = [0-32767]")    
-    
-    
-    
-    //ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"noise_div"       , configuration.noise_vol_div   , 1      ,1000   ,0      ,NULL                        ,"Noise volume divider")    
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"watchdog"        , configuration.watchdog        , 0      ,1      ,0      ,callback_ConfigFunction     ,"Watchdog Enable")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"watchdog_timeout", configuration.watchdog_timeout, 1      ,10000  ,0      ,callback_ConfigFunction     ,"Watchdog timeout [ms]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_tr_pw"       , configuration.max_tr_pw       , 0      ,10000  ,0      ,callback_ConfigFunction     ,"Maximum TR PW [uSec]")
@@ -242,10 +223,8 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"temp2_max"       , configuration.temp2_max       , 0      ,100    ,0      ,NULL                        ,"Max temperature 2 [*C]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ct1_ratio"       , configuration.ct1_ratio       , 1      ,5000   ,0      ,callback_TTupdateFunction   ,"CT1 (feedback) [N Turns]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ct2_ratio"       , configuration.ct2_ratio       , 1      ,5000   ,0      ,callback_ConfigFunction     ,"CT2 (bus) [N Turns]")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ct3_ratio"       , configuration.ct3_ratio       , 1      ,5000   ,0      ,callback_ConfigFunction     ,"CT3 (sec) [N Turns]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ct1_burden"      , configuration.ct1_burden      , 1      ,1000   ,10     ,callback_TTupdateFunction   ,"CT1 (feedback) burden [Ohm]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ct2_burden"      , configuration.ct2_burden      , 1      ,1000   ,10     ,callback_ConfigFunction     ,"CT2 (bus) burden [Ohm]")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ct3_burden"      , configuration.ct3_burden      , 1      ,1000   ,10     ,callback_ConfigFunction     ,"CT3 (sec) burden [Ohm]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ct2_type"        , configuration.ct2_type        , 0      ,1      ,0      ,callback_ConfigFunction     ,"CT2 type 0=current 1=voltage")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ct2_current"     , configuration.ct2_current     , 0      ,20000  ,10     ,callback_ConfigFunction     ,"CT2 current @ ct_voltage")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ct2_voltage"     , configuration.ct2_voltage     , 0      ,5000   ,1000   ,callback_ConfigFunction     ,"CT2 voltage @ ct_current")
@@ -267,16 +246,10 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"autotune_s"      , configuration.autotune_s      , 1      ,32     ,0      ,NULL                        ,"Number of samples for Autotune")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ud_name"         , configuration.ud_name         , 0      ,0      ,0      ,NULL                        ,"Name of the Coil [15 chars]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"min_enable"      , configuration.minprot         , 0      ,1      ,0      ,NULL                        ,"Use MIN-Protocol")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_const_i"     , configuration.max_const_i     , 0      ,2000   ,10     ,callback_i2tFunction        ,"Maximum constant current [A] 0=off")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_fault_i"     , configuration.max_fault_i     , 0      ,2000   ,10     ,callback_i2tFunction        ,"Maximum fault current for 10s [A]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"baudrate"        , configuration.baudrate        , 1200   ,4000000,0      ,callback_baudrateFunction   ,"Serial baudrate")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ivo_uart"        , configuration.ivo_uart        , 0      ,11     ,0      ,callback_ivoUART            ,"[RX][TX] 0=not inverted 1=inverted")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"r_bus"           , configuration.r_top           , 100    ,1000000,1000   ,callback_TTupdateFunction   ,"Series resistor of voltage input [kOhm]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ena_display"     , configuration.enable_display  , 0      ,6      ,0      ,NULL                        ,"Enables the WS2812 display")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"synth_filter"    , configuration.synth_filter    , 0      ,0      ,0      ,callback_synthFilter        ,"Synthesizer filter string")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"pid_curr_p"      , configuration.pid_curr_p      , 0      ,200    ,0      ,callback_pid                ,"Current PI")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"pid_curr_i"      , configuration.pid_curr_i      , 0      ,200    ,0      ,callback_pid                ,"Current PI")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_dc_curr"     , configuration.max_dc_curr     , 0      ,2000   ,10     ,callback_pid                ,"Maximum DC-Bus current [A] 0=off")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ena_ext_int"     , configuration.ext_interrupter , 0      ,2      ,0      ,callback_ext_interrupter    ,"Enable external interrupter 2=inverted")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"qcw_coil"        , configuration.is_qcw          , 0      ,1      ,0      ,NULL                        ,"Is QCW 1=true 0=false")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"pca9685"         , configuration.pca9685         , 0      ,1      ,0      ,NULL                        ,"0=off 1=on")
@@ -303,7 +276,6 @@ parameter_entry confparam[] = {
 void eeprom_load(TERMINAL_HANDLE * handle){
     EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,handle);
     if(param.offtime<3) param.offtime=3;
-    i2t_set_limit(configuration.max_const_i,configuration.max_fault_i,10000);
     update_ivo();
     update_visibilty();
     uart_baudrate(configuration.baudrate);
@@ -311,7 +283,6 @@ void eeprom_load(TERMINAL_HANDLE * handle){
     ramp.changed = pdTRUE;
     qcw_regenerate_ramp();
     init_telemetry();
-    callback_pid(confparam,0,handle);
     callback_temp_pid(confparam,0,handle);
     callback_ext_interrupter(confparam,0,handle);
     callback_ConfigFunction(confparam,0,handle);
@@ -527,14 +498,6 @@ uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, TERMINA
 ******************************************************************************/
 uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     
-    return 1;
-}
-
-/*****************************************************************************
-* Callback for overcurrent module
-******************************************************************************/
-uint8_t callback_i2tFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
-    i2t_set_limit(configuration.max_const_i,configuration.max_fault_i,10000);
     return 1;
 }
 
@@ -863,13 +826,6 @@ uint8_t CMD_bus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
 		ttprintf("BUS OFF\r\n");
         return TERM_CMD_EXIT_SUCCESS;
 	}
-    return TERM_CMD_EXIT_SUCCESS;
-}
-/*****************************************************************************
-* Resets the software fuse
-******************************************************************************/
-uint8_t CMD_fuse(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
-    i2t_reset();
     return TERM_CMD_EXIT_SUCCESS;
 }
 

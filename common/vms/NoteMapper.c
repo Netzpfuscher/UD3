@@ -13,6 +13,7 @@
 #include "helper/nvm.h"
 #include "interrupter.h"
 #include "cli_common.h"
+#include "tasks/tsk_cli.h"
 
 static MAPTABLE_HEADER_t * channelMap[MIDI_CHANNELCOUNT];
 static uint32_t Mapper_getNextVoice(uint8_t note, uint8_t channel);
@@ -33,6 +34,7 @@ static uint32_t isHeaderValid(MAPTABLE_HEADER_t * header){
 
 static void loadNewProgramm(uint32_t channel, uint32_t programm){
     //unlike in the MidiBox implementation the map list will always remain in flash instead of being loaded into ram
+    TERM_printDebug(min_handle[1], "loading mapentry\r\n");               
     
     //find map in NVM
     channelMap[channel] = NULL;
@@ -67,7 +69,7 @@ static void loadNewProgramm(uint32_t channel, uint32_t programm){
     }
 
     //did we find the required map? If not: set the default map
-    if(channelMap[channel] == NULL) channelMap[channel] = (MAPTABLE_HEADER_t *) &DEFMAP;
+    if(channelMap[channel] == NULL) channelMap[channel] = (MAPTABLE_HEADER_t *) &DEFMAP;        
 }
 
 void Mapper_bendHandler(uint32_t channel){
@@ -82,10 +84,14 @@ void Mapper_noteOffEventHandler(uint32_t output, uint32_t note, uint32_t channel
     VMSW_stopNote(output, note, channel);
 }
 
+void Mapper_programmChangeHandler(uint32_t channel, uint32_t programm){
+    loadNewProgramm(channel, programm);
+}
+
 void Mapper_noteOnEventHandler(uint32_t output, uint32_t note, uint32_t velocity, uint32_t channel, uint32_t programm){
     //does the map loaded still match the one required?
     if(channelMap[channel] == 0 || (channelMap[channel]->programNumberStart > programm || channelMap[channel]->programNumberEnd < programm)){
-        //nope, reload the new data and free current one if necessary
+        //reload the new data
         loadNewProgramm(channel, programm);
     }
     
@@ -97,7 +103,7 @@ void Mapper_noteOnEventHandler(uint32_t output, uint32_t note, uint32_t velocity
     for(uint32_t currEntryIdx = 0; currEntryIdx < channelMap[channel]->listEntries; currEntryIdx++){
         //get pointer to current entry
         currEntry = MAPPER_ENTRY_FROM_HEADER(channelMap[channel], currEntryIdx);
-        
+          
         //does the note fall within the range of the current header entry?
         if(note >= currEntry->startNote && note <= currEntry->endNote){
             //yes :) add entry to the list of ones to process

@@ -27,7 +27,12 @@ SIDFilterData_t SID_filterData = {
 void SidFilter_updateVoice(uint32_t channel, SIDChannelData_t * channelData){
     
     //is this voice even on?
-    if(channelData->currentEnvelopeVolume != 0 && channelData->frequency_dHz != 0 && SID_filterData.channelVolume[channel] != 0 && (channel != 2 || !(channelData->flags & SID_FRAME_FLAG_CH3OFF))){
+    if(    channelData->currentEnvelopeVolume != 0      //adsr volume > 0?
+        && channelData->frequency_dHz != 0              //frequency not set to 0 (done when resetting voices after sid timeout for example)
+        && !(channelData->flags & SID_FRAME_FLAG_TEST)  //test bit not set, that would have the side effect of disabling output on a realy sid
+        && SID_filterData.channelVolume[channel] != 0   //master volume for the channel > 0?
+        && (channel != 2 || !(channelData->flags & SID_FRAME_FLAG_CH3OFF))  //check for ch3off bit, of course only for channel 3
+    ){
         //yes
         
         //calculate ontime 
@@ -48,11 +53,15 @@ void SidFilter_updateVoice(uint32_t channel, SIDChannelData_t * channelData){
             //noise volume (if noise is on)
             if((channelData->flags & SID_FRAME_FLAG_NOISE) && (SID_filterData.noiseVolume != MAX_VOL)) totalVolume = (totalVolume * SID_filterData.noiseVolume) >> 15;
             
+            totalVolume += (channelData->frequency_dHz>>3);
+            if(totalVolume > MAX_VOL) totalVolume = MAX_VOL;
+            
             //half volume scale for hpv is done in hpv calc code
    
         //calculate hpv stuff
             uint32_t hpvCount = 0;
             uint32_t hpvPhase = 0;
+            uint32_t hpvVolume = totalVolume;
             
             //is hpv even required?
             //TODO evaluate having a hpv enable for every voice
@@ -63,7 +72,16 @@ void SidFilter_updateVoice(uint32_t channel, SIDChannelData_t * channelData){
                 
                 //also scale volume down by half
                 //TODO evaluate how good this actually sounds
-                totalVolume = totalVolume >> 1;
+                //totalVolume = totalVolume >> 1;
+                //ontime = ontime >> 1;
+                
+                
+                //start scaling down the volume starting from 1kHz to 1,32767kHz
+                if(channelData->frequency_dHz > 10000){
+                    hpvVolume = (hpvVolume * (18192 - channelData->frequency_dHz)) >> 13;
+                }else if(channelData->frequency_dHz >= 18192){
+                    hpvVolume = 0;
+                }
             }
             
         //is noise required?
@@ -95,13 +113,12 @@ void SidFilter_updateVoice(uint32_t channel, SIDChannelData_t * channelData){
                 
                 frequency_dHz = 20000 + ((frequency_dHz * 24576) >> 14);
                 
-                //also reduce the ontime a bit
-                ontime >>= 1;
+                
             }
             
         //and finally update siggen
             SigGen_setVoiceSID(channel, 1, ontime, totalVolume, frequency_dHz, noiseAmplitude);
-            
+            SigGen_setHyperVoiceSID(channel, hpvCount, ontime, totalVolume, hpvPhase);
             
     }else{
         //no, channel muted. Just switch it off in siggen

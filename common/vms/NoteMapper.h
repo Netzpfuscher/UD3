@@ -72,6 +72,7 @@ typedef struct {
 
 
 void Mapper_noteOffEventHandler(uint32_t output, uint32_t note, uint32_t channel);
+void Mapper_programmChangeHandler(uint32_t channel, uint32_t programm);
 void Mapper_bendHandler(uint32_t channel);
 void Mapper_init();
 void Mapper_volumeChangeHandler(uint32_t channel);

@@ -205,7 +205,7 @@ uint32_t SigGen_getCurrDuty(){
 
 //phase is 0-100% fixed point with a maximum of 1024=1
 static void SigGen_setHyperVoiceParams(uint32_t voice, uint32_t count, uint32_t pulseWidth, uint32_t volume, uint32_t phase){
-    if(count == 0 || taskData->voice[voice].noiseAmplitude || masterVolume == 0){
+    if(count == 0 || taskData->voice[voice].noiseAmplitude || masterVolume == 0 || volume == 0){
         taskData->voice[voice].limitedHpvPulseWidth_us = 0;
         taskData->voice[voice].hpvPulseWidth_us = 0;
         
@@ -237,20 +237,13 @@ uint8_t divder = 0xff;
 
 static void SigGen_setVoiceParams(uint32_t voice, uint32_t enabled, int32_t pulseWidth, int32_t volume, int32_t frequencyTenths, int32_t noiseAmplitude, int32_t burstOn_us, int32_t burstOff_us){
     IsOkToPrint = 1;
-    //if(--divder == 0) TERM_printDebug(min_handle[1], "set voice param: %d en=%d freq=%d pw=%d vol=%d burstOn=%d burstOff=%d\r\n", voice, enabled, frequencyTenths, pulseWidth, volume, burstOn_us, burstOff_us);
     
     //check if voice is switching on
     uint32_t willBeOn = enabled && (volume != 0) && (frequencyTenths != 0);
     
     //is the voice switching on?
     if(!taskData->voice[voice].enabled && willBeOn){
-        //yes voice was off before and will be on after this. Check pulsebuffer length
-        if(taskData->bufferLengthInCounts > SIGGEN_MS_TO_PERIOD_COUNT(SIGGEN_LONG_DELAY_THRESHOLD_ms)){
-            //pulsebuffer is massive at the moment and will cause a long delay, trigger print
-            TERM_printDebug(min_handle[1], "lag! %d Count=%d\r\n", --divder, RingBuffer_getDataCount(taskData->pulseBuffer));
-        }
-        
-        //also reset the timebase for the note
+        //yes => reset the timebase for the note
         taskData->voice[voice].counter = 0;
     }
     
@@ -302,19 +295,58 @@ static void SigGen_setVoiceParams(uint32_t voice, uint32_t enabled, int32_t puls
     SigGen_limit();
 }
 
+static uint32_t getFixedDutyOntime(int32_t pulseWidth, int32_t frequencyTenths, uint32_t noiseOn){
+    //check for maximum frequency
+    if(frequencyTenths > 200000) return 0;
+    
+    //calculate the pulsewidth we need to achive the target dutycycle
+    
+    //target dutycycle is scaled 0-max_tr_duty with the ontime slider
+    
+    //targetDuty = max_duty * (pw/max_tr_pw)
+    
+    //target ontime = targetDuty / target frequency = max_duty * (pw/max_tr_pw) * 1/targetFrequency
+    //target ontime_us = targetDuty / target frequency = max_duty * (pw/max_tr_pw) * 1/targetFrequency * 1e6
+    
+    //units:                 [us]        [thousands - 1/10%]                       [us]
+    //                                   [         1/1000 %          ]
+    //                     [                                  1/1000 %                            ]       range: 0-100000  
+    //                     [                                  1/1000 %                            ]       range: 0-100000  
+    //                     [                                  1/10000 %  aka 0.1ppm                         ]       range: 0-10000000  
+    //                     [                                  1/10000 %  aka 0.1ppm                         ] /      [10/s]
+    //                     [                                  1/10000 %  aka 0.1ppm                         ] *      [s/10]
+    //                     [                                               us                                                  ]
+    int32_t targetOt_us = (((pulseWidth * configuration.max_tr_duty * 100) / (configuration.max_tr_pw)) * 100) / frequencyTenths;
+    
+    if(noiseOn) targetOt_us = ((targetOt_us * 3) >> 1);
+    
+    //TODO perhaps start reducing this as we approach a very low volume?
+    
+    //would that exceed the maximum pw?
+    if(targetOt_us > configuration.max_tr_pw) targetOt_us = configuration.max_tr_pw;
+    
+    return targetOt_us;
+}
+
 //wrappers for writing the voice configs from the different synthesizer modes
 void SigGen_setVoiceVMS(uint32_t voice, uint32_t enabled, int32_t pulseWidth, int32_t volume, int32_t frequencyTenths, int32_t noiseAmplitude, int32_t burstOn_us, int32_t burstOff_us){
     if(synthMode != SYNTH_MIDI) return;
-    SigGen_setVoiceParams(voice, enabled, pulseWidth, volume, frequencyTenths, noiseAmplitude, burstOn_us, burstOff_us);
+    
+    SigGen_setVoiceParams(voice, enabled, getFixedDutyOntime(pulseWidth, frequencyTenths, noiseAmplitude > 0), volume, frequencyTenths, noiseAmplitude, burstOn_us, burstOff_us);
 }
 void SigGen_setHyperVoiceVMS(uint32_t voice, uint32_t count, uint32_t pulseWidth, uint32_t volume, uint32_t phase){
     if(synthMode != SYNTH_MIDI) return;
-    SigGen_setHyperVoiceParams(voice, count, pulseWidth, volume, phase);
+    SigGen_setHyperVoiceParams(voice, count, getFixedDutyOntime(pulseWidth, taskData->voice[voice].frequencyTenths, 0), volume, phase);
 }
 
 void SigGen_setVoiceSID(uint32_t voice, uint32_t enabled, int32_t pulseWidth, int32_t volume, int32_t frequencyTenths, int32_t noiseAmplitude){
     if(synthMode != SYNTH_SID) return;
-    SigGen_setVoiceParams(voice, enabled, pulseWidth, volume, frequencyTenths, noiseAmplitude, 0, 0);
+    SigGen_setVoiceParams(voice, enabled, getFixedDutyOntime(pulseWidth, frequencyTenths, noiseAmplitude > 0), volume, frequencyTenths, noiseAmplitude, 0, 0);
+}
+
+void SigGen_setHyperVoiceSID(uint32_t voice, uint32_t count, uint32_t pulseWidth, uint32_t volume, uint32_t phase){
+    if(synthMode != SYNTH_SID) return;
+    SigGen_setHyperVoiceParams(voice, count, getFixedDutyOntime(pulseWidth, taskData->voice[voice].frequencyTenths, 0), volume, phase);
 }
 
 void SigGen_setVoiceTR(uint32_t enabled, int32_t pulseWidth, int32_t volume, int32_t frequencyTenths, int32_t burstOn_us, int32_t burstOff_us){

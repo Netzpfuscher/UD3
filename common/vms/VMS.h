@@ -10,7 +10,7 @@ typedef struct _VMS_VoiceData_t_ VMS_VoiceData_t;
 
 typedef enum {TONE_NORMAL, TONE_NOISE, TONE_SINGE_SHOT} ToneType;
 typedef enum {VMS_INVALID, VMS_EXP, VMS_EXP_INV, VMS_LIN, VMS_SIN, VMS_JUMP} VMS_MODTYPE;
-typedef enum {maxOnTime, minOnTime, onTime, volumeCurrent, volumeTarget, volumeFactor, frequency, freqCurrent, freqTarget, freqFactor, noise, pTime, circ1, circ2, circ3, circ4, CC_102, CC_103, CC_104, CC_105, CC_106, CC_107, CC_108, CC_109, CC_110, CC_111, CC_112, CC_113, CC_114, CC_115, CC_116, CC_117, CC_118, CC_119, HyperVoice_Count, HyperVoice_Phase, HyperVoice_Volume, KNOWNVAL_MAX, ANNOYINGPAD=0xffff} KNOWN_VALUE;
+typedef enum {maxOnTime, minOnTime, onTime, otCurrent, otTarget, otFactor, frequency, freqCurrent, freqTarget, freqFactor, noise, pTime, circ1, circ2, circ3, circ4, CC_102, CC_103, CC_104, CC_105, CC_106, CC_107, CC_108, CC_109, CC_110, CC_111, CC_112, CC_113, CC_114, CC_115, CC_116, CC_117, CC_118, CC_119, HyperVoice_Count, HyperVoice_Phase, HyperVoice_Volume, volume, volumeCurrent, volumeTarget, volumeFactor, KNOWNVAL_MAX, ANNOYINGPAD=0xffff} KNOWN_VALUE;
 typedef enum {RISING, FALLING, ANY, NONE} DIRECTION;
 typedef enum {INVERTED = 0, NORMAL = 1} NOTEOFF_BEHAVIOR;
 
@@ -97,7 +97,7 @@ typedef struct{
     KNOWN_VALUE sourceId    : 8;
     int32_t     rangeStart  : 12;
     int32_t     rangeEnd    : 12;
-} RangeParameters;
+} __attribute__((packed)) RangeParameters;
 
 struct _VMS_BLOCK_ {
     //next block indices
@@ -116,10 +116,10 @@ struct _VMS_BLOCK_ {
     
     uint32_t periodMs;
     uint32_t flags;
-};
+} __attribute__ ((packed));
 
 //WARNING: don't remove the packed attribute. This allow accesses to this datatype to be not aligned to word boundaries, which is essential for readout from the usb command buffer
-typedef struct  __attribute__ ((packed)) {
+typedef struct{
     uint32_t uid;
     uint32_t nextBlocks[VMS_MAX_BRANCHES];    //NOTE: used to be VMS_BLOCK*, but since that is changed to an ID during write it is acceptable to instead use uint32_t
     uint32_t offBlock;
@@ -133,7 +133,7 @@ typedef struct  __attribute__ ((packed)) {
     int32_t param3;
     uint32_t period;
     uint32_t flags;
-} VMS_LEGAYBLOCK_t;
+} __attribute__ ((packed))  VMS_LEGAYBLOCK_t;
 
 void VMS_removeBlocksWithTargetVoice(uint32_t targetVoice);
 uint32_t VMS_isBlockValid(VMS_Block_t * block);

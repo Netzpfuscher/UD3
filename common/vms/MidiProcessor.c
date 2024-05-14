@@ -170,6 +170,7 @@ void MidiProcessor_processCmd(uint32_t cable, uint32_t channel, uint32_t cmd, ui
     }else if(cmd == MIDI_CMD_PROGRAM_CHANGE){
         //programm was changed, call mapper and update the map data pointer
         channelDescriptors[channel].programm = param1;
+        Mapper_programmChangeHandler(channel, param1);
     }
 }
 

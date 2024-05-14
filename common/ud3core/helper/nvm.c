@@ -25,6 +25,7 @@
 #include "NoteMapper.h"
 #include "VMS.h"
 #include "stdlib.h"
+#include "tasks/tsk_cli.h"
 
 
 #define NVM_START_ADDR 0x38000
@@ -117,6 +118,14 @@ uint8_t nvm_write_buffer(uint16_t index, uint8_t* buffer, int32_t len){
         
         buffer+=write_len;
         
+        #if NVM_DEBUG
+            /*for(int i=0; i<NVM_PAGE_SIZE; i++){
+                TERM_printDebug(min_handle[1], "%02X:%c ", page_content[i], page_content[i]);   
+            }*/
+            //TERM_printDebug(min_handle[1], "\r\n");
+            TERM_printDebug(min_handle[1], "page: %u addr: %04X n_pages %u write_len: %u index: %u offset: %u \r\n", page, page_addr, n_pages, write_len, index, write_offset);
+        #endif
+        
         if(write_offset){
             len-=(NVM_PAGE_SIZE-write_offset);
             index+=NVM_PAGE_SIZE;
@@ -126,14 +135,6 @@ uint8_t nvm_write_buffer(uint16_t index, uint8_t* buffer, int32_t len){
             index+=NVM_PAGE_SIZE;
         }
         n_pages++;
-        
-        #if NVM_DEBUG
-            for(int i=0; i<NVM_PAGE_SIZE; i++){
-                ttprintf("%02X:%c ", page_content[i], page_content[i]);   
-            }
-            ttprintf("\r\n");
-            ttprintf("page: %u addr: %04X n_pages %u write_len: %u\r\n", page, page_addr, n_pages, write_len);
-        #endif
 
     }
     
@@ -145,11 +146,7 @@ void VMS_init_blk(VMS_Block_t* blk){
 }
 
 void VMS_print_blk(TERMINAL_HANDLE* handle, VMS_Block_t* blk, uint8_t indent){
-    /*
-    
-    //TODO reimplement this
-    
-    ttprintf("%*sBlock ID: %u @ 0x%08X\r\n", indent, "", blk->uid, blk);
+/*    ttprintf("%*sBlock ID: %u @ 0x%08X\r\n", indent, "", id, blk);
     indent++;
     for(int i=0;i<VMS_MAX_BRANCHES;i++){
         if(blk->nextBlocks[i] == NO_BLK){
@@ -285,31 +282,31 @@ void VMS_print_blk(TERMINAL_HANDLE* handle, VMS_Block_t* blk, uint8_t indent){
     ttprintf("%*sParam 3: %i\r\n", indent, "", blk->param3);
     ttprintf("%*sPeriod: %u\r\n", indent, "", blk->period);
     ttprintf("%*sFlags: 0x%08X\r\n\r\n", indent, "", blk->flags);
- */
+*/
 }
 
 MAPTABLE_HEADER_t* VMS_print_map(TERMINAL_HANDLE* handle, MAPTABLE_HEADER_t* map){
-    /*
-    //TODO reimplement this
+    if(!map->listEntries){
+        return NULL;
+    }
     
-    
-    ttprintf("\r\nProgram: %u - %s\r\n", map->programNumber, map->name);
-    MAPTABLE_ENTRY* ptr = (MAPTABLE_ENTRY*)(map+1);
+    ttprintf("\r\nProgram: %u to %u - %s\r\n", map->programNumberStart, map->programNumberEnd, map->name);
+    MAPTABLE_ENTRY_t* ptr = (MAPTABLE_ENTRY_t*)(map+1);
     for(uint32_t i=0;i<map->listEntries;i++){
         ttprintf("   Note range: %u - %u\r\n", ptr->startNote, ptr->endNote);
         ttprintf("   Note frequency: %u\r\n", ptr->data.noteFreq);
         ttprintf("   Target ontime : %u\r\n", ptr->data.targetOT);
         ttprintf("   Flags         : 0x%04x\r\n", ptr->data.flags);
-        ttprintf("   Start block   : 0x%04x\r\n\r\n", ptr->data.VMS_Startblock);
+        ttprintf("   Start block   : 0x%04x\r\n\r\n", ptr->data.startblockID);
         ptr++;
     }
     
-    map = (MAPTABLE_HEADER*)ptr;
+    map = (MAPTABLE_HEADER_t*)ptr;
     if(map->listEntries){
         return map;
     }else{
         return NULL;
-    }*/
+    }
     return NULL;
 }
 

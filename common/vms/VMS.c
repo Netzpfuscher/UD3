@@ -12,6 +12,7 @@
 #include "task.h"
 #include "semphr.h"
 #include "utilH/include/util.h"
+#include "tasks/tsk_cli.h"
 
 static DLLObject * VMS_listHead = 0;
 
@@ -149,6 +150,17 @@ static unsigned VMS_hasReachedThreshold(VMS_Block_t * block, int32_t factor, int
     //is it a VMS_JUMP block? If so just return 1, as it immediately sets the target value anyway
     if(block->type == VMS_JUMP) return 1;
     
+    //add a special case for compatibility with old vms blocks:
+    //is this an old portamento block? That was a linear one with parameter 1 (aka m/steepness) variable and sourced from ptime
+    //first check if p1 is even variable
+    if(block->flags & VMS_FLAG_ISVARIABLE_PARAM1){
+        //yes => load range parameters
+        RangeParameters * range = &block->param1;
+        
+        //is the source pTime? If so just say we reached the end of the block
+        if(range->sourceId == pTime) return 1;
+    }
+    
     //check for threshold direction and return accordingly
     switch(VMS_getThresholdDirection(block, param1)){
         case RISING:
@@ -255,7 +267,7 @@ static unsigned VMS_calculateValue(VMS_listDataObject * data){
             }
             currFactor = (currFactor * param1) / 1000;
             
-            if(param1 < 1000 && currFactor < 1000){
+            if(param1 < 5000 && currFactor < 5000){
                 currFactor = 0;
             }
             
@@ -272,7 +284,7 @@ static unsigned VMS_calculateValue(VMS_listDataObject * data){
             
         case VMS_LIN:
             currFactor += param1;
-            //if(block->target == frequency) UART_print("frequency lin: factor = %d, param1 = %d\r\n", currFactor, param1);
+            
             break;
         case VMS_SIN:
             d = (SINE_DATA *) data->data;

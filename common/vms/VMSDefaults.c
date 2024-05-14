@@ -6,7 +6,8 @@ const VMS_Block_t VMS_DEFAULT_ATTAC = {
     .offBlock = VMS_BLOCKID_DEFRELEASE,
     .behavior = NORMAL,
     
-    .target = volumeCurrent,
+    .periodMs = 1,
+    .target = volume,
     .targetFactor = 1000000,
     .type = VMS_JUMP,
 };
@@ -16,8 +17,9 @@ const VMS_Block_t VMS_DEFAULT_SUSTAIN = {
     .offBlock = VMS_BLOCKID_DEFRELEASE,
     .behavior = NORMAL,
     
+    .periodMs = 1,
     .flags = VMS_FLAG_ISBLOCKPERSISTENT,
-    .target = volumeCurrent,
+    .target = volume,
     .targetFactor = 1000000,
     .type = VMS_JUMP
 };
@@ -26,7 +28,8 @@ const VMS_Block_t VMS_DEFAULT_RELEASE = {
     .nextBlocks[0] = VMS_BLOCKID_INVALID,
     .behavior = INVERTED,
     
-    .target = volumeCurrent,
+    .periodMs = 1,
+    .target = volume,
     .targetFactor = 0,
     .type = VMS_JUMP
 };

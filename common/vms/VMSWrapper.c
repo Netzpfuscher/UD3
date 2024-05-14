@@ -50,7 +50,15 @@ void VMSW_init(){
 static void VMSW_task(void * params){
     while(1){
         //run VMS service
-        VMS_run();
+        
+        //does the synth mode require vms?
+        if(param.synth == SYNTH_MIDI){
+            //yes => run it
+            VMS_run();
+        }else{
+            //no => save some cpu cycles
+            vTaskDelay(pdMS_TO_TICKS(100));
+        }
         vTaskDelay(1);
     }
 }
@@ -202,12 +210,21 @@ int32_t VMSW_getKnownValue(KNOWN_VALUE ID, uint32_t output, uint32_t voiceId){
             return configuration.max_tr_pw;
         case minOnTime:
             return 0;
+        
+        case otCurrent:
+            return voiceData[output][voiceId].onTimeCurrent;
+        case otTarget:
+            return voiceData[output][voiceId].onTimeTarget;
+        case otFactor:
+            return voiceData[output][voiceId].onTimeFactor;
+            
         case volumeCurrent:
             return voiceData[output][voiceId].volumeCurrent;
         case volumeTarget:
             return voiceData[output][voiceId].volumeTarget;
         case volumeFactor:
             return voiceData[output][voiceId].volumeFactor;
+            
         case freqCurrent:
             return voiceData[output][voiceId].freqCurrent;
         case freqTarget:
@@ -260,7 +277,7 @@ void VMSW_setKnownValue(KNOWN_VALUE ID, int32_t value, uint32_t output, uint32_t
             
             break;
         
-        case volumeCurrent:
+        case volume:
             //update volume. ontime is no longer used up until the very last stage
             vData->volumeFactor = value;
             
@@ -358,6 +375,8 @@ int32_t VMSW_getCurrentFactor(KNOWN_VALUE ID, uint32_t output, uint32_t voiceId)
         default:
             return 0;
         case onTime:
+            return voiceData[output][voiceId].onTimeFactor;
+        case volume:
             return voiceData[output][voiceId].volumeFactor;
         case frequency:
             return voiceData[output][voiceId].freqFactor;

@@ -109,7 +109,7 @@ typedef struct {
 } MAP_HEADER_WIRE_DATA_t;
 
 typedef struct {
-    uint32_t id;
+    //uint8_t id;
     MAPTABLE_ENTRY_t entry;
 } MAP_ENTRY_WIRE_DATA_t;
 
@@ -196,15 +196,15 @@ void process_synth(uint8_t *min_payload, uint8_t len_payload){
             break;
         case SYNTH_CMD_SID:
             param.synth=SYNTH_SID;
-            SigGen_switchSynthMode(SYNTH_SID);
+            callback_SynthFunction(0,0,0);
             break;
         case SYNTH_CMD_MIDI:
             param.synth=SYNTH_MIDI;
-            SigGen_switchSynthMode(SYNTH_MIDI);
+            callback_SynthFunction(0,0,0);
             break;
         case SYNTH_CMD_OFF:
             param.synth=SYNTH_OFF;
-            SigGen_switchSynthMode(SYNTH_OFF);
+            callback_SynthFunction(0,0,0);
             break;
   }
 }
@@ -294,7 +294,7 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
     
     static MAP_HEADER_WIRE_DATA_t* map_header;
     static MAPTABLE_ENTRY_t* map_entries;
-    static MAP_ENTRY_WIRE_DATA_t* map_entry;
+    volatile static MAP_ENTRY_WIRE_DATA_t* map_entry;
     static uint8_t n_map_entry=0;
     static uint16_t last_write_index=0;
     
@@ -308,15 +308,23 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
             //convert wire byte to vms stuff
             VMS_WIRE_DATA_t * data = (VMS_WIRE_DATA_t *) min_payload;
             nvm_write_buffer(MAPMEM_SIZE + (sizeof(VMS_Block_t) * (data->id)), (uint8_t*) &(data->block), sizeof(VMS_Block_t));
+            TERM_printDebug(min_handle[1], "got block: %d target=%d\r\n", data->id, data->block.target);
             
             break;
         case VMS_WRT_MAP_HEADER:
-            map_header = (MAP_HEADER_WIRE_DATA_t*) min_payload;
+            //header will be needed again later, allocate ram
+            if(map_header != NULL) vPortFree(map_header);
+            map_header = pvPortMalloc(sizeof(MAP_HEADER_WIRE_DATA_t));
+            memcpy(map_header, min_payload, sizeof(MAP_HEADER_WIRE_DATA_t));
+            
             if (map_header->header.listEntries != 0) {
                 map_entries = pvPortMalloc(sizeof(MAPTABLE_ENTRY_t) * map_header->header.listEntries);
+                
+                TERM_printDebug(min_handle[1], "got header for %s with count %d\r\n", map_header->header.name, map_header->header.listEntries);
             } else {
                 nvm_write_buffer(last_write_index, (uint8_t*)&(map_header->header), sizeof(MAPTABLE_HEADER_t));
                 last_write_index += sizeof(MAPTABLE_HEADER_t);
+                vPortFree(map_header);
                 map_header = NULL;
             }
             n_map_entry = 0;
@@ -326,14 +334,19 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
                 
                 //copy the data 
                 map_entry = (MAP_ENTRY_WIRE_DATA_t*) min_payload;
-                memcpy(&map_entries[n_map_entry], &(map_entry->entry), sizeof(MAP_ENTRY_WIRE_DATA_t));
+                memcpy(&map_entries[n_map_entry], &(map_entry->entry), sizeof(MAPTABLE_ENTRY_t));
                 n_map_entry++;
                 
+                TERM_printDebug(min_handle[1], "got mapentry %d of %d: id=%d notes=%d-%d freq=%d flags=%02x ot=%d startBlock=%d\r\n", n_map_entry, map_header->header.listEntries, 0, map_entry->entry.startNote, map_entry->entry.endNote, map_entry->entry.data.noteFreq, map_entry->entry.data.flags, map_entry->entry.data.targetOT, map_entry->entry.data.startblockID);
+                
                 if(n_map_entry == map_header->header.listEntries){
-                    nvm_write_buffer(last_write_index, (uint8_t*)map_header, sizeof(MAPTABLE_HEADER_t));
+                    TERM_printDebug(min_handle[1], "write map: %s\r\n", map_header->header.name);
+                    
+                    nvm_write_buffer(last_write_index, (uint8_t*)&(map_header->header), sizeof(MAPTABLE_HEADER_t));
                     last_write_index += sizeof(MAPTABLE_HEADER_t);
                     nvm_write_buffer(last_write_index, (uint8_t*)map_entries, sizeof(MAPTABLE_ENTRY_t) * map_header->header.listEntries);
                     last_write_index += sizeof(MAPTABLE_ENTRY_t) * map_header->header.listEntries;
+                    
                     vPortFree(map_entries);
                     vPortFree(map_header);
                     map_entries = NULL;
@@ -346,8 +359,9 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
         case VMS_WRT_FLUSH:
             last_write_index=0;
             nvm_flush();
-            vPortFree(map_entries);
-            vPortFree(map_header);
+            if(map_entries != NULL) vPortFree(map_entries);
+            if(map_header != NULL) vPortFree(map_header);
+            map_header = NULL;
             for(uint8_t i=0;i<NUM_MIN_CON;i++){
                 if(socket_info[i].socket==SOCKET_CONNECTED){
                     TERMINAL_HANDLE* handle = min_handle[i];
@@ -360,6 +374,9 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
         default:
             break;
     }
+            
+    
+    if(map_header != NULL) vPortFree(map_header);
 }
 
 void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_payload, uint8_t port)

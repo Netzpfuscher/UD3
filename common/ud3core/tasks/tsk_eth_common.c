@@ -123,14 +123,14 @@ void process_min_sid(uint8_t* ptr, uint16_t len) {
             //is noise bit set?
             if(*ptr & 0x80) SID_frame.flags[i] |= SID_FRAME_FLAG_NOISE;
             
-            //is TRI bit set?
-            if(*ptr & 0x40) SID_frame.flags[i] |= SID_FRAME_FLAG_TRIANGLE;
+            //is SQR bit set?
+            if(*ptr & 0x40) SID_frame.flags[i] |= SID_FRAME_FLAG_SQUARE;
             
             //is SAW bit set?
             if(*ptr & 0x20) SID_frame.flags[i] |= SID_FRAME_FLAG_SAWTOOTH;
             
-            //is SQR bit set?
-            if(*ptr & 0x10) SID_frame.flags[i] |= SID_FRAME_FLAG_SQUARE;
+            //is TRI bit set?
+            if(*ptr & 0x10) SID_frame.flags[i] |= SID_FRAME_FLAG_TRIANGLE;
             
             //is TEST bit set?
             if(*ptr & 0x08) SID_frame.flags[i] |= SID_FRAME_FLAG_TEST;

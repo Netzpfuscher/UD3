@@ -288,14 +288,26 @@ void VMSW_setKnownValue(KNOWN_VALUE ID, int32_t value, uint32_t output, uint32_t
                 //volume is max, no need to scale the volume, just write a scaled down version of the factor into the voice
                 vData->volumeCurrent = value >> 4; //LOSSY the axual divisor should be 15.258...
             }else{
+            }
+            
+            if(vData->volumeFactor == 1000000){
+                vData->volumeCurrent = vData->volumeTarget; //62500 = 1000000 >> 4
+            }else{
                 vData->volumeCurrent = (((uint32_t)value>>4) *  vData->volumeTarget) / 62500; //62500 = 1000000 >> 4
             }
             
-            if(vData->volumeCurrent == MAX_VOL){
-                //volume is max, no need to scale the volume, just write a scaled down version of the factor into the voice
-                vData->hypervoiceVolumeCurrent = vData->hypervoiceVolumeFactor >> 4; //LOSSY the axual divisor should be 15.258...
-            }else{
-                vData->hypervoiceVolumeCurrent = (((uint32_t)vData->hypervoiceVolumeFactor>>4) *  vData->volumeCurrent) / 62500; //62500 = 1000000 >> 4
+            //is hypervoice enabled? If so also update its volume
+            if(vData->hypervoiceCount > 0){
+                //get the current volume from the factor. We need to scale this to prevent overflow :/
+                
+                if(vData->hypervoiceVolumeFactor == 1000000){
+                    //volume is max, no need to scale the volume, just write a scaled down version of the factor into the voice
+                    vData->hypervoiceVolumeCurrent = vData->volumeCurrent; //LOSSY the axual divisor should be 15.258...
+                }else{
+                    vData->hypervoiceVolumeCurrent = (((uint32_t)value>>4) *  vData->volumeCurrent) / 62500; //62500 = 1000000 >> 4
+                }
+                
+                SigGen_setHyperVoiceVMS(voiceId, vData->hypervoiceCount / 1000000, vData->onTimeCurrent, vData->hypervoiceVolumeCurrent, vData->hypervoicePhase / 977);
             }
             
             //update siggen values
@@ -354,9 +366,9 @@ void VMSW_setKnownValue(KNOWN_VALUE ID, int32_t value, uint32_t output, uint32_t
             vData->hypervoiceVolumeFactor = value;
             
             //get the current volume from the factor. We need to scale this to prevent overflow :/
-            if(vData->volumeCurrent == MAX_VOL){
+            if(vData->hypervoiceVolumeFactor == 1000000){
                 //volume is max, no need to scale the volume, just write a scaled down version of the factor into the voice
-                vData->hypervoiceVolumeCurrent = value >> 4; //LOSSY the axual divisor should be 15.258...
+                vData->hypervoiceVolumeCurrent = vData->volumeCurrent; //LOSSY the axual divisor should be 15.258...
             }else{
                 vData->hypervoiceVolumeCurrent = (((uint32_t)value>>4) *  vData->volumeCurrent) / 62500; //62500 = 1000000 >> 4
             }

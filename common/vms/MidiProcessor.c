@@ -204,7 +204,7 @@ static void MidiProcessor_updateStereoVolume(uint32_t channel){
 static void MidiProcessor_DataHandler(uint32_t channel, uint32_t parameter){
     if(MIDIPROC_CH_CURR_RPN(channel) == MIDI_RPN_BENDRANGE){     //get the 100ths semitones for the bendrange
         channelDescriptors[channel].bendRangeRaw = MIDIPROC_CH_CURR_DATA(channel);
-        channelDescriptors[channel].bendRange = (float) channelDescriptors[channel].bendRangeRaw / 100.0;
+        //channelDescriptors[channel].bendRange = (float) channelDescriptors[channel].bendRangeRaw / 100.0;
         
         //TODO shouldn't we reset or at least re-calculate the bend-factor here?
     }

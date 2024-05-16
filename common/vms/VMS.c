@@ -321,7 +321,7 @@ static unsigned VMS_calculateValue(VMS_listDataObject * data){
     return 1;
 }
 
-//TODO evaluate refactoring :3
+//TODO evaluate refactoring :3 => evaluated aaaaand: its shit xD redo this
 static int32_t VMS_getParameter(uint8_t param, const VMS_Block_t * block, uint32_t outputId, uint32_t voiceId){
     //load a parameter from the block in flash, or compute it from a known value if the flag is set for it
     
@@ -338,7 +338,7 @@ static int32_t VMS_getParameter(uint8_t param, const VMS_Block_t * block, uint32
             break;
             
         case 2:
-            if(block->flags & VMS_FLAG_ISVARIABLE_PARAM1){
+            if(block->flags & VMS_FLAG_ISVARIABLE_PARAM2){
                 range = (RangeParameters *)&block->param2;
             }else{
                 return block->param2;
@@ -346,7 +346,7 @@ static int32_t VMS_getParameter(uint8_t param, const VMS_Block_t * block, uint32
             break;
             
         case 3:
-            if(block->flags & VMS_FLAG_ISVARIABLE_PARAM1){
+            if(block->flags & VMS_FLAG_ISVARIABLE_PARAM3){
                 range = (RangeParameters *)&block->param3;
             }else{
                 return block->param3;
@@ -354,7 +354,7 @@ static int32_t VMS_getParameter(uint8_t param, const VMS_Block_t * block, uint32
             break;
             
         case 4:
-            if(block->flags & VMS_FLAG_ISVARIABLE_PARAM1){
+            if(block->flags & VMS_FLAG_ISVARIABLE_TARGETFACTOR){
                 range = (RangeParameters *)&block->targetFactor;
             }else{
                 return block->targetFactor;
@@ -372,10 +372,14 @@ static int32_t VMS_getParameter(uint8_t param, const VMS_Block_t * block, uint32
     
     //read out value and scale accordingly
     if(source == freqCurrent){    //does the parameter selected support range mapping?
-        ret = range->rangeStart + (slope * VMSW_getKnownValue(freqCurrent, outputId, voiceId)) / 20000;
+        ret = range->rangeStart + (slope * VMSW_getKnownValue(freqCurrent, outputId, voiceId)) / 200000;
         
     }else if(source >= circ1 && source <= circ4){    //does the parameter selected support range mapping?
-        ret = range->rangeStart + (slope * (VMSW_getKnownValue(source, outputId, voiceId) >> 4)) / 62500;
+        if(slope == 0) {
+            ret = VMSW_getKnownValue(source, outputId, voiceId);
+        }else{
+            ret = range->rangeStart + (slope * (VMSW_getKnownValue(source, outputId, voiceId) >> 4)) / 62500;
+        }
         
     }else if(source >= CC_102 && source <= CC_119){    //does the parameter selected support range mapping?
         ret = range->rangeStart + (slope * VMSW_getKnownValue(source, outputId, voiceId)) / 127;
@@ -385,8 +389,10 @@ static int32_t VMS_getParameter(uint8_t param, const VMS_Block_t * block, uint32
         return VMSW_getKnownValue(source, outputId, voiceId);
     }
     
+    return ret;
+    
     //is the parameter we are trying to read variable? If not we can just return the parameter itself. Otherwise assign the RangeParameters variable
-    switch(param){
+    /*switch(param){
         case 1:
             if(source == freqCurrent){
                 if(block->type == VMS_EXP || block->type == VMS_EXP_INV){
@@ -423,8 +429,8 @@ static int32_t VMS_getParameter(uint8_t param, const VMS_Block_t * block, uint32
             
         case 3:
             return ret;
-    }
-    return 0;
+    }*/
+    //return 0;
 }
 
 static DIRECTION VMS_getThresholdDirection(const VMS_Block_t * block, int32_t param1){

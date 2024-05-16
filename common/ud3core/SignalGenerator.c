@@ -75,6 +75,10 @@ static volatile uint32_t voicesToEradicate = 0;
 #define SigGen_disableTimerISR() interrupterIRQ_Disable()
 #define SigGen_enableTimerISR() interrupterIRQ_Enable()
 
+#define SIGGEN_GET_PULSE(VOICE, TARGETPULSE) TARGETPULSE.current = VOICE.pulseVolume; TARGETPULSE.period = VOICE.counter; TARGETPULSE.onTime = VOICE.limitedPulseWidth_us;
+#define SIGGEN_GET_PULSE_HPV(VOICE, TARGETPULSE) TARGETPULSE.current = VOICE.hpvVolume; TARGETPULSE.period = VOICE.currHPVCounter; TARGETPULSE.onTime = VOICE.limitedHpvPulseWidth_us;
+#define SIGGEN_COPY_PULSE(TARGETPULSE, SRCPULSE) TARGETPULSE.current = SRCPULSE.current; TARGETPULSE.period = SRCPULSE.period; TARGETPULSE.onTime = SRCPULSE.onTime;
+
 static void SigGen_setHyperVoiceParams(uint32_t voice, uint32_t count, uint32_t pulseWidth, uint32_t volume, uint32_t phase);
 static void SigGen_setVoiceParams(uint32_t voice, uint32_t enabled, int32_t pulseWidth, int32_t volume, int32_t frequencyTenths, int32_t noiseAmplitude, int32_t burstOn_us, int32_t burstOff_us);
 
@@ -510,6 +514,43 @@ volatile uint32_t adding = 0;
 SigGen_pulseData_t currPulse;
     
 volatile uint32_t compDebug = 0;
+
+static void SigGen_overlayPulse(SigGen_pulseData_t * pulse, int32_t newVolume, int32_t newOntime){
+    //a pulse was triggered and we need to decide how to overlay it with any potentially already triggered pulses
+    
+    //ways in which we can scale this:
+    /*
+        
+        Ontime:
+            Highest
+            Lowest
+            Sum
+            Average
+            ->Loudest pulse
+            Quitest pulse
+            
+            
+        Volume:
+            Highest
+            Lowest
+            Sum
+            Average
+            ->Loudest pulse
+            Quitest pulse
+    
+    
+    */
+    
+    
+    if(newOntime > pulse->onTime) pulse->onTime = newOntime;
+    
+    pulse->current += newVolume;
+    
+    /*if(newVolume > pulse->current){
+        pulse->onTime = newOntime; //if(pulseWidth < data->voice[currVoice].limitedPulseWidth_us)
+        pulse->current = newVolume;
+    }*/
+}
     
 static void SigGen_task(void * callData){
     volatile SigGen_taskData_t * data = (SigGen_taskData_t *) callData;
@@ -533,7 +574,7 @@ static void SigGen_task(void * callData){
         
             //find next pulse to be triggered
             int32_t nextVoice = 0xffff;
-            int32_t timeToNextPulse = INT_MAX;
+            SigGen_pulseData_t nextPulse = {.current = 0, . onTime = 0, .period = INT_MAX};
             
             for(uint32_t currVoice = 0; currVoice < SIGGEN_VOICECOUNT; currVoice++){
                 //if we are in TR mode then only voice 1 is active and all others can be ignored
@@ -547,26 +588,26 @@ static void SigGen_task(void * callData){
                         //will the next pulse be a hypervoice pulse or not?
                         if(data->voice[currVoice].currHPVDivider == 0 && data->voice[currVoice].currHPVCounter < data->voice[currVoice].counter){
                             //yes, set the timeToNextPulse to the hpv counter
-                            timeToNextPulse = data->voice[currVoice].currHPVCounter;
+                            nextPulse.period = data->voice[currVoice].currHPVCounter;
                         }else{
                             //no set it to the normal counter
-                            timeToNextPulse = data->voice[currVoice].counter;
+                            nextPulse.period = data->voice[currVoice].counter;
                         }
                     }
 
                 //is the current voice's timer expiring sooner than that of the current nextVoice? 
                 }else{
                     if(data->voice[currVoice].limitedEnabled && data->voice[currVoice].limitedPulseWidth_us != 0){
-                        if((data->voice[currVoice].counter < timeToNextPulse) || (data->voice[currVoice].currHPVDivider == 0 && data->voice[currVoice].currHPVCounter < timeToNextPulse)){
+                        if((data->voice[currVoice].counter < nextPulse.period) || (data->voice[currVoice].currHPVDivider == 0 && data->voice[currVoice].currHPVCounter < nextPulse.period)){
                             nextVoice = currVoice;
 
                             //will the next pulse be a hypervoice pulse or not?
                             if(data->voice[currVoice].currHPVDivider == 0 && data->voice[currVoice].currHPVCounter < data->voice[currVoice].counter){
                                 //yes, set the timeToNextPulse to the hpv counter
-                                timeToNextPulse = data->voice[currVoice].currHPVCounter;
+                                nextPulse.period = data->voice[currVoice].currHPVCounter;
                             }else{
                                 //no set it to the normal counter
-                                timeToNextPulse = data->voice[currVoice].counter;
+                                nextPulse.period = data->voice[currVoice].counter;
                             }
                         }
                     }
@@ -587,14 +628,9 @@ static void SigGen_task(void * callData){
             //is the time longer? If so just limit it to the maximum
             //if we do this then no voice will trigger a pulse and all pulse parameters will remain at zero except for the period
             //the timer interrupt will check for this and ignore the pulse as if it was one that had its pulse muted due to burst mode
-            if(timeToNextPulse > maxPeriod_us) timeToNextPulse = maxPeriod_us;
+            if(nextPulse.period > maxPeriod_us) nextPulse.period = maxPeriod_us;
             
             noVoicesEnabled = 0;
-
-            int32_t pulseVolume = 0;
-            int32_t pulseWidth = 0;
-            uint32_t pulseSource = 0;
-            uint32_t editedSources = 0;
 
             //now the voice of which the timer expires next is indexed by nextVoice, propagate the current time to that point (aka decrease all other time counters by the delay to the next pulse)
             for(uint32_t currVoice = 0; currVoice < SIGGEN_VOICECOUNT; currVoice++){
@@ -602,17 +638,14 @@ static void SigGen_task(void * callData){
                 if(synthMode == SYNTH_TR && currVoice >= 1) break;
                 
                 if(data->voice[currVoice].limitedEnabled){ 
-                    //remember that we edited this voice
-                    editedSources |= VoiceFlags[currVoice];
-                    
                     //decrement frequency timer
-                    data->voice[currVoice].counter -= timeToNextPulse;
+                    data->voice[currVoice].counter -= nextPulse.period;
                     
                     //decrement burst timer if burst is active
-                    if(data->voice[currVoice].burstPeriod != 0) data->voice[currVoice].burstCounter -= timeToNextPulse;
+                    if(data->voice[currVoice].burstPeriod != 0) data->voice[currVoice].burstCounter -= nextPulse.period;
                     
                     //decrement hpv timer if hpv is active
-                    if(data->voice[currVoice].currHPVDivider == 0) data->voice[currVoice].currHPVCounter -= timeToNextPulse;
+                    if(data->voice[currVoice].currHPVDivider == 0) data->voice[currVoice].currHPVCounter -= nextPulse.period;
 
                     //check if a pulse needs to be sent because this timer expired (turned to 0)
                     if(data->voice[currVoice].counter <= 0){ 
@@ -636,11 +669,8 @@ static void SigGen_task(void * callData){
                             if(abs(randomizer) < data->voice[currVoice].counter) data->voice[currVoice].counter += randomizer;
                         }  //TODO verify use of "&" as randomizer scaling
 
-                        //increase volume of current pulse
-                        //TODO perhaps rework this. We need to decide what exactly we would scale, be that ontime, volume or a mix of both
-                        pulseVolume += data->voice[currVoice].pulseVolume;
-                        if(pulseWidth < data->voice[currVoice].limitedPulseWidth_us) pulseWidth = data->voice[currVoice].limitedPulseWidth_us;
-                        pulseSource |= VoiceFlags[currVoice];
+                        //overlay current pulse
+                        SigGen_overlayPulse(&nextPulse, data->voice[currVoice].pulseVolume, data->voice[currVoice].limitedPulseWidth_us);
 
                         //block timer for this iteration
                         data->voice[currVoice].alreadyTriggered = 1;
@@ -674,10 +704,8 @@ static void SigGen_task(void * callData){
                             data->voice[currVoice].currHPVDivider = INT_MAX;
                         }
                                 
-                        //increase volume of current pulse
-                        pulseVolume += data->voice[currVoice].hpvVolume;
-                        if(pulseWidth < data->voice[currVoice].limitedHpvPulseWidth_us) pulseWidth = data->voice[currVoice].limitedHpvPulseWidth_us;
-                        pulseSource |= VoiceFlags[currVoice];
+                        //overlay current pulse
+                        SigGen_overlayPulse(&nextPulse, data->voice[currVoice].hpvVolume, data->voice[currVoice].limitedHpvPulseWidth_us);
 
                         //block timer for this iteration
                         data->voice[currVoice].alreadyTriggered = 1;
@@ -699,7 +727,7 @@ static void SigGen_task(void * callData){
                 //if we are in TR mode then only voice 1 is active and all others can be ignored
                 if(synthMode == SYNTH_TR && currVoice >= 1) break;
                 
-                int32_t currentMinimumPeriod = (pulseWidth + param.offtime);
+                int32_t currentMinimumPeriod = (nextPulse.onTime + param.offtime);
                 
                 if(data->voice[currVoice].limitedEnabled){ 
                     //would the note pulse occur within the pulse or during the holdoff time after it?
@@ -718,10 +746,8 @@ static void SigGen_task(void * callData){
                         
                         //did this timer already trigger during this pulse length? If so we just skip it
                         if(!data->voice[currVoice].alreadyTriggered){
-                            //no => add the pulse volume to the current one
-                            pulseVolume += data->voice[currVoice].pulseVolume;
-                            if(pulseWidth < data->voice[currVoice].limitedPulseWidth_us) pulseWidth = data->voice[currVoice].limitedPulseWidth_us;
-                            pulseSource |= VoiceFlags[currVoice];
+                            //overlay current pulse
+                            SigGen_overlayPulse(&nextPulse, data->voice[currVoice].pulseVolume, data->voice[currVoice].limitedPulseWidth_us);
 
                             //block timer for this iteration
                             data->voice[currVoice].alreadyTriggered = 1;
@@ -749,10 +775,8 @@ static void SigGen_task(void * callData){
                         if(!data->voice[currVoice].alreadyTriggered){
                             //no => add the pulse volume to the current one. Check if the width is wider than the current one, if so use it instead
                             
-                            pulseVolume += data->voice[currVoice].hpvVolume;
-                            
-                            if(pulseWidth < data->voice[currVoice].limitedHpvPulseWidth_us) pulseWidth = data->voice[currVoice].limitedHpvPulseWidth_us;
-                            pulseSource |= VoiceFlags[currVoice];
+                            //overlay current pulse
+                            SigGen_overlayPulse(&nextPulse, data->voice[currVoice].hpvVolume, data->voice[currVoice].limitedHpvPulseWidth_us);
 
                             //block timer for this iteration
                             data->voice[currVoice].alreadyTriggered = 1;
@@ -765,22 +789,20 @@ static void SigGen_task(void * callData){
             }
             
             //limit volume of pulse
-            if(pulseVolume > MAX_VOL) pulseVolume = MAX_VOL;
+            if(nextPulse.onTime > MAX_VOL) nextPulse.onTime = MAX_VOL;
             
             //check if the voice fron which the pulse originates is muted due to burst off time. If it is then we just set the pulse current and ontime to zero.
             //we still need to add it however to prevent the buffer from running dry and the load exceeding 100%
             if(data->voice[nextVoice].burstPeriod != 0 && data->voice[nextVoice].burstCounter < data->voice[nextVoice].burstOt){
-                pulseWidth = 0;
-                pulseVolume = 0;
+                nextPulse.onTime = 0;
+                nextPulse.current = 0;
             }
             
             //we were here
             //convert the period, volume and ontime to the values that will need to be written into the hardware upon pulse execution
-            currPulse.period = SIGGEN_US_TO_PERIOD_COUNT(timeToNextPulse);
-            currPulse.onTime = SIGGEN_US_TO_OT_COUNT(pulseWidth);
-            currPulse.current = SIGGEN_VOLUME_TO_CURRENT_DAC_VALUE(pulseVolume);
-            currPulse.sourceVoices = pulseSource;
-            currPulse.editedVoices = editedSources;
+            currPulse.period = SIGGEN_US_TO_PERIOD_COUNT(nextPulse.period);
+            currPulse.onTime = SIGGEN_US_TO_OT_COUNT(nextPulse.onTime);
+            currPulse.current = SIGGEN_VOLUME_TO_CURRENT_DAC_VALUE(nextPulse.current);
             
             //write it into the buffer
             if(RingBuffer_write(data->pulseBuffer, &currPulse, 1, 0) != 1){

@@ -102,11 +102,9 @@
     } SigGen_voiceData_t;
 
     typedef struct{
-        volatile uint32_t period;
-        volatile uint32_t onTime;
-        volatile uint32_t current;
-        volatile uint32_t sourceVoices;
-        volatile uint32_t editedVoices;
+        volatile int32_t period;
+        volatile int32_t onTime;
+        volatile int32_t current;
     } volatile SigGen_pulseData_t;
 
     typedef struct{

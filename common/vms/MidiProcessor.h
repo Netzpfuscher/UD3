@@ -64,7 +64,7 @@ typedef struct{
 void MidiProcessor_init();
 void MidiProcessor_resetMidi();
 void MidiProc_setStereoConfig(uint32_t stereoPosition, uint32_t stereoWidth, uint32_t stereoSlope);
-uint32_t MidiProcessor_noteToFrequency(uint32_t note);
+uint32_t MidiProcessor_noteToFrequency_dHz(uint32_t note);
 void MidiProcessor_processCmd(uint32_t cable, uint32_t channel, uint32_t cmd, uint32_t param1, uint32_t param2);
 uint32_t MidiProcessor_getStereoVolume(uint32_t channel);
 uint32_t MidiProcessor_getCCValue(uint32_t channel, uint32_t id);

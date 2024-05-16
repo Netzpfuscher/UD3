@@ -84,6 +84,9 @@ void VMSW_startNote(uint32_t output, uint32_t startBlockID, uint32_t sourceNote,
     //would the note even be on after this? If not just go back without doing anything
     if(targetFrequency == 0 || targetVolume == 0) return;
     
+    //we also need to make sure the target frequency is not too high. VMS can only scale frequencies up to 13.7kHz. We will limit at 10kHz just to be sure
+    if(targetFrequency > 100000) return;
+    
     //TODO remove this hack once portamento works...
     flags &= ~MAP_ENA_PORTAMENTO;
     
@@ -118,7 +121,7 @@ void VMSW_startNote(uint32_t output, uint32_t startBlockID, uint32_t sourceNote,
     //portamento, check if we need to apply it first though
     if(flags & MAP_ENA_PORTAMENTO){ 
         int32_t difference = (int32_t) freqLast - (int32_t) vData->freqTarget;
-        difference = (difference * (vData->portamentoCurrent>>4)) / 62500; 
+        difference = (difference * (vData->portamentoCurrent>>6)) / 15625; 
         newFrequency += difference;
     }
     
@@ -304,7 +307,7 @@ void VMSW_setKnownValue(KNOWN_VALUE ID, int32_t value, uint32_t output, uint32_t
                     //volume is max, no need to scale the volume, just write a scaled down version of the factor into the voice
                     vData->hypervoiceVolumeCurrent = vData->volumeCurrent; //LOSSY the axual divisor should be 15.258...
                 }else{
-                    vData->hypervoiceVolumeCurrent = (((uint32_t)value>>4) *  vData->volumeCurrent) / 62500; //62500 = 1000000 >> 4
+                    vData->hypervoiceVolumeCurrent = (((uint32_t)vData->hypervoiceVolumeFactor>>4) *  vData->volumeCurrent) / 62500; //62500 = 1000000 >> 4
                 }
                 
                 SigGen_setHyperVoiceVMS(voiceId, vData->hypervoiceCount / 1000000, vData->onTimeCurrent, vData->hypervoiceVolumeCurrent, vData->hypervoicePhase / 977);
@@ -333,12 +336,12 @@ void VMSW_setKnownValue(KNOWN_VALUE ID, int32_t value, uint32_t output, uint32_t
             //portamento, check if we need to apply it first though
             if(vData->portamentoCurrent != 0){ 
                 int32_t difference = (int32_t) vData->freqLast - (int32_t) vData->freqTarget;
-                difference = (difference * (vData->portamentoCurrent>>4)) / 62500; 
+                difference = (difference * (vData->portamentoCurrent>>6)) / 15625; 
                 newFrequency += difference;
             }
             
             //and finally, the currentfreqFactor
-            if(value != 1000000) newFrequency = (newFrequency * (value>>4)) / 62500;
+            if(value != 1000000) newFrequency = (newFrequency * (value>>6)) / 15625;
             
             vData->freqCurrent = newFrequency;
             

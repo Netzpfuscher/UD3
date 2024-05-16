@@ -163,7 +163,7 @@ void Mapper_noteOnEventHandler(uint32_t output, uint32_t note, uint32_t velocity
             //octave offset mode
             int16_t currNote = note + data->noteFreq;
             if(currNote > 127 || currNote < 1) return;
-            targetFrequency = MidiProcessor_noteToFrequency(currNote) * 10;
+            targetFrequency = MidiProcessor_noteToFrequency_dHz(currNote);
         }else{
             //fixed frequency mode
             targetFrequency = data->noteFreq * 10;

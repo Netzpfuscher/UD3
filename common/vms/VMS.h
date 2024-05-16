@@ -79,6 +79,9 @@ struct _VMS_VoiceData_t_{
     
     int32_t     circ[VMS_CIRC_PARAM_COUNT];
     
+    //TODO add a safe state for killing a orphaned note by counting this up and down and killing it if its 0
+    uint32_t    referencingBlocksCount;
+    
     uint32_t    voiceIndex;
 };
 

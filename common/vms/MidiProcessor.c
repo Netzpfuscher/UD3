@@ -18,7 +18,7 @@
 #define MIDIPROC_CH_CURR_DATA(CHANNEL) (((channelDescriptors[CHANNEL].parameters[MIDI_CC_DATA_COARSE] << 8) & 0xff00) | (channelDescriptors[CHANNEL].parameters[MIDI_CC_DATA_FINE] & 0xff))
 
 //Note frequency lookup table
-static const uint16_t Midi_NoteFreq[128] = {8, 9, 9, 10, 10, 11, 12, 12, 13, 14, 15, 15, 16, 17, 18, 19, 21, 22, 23, 24, 26, 28, 29, 31, 33, 35, 37, 39, 41, 44, 46, 49, 52, 55, 58, 62, 65, 69, 73, 78, 82, 87, 92, 98, 104, 110, 117, 123, 131, 139, 147, 156, 165, 175, 185, 196, 208, 220, 233, 247, 262, 277, 294, 311, 330, 349, 370, 392, 415, 440, 466, 494, 523, 554, 587, 622, 659, 698, 740, 784, 831, 880, 932, 988, 1047, 1109, 1175, 1245, 1319, 1397, 1480, 1568, 1661, 1760, 1865, 1976, 2093, 2217, 2349, 2489, 2637, 2794, 2960, 3136, 3322, 3520, 3729, 3951, 4186, 4435, 4699, 4978, 5274, 5588, 5920, 5920, 6645, 7040, 7459, 7902, 8372, 8870, 9397, 9956, 10548, 11175, 11840, 12544};
+static const uint32_t Midi_NoteFreq_dHz[] = {82, 87, 92, 97, 103, 109, 116, 122, 130, 138, 146, 154, 164, 173, 184, 194, 206, 218, 231, 245, 260, 275, 291, 309, 327, 346, 367, 389, 412, 437, 462, 490, 519, 550, 583, 617, 654, 693, 734, 778, 824, 873, 925, 980, 1038, 1100, 1165, 1235, 1308, 1386, 1468, 1556, 1648, 1746, 1850, 1960, 2077, 2200, 2331, 2469, 2616, 2772, 2937, 3111, 3296, 3492, 3700, 3920, 4153, 4400, 4662, 4939, 5233, 5544, 5873, 6223, 6593, 6985, 7400, 7840, 8306, 8800, 9323, 9878, 10465, 11087, 11747, 12445, 13185, 13969, 14800, 15680, 16612, 17600, 18647, 19755, 20930, 22175, 23493, 24890, 26370, 27938, 29600, 31360, 33224, 35200, 37293, 39511, 41860, 44349, 46986, 49780, 52740, 55877, 59199, 62719, 66449, 70400, 74586, 79021, 83720, 88698, 93973, 99561, 105481, 111753, 118398, 125439};
 
 static MidiChannelDescriptor_t * channelDescriptors;
 
@@ -41,8 +41,8 @@ void MidiProcessor_init(){
     }
 }
 
-uint32_t MidiProcessor_noteToFrequency(uint32_t note){
-    return Midi_NoteFreq[note];
+uint32_t MidiProcessor_noteToFrequency_dHz(uint32_t note){
+    return Midi_NoteFreq_dHz[note];
 }
 
 uint32_t MidiProcessor_getLastFrequency(uint32_t channel){
@@ -183,8 +183,8 @@ static void MidiProcessor_updateStereoVolume(uint32_t channel){
     uint8_t stereoSlope = 255;
     
     int16_t sp = channelDescriptors[channel].parameters[MIDI_CC_PAN];
-    int16_t rsStart = (stereoPosition - stereoWidth - 255/stereoSlope);
-    int16_t fsEnd = (stereoPosition + stereoWidth + 255/stereoSlope);
+    int16_t rsStart = (stereoPosition - stereoWidth - MIDI_VOLUME_MAX/stereoSlope);
+    int16_t fsEnd = (stereoPosition + stereoWidth + MIDI_VOLUME_MAX/stereoSlope);
     
     
     if(sp < rsStart){                                                   //span before volume > 0
@@ -192,9 +192,9 @@ static void MidiProcessor_updateStereoVolume(uint32_t channel){
     }else if(sp > rsStart && sp < (stereoPosition - stereoWidth)){      //rising slope
         channelDescriptors[channel].stereoVolume = (sp - rsStart) * stereoSlope;
     }else if(sp < (stereoPosition + stereoWidth) && sp > (stereoPosition - stereoWidth)){   //span of 0xff
-        channelDescriptors[channel].stereoVolume = 0xff;
+        channelDescriptors[channel].stereoVolume = MIDI_VOLUME_MAX;
     }else if(sp < fsEnd && sp > (stereoPosition - stereoWidth)){        //falling slope
-        channelDescriptors[channel].stereoVolume = 0xff - (sp - stereoPosition - stereoWidth) * stereoSlope;
+        channelDescriptors[channel].stereoVolume = MIDI_VOLUME_MAX - (sp - stereoPosition - stereoWidth) * stereoSlope;
     }else if(sp > fsEnd){                                               //span after the volume curve
         channelDescriptors[channel].stereoVolume = 0;
     }

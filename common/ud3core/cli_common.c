@@ -142,6 +142,9 @@ void init_config(){
     configuration.ivo_led = 0;
     configuration.uvlo_analog = 0;
     
+    configuration.SigGen_maxOtOffset = 0;
+    configuration.SigGen_minOtOffset = 0;
+    
     configuration.min_fb_current = 25;
     
     configuration.compressor_attac = 20;
@@ -270,6 +273,8 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"comp_sustain"    , configuration.compressor_sustain  , 0      ,255    ,0      ,NULL                        ,"Compressor Sustain Setting")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"comp_release"    , configuration.compressor_release  , 0      ,255    ,0      ,NULL                        ,"Compressor Release Setting")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"comp_dutyOffset" , configuration.compressor_maxDutyOffset  , 0      ,255    ,0      ,NULL                        ,"Maximum Dutycycle offset before hard limit")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"maxDutyOffset"    , configuration.SigGen_maxOtOffset  , 0      ,100    ,0      ,callback_siggen                        ,"Compressor Release Setting")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"minDutyOffset"   , configuration.SigGen_minOtOffset  , 0      ,100    ,0      ,callback_siggen                        ,"Maximum Dutycycle offset before hard limit")
 };
 
    

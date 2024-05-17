@@ -169,6 +169,8 @@ static const char * AC_set_get[] = {
     "ivo_led",
     "ivo_uart",
     "lead_time",
+    "maxDutyOffset",
+    "minDutyOffset",
     "max_const_i",
     "max_fb_errors",
     "max_qcw_current",

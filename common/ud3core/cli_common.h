@@ -126,6 +126,9 @@ struct config_struct{
     uint8_t autostart;
     uint8_t min_fb_current;
     
+    uint8_t SigGen_maxOtOffset;
+    uint8_t SigGen_minOtOffset;
+    
     uint8_t compressor_attac;
     uint8_t compressor_sustain;
     uint8_t compressor_release;

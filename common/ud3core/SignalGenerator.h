@@ -137,6 +137,8 @@
 
     uint32_t SigGen_otToVolume(uint32_t ontime);
     uint32_t SigGen_volumeToOT(uint32_t volume);
+    
+    uint8_t callback_siggen(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 
     void SigGen_setMasterVol(uint32_t newVolume);
     

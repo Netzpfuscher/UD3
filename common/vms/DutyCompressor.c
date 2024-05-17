@@ -26,63 +26,62 @@
 #include "cli_common.h"
 #include "ZCDtoPWM.h"
 #include "SignalGenerator.h"
+#include "tasks/tsk_cli.h"
 
 #define COMPSTATE_ATTAC 0
 #define COMPSTATE_SUSTAIN 1
 #define COMPSTATE_RELEASE 2
-
-#define COMP_UNITYGAIN INT16_MAX
 
 static int32_t currGain = COMP_UNITYGAIN; //the scale of this value affects speeds, so we need to scale to the max volume later
 static uint32_t compressorState = 0; 
 static uint32_t compressorSustainCount = 0; 
 static uint32_t compressorWaitCount = 0; 
 
+static int8_t dsgfhjklbgb = 0;
+static int8_t dsgfhjklbgb2 = 0;
 
 void COMP_compress(){
-    if(++compressorWaitCount == 10){
-        compressorWaitCount = 0;
-        
-        if(configuration.compressor_attac == 0){
-            currGain = COMP_UNITYGAIN;
-            return;
-        }
-        
-        uint32_t currDuty = SigGen_getCurrDuty();
-        
-        //TODO make sure dutycycle value range is correct between implementations
-        if(currDuty > configuration.max_tr_duty){
-            compressorState = COMPSTATE_ATTAC;
-            if((currGain -= configuration.compressor_attac) < 0) currGain = 0;
+    taskENTER_CRITICAL();
+    if(configuration.compressor_attac == 0){
+        currGain = COMP_UNITYGAIN;
+        return;
+    }
+    
+    uint32_t currDuty = SigGen_getCurrDuty();
+    
+    //TODO make sure dutycycle value range is correct between implementations
+    if((currDuty*10) > configuration.max_tr_duty){
+        compressorState = COMPSTATE_ATTAC;
+        if((currGain -= configuration.compressor_attac) < 0) currGain = 0;
 
-        }else{
-            switch(compressorState){
-                case COMPSTATE_ATTAC:
-                    compressorSustainCount = 0;
-                case COMPSTATE_SUSTAIN:
-                    //did the dutycycle change?
-                    if(currDuty < configuration.max_tr_duty){
-                        if(compressorSustainCount == configuration.compressor_sustain){
-                            compressorState = COMPSTATE_RELEASE;
-                            compressorSustainCount = 0;
-                        }else{
-                            compressorState = COMPSTATE_SUSTAIN;
-                            compressorSustainCount ++;
-                        }
-                    }else{
+    }else{
+        switch(compressorState){
+            case COMPSTATE_ATTAC:
+                compressorSustainCount = 0;
+            case COMPSTATE_SUSTAIN:
+                //did the dutycycle change?
+                if(currDuty < configuration.max_tr_duty){
+                    if(compressorSustainCount == configuration.compressor_sustain){
+                        compressorState = COMPSTATE_RELEASE;
                         compressorSustainCount = 0;
+                    }else{
+                        compressorState = COMPSTATE_SUSTAIN;
+                        compressorSustainCount ++;
                     }
-                    
-                    break;
+                }else{
+                    compressorSustainCount = 0;
+                }
+                
+                break;
 
-                case COMPSTATE_RELEASE:
-                    if(currGain != COMP_UNITYGAIN){ 
-                        if((currGain += configuration.compressor_release) >= COMP_UNITYGAIN) currGain = COMP_UNITYGAIN;
-                    }
-                    break;
-            }
+            case COMPSTATE_RELEASE:
+                if(currGain != COMP_UNITYGAIN){ 
+                    if((currGain += configuration.compressor_release) >= COMP_UNITYGAIN) currGain = COMP_UNITYGAIN;
+                }
+                break;
         }
     }
+    taskEXIT_CRITICAL();
 }
 
 static void COMP_task(void * params){
@@ -90,7 +89,7 @@ static void COMP_task(void * params){
         //TODO maybe make this thread safe? Or at least verify that this will not try to compress right in the middle of some voice values being updated
         COMP_compress();
         
-        vTaskDelay(pdMS_TO_TICKS(1));
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 
@@ -103,5 +102,6 @@ inline uint32_t Comp_getGain(){
 }
 
 inline uint32_t Comp_getMaxDutyOffset(){
+    dsgfhjklbgb2 = 1;
     return configuration.compressor_maxDutyOffset;
 }

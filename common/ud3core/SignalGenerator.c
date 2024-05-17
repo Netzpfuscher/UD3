@@ -37,6 +37,9 @@
 #include "tasks/tsk_cli.h"
 #include "telemetry.h"
 
+static int32_t SigGen_otDeriv = 0;
+static int32_t SigGen_otCurveStart = 0;
+static int32_t SigGen_minDuty = 0;
 
 static SigGen_taskData_t * taskData;
 
@@ -138,6 +141,32 @@ CY_ISR(SigGen_PulseTimerISR){
     }
 }
 
+uint8_t callback_siggen(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
+    //mute output during update of parameters
+    uint32_t outEn = isEnabled;
+    
+    SigGen_setOutputEnabled(0);
+    SigGen_killAudio();
+    
+    //ontime is given as max and min parameters in % of total ontime in a frequency range from 1Hz - 20kHz
+    //ot derivative denotes the rate of rise of the ontime factor. 2^14 = 1. Parameters are percent = 100 => dOt = val * 8192/100
+    //maximums: otMax & otMin = 100 => dOt = -100 | 100. For best resolution: multiply with 2^31 / 100 = 10.000.000 => ~1<<23
+    
+    //calc difference and scale to max out the range
+    int32_t dOt = (((configuration.SigGen_minOtOffset - configuration.SigGen_maxOtOffset) << 22) / 100) << 7;
+    SigGen_otDeriv = dOt/200000;
+    
+    SigGen_otCurveStart = (configuration.SigGen_maxOtOffset * 8192) / 100;
+    
+    SigGen_minDuty = (configuration.max_tr_pw * configuration.SigGen_minOtOffset) / 100;
+    
+    SigGen_setOutputEnabled(outEn);
+    
+    TERM_printDebug(min_handle[1], "Calc otderiv for min=%d%% SigGen_minDuty=%d\r\n", configuration.SigGen_minOtOffset, SigGen_minDuty);
+    
+    return pdPASS;
+}
+
 void SigGen_init(){
     //initialize flags needed for masking voices
     for(uint32_t i = 0; i < SIGGEN_VOICECOUNT; i++){
@@ -204,6 +233,9 @@ uint32_t SigGen_getCurrDuty(){
         totalDuty += ourDuty;
     }
     
+    //scale current duty by the compressor volume
+    if(Comp_getGain() != COMP_UNITYGAIN) totalDuty = (totalDuty * Comp_getGain()) >> 15;
+    
     return totalDuty;
 }
 
@@ -241,6 +273,8 @@ uint8_t divder = 0xff;
 
 static void SigGen_setVoiceParams(uint32_t voice, uint32_t enabled, int32_t pulseWidth, int32_t volume, int32_t frequencyTenths, int32_t noiseAmplitude, int32_t burstOn_us, int32_t burstOff_us){
     IsOkToPrint = 1;
+    
+    //if(--divder == 0) TERM_printDebug(min_handle[1], "set voice freq=%d, ontime=%d\r\n", frequencyTenths, pulseWidth);
     
     //check if voice is switching on
     uint32_t willBeOn = enabled && (volume != 0) && (frequencyTenths != 0);
@@ -303,6 +337,12 @@ static uint32_t getFixedDutyOntime(int32_t pulseWidth, int32_t frequencyTenths, 
     //check for maximum frequency
     if(frequencyTenths > 200000) return 0;
     
+    //uint32_t ot = ((SigGen_otCurveStart + ((frequencyTenths * SigGen_otDeriv) >> 16)) * pulseWidth) >> 13;
+    
+    //TERM_printDebug(min_handle[1], "Calc ot for freq=%ddHz val=%dus\r\n", frequencyTenths, ot);
+    
+    //return ot;
+    
     //calculate the pulsewidth we need to achive the target dutycycle
     
     //target dutycycle is scaled 0-max_tr_duty with the ontime slider
@@ -320,9 +360,12 @@ static uint32_t getFixedDutyOntime(int32_t pulseWidth, int32_t frequencyTenths, 
     //                     [                                  1/10000 %  aka 0.1ppm                         ] /      [10/s]
     //                     [                                  1/10000 %  aka 0.1ppm                         ] *      [s/10]
     //                     [                                               us                                                  ]
-    int32_t targetOt_us = (((pulseWidth * configuration.max_tr_duty * 100) / (configuration.max_tr_pw)) * 100) / frequencyTenths;
+    int32_t targetOt_us = ((((pulseWidth * configuration.max_tr_duty * 100) / (configuration.max_tr_pw)) * 100) / frequencyTenths);
+    
     
     if(noiseOn) targetOt_us = ((targetOt_us * 3) >> 1);
+    
+    if(targetOt_us < SigGen_minDuty) targetOt_us = SigGen_minDuty;
     
     //TODO perhaps start reducing this as we approach a very low volume?
     
@@ -391,7 +434,6 @@ void SigGen_limit(){
         //yes! Reduce the scaling factor
         
         ontimeScale = (maxDuty * MAX_VOL) / currDuty;
-        
     }else{
         //TODO perhaps add duty limiter active flag?
     }
@@ -410,6 +452,7 @@ void SigGen_limit(){
         //linearly scale the ontime down
         uint32_t onTime = taskData->voice[currVoice].pulseWidth_us;
         onTime = (onTime * ontimeScale) >> 15;
+        if(Comp_getGain() != COMP_UNITYGAIN) onTime = (onTime * Comp_getGain()) >> 15;
         taskData->voice[currVoice].limitedPulseWidth_us = onTime;
         taskData->voice[currVoice].limitedPeriod = taskData->voice[currVoice].period;
         
@@ -420,6 +463,7 @@ void SigGen_limit(){
         if(taskData->voice[currVoice].hpvCount != 0 && taskData->voice[currVoice].noiseAmplitude == 0){
             onTime = taskData->voice[currVoice].hpvPulseWidth_us;
             onTime = (onTime * ontimeScale) >> 15;
+            if(Comp_getGain() != COMP_UNITYGAIN) onTime = (onTime * Comp_getGain()) >> 15;
             taskData->voice[currVoice].limitedHpvPulseWidth_us = onTime;
             
             taskData->voice[currVoice].limitedHpvCount = taskData->voice[currVoice].hpvCount;

@@ -34,7 +34,7 @@ static uint32_t isHeaderValid(MAPTABLE_HEADER_t * header){
 
 static void loadNewProgramm(uint32_t channel, uint32_t programm){
     //unlike in the MidiBox implementation the map list will always remain in flash instead of being loaded into ram
-    TERM_printDebug(min_handle[1], "loading mapentry\r\n");               
+    //TERM_printDebug(min_handle[1], "loading mapentry\r\n");               
     
     //find map in NVM
     channelMap[channel] = NULL;

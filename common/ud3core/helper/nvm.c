@@ -145,22 +145,22 @@ void VMS_init_blk(VMS_Block_t* blk){
     memset(blk, 0xff, sizeof(VMS_Block_t));
 }
 
-void VMS_print_blk(TERMINAL_HANDLE* handle, const VMS_Block_t* blk, uint8_t indent){
-/*    ttprintf("%*sBlock ID: %u @ 0x%08X\r\n", indent, "", id, blk);
+void VMS_print_blk(TERMINAL_HANDLE* handle,uint32_t id ,const VMS_Block_t* blk, uint8_t indent){
+    ttprintf("%*sBlock ID: %u @ 0x%08X\r\n", indent, "", id, blk);
     indent++;
     for(int i=0;i<VMS_MAX_BRANCHES;i++){
-        if(blk->nextBlocks[i] == NO_BLK){
+        if(blk->nextBlocks[i] == VMS_BLOCKID_INVALID){
             ttprintf("%*sNext %i: No Block\r\n", indent, "", i);   
-        }else if(blk->nextBlocks[i] < (VMS_BLOCK*)4096){
+        }else if(blk->nextBlocks[i] < (VMS_Block_t*)4096){
             ttprintf("%*sNext %i: ID %u\r\n", indent, "", i, blk->nextBlocks[i]);
         }else{
             ttprintf("%*sNext %i: 0x%08X\r\n", indent, "", i, blk->nextBlocks[i]);
         }
     }
     
-    if(blk->offBlock == NO_BLK){
+    if(blk->offBlock == VMS_BLOCKID_INVALID){
         ttprintf("%*soffBlock: No Block\r\n", indent, "");   
-    }else if(blk->offBlock < (VMS_BLOCK*)4096){
+    }else if(blk->offBlock < (VMS_Block_t*)4096){
         ttprintf("%*soffBlock: ID %u\r\n", indent, "", blk->offBlock);
     }else{
         ttprintf("%*soffBlock: 0x%08X\r\n", indent, "", blk->offBlock);
@@ -179,6 +179,9 @@ void VMS_print_blk(TERMINAL_HANDLE* handle, const VMS_Block_t* blk, uint8_t inde
     
     ttprintf("\r\n%*sType: ", indent, "");
     switch(blk->type){
+        case VMS_INVALID:
+            ttprintf("LIN");
+        break;
         case VMS_LIN:
             ttprintf("LIN");
         break;
@@ -258,31 +261,34 @@ void VMS_print_blk(TERMINAL_HANDLE* handle, const VMS_Block_t* blk, uint8_t inde
         case HyperVoice_Phase:
             ttprintf("Hypervoice_Phase");
         break;
+        case HyperVoice_Volume:
+            ttprintf("Hypervoice_Volume");
+        break;
+        case volume:
+            ttprintf("Volume");
+        break;
+        case volumeTarget:
+            ttprintf("Volume_Target");
+        break;
+        case volumeCurrent:
+            ttprintf("Volume_Current");
+        break;
+        case volumeFactor:
+            ttprintf("Volume_Factor");
+        break;
+        default:
+            ttprintf("default");
+        break;
     }
     
-    ttprintf("\r\n%*sThreshold Direction: ", indent, "");
-    switch(blk->thresholdDirection){
-        case RISING:
-            ttprintf("RISING");
-        break;
-        case FALLING:
-            ttprintf("FALLING");
-        break;
-        case ANY:
-            ttprintf("ANY");
-        break;
-        case NONE:
-            ttprintf("NONE");
-        break;
-    }
     
     ttprintf("\r\n%*sTarget factor: %i\r\n", indent, "", blk->targetFactor);
-    ttprintf("%*sParam 1: %i\r\n", indent, "", blk->param1);
-    ttprintf("%*sParam 2: %i\r\n", indent, "", blk->param2);
-    ttprintf("%*sParam 3: %i\r\n", indent, "", blk->param3);
-    ttprintf("%*sPeriod: %u\r\n", indent, "", blk->period);
+    ttprintf("%*sParam 1: %08X\r\n", indent, "", blk->param1);
+    ttprintf("%*sParam 2: %08X\r\n", indent, "", blk->param2);
+    ttprintf("%*sParam 3: %08X\r\n", indent, "", blk->param3);
+    ttprintf("%*sPeriod: %u\r\n", indent, "", blk->periodMs);
     ttprintf("%*sFlags: 0x%08X\r\n\r\n", indent, "", blk->flags);
-*/
+
 }
 
 MAPTABLE_HEADER_t* VMS_print_map(TERMINAL_HANDLE* handle, MAPTABLE_HEADER_t* map){
@@ -312,6 +318,7 @@ MAPTABLE_HEADER_t* VMS_print_map(TERMINAL_HANDLE* handle, MAPTABLE_HEADER_t* map
 
 uint32_t nvm_get_blk_cnt(const VMS_Block_t* blk){
     uint32_t cnt=0;
+    blk++;  //First Block is a NULL block
     while(1){
         if(!VMS_isBlockValid(blk)) break;
         blk++;
@@ -323,7 +330,7 @@ uint32_t nvm_get_blk_cnt(const VMS_Block_t* blk){
 
 uint8_t CMD_nvm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     if(argCount==0 || strcmp(args[0], "-?") == 0){
-        ttprintf("nvm [maps|blocks]\r\n");
+        ttprintf("nvm [maps|blocks|block [id]]\r\n");
         return TERM_CMD_EXIT_SUCCESS;
     }
     
@@ -337,12 +344,29 @@ uint8_t CMD_nvm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     }
     
     if(strcmp(args[0], "blocks") == 0){
-        uint32_t n_blocks = nvm_get_blk_cnt(NVM_blocks);
+        uint32_t n_blocks = nvm_get_blk_cnt((const VMS_Block_t*) NVM_blocks);
         ttprintf("NVM block count: %u\r\n", n_blocks);
         
         for(uint32_t i=0;i<n_blocks;i++){
-            VMS_print_blk(handle, &NVM_blocks[i], 4);
+            VMS_print_blk(handle,i ,(const VMS_Block_t*)&NVM_blocks[i], 4);
         }
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    
+    if(strcmp(args[0], "block") == 0 && argCount == 2){
+        int32_t n_blocks = nvm_get_blk_cnt((const VMS_Block_t*) NVM_blocks);
+        
+        int32_t num = atoi(args[1]);
+        if(num < 0 || num > n_blocks){
+            ttprintf("Invalid block\r\n");
+            return TERM_CMD_EXIT_SUCCESS; 
+        }
+        
+        
+        
+        
+        VMS_print_blk(handle,num ,(const VMS_Block_t*)&NVM_blocks[num], 4);
+
         return TERM_CMD_EXIT_SUCCESS;
     }
     

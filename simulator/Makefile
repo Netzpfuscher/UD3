@@ -21,6 +21,7 @@ INCLUDE_DIRS += -I${CORE_DIR}/ud3core/helper
 INCLUDE_DIRS += -I${CORE_DIR}/tterm
 INCLUDE_DIRS += -I${CORE_DIR}/min
 INCLUDE_DIRS += -I${CORE_DIR}/vms
+INCLUDE_DIRS += -I${CORE_DIR}/Modules
 
 SOURCE_FILES := $(wildcard *.c)
 SOURCE_FILES += $(wildcard ${FREERTOS_DIR}/*.c)
@@ -52,8 +53,6 @@ SOURCE_FILES += ${CORE_DIR}/ud3core/clock.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/DMA.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/interrupter.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/SignalGenerator.c
-SOURCE_FILES += ${CORE_DIR}/ud3core/SignalGeneratorSID.c
-SOURCE_FILES += ${CORE_DIR}/ud3core/SignalGeneratorMIDI.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/system.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/qcw.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/ZCDtoPWM.c

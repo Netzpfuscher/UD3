@@ -2,7 +2,6 @@
 
 
 #include "FreeRTOS.h"
-#include "SignalGeneratorSID.h"
 #include "qcw.h"
 #include "task.h"
 #include "queue.h"

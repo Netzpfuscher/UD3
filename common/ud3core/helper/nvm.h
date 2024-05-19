@@ -35,6 +35,8 @@
         extern uint8_t * NVM_mapMem;
         extern uint8_t * NVM_blockMem;
         extern VMS_Block_t * NVM_blocks;
+
+        void load_flash();
     #endif
     
     #define MAPMEM_SIZE   16384

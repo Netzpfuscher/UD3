@@ -85,6 +85,7 @@
 #include "tasks/tsk_duty.h"
 #include "tsk_sim.h"
 #include "tsk_audio.h"
+#include "nvm.h"
 
 
 /*
@@ -140,6 +141,7 @@ int main( void )
 	init_config();
 	
     EEPROM_1_Start();
+    load_flash();
 	SG_Timer_Start();
     
     null_port.type = PORT_TYPE_NULL;

@@ -27,6 +27,10 @@
 #include "stdlib.h"
 #include "tasks/tsk_cli.h"
 
+#ifdef SIMULATOR
+#include <stdio.h>
+#endif
+
 
 #define NVM_START_ADDR 0x38000
 #define NVM_ARRAY 3
@@ -43,18 +47,36 @@
 #else
     
     uint8_t flash_pages[128][256];
+    char const* flash_file = "flash.data";
+
+    void load_flash() {
+        memset(flash_pages, 0xff, sizeof(flash_pages));
+        FILE *fp = fopen(flash_file, "r");
+        if(fp == NULL) return;
+        for(uint32_t i = 0; i<sizeof(flash_pages); i++){
+            int c = fgetc(fp);
+            if(c==EOF) break;
+            ((char*)flash_pages)[i] = c;
+        }
+        fclose(fp);
+    }
     
     uint8_t * NVM_mapMem = (uint8_t*)flash_pages;
     uint8_t * NVM_blockMem = (uint8_t*)(((uint8_t*)flash_pages) + MAPMEM_SIZE);
     VMS_Block_t* NVM_blocks = (VMS_Block_t*)(((uint8_t*)flash_pages) + MAPMEM_SIZE);
-    
+
     uint8_t CyWriteRowData(uint8_t arr_n, uint16_t page, uint8_t* page_content){
         page -= NVM_START_PAGE;
         memcpy(&flash_pages[page][0], page_content, NVM_PAGE_SIZE);
         return 0;
     }
     void CyFlushCache(){
-        
+        FILE *fp = fopen(flash_file, "w");
+
+        for(uint32_t i = 0;i<sizeof(flash_pages);i++){
+            fputc(((char*) flash_pages)[i],fp);
+        }
+        fclose(fp);
     }
     void CySetTemp(){
         

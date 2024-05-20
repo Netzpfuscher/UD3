@@ -237,14 +237,23 @@ struct __event_response {
     uint32_t unique_id[2];
     char udname[16];   
 };
+
 typedef struct __event_response event_resonse;
+
+
+struct __os_info {
+    uint8_t struct_version;
+    uint32_t free_heap;
+};
+
+typedef struct __os_info os_info;
 
 void min_event(uint8_t command, uint8_t *min_payload, uint8_t len_payload){
     event_resonse response;
     switch(command){
         case EVENT_GET_INFO:
             response.id = EVENT_GET_INFO;
-            response.struct_version = 1;
+            response.struct_version = EVENT_STRUCT_VERSION;
             CyGetUniqueId(response.unique_id);
             strncpy(response.udname, configuration.ud_name, sizeof(configuration.ud_name));
             min_send_frame(&min_ctx,MIN_ID_EVENT,(uint8_t*)&response,sizeof(response));

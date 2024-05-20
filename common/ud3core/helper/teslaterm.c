@@ -257,6 +257,8 @@ void send_status(uint8_t bus_active, uint8_t transient_active, uint8_t bus_contr
     ttprintb(buf, sizeof(buf));
 }
 
+
+
 void tt_chart_init(CHART *chart, TERMINAL_HANDLE * handle){
     
     int16_t f;

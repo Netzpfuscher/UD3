@@ -297,7 +297,7 @@ static void SigGen_setVoiceParams(uint32_t voice, uint32_t enabled, int32_t puls
 
 static uint32_t getFixedDutyOntime(int32_t pulseWidth, int32_t frequencyTenths, uint32_t noiseOn){
     //check for maximum frequency
-    if(frequencyTenths > 200000) return 0;
+    if(frequencyTenths > 200000 || frequencyTenths == 0) return 0;
     
     //uint32_t ot = ((SigGen_otCurveStart + ((frequencyTenths * SigGen_otDeriv) >> 16)) * pulseWidth) >> 13;
     

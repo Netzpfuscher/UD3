@@ -144,7 +144,7 @@ void configure_interrupter()
 }
 
 void interrupter_oneshot(uint32_t pw, uint32_t vol) {
-    if(sysfault.interlock || configuration.ext_interrupter) return;
+    if(tsk_fault_is_fault() || configuration.ext_interrupter) return;
     
 	if (vol < MAX_VOL) {
 		ct1_dac_val[0] = params.min_tr_cl_dac_val + ((vol * params.diff_tr_cl_dac_val) >> 15);
@@ -168,7 +168,7 @@ void interrupter_oneshot(uint32_t pw, uint32_t vol) {
 
 void interrupter_oneshotRaw(uint32_t pw_us, uint32_t dacValue_counts) {
     //is sysfault triggered?
-    if(sysfault.interlock || configuration.ext_interrupter) return;
+    if(tsk_fault_is_fault() || configuration.ext_interrupter) return;
     
     //is the output already on?
     //TODO add this check either in hardware or software

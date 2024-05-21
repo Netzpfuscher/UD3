@@ -22,6 +22,7 @@
 #include "tasks/tsk_sid.h"
 #include "tasks/tsk_fault.h"
 #include "clock.h"
+#include "SidFilter.h"
 
 void process_midi(uint8_t* ptr, uint16_t len) {
 	uint8_t c;
@@ -67,11 +68,22 @@ void process_midi(uint8_t* ptr, uint16_t len) {
 }
 
 #define SID_BYTES       29
+#define SID_COMMAND_VOLUME 0
 
 void process_min_sid(uint8_t* ptr, uint16_t len) {
     uint8_t n_frames = *ptr;
     len--;
     ptr++;
+    if (n_frames == 0 && len == 4) {
+        uint8_t command = ptr[0];
+        uint8_t channel = ptr[1];
+        uint16_t value = (ptr[2] << 8) | ptr[3];
+        switch (command) {
+            case SID_COMMAND_VOLUME:
+                SID_filterData.channelVolume[channel] = value;
+                return;
+        }
+    }
     
     if(len!=(SID_BYTES*n_frames)){
         alarm_push(ALM_PRIO_WARN,"SID: Malformed SID frame", ALM_NO_VALUE);

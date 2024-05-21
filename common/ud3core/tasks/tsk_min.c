@@ -383,9 +383,6 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
         default:
             break;
     }
-            
-    
-    if(map_header != NULL) vPortFree(map_header);
 }
 
 void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_payload, uint8_t port)

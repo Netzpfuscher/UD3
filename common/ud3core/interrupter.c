@@ -35,6 +35,7 @@
 #include "VMSWrapper.h"
 #include "SidProcessor.h"
 #include "MidiProcessor.h"
+#include "NoteMapper.h"
 
 #include <device.h>
 #include <math.h>
@@ -330,115 +331,93 @@ uint8_t CMD_tr(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
 
 
 
-void Synthmon_MIDI(TERMINAL_HANDLE * handle){
-    //TODO reimplement
-    /*
+void Synthmon_printMIDI(TERMINAL_HANDLE * handle){
     uint32_t freq=0;
-    
-    TERM_sendVT100Code(handle, _VT100_CURSOR_DISABLE,0);
-    TERM_sendVT100Code(handle, _VT100_CLS,0);
-    ttprintf("Synthesizer monitor    [CTRL+C] for quit\r\n");
-    ttprintf("-----------------------------------------------------------\r\n");
-    while(Term_check_break(handle,100)){
-        TERM_setCursorPos(handle, 3,1);
+
+    //print what the voices are doing
+    for(uint8_t i=0;i<SIGGEN_VOICECOUNT;i++){
+        VMS_VoiceData_t * cvData = VMSW_getVoiceData()[i];
         
-        for(uint8_t i=0;i<N_CHANNEL;i++){
-
-            freq= Midi_voice[i].freqCurrent/10;
-            uint8_t noteOrigin=Midi_voice[i].currNoteOrigin;
-            
-            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 0);
-            ttprintf("Ch:   ");
-            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 0);
-            ttprintf("Ch: %u", i+1);
-            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 7);
-            ttprintf("Freq:      ");
-            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 7);
-            ttprintf("Freq: %u", freq);
-            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 20);
-            ttprintf("Prog:   ");
-            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 20);
-            ttprintf("Prog: %u", channelData[noteOrigin].currProgramm);
-    
-            MAPTABLE_HEADER* map = MAPPER_findHeader(channelData[noteOrigin].currProgramm);
-            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 28);
-            ttprintf("Name:                  ", map->name);
-            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 28);
-            ttprintf("Name: %s", map->name);
-            
-            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 50);
-            ttprintf("Vol: ");
-
-            uint8_t cnt = (channel[i].volume>>16)/12;
-
-            for(uint8_t w=0;w<10;w++){
-                if(w<cnt){
-                    ttprintf("o");
-                }else{
-                    ttprintf(" ");
-                }
-            }
-            ttprintf("\r\n");
+        ttprintnlf("Voice %d: \r\n", i);
+        if(cvData->on){
+            ttprintnlf("\tNote %02d from Ch %02d at Volume %04x\r\n", cvData->sourceNote, cvData->sourceChannel, cvData->baseVolume);
+            ttprintnlf("\tFreq=%05ddHz PW=%05dus curVOL=%04x HPV=%d noise=%d\r\n", cvData->freqCurrent, cvData->onTimeCurrent, cvData->volumeCurrent, cvData->hypervoiceCount, cvData->noiseCurrent);
+        }else{
+            ttprintnlf("\t--off--\r\n\n");
         }
     }
-    ttprintf("\r\n");
-    TERM_sendVT100Code(handle, _VT100_CURSOR_ENABLE,0);    
-    */
-}
-
-void Synthmon_SID(TERMINAL_HANDLE * handle){
-    //TODO reimplement
-    /*
-    uint32_t freq=0;
     
-    TERM_sendVT100Code(handle, _VT100_CURSOR_DISABLE,0);
-    TERM_sendVT100Code(handle, _VT100_CLS,0);
-    ttprintf("Synthesizer monitor    [CTRL+C] for quit\r\n");
-    ttprintf("-----------------------------------------------------------\r\n");
-    while(Term_check_break(handle,100)){
-        TERM_setCursorPos(handle, 3,1);
+    ttprintnlf("Maps: \r\n\t");
         
-        for(uint8_t i=0;i<SID_CHANNELS;i++){
-            ttprintf("Ch:   Freq:      \r");
-            if(channel[i].volume>0){
-                freq=channel[i].freq;
+    //print map names
+    for(uint8_t i=0;i<MIDI_CHANNELCOUNT;i++){
+        const char * name = Mapper_getProgrammName(i);
+        
+        if(name != NULL){
+            ttprintnlf("[%d]=\"% 20s\" ", i, name);
+        }else{
+            ttprintnlf("[%d]=NO MAP LOADED ", i);
+        }
+        
+        i++;
+        
+        if(i < MIDI_CHANNELCOUNT){
+            name = Mapper_getProgrammName(i);
+        
+            if(name != NULL){
+                ttprintnlf("[%d]=\"% 20s\"\r\n", i, name);
             }else{
-                freq=0;
+                ttprintnlf("[%d]=NO MAP LOADED\r\n", i);
             }
-            ttprintf("Ch: %u Freq: %u",i+1,freq);             
-            TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, 20);
-            ttprintf("Vol: ");
-            
-            // volume is in 7.16 fixed point format.  Shifting right by 16 results in 7.0 format so 
-            // the volume will be 0 to 127.  Dividing by 12 yields a value of 0 to 10.
-            uint8_t cnt = (channel[i].volume >> 16) / 12;
-
-            for(uint8_t w=0;w<10;w++){
-                if(w<cnt){
-                    ttprintf("o");
-                }else{
-                    ttprintf(" ");
-                }
-            }
-            ttprintf("\r\n");
+        }else{
+            ttprintnlf("\r\n", i);
         }
     }
-    ttprintf("\r\n");
-    TERM_sendVT100Code(handle, _VT100_CURSOR_ENABLE,0);*/
 }
 
-
+void Synthmon_printSID(TERMINAL_HANDLE * handle){
+    
+    for(uint8_t i=0;i<N_SIDCHANNEL;i++){
+        SIDChannelData_t * chData = &(SID_getChannelData()[i]);
+        
+        ttprintnlf("Channel %d: \r\n", i);
+        ttprintnlf("\tFreq=%05ddHz curVOL=%04x WAVE=%s\r\n", chData->frequency_dHz, chData->currentEnvelopeVolume, SID_getWaveName(chData));
+        ttprintnlf("\tADSR state=%d masterVolume=%d\r\n", chData->adsrState, SID_filterData.channelVolume[i]);
+    }
+}
 
 uint8_t CMD_SynthMon(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
-    if(param.synth == SYNTH_SID || param.synth == SYNTH_SID_QCW) Synthmon_SID(handle);
-    if(param.synth == SYNTH_MIDI || param.synth == SYNTH_MIDI_QCW) Synthmon_MIDI(handle);
-    if(param.synth == 0){
-        ttprintf("\r\nNo synthesizer active\r\n");   
+    TERM_sendVT100Code(handle, _VT100_CURSOR_DISABLE,0);
+    TERM_sendVT100Code(handle, _VT100_CLS,0);
+    
+            
+    while(Term_check_break(handle,100)){
+        ttprintnlf("Synthesizer status:    [CTRL+C] for quit\r\n\n");
+        
+        if(param.synth == SYNTH_SID || param.synth == SYNTH_SID_QCW){
+            Synthmon_printSID(handle);
+        
+        }else if(param.synth == SYNTH_MIDI || param.synth == SYNTH_MIDI_QCW){ 
+            Synthmon_printMIDI(handle);
+            
+        }
+        
+        if(param.synth == 0){
+            ttprintnlf("\r\nNo synthesizer active\r\n");   
+        }else{
+            //if any synth is active print compressor state
+            ttprintnlf("\r\n\nCompressor state:\r\n");
+            ttprintnlf("\tstate=%01d volume=%04x\r\n", Comp_getState(), Comp_getGain());
+        }
+            
+        //reset cursor
+        TERM_sendVT100Code(handle, _VT100_CURSOR_POS1, 0);
+        
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
+    
+    TERM_sendVT100Code(handle, _VT100_CURSOR_ENABLE,0);
+    TERM_sendVT100Code(handle, _VT100_CLS,0);
+    
     return TERM_CMD_EXIT_SUCCESS;
-}
-
-uint8_t callback_synthFilter(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
-    //filter no longer used
-    return 1;
 }

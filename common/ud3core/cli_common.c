@@ -142,7 +142,6 @@ void init_config(){
     configuration.ivo_led = 0;
     configuration.uvlo_analog = 0;
     
-    configuration.SigGen_maxOtOffset = 0;
     configuration.SigGen_minOtOffset = 0;
     
     configuration.min_fb_current = 25;
@@ -213,7 +212,12 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_repeat"      , param.qcw_repeat              , 0      ,1000   ,0      ,NULL                        ,"QCW pulse repeat time [ms] <100=single shot")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"synth"           , param.synth                   , 0      ,3      ,0      ,callback_SynthFunction      ,"0=off 1=MIDI 2=SID 3=TR")    
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"sid_hpv_enabled" , SID_filterData.hpvEnabledGlobally, 0      ,1      ,0      ,NULL                     ,"use hpv for playing square sid voices")    
-    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"sid_noise_volume", SID_filterData.noiseVolume    , 0      ,MAX_VOL,0      ,NULL                        ,"sid music volume [0-MAX_VOL] = [0-32767]")    
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"sid_noise_volume", SID_filterData.noiseVolume    , 0      ,MAX_VOL,0      ,NULL                        ,"sid noise volume [0-MAX_VOL] = [0-32767]")    
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"sid_ch1_volume"  , SID_filterData.channelVolume[0], 0     ,MAX_VOL,0      ,NULL                        ,"sid channel 1 volume [0-MAX_VOL] = [0-32767]")    
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"sid_ch2_volume"  , SID_filterData.channelVolume[1], 0     ,MAX_VOL,0      ,NULL                        ,"sid channel 2 volume [0-MAX_VOL] = [0-32767]")    
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"sid_ch3_volume"  , SID_filterData.channelVolume[2], 0     ,MAX_VOL,0      ,NULL                        ,"sid channel 3 volume [0-MAX_VOL] = [0-32767]")    
+    
+    
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"watchdog"        , configuration.watchdog        , 0      ,1      ,0      ,callback_ConfigFunction     ,"Watchdog Enable")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"watchdog_timeout", configuration.watchdog_timeout, 1      ,10000  ,0      ,callback_ConfigFunction     ,"Watchdog timeout [ms]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_tr_pw"       , configuration.max_tr_pw       , 0      ,10000  ,0      ,callback_ConfigFunction     ,"Maximum TR PW [uSec]")
@@ -269,12 +273,11 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"hw_rev"          , configuration.hw_rev          , 0      ,1      ,0      ,callback_ConfigFunction     ,"Hardware revision 0=3.0 1=3.1")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"autostart"       , configuration.autostart       , 0      ,1      ,0      ,NULL                        ,"Autostart")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"min_fb_current"  , configuration.min_fb_current  , 0      ,255    ,0      ,callback_ConfigFunction     ,"Current at which to switch to feedback")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"comp_attac"      , configuration.compressor_attac  , 0      ,255    ,0      ,NULL                        ,"Compressor Attac Setting")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"comp_sustain"    , configuration.compressor_sustain  , 0      ,255    ,0      ,NULL                        ,"Compressor Sustain Setting")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"comp_release"    , configuration.compressor_release  , 0      ,255    ,0      ,NULL                        ,"Compressor Release Setting")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"comp_dutyOffset" , configuration.compressor_maxDutyOffset  , 0      ,255    ,0      ,NULL                        ,"Maximum Dutycycle offset before hard limit")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"maxDutyOffset"    , configuration.SigGen_maxOtOffset  , 0      ,100    ,0      ,callback_siggen                        ,"Compressor Release Setting")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"minDutyOffset"   , configuration.SigGen_minOtOffset  , 0      ,100    ,0      ,callback_siggen                        ,"Maximum Dutycycle offset before hard limit")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"minDutyOffset"   , configuration.SigGen_minOtOffset  , 0      ,100    ,0      ,callback_siggen         ,"Minimum pulsewidth in percent of maximum pulsewidth")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"comp_attac"      , configuration.compressor_attac  , 0      ,255    ,0      ,NULL                      ,"Compressor Attac Setting")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"comp_sustain"    , configuration.compressor_sustain  , 0      ,255    ,0      ,NULL                    ,"Compressor Sustain Setting")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"comp_release"    , configuration.compressor_release  , 0      ,255    ,0      ,NULL                    ,"Compressor Release Setting")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"comp_dutyOffset" , configuration.compressor_maxDutyOffset  , 0      ,255    ,0      ,NULL              ,"Maximum Dutycycle offset before hard limit")
 };
 
    
@@ -284,7 +287,6 @@ void eeprom_load(TERMINAL_HANDLE * handle){
     update_ivo();
     update_visibilty();
     uart_baudrate(configuration.baudrate);
-    callback_synthFilter(NULL,0, handle);
     ramp.changed = pdTRUE;
     qcw_regenerate_ramp();
     init_telemetry();

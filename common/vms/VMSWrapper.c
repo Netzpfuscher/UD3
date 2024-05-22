@@ -31,6 +31,10 @@ uint32_t VMSW_getBlockMemSizeInBlocks(){
     return blockMemBlockCount;
 }
 
+VMS_VoiceData_t ** VMSW_getVoiceData(){
+    return voiceData;
+}
+
 void VMSW_init(){
     //add vms memory to conman
     

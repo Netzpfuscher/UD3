@@ -20,6 +20,7 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
+
 #include <stdlib.h>
 #include <limits.h>
 
@@ -39,7 +40,7 @@
 
 static int32_t SigGen_otDeriv = 0;
 static int32_t SigGen_otCurveStart = 0;
-static int32_t SigGen_minDuty = 0;
+static int32_t SigGen_minOt = 0;
 
 static SigGen_taskData_t * taskData;
 
@@ -142,27 +143,8 @@ CY_ISR(SigGen_PulseTimerISR){
 }
 
 uint8_t callback_siggen(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
-    //mute output during update of parameters
-    uint32_t outEn = isEnabled;
-    
-    SigGen_setOutputEnabled(0);
-    SigGen_killAudio();
-    
-    //ontime is given as max and min parameters in % of total ontime in a frequency range from 1Hz - 20kHz
-    //ot derivative denotes the rate of rise of the ontime factor. 2^14 = 1. Parameters are percent = 100 => dOt = val * 8192/100
-    //maximums: otMax & otMin = 100 => dOt = -100 | 100. For best resolution: multiply with 2^31 / 100 = 10.000.000 => ~1<<23
-    
-    //calc difference and scale to max out the range
-    int32_t dOt = (((configuration.SigGen_minOtOffset - configuration.SigGen_maxOtOffset) << 22) / 100) << 7;
-    SigGen_otDeriv = dOt/200000;
-    
-    SigGen_otCurveStart = (configuration.SigGen_maxOtOffset * 8192) / 100;
-    
-    SigGen_minDuty = (configuration.max_tr_pw * configuration.SigGen_minOtOffset) / 100;
-    
-    SigGen_setOutputEnabled(outEn);
-    
-    TERM_printDebug(min_handle[1], "Calc otderiv for min=%d%% SigGen_minDuty=%d\r\n", configuration.SigGen_minOtOffset, SigGen_minDuty);
+    //update minimum OT parameter
+    SigGen_minOt = (configuration.max_tr_pw * configuration.SigGen_minOtOffset) / 100;
     
     return pdPASS;
 }
@@ -190,26 +172,6 @@ void SigGen_init(){
     
     xTaskCreate(SigGen_task, "SigGen", configMINIMAL_STACK_SIZE+128, (void*) data, tskIDLE_PRIORITY + 4, NULL);
 }
- /*
-
-//TODO figure out how to implement the compressor... we aren't scaling the ontime anymore really... not sure what to do :(
-
-//calculate ontime in microseconds from a target volume
-uint32_t SigGen_scalePulseWidth_us(uint32_t pulseWidth_us){
-    //TODO add non-linear volume to ontime conversion
-	
-    if(pulseWidth_us > configuration.max_tr_pw) pulseWidth_us = configuration.max_tr_pw;
-    
-    //scale if master is lower than max
-    if(masterVolume < VOLUME_MAX) volume = (volume * masterVolume) >> 16;
-    
-    //how about the duty compressor
-    if(Comp_getGain() < VOLUME_MAX) volume = (volume * Comp_getGain()) >> 16;
-    
-    //scale 0-0x10000 (vol_max) to minOnTime-maxOnTime
-    uint32_t ontimeDifference = currentCCI->maxOnTime - currentCCI->minOnTime;
-    return ((volume * ontimeDifference) >> 16) + currentCCI->minOnTime;
-}*/
 
 //calculate the dutycycle and return it in percent
 uint32_t SigGen_getCurrDuty(){
@@ -365,7 +327,7 @@ static uint32_t getFixedDutyOntime(int32_t pulseWidth, int32_t frequencyTenths, 
     
     if(noiseOn) targetOt_us = ((targetOt_us * 3) >> 1);
     
-    if(targetOt_us < SigGen_minDuty) targetOt_us = SigGen_minDuty;
+    if(targetOt_us < SigGen_minOt) targetOt_us = SigGen_minOt;
     
     //TODO perhaps start reducing this as we approach a very low volume?
     

@@ -76,7 +76,7 @@ void SidFilter_updateVoice(uint32_t channel, SIDChannelData_t * channelData){
                 //ontime = ontime >> 1;
                 
                 
-                //start scaling down the volume starting from 1kHz to 1,32767kHz
+                //start scaling down the volume starting from 1kHz to 1,8192kHz. Above 1,8192kHz HPV is disabled
                 if(channelData->frequency_dHz > 10000){
                     hpvVolume = (hpvVolume * (18192 - channelData->frequency_dHz)) >> 13;
                 }else if(channelData->frequency_dHz >= 18192){

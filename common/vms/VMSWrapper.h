@@ -30,6 +30,7 @@ int32_t VMSW_getKnownValue(KNOWN_VALUE ID, uint32_t output, uint32_t voiceId);
 void VMSW_setKnownValue(KNOWN_VALUE ID, int32_t value, uint32_t output, uint32_t voiceId);
 
 uint32_t VMSW_getBlockMemSizeInBlocks();
+VMS_VoiceData_t ** VMSW_getVoiceData();
 void VMSW_updateBlock(uint32_t id, VMS_Block_t * src);
 uint32_t VMSW_writeLegacyBlockWith63Bytes(VMS_LEGAYBLOCK_t * block);
 

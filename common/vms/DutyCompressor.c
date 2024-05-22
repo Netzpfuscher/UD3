@@ -101,6 +101,10 @@ inline uint32_t Comp_getGain(){
     return currGain;
 }
 
+inline uint32_t Comp_getState(){
+    return compressorState;
+}
+
 inline uint32_t Comp_getMaxDutyOffset(){
     dsgfhjklbgb2 = 1;
     return configuration.compressor_maxDutyOffset;

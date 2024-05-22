@@ -7,6 +7,7 @@
 
 void Comp_init();
 extern uint32_t Comp_getGain();
+extern uint32_t Comp_getState();
 extern uint32_t Comp_getMaxDutyOffset();
 
 #endif

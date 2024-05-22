@@ -72,6 +72,16 @@ static void loadNewProgramm(uint32_t channel, uint32_t programm){
     if(channelMap[channel] == NULL) channelMap[channel] = (MAPTABLE_HEADER_t *) &DEFMAP;        
 }
 
+const char * Mapper_getProgrammName(uint32_t channel){
+    //is a map loaded on the channel?
+    if(channelMap[channel] == NULL){
+        //nope => return NULL
+        return NULL;
+    }else{
+        return channelMap[channel]->name;
+    }
+}
+
 void Mapper_bendHandler(uint32_t channel){
     VMSW_bendHandler(channel);
 }

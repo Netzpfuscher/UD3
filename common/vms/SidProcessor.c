@@ -29,6 +29,19 @@ void SidProcessor_resetSid(){
     }
 }
 
+SIDChannelData_t * SID_getChannelData(){
+    return channelData;
+}
+
+const char * SID_getWaveName(SIDChannelData_t * data){
+    if(data->flags & SID_FRAME_FLAG_NOISE) return "NOISE";
+    if(data->flags & SID_FRAME_FLAG_SQUARE) return "SQUARE";
+    if(data->flags & SID_FRAME_FLAG_SAWTOOTH) return "SAWTOOTH";
+    if(data->flags & SID_FRAME_FLAG_TRIANGLE) return "TRIANGLE";
+    
+    return "?";
+}
+
 void SidProcessor_handleFrame(SIDFrame_t * frame){
     //is the frame NULL? if that is the case then a timeout occured and we need to KILL EVERYTHING
     

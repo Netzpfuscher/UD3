@@ -68,7 +68,10 @@ void process_midi(uint8_t* ptr, uint16_t len) {
 }
 
 #define SID_BYTES       29
-#define SID_COMMAND_VOLUME 0
+
+#define SID_COMMAND_VOLUME       0
+#define SID_COMMAND_NOISE_VOLUME 1
+#define SID_COMMAND_HPV_ENABLE   2
 
 void process_min_sid(uint8_t* ptr, uint16_t len) {
     uint8_t n_frames = *ptr;
@@ -81,6 +84,12 @@ void process_min_sid(uint8_t* ptr, uint16_t len) {
         switch (command) {
             case SID_COMMAND_VOLUME:
                 SID_filterData.channelVolume[channel] = value;
+                return;
+            case SID_COMMAND_NOISE_VOLUME:
+                SID_filterData.noiseVolume = value;
+                return;
+            case SID_COMMAND_HPV_ENABLE:
+                SID_filterData.hpvEnabledGlobally = value != 0;
                 return;
         }
     }

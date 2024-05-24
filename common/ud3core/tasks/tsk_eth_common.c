@@ -58,7 +58,7 @@ typedef struct{
 
 
 void process_midi(uint8_t* ptr, uint16_t len) {
-    static midi_cmd state;
+    static midi_cmd state = {.message_size = DATA_NOT_READY};
  
 	while (len) {
 		uint8_t c = *ptr;

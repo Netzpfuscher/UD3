@@ -400,16 +400,7 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
             xStreamBufferSend(min_port[min_id].rx,min_payload, len_payload,1);
             return;
         case MIN_ID_MIDI:
-            switch(param.synth){
-                case SYNTH_OFF:
-                    break;
-                case SYNTH_MIDI:
-                    process_midi(min_payload,len_payload);     
-                    break;
-                case SYNTH_MIDI_QCW:
-                    process_midi(min_payload,len_payload);     
-                    break;
-            }
+            process_midi(min_payload,len_payload);     
             return;
         case MIN_ID_SID:
             process_min_sid(min_payload, len_payload);

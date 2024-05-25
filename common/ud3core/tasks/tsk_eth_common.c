@@ -24,51 +24,119 @@
 #include "clock.h"
 #include "SidFilter.h"
 
+typedef struct{
+    uint8_t cmd;
+    int8_t message_size;
+    uint8_t bytes_received;
+    uint8_t msg[3];
+} midi_cmd;
+
+#define MIDI_NOTE_OFF           0x80
+#define MIDI_NOTE_ON            0x90
+#define MIDI_KEY_PRESSURE       0xA0
+#define MIDI_CC                 0xB0
+#define MIDI_PC                 0xC0
+#define MIDI_CP                 0xD0
+#define MIDI_PB                 0xE0
+#define MIDI_FUNCTION           0xF0
+
+#define MIDI_SYSEX_START        0xF0
+#define MIDI_SONG_POSITION      0xF2
+#define MIDI_SONG_SELECT        0xF3
+#define MIDI_BUS_SELECT         0xF5
+#define MIDI_TUNE_REQUEST       0xF6
+#define MIDI_SYSEX_END          0xF7
+#define MIDI_START_SONG         0xFA
+#define MIDI_CONTINUE_SONG      0xFB
+#define MIDI_STOP_SONG          0xFC
+#define MIDI_ACTIVE_SENSING     0xFE
+#define MIDI_SYSTEM_RESET       0xFF
+
+#define MAX_SYSEX_SIZE          32
+
+#define DATA_NOT_READY          -1
+
+
 void process_midi(uint8_t* ptr, uint16_t len) {
-	uint8_t c;
-    static uint8_t midi_count = 0;
-    static uint8_t midiMsg[3];
-    
+    static midi_cmd state = {.message_size = DATA_NOT_READY};
+ 
 	while (len) {
-		c = *ptr;
+		uint8_t c = *ptr;
+        uint8_t c_masked = c & 0xF0;
         len--;
         ptr++;
-		if (c & 0x80) {
-			midi_count = 1;
-			midiMsg[0] = c;
 
-			goto end;
-		} else if (!midi_count) {
-            goto end;
-		}
-		switch (midi_count) {
-		case 1:
-			midiMsg[1] = c;
-			midi_count = 2;
-            if((midiMsg[0] & 0xF0) == 0xC0){
-                midi_count = 0;
-                midiMsg[2]=0;
-                USBMIDI_1_callbackLocalMidiEvent(0, midiMsg);
+		if (c & 0x80) {  //MSB set  Reset
+            state.bytes_received = 0;
+            switch(c_masked){
+                case MIDI_PC:
+                    state.cmd = c;
+                    state.message_size = 1;
+                break;
+                case MIDI_CP:
+                    state.cmd = c;
+                    state.message_size = 1;
+                break;
+                case MIDI_FUNCTION:
+                
+                    switch(c){
+                        case MIDI_SYSEX_START:
+                            state.cmd = c;
+                            state.bytes_received = 0;
+                            state.message_size = MAX_SYSEX_SIZE;
+                        break;
+                        case MIDI_SYSEX_END:
+                            state.message_size = state.bytes_received;
+                        break;
+                        case MIDI_SONG_POSITION:
+                            state.cmd = c;
+                            state.message_size = 2;
+                        break;
+                        case MIDI_SONG_SELECT:
+                            state.cmd = c;
+                            state.message_size = 1;
+                        break;
+                        case MIDI_BUS_SELECT:
+                            state.cmd = c;
+                            state.message_size = 1;
+                        break;
+                        default:
+                            state.cmd = c;
+                            state.message_size = 0;
+                        break;
+                    }
+                break;
+                default:
+                    state.cmd = c;
+                    state.message_size = 2;
+                break;
             }
-			break;
-		case 2:
-			midiMsg[2] = c;
-			midi_count = 0;
-			if (midiMsg[0] == 0xF0) {
-				if (midiMsg[1] == 0x0F) {
-					WD_reset();
-					goto end;
-				}
-			}
-			USBMIDI_1_callbackLocalMidiEvent(0, midiMsg);
-			break;
-		}
-	end:;
-	}
+        }else{
+                if(state.bytes_received < state.message_size && state.cmd != MIDI_SYSEX_START){
+                    state.msg[state.bytes_received + 1] = c;
+                    state.bytes_received++;
+                } else if(state.bytes_received < state.message_size && state.cmd == MIDI_SYSEX_START){
+                    state.bytes_received++;
+                }
+ 
+                if(state.message_size != DATA_NOT_READY && state.bytes_received == state.message_size){   
+                    state.msg[0] = state.cmd;
+                    USBMIDI_1_callbackLocalMidiEvent(0, state.msg);
+                    state.bytes_received = 0;
+                    if((state.cmd & 0xF0) == MIDI_FUNCTION){
+                        state.message_size = DATA_NOT_READY;
+                    }
+                }
+        }
+    }
 }
 
+
 #define SID_BYTES       29
-#define SID_COMMAND_VOLUME 0
+
+#define SID_COMMAND_VOLUME       0
+#define SID_COMMAND_NOISE_VOLUME 1
+#define SID_COMMAND_HPV_ENABLE   2
 
 void process_min_sid(uint8_t* ptr, uint16_t len) {
     uint8_t n_frames = *ptr;
@@ -81,6 +149,12 @@ void process_min_sid(uint8_t* ptr, uint16_t len) {
         switch (command) {
             case SID_COMMAND_VOLUME:
                 SID_filterData.channelVolume[channel] = value;
+                return;
+            case SID_COMMAND_NOISE_VOLUME:
+                SID_filterData.noiseVolume = value;
+                return;
+            case SID_COMMAND_HPV_ENABLE:
+                SID_filterData.hpvEnabledGlobally = value != 0;
                 return;
         }
     }

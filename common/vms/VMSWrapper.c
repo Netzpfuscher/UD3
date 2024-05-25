@@ -31,8 +31,8 @@ uint32_t VMSW_getBlockMemSizeInBlocks(){
     return blockMemBlockCount;
 }
 
-VMS_VoiceData_t ** VMSW_getVoiceData(){
-    return voiceData;
+VMS_VoiceData_t * VMSW_getVoiceData(){
+    return voiceData[0];
 }
 
 void VMSW_init(){

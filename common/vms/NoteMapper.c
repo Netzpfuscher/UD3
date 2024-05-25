@@ -77,6 +77,9 @@ const char * Mapper_getProgrammName(uint32_t channel){
     if(channelMap[channel] == NULL){
         //nope => return NULL
         return NULL;
+    }else if(channelMap[channel] == (MAPTABLE_HEADER_t *) &DEFMAP){
+        //yes but its the defmap => return "DEFMAP"
+        return "DEFMAP";
     }else{
         return channelMap[channel]->name;
     }

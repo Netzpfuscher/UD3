@@ -336,18 +336,14 @@ void Synthmon_printMIDI(TERMINAL_HANDLE * handle){
 
     //print what the voices are doing
     for(uint8_t i=0;i<SIGGEN_VOICECOUNT;i++){
-        VMS_VoiceData_t * cvData = VMSW_getVoiceData()[i];
+        VMS_VoiceData_t * cvData = &(VMSW_getVoiceData()[i]);
         
         ttprintnlf("Voice %d: \r\n", i);
-        if(cvData->on){
-            ttprintnlf("\tNote %02d from Ch %02d at Volume %04x\r\n", cvData->sourceNote, cvData->sourceChannel, cvData->baseVolume);
-            ttprintnlf("\tFreq=%05ddHz PW=%05dus curVOL=%04x HPV=%d noise=%d\r\n", cvData->freqCurrent, cvData->onTimeCurrent, cvData->volumeCurrent, cvData->hypervoiceCount, cvData->noiseCurrent);
-        }else{
-            ttprintnlf("\t--off--\r\n\n");
-        }
+        ttprintnlf("\tNote %02d from Ch %02d at Volume %04x %s\r\n", cvData->sourceNote, cvData->sourceChannel, cvData->baseVolume, cvData->on ? "ON" : "OFF");
+        ttprintnlf("\tFreq=%05ddHz PW=%05dus curVOL=%04x HPV=%d noise=%d\r\n", cvData->freqCurrent, cvData->onTimeCurrent, cvData->volumeCurrent, cvData->hypervoiceCount, cvData->noiseCurrent);
     }
     
-    ttprintnlf("Maps: \r\n\t");
+    ttprintnlf("Maps: \r\n");
         
     //print map names
     for(uint8_t i=0;i<MIDI_CHANNELCOUNT;i++){
@@ -356,7 +352,21 @@ void Synthmon_printMIDI(TERMINAL_HANDLE * handle){
         if(name != NULL){
             ttprintnlf("[%d]=\"% 20s\" ", i, name);
         }else{
-            ttprintnlf("[%d]=NO MAP LOADED ", i);
+            ttprintnlf("[%d]= % 20s  ", i, "NO MAP LOADED");
+        }
+        
+        i++;
+        
+        if(i < MIDI_CHANNELCOUNT){
+            name = Mapper_getProgrammName(i);
+        
+            if(name != NULL){
+                ttprintnlf("[%d]=\"% 20s\" ", i, name);
+            }else{
+                ttprintnlf("[%d]= % 20s  ", i, "NO MAP LOADED");
+            }
+        }else{
+            ttprintnlf("\r\n", i);
         }
         
         i++;
@@ -367,7 +377,7 @@ void Synthmon_printMIDI(TERMINAL_HANDLE * handle){
             if(name != NULL){
                 ttprintnlf("[%d]=\"% 20s\"\r\n", i, name);
             }else{
-                ttprintnlf("[%d]=NO MAP LOADED\r\n", i);
+                ttprintnlf("[%d]= % 20s  \r\n", i, "NO MAP LOADED");
             }
         }else{
             ttprintnlf("\r\n", i);

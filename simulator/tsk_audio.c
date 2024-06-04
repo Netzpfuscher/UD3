@@ -72,16 +72,6 @@ void add_tr_volume(size_t pwm_counter, int16_t* audio_buffer, size_t samples_in_
     }
 }
 
-void add_total_dds_volume(size_t pwm_counter, int16_t* audio_buffer, size_t buffer_size) {
-    for (int channel = 0; channel < 4; ++channel) {
-        if (DDS32_en[channel]) {
-            int prd = interrupter_clock / (DDS32_freq[channel] >> 8);
-            int pw = ch_prd[channel] - ch_cmp[channel];
-            add_volume(pwm_counter, audio_buffer, buffer_size, prd, pw,  DDS32_noise[channel] != 0);
-        }
-    }
-}
-
 void tsk_audio(void *pvParameters) {
     FILE* audio_pipe = popen("aplay --rate=44100 --format=S16_LE", "w");
     const int batches_per_second = 50;
@@ -109,7 +99,6 @@ void tsk_audio(void *pvParameters) {
         audio_buffer = realloc(audio_buffer, buffer_bytes);
         memset(audio_buffer, 0, buffer_bytes);
         add_tr_volume(pwm_counter, audio_buffer, samples_in_batch);
-        add_total_dds_volume(pwm_counter, audio_buffer, samples_in_batch);
         pwm_counter += pwm_counts_per_sample * samples_in_batch;
         fwrite(audio_buffer, sizeof(*audio_buffer), samples_in_batch, audio_pipe);
         fflush(audio_pipe);

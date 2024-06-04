@@ -65,8 +65,6 @@ uint32_t last_frame=4294967295;
 static SIDFrame_t currentFrame;
 
 void tsk_sid_TaskProc(void *pvParameters) {
-    //create queue that stores all sid frames after they were received by the min task
-    qSID = xQueueCreate(N_QUEUE_SID, sizeof(SIDFrame_t));
 
     alarm_push(ALM_PRIO_INFO, "TASK: SID started", ALM_NO_VALUE);
 	for (;;) {
@@ -115,6 +113,8 @@ void tsk_sid_Start(void) {
 
 	if (tsk_sid_initVar != 1) {
 
+        //create queue that stores all sid frames after they were received by the min task
+        qSID = xQueueCreate(N_QUEUE_SID, sizeof(SIDFrame_t));
         /*
 	 	* Create the task and then leave. When FreeRTOS starts up the scheduler
 	 	* will call the task procedure and start execution of the task.

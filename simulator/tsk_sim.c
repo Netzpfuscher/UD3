@@ -78,22 +78,7 @@ void isr_synth() {
         qcw_handle();
         return;
     }
-    switch(param.synth){
-        case SYNTH_MIDI:
-            synthcode_MIDI();
-            break;
-        case SYNTH_SID:
-            synthcode_SID(r);
-            break;
-        case SYNTH_MIDI_QCW:
-            //synthcode_QMIDI(r);
-            break;
-        case SYNTH_SID_QCW:
-            synthcode_QSID(r);
-            break;
-        default:
-            break;
-    }
+    // TODO do we need to call anything here now? Probably not?
 }
 
 void tsk_sim_isr(void *pvParameters) {

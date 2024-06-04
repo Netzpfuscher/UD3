@@ -308,4 +308,18 @@ uint8_t EEPROM_1_ReadByte(uint16 address) ;
 #define DMAC_CFGMEM                 (CY_DMA_CFGMEM_STRUCT_PTR)
 #define DMAC_TDMEM                  (CY_DMA_TDMEM_STRUCT_PTR)
 
+#define interrupterTimebase_CTRL_ENABLE 1
+#define interrupterTimebase_Init()
+#define interrupterIRQ_StartEx(i)
+#define interrupterIRQ_Enable()
+#define interrupterIRQ_Disable()
+#define interrupterTimebase_WriteCounter(i)
+#define interrupterTimebase_WriteCompare(i)
+#define interrupterIRQ_ClearPending()
+#define Opamp_2_Start()
+
+void interrupterTimebase_WriteControlRegister(uint8_t value);
+uint8_t interrupterTimebase_ReadControlRegister();
+uint8_t interrupterTimebase_ReadStatusRegister();
+
 #endif

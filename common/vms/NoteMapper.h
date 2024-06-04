@@ -23,7 +23,7 @@
 
 #define MAPPER_VERSION 2
 
-#define MAPPER_ENTRY_FROM_HEADER(HEADER_PTR, IDX) (MAPTABLE_ENTRY_t *) ((uint32_t ) HEADER_PTR + sizeof(MAPTABLE_HEADER_t) + IDX * sizeof(MAPTABLE_ENTRY_t))
+#define MAPPER_ENTRY_FROM_HEADER(HEADER_PTR, IDX) (MAPTABLE_ENTRY_t *) ((char*) HEADER_PTR + sizeof(MAPTABLE_HEADER_t) + IDX * sizeof(MAPTABLE_ENTRY_t))
 
 typedef struct _MapData_ MAPTABLE_DATA_t;
 typedef struct _MapEntry_ MAPTABLE_ENTRY_t;

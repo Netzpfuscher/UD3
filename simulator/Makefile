@@ -42,6 +42,7 @@ SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_hwGauge.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_midi.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_min.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_overlay.c
+SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_sid.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_thermistor.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_uart.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_usb.c
@@ -61,6 +62,7 @@ SOURCE_FILES += $(wildcard ${CORE_DIR}/ud3core/helper/*.c)
 SOURCE_FILES += $(wildcard ${CORE_DIR}/tterm/*.c)
 SOURCE_FILES += $(wildcard ${CORE_DIR}/min/*.c)
 SOURCE_FILES += $(wildcard ${CORE_DIR}/vms/*.c)
+SOURCE_FILES += $(wildcard ${CORE_DIR}/Modules/*/*.c)
 
 
 CFLAGS := -ggdb3 -Os -DprojCOVERAGE_TEST=0 -std=gnu11

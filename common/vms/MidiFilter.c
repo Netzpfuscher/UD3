@@ -8,7 +8,7 @@
 #include "NoteMapper.h"
 #include "MidiFilter.h"
 #include "TTerm.h"
-#include "Tasks/tsk_cli.h"
+#include "tasks/tsk_cli.h"
 
 /* 
  * filter options:

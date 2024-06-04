@@ -23,6 +23,7 @@
 
 #include <stdlib.h>
 #include <limits.h>
+#include <cytypes.h>
 
 #include "clock.h"
 #include "qcw.h"
@@ -493,6 +494,8 @@ void SigGen_setOutputEnabled(uint32_t en){
 }
 
 void SigGen_killAudio(){
+    // This can only happen during UD3 startup
+    if (!taskData) { return; }
     //TODO evaluate if this is actually thread safe
     
 	//disable all voices

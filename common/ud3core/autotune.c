@@ -186,6 +186,7 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 
 	configure_ZCD_to_PWM();
 	interrupter_init_safe();
+	interrupter_unkill();
 	//interrupter_DMA_mode(original_dma_mode);
 
 	//search max current

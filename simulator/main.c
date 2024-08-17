@@ -66,6 +66,7 @@
 #include "DMA.h"
 #include "ZCDtoPWM.h"
 #include "interrupter.h"
+#include "tasks/tsk_sid.h"
 #include "telemetry.h"
 #include "helper/printf.h"
 #include <device.h>
@@ -194,6 +195,8 @@ int main( void )
 	tsk_fault_Start();		//Handles fault conditions
 	console_print("Duty init...\n");
     tsk_duty_Start();
+	console_print("SID init...\n");
+    tsk_sid_Start();
     
     if(configuration.enable_display){
 		console_print("Display init...\n");

@@ -38,6 +38,9 @@
 #include "interrupter.h"
 #include "tasks/tsk_cli.h"
 #include "telemetry.h"
+#ifdef SIMULATOR
+#include "tsk_audio.h"
+#endif
 
 static int32_t SigGen_otDeriv = 0;
 static int32_t SigGen_otCurveStart = 0;
@@ -853,5 +856,8 @@ static void SigGen_task(void * callData){
             
             //wait what? Read failed although there is supposedly data in the buffer... anyway, forget what we are doing and just carry on the loop
         }
+#ifdef SIMULATOR
+        simulator_process_audio(data);
+#endif
     }
 }

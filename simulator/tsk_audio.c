@@ -15,102 +15,120 @@
 #include "cli_basic.h"
 #include "clock.h"
 #include "SignalGenerator.h"
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
 #include <errno.h>
+#include <assert.h>
 
 const int audio_rate = 44100;
-const int interrupter_clock = 1000000;
-const int pwm_counts_per_sample = interrupter_clock / audio_rate;
+const int siggen_clock = 32000000;
+const int ontime_clock = 1000000;
+const int ns_per_second = 1000000000;
+const int sg_clocks_per_ns = ns_per_second / siggen_clock;
+const int sg_counts_per_sample = siggen_clock / audio_rate;
+const int ot_counts_per_sample = ontime_clock / audio_rate;
+const int buffers_per_second = 10;
+const int buffer_size = audio_rate / buffers_per_second;
 
-bool is_active(size_t old_inter, size_t new_inter, int prd) {
-    return new_inter / prd > old_inter / prd;
-}
+typedef struct {
+    int16_t* active_buffer;
+    int16_t* next_buffer;
+    int last_pulse_clock;
+    bool main_buffer_full;
+    struct timespec buffer_scheduled_time;
+} AudioBuffers;
 
-int get_tr_volume(size_t old_inter, size_t new_inter) {
-    if (!(interrupter1_control_Control & 2)) {
-        return 0;
-    } else {
-        return (1 << 12) * is_active(old_inter, new_inter, int1_prd);
+void add_nanoseconds(struct timespec* time, int ns) {
+    time->tv_nsec += ns;
+    while (time->tv_nsec > ns_per_second) {
+        time->tv_nsec -= ns_per_second;
+        ++time->tv_sec;
     }
 }
 
-bool add_volume(
-    size_t pwm_counter, int16_t* audio_buffer, size_t buffer_size, size_t prd, int16_t pw, bool noise
-) {
-    int volume = (1 << 14) * pw / configuration.max_tr_pw;
-    size_t prd_buffer = prd / pwm_counts_per_sample;
-    size_t offset = (prd - pwm_counter % prd) / pwm_counts_per_sample;
-    int num_changed = 0;
-    for (size_t i = offset; i < buffer_size; i += prd_buffer) {
-        size_t index_to_increase = i;
-        if (noise) {
-            size_t noise_range = prd_buffer / 2;
-            size_t noise = rand() % noise_range;
-            index_to_increase += noise;
-            if (index_to_increase >= buffer_size) {
-                index_to_increase = buffer_size - 1;
+void add_pulse(AudioBuffers* buffers, SigGen_pulseData_t pulse) {
+    // TODO handle pulses with more than a full buffer of delay. Then we can reduce buffer size again
+    buffers->last_pulse_clock += pulse.period;
+
+    int16_t* buffer_to_write;
+    if (buffers->last_pulse_clock / sg_counts_per_sample >= buffer_size) {
+        buffers->last_pulse_clock -= buffer_size * sg_counts_per_sample;
+        assert(buffers->last_pulse_clock / sg_counts_per_sample < buffer_size);
+        buffer_to_write = buffers->next_buffer;
+        buffers->main_buffer_full = true;
+    } else {
+        buffer_to_write = buffers->active_buffer;
+    }
+
+    int next_index = buffers->last_pulse_clock / sg_counts_per_sample;
+    while (pulse.onTime > 0) {
+        double fraction_of_sample = fmin(pulse.onTime / (double) ot_counts_per_sample, 1);
+        buffer_to_write[next_index] += (pulse.current << 4) * fraction_of_sample;
+        ++next_index;
+        pulse.onTime -= ot_counts_per_sample;
+        if (next_index >= buffer_size) {
+            if (buffer_to_write == buffers->active_buffer) {
+                buffer_to_write = buffers->next_buffer;
+                next_index -= buffer_size;
+            } else {
+                // wtf
+                break;
             }
         }
-        audio_buffer[index_to_increase] += volume;
-        ++num_changed;
-    }
-    return num_changed > 0;
-}
-
-// If TR is briefly turned on (e.g. burst mode) at low frequencies, we want to play at least one cycle, even if that
-// falls outside the window where TR was enabled
-bool force_tr_next_cycle = false;
-
-void add_tr_volume(size_t pwm_counter, int16_t* audio_buffer, size_t samples_in_batch) {
-    if (force_tr_next_cycle || (interrupter1_control_Control & 2)) {
-        force_tr_next_cycle = !add_volume(
-            pwm_counter, audio_buffer, samples_in_batch, int1_prd, int1_prd - int1_cmp, false
-        );
     }
 }
 
-void tsk_audio(void *pvParameters) {
-    FILE* audio_pipe = popen("aplay --rate=44100 --format=S16_LE", "w");
-    const int batches_per_second = 50;
-    const int ms_per_audio_batch = 1000 / batches_per_second;
-    const TickType_t batch_delay = ms_per_audio_batch / portTICK_PERIOD_MS;
-
-    const int ns_per_sample = 1e9 / audio_rate;
-    size_t pwm_counter = 0;
-    int next_channel = 0;
-    struct timespec last_time;
-    clock_gettime(CLOCK_REALTIME, &last_time);
-    int16_t* audio_buffer = NULL;
-    while(1){
-        vTaskDelay(batch_delay);
-
-        struct timespec now;
-        clock_gettime(CLOCK_REALTIME, &now);
-        // Keep ahead by 10 ms
-        now.tv_nsec += 10e6;
-        const size_t ns_between = 1e9 * (now.tv_sec - last_time.tv_sec) + now.tv_nsec - last_time.tv_nsec;
-        const int samples_in_batch = ns_between / ns_per_sample;
-        last_time = now;
-
-        size_t buffer_bytes = sizeof(*audio_buffer) * samples_in_batch;
-        audio_buffer = realloc(audio_buffer, buffer_bytes);
-        memset(audio_buffer, 0, buffer_bytes);
-        add_tr_volume(pwm_counter, audio_buffer, samples_in_batch);
-        pwm_counter += pwm_counts_per_sample * samples_in_batch;
-        fwrite(audio_buffer, sizeof(*audio_buffer), samples_in_batch, audio_pipe);
-        fflush(audio_pipe);
-    }
-}
-
-xTaskHandle tsk_audio_TaskHandle;
+AudioBuffers buffers;
+FILE* audio_pipe;
 
 void tsk_audio_Start() {
     char const* audio_enabled = getenv("ud3sim_audio");
     if (audio_enabled && *audio_enabled == '1') {
+        buffers.last_pulse_clock = 0;
+        buffers.main_buffer_full = false;
+        clock_gettime(CLOCK_REALTIME, &buffers.buffer_scheduled_time);
+        buffers.active_buffer = calloc(buffer_size, sizeof(*buffers.active_buffer));
+        buffers.next_buffer = calloc(buffer_size, sizeof(*buffers.next_buffer));
+        audio_pipe = popen("aplay --rate=44100 --format=S16_LE", "w");
+        //audio_pipe = fopen("temp.dat", "w");
         console_print("Audio init...\n");
-        xTaskCreate(tsk_audio, "AUDIO", 1024, NULL, 3, &tsk_audio_TaskHandle);
+    }
+}
+
+bool is_before(struct timespec a, struct timespec b) {
+    if (a.tv_sec != b.tv_sec) {
+        return a.tv_sec < b.tv_sec;
+    } else {
+        return a.tv_nsec < b.tv_nsec;
+    }
+}
+
+void simulator_process_audio(SigGen_taskData_t* data) {
+    if (!audio_pipe) { return; }
+    struct timespec now;
+    clock_gettime(CLOCK_REALTIME, &now);
+    SigGen_pulseData_t next_pulse = {
+        .period = siggen_clock / 20,
+        .onTime = 1,
+        .current = 300,
+    };
+    while (!buffers.main_buffer_full&& RingBuffer_read(data->pulseBuffer, (void*)&next_pulse, 1) == 1) {
+        data->bufferLengthInCounts -= next_pulse.period;
+        add_pulse(&buffers, next_pulse);
+    }
+    if (is_before(buffers.buffer_scheduled_time, now)) {
+        int16_t* buffer = buffers.active_buffer;
+        fwrite(buffer, 1, sizeof(*buffer) * buffer_size, audio_pipe);
+        fflush(audio_pipe);
+
+        buffers.active_buffer = buffers.next_buffer;
+        memset(buffer, 0, sizeof(*buffer) * buffer_size);
+        buffers.next_buffer = buffer;
+
+        add_nanoseconds(&buffers.buffer_scheduled_time, ns_per_second / buffers_per_second);
+        buffers.main_buffer_full = false;
     }
 }

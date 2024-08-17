@@ -221,15 +221,15 @@ xTaskHandle tsk_udp_tx_TaskHandle;
 int tsk_started = 0;
 
 
+sck sim_socket;
+
 void UART_Start(){
 	
 	
 	if(!tsk_started){
 		
-		sck socket;
-		
-		xTaskCreate(tsk_udp_rx, "UDP-RX", 1024, &socket, 3, &tsk_udp_rx_TaskHandle);
-		xTaskCreate(tsk_udp_tx, "UDP-TX", 1024, &socket, 3, &tsk_udp_tx_TaskHandle);
+		xTaskCreate(tsk_udp_rx, "UDP-RX", 1024, &sim_socket, 3, &tsk_udp_rx_TaskHandle);
+		xTaskCreate(tsk_udp_tx, "UDP-TX", 1024, &sim_socket, 3, &tsk_udp_tx_TaskHandle);
 	
 		frame.len = 0;
 		tsk_started=1;

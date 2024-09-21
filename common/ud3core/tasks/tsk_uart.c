@@ -95,7 +95,7 @@ CY_ISR(isr_uart_rx) {
 				}
 			}
 
-			USBMIDI_1_callbackLocalMidiEvent(0, (uint8_t*)midiMsg);
+			queue_midi_message((uint8_t*)midiMsg);
 			break;
 		}
 	end:;

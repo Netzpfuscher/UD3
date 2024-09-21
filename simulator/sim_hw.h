@@ -159,8 +159,6 @@ extern uint8_t IVO_Control;
 
 #define UVLO_Read() 1
 
-void USBMIDI_1_callbackLocalMidiEvent(uint8_t cable, uint8_t *midiMsg);
-
 void LED_com_Write(uint8_t val);
 void LED_sysfault_Write(uint8_t val);
 void LED3_Write(uint8_t val);

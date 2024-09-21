@@ -121,7 +121,7 @@ void process_midi(uint8_t* ptr, uint16_t len) {
  
                 if(state.message_size != DATA_NOT_READY && state.bytes_received == state.message_size){   
                     state.msg[0] = state.cmd;
-                    USBMIDI_1_callbackLocalMidiEvent(0, state.msg);
+                    queue_midi_message(state.msg);
                     state.bytes_received = 0;
                     if((state.cmd & 0xF0) == MIDI_FUNCTION){
                         state.message_size = DATA_NOT_READY;

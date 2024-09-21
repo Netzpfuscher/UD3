@@ -66,6 +66,8 @@ void tsk_midi_reset_skip();
 
 void update_midi_duty();
 
+void queue_midi_message(uint8 *midiMsg);
+
 //void switch_synth(uint8_t synth);
 
 //void kill_accu();

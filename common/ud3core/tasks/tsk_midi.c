@@ -75,9 +75,8 @@ xQueueHandle qMIDI_rx;
 
 
 
-void USBMIDI_1_callbackLocalMidiEvent(uint8 cable, uint8 *midiMsg) {
-    uint8_t ret=pdTRUE;
-    ret = xQueueSend(qMIDI_rx, midiMsg,4);
+void queue_midi_message(uint8 *midiMsg) {
+    uint8_t ret = xQueueSend(qMIDI_rx, midiMsg,4);
 	if(ret==errQUEUE_FULL){
         alarm_push(ALM_PRIO_WARN, "COM: MIDI buffer overrun",ALM_NO_VALUE);
     }

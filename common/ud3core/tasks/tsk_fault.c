@@ -202,7 +202,7 @@ void vWD_Timer_Callback(TimerHandle_t xTimer){
     interrupter1_control_Control = 0;
 	QCW_enable_Control = 0;
     interrupter_kill();
-    USBMIDI_1_callbackLocalMidiEvent(0, (uint8_t*)kill_msg);
+    queue_midi_message((uint8_t*)kill_msg);
     xTimerReset(xTimer,0);
 }
 

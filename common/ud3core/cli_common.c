@@ -679,7 +679,7 @@ uint8_t CMD_udkill(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     
     if(strcmp(args[0], "set") == 0){
         interrupter_kill();
-    	USBMIDI_1_callbackLocalMidiEvent(0, (uint8_t*)kill_msg);
+    	queue_midi_message((uint8_t*)kill_msg);
     	bus_command = BUS_COMMAND_OFF;
         
         QCW_delete_timer();

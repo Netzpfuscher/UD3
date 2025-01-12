@@ -528,10 +528,28 @@ void SigGen_killAudio(){
     tt.n.midi_voices.value = 0;
 }
 
+uint8_t SigGen_queuePulse(SigGen_pulseData_t* pulse) {
+    //convert the period, volume and ontime to the values that will need to be written into the hardware upon pulse execution
+    SigGen_pulseData_t raw_pulse;
+    raw_pulse.period = SIGGEN_US_TO_PERIOD_COUNT(pulse->period);
+    raw_pulse.onTime = SIGGEN_US_TO_OT_COUNT(pulse->onTime);
+    raw_pulse.current = SIGGEN_VOLUME_TO_CURRENT_DAC_VALUE(pulse->current);
+
+    //write it into the buffer
+    if(RingBuffer_write(taskData->pulseBuffer, (void*)&raw_pulse, 1, 0) != 1){
+        //write failed, not enough space available...
+        return 0;
+    }else{
+        //increase the buffersize
+        SigGen_disableTimerISR();
+        taskData->bufferLengthInCounts += raw_pulse.period;
+        SigGen_enableTimerISR();
+        return 1;
+    }
+}
+
 volatile uint32_t adding = 0;
 
-SigGen_pulseData_t currPulse;
-    
 volatile uint32_t compDebug = 0;
 
 static void SigGen_overlayPulse(SigGen_pulseData_t * pulse, int32_t newVolume, int32_t newOntime){
@@ -573,9 +591,6 @@ static void SigGen_overlayPulse(SigGen_pulseData_t * pulse, int32_t newVolume, i
     
 static void SigGen_task(void * callData){
     volatile SigGen_taskData_t * data = (SigGen_taskData_t *) callData;
-    
-    currPulse.onTime = 0;
-    currPulse.period = 0xf;
     
     while(1){
         vTaskDelay(1);
@@ -815,23 +830,13 @@ static void SigGen_task(void * callData){
             }
             
             //we were here
-            //convert the period, volume and ontime to the values that will need to be written into the hardware upon pulse execution
-            currPulse.period = SIGGEN_US_TO_PERIOD_COUNT(nextPulse.period);
-            currPulse.onTime = SIGGEN_US_TO_OT_COUNT(nextPulse.onTime);
-            currPulse.current = SIGGEN_VOLUME_TO_CURRENT_DAC_VALUE(nextPulse.current);
             
             //write it into the buffer
-            if(RingBuffer_write(data->pulseBuffer, (void*)&currPulse, 1, 0) != 1){
-                //write failed, not enough space available...
+            if (!SigGen_queuePulse(&nextPulse)) {
                 //TODO maybe send an alarm?
                 
                 //theoretically it might be cleverer to continue; here, but that could create a situation where we get stuck in this loop, so break instead
                 break;
-            }else{
-                //increase the buffersize
-                SigGen_disableTimerISR();
-                data->bufferLengthInCounts += currPulse.period;
-                SigGen_enableTimerISR();
             }
         }
         

@@ -102,8 +102,10 @@
     } SigGen_voiceData_t;
 
     typedef struct{
+        // period and onTime are microseconds most of the time, but clock pulses when in the pulseBuffer
         volatile int32_t period;
         volatile int32_t onTime;
+        // Usually "siggen volume", i.e. 0 to INT16_MAX; OCD DAC count when in the pulseBuffer
         volatile int32_t current;
     } volatile SigGen_pulseData_t;
 
@@ -153,7 +155,7 @@
     void SigGen_limit();
     void SigGen_setOutputEnabled(uint32_t en);
     void SigGen_killAudio();
-    uint32_t SigGen_isOutputOn();
-    uint32_t SigGen_wasOutputOn();
-    
+
+    uint8_t SigGen_queuePulse(SigGen_pulseData_t* pulse);
+
 #endif

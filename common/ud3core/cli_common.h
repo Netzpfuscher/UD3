@@ -48,6 +48,7 @@ void update_visibilty(void);
 
 uint8_t CMD_signals(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 uint8_t CMD_tr(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+uint8_t CMD_oneshot(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 uint8_t CMD_con(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 uint8_t CMD_alarms(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 uint8_t CMD_bootloader(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);

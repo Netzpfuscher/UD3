@@ -356,6 +356,8 @@ void tsk_cli_Start(void) {
         
         TERM_addCommandConstAC(CMD_get, "get", "Usage get [param]", AC_set_get,&TERM_cmdListHead);     
         TERM_addCommandConstAC(CMD_set, "set","Usage set [param] [value]",AC_set_get,&TERM_cmdListHead);
+
+        TERM_addCommand(CMD_oneshot, "oneshot","oneshot <ontime> <volume>, volume from 0 to 32767",0,&TERM_cmdListHead);
         
         TERM_addCommandConstAC(CMD_nvm, "nvm","NVM-Test Func", AC_nvm,&TERM_cmdListHead); 
         

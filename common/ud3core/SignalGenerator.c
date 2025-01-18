@@ -866,7 +866,7 @@ static void SigGen_task(void * callData){
             //wait what? Read failed although there is supposedly data in the buffer... anyway, forget what we are doing and just carry on the loop
         }
 #ifdef SIMULATOR
-        simulator_process_audio(data);
+        simulator_process_audio(data, &readPulse);
 #endif
     }
 }

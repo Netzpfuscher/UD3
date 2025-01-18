@@ -106,15 +106,15 @@ bool is_before(struct timespec a, struct timespec b) {
     }
 }
 
-void simulator_process_audio(SigGen_taskData_t* data) {
+void simulator_process_audio(SigGen_taskData_t* data, SigGen_pulseData_t* read_pulse) {
     if (!audio_pipe) { return; }
     struct timespec now;
     clock_gettime(CLOCK_REALTIME, &now);
-    SigGen_pulseData_t next_pulse = {
-        .period = siggen_clock / 20,
-        .onTime = 1,
-        .current = 300,
-    };
+    if (read_pulse->onTime > 0 && read_pulse->current > 0) {
+        add_pulse(&buffers, *read_pulse);
+        read_pulse->onTime = read_pulse->current = 0;
+    }
+    SigGen_pulseData_t next_pulse;
     while (!buffers.main_buffer_full&& RingBuffer_read(data->pulseBuffer, (void*)&next_pulse, 1) == 1) {
         data->bufferLengthInCounts -= next_pulse.period;
         add_pulse(&buffers, next_pulse);

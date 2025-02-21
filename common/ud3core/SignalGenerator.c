@@ -42,13 +42,13 @@
 #include "tsk_audio.h"
 #endif
 
-static int32_t SigGen_otDeriv = 0;
-static int32_t SigGen_otCurveStart = 0;
+//static int32_t SigGen_otDeriv = 0;
+//static int32_t SigGen_otCurveStart = 0;
 static int32_t SigGen_minOt = 0;
 
 static SigGen_taskData_t * taskData;
 
-static uint32_t isOutputInErrorState = 0;
+//static uint32_t isOutputInErrorState = 0;
 
 static void SigGen_task(void * params);
 
@@ -109,7 +109,7 @@ CY_ISR(SigGen_PulseTimerISR){
     
     //try to read the next pulse
     while(1){
-        if(RingBuffer_readFromISR(taskData->pulseBuffer, &readPulse, 1) == 1){
+        if(RingBuffer_readFromISR(taskData->pulseBuffer, (void*)&readPulse, 1) == 1){
             //check if we got valid pulse and if not retry
             if(readPulse.period == 0){ 
                 readPulse.period = 1;
@@ -160,7 +160,7 @@ void SigGen_init(){
     }
     
     SigGen_taskData_t * data = pvPortMalloc(sizeof(SigGen_taskData_t));
-    memset(data, 0, sizeof(SigGen_taskData_t));
+    memset((void *)data, 0, sizeof(SigGen_taskData_t));
     taskData = data;
     
     //create pulse buffer
@@ -572,13 +572,10 @@ static void SigGen_task(void * callData){
     
     while(1){
         vTaskDelay(1);
-        uint32_t noVoicesEnabled = 1;
+        //uint32_t noVoicesEnabled = 1;
 		
 		if(!isEnabled) continue;
-        
-        uint32_t retryCount = SIGGEN_VOICECOUNT;
-        
-        
+              
         //check if the buffer is running low
         while(data->bufferLengthInCounts < SIGGEN_MS_TO_PERIOD_COUNT(1)){
         
@@ -642,7 +639,7 @@ static void SigGen_task(void * callData){
             //the timer interrupt will check for this and ignore the pulse as if it was one that had its pulse muted due to burst mode
             if(nextPulse.period > maxPeriod_us) nextPulse.period = maxPeriod_us;
             
-            noVoicesEnabled = 0;
+            //noVoicesEnabled = 0;
 
             //now the voice of which the timer expires next is indexed by nextVoice, propagate the current time to that point (aka decrease all other time counters by the delay to the next pulse)
             for(uint32_t currVoice = 0; currVoice < SIGGEN_VOICECOUNT; currVoice++){
@@ -817,7 +814,7 @@ static void SigGen_task(void * callData){
             currPulse.current = SIGGEN_VOLUME_TO_CURRENT_DAC_VALUE(nextPulse.current);
             
             //write it into the buffer
-            if(RingBuffer_write(data->pulseBuffer, &currPulse, 1, 0) != 1){
+            if(RingBuffer_write(data->pulseBuffer, (void*)&currPulse, 1, 0) != 1){
                 //write failed, not enough space available...
                 //TODO maybe send an alarm?
                 
@@ -836,7 +833,7 @@ static void SigGen_task(void * callData){
             //time is off but pulses are waiting. Load the first pulse and start the timer
             
             //get the next pulse
-            if(RingBuffer_read(data->pulseBuffer, &readPulse, 1) == 1){
+            if(RingBuffer_read(data->pulseBuffer, (void*)&readPulse, 1) == 1){
                 taskData->bufferLengthInCounts -= readPulse.period;
                 
                 if(readPulse.period < SIGGEN_MIN_PERIOD) readPulse.period = SIGGEN_MIN_PERIOD;

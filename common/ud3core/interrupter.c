@@ -162,8 +162,8 @@ void interrupter_oneshot(uint32_t pw, uint32_t vol) {
 	CyGlobalIntDisable;
 	int1_prd = prd - 3;
 	int1_cmp = prd - pw - 3;
-	interrupter1_control_Control = 0b0001;
-	interrupter1_control_Control = 0b0000;
+	interrupter1_control_Control = INT_ENA;
+	interrupter1_control_Control = INT_KILL_ALL;
     CyGlobalIntEnable;
 }
 
@@ -197,8 +197,8 @@ void interrupter_oneshotRaw(uint32_t pw_us, uint32_t dacValue_counts) {
 	int1_cmp = prd - pw_us - 3;
     
     //trigger pulse
-	interrupter1_control_Control = 0b0001;
-	interrupter1_control_Control = 0b0000;
+	interrupter1_control_Control = INT_ENA;
+	interrupter1_control_Control = INT_KILL_ALL;
     CyGlobalIntEnable;
 }
 
@@ -218,11 +218,18 @@ void interrupter_update_ext() {
 	int1_prd = prd - 3;
 	int1_cmp = prd - pw - 3;
     
-    if(configuration.ext_interrupter==1){
-	    interrupter1_control_Control = 0b1100;
-    }else{
-        interrupter1_control_Control = 0b0000;
+    switch(configuration.ext_interrupter){
+        case 0:
+            interrupter1_control_Control = INT_KILL_ALL;
+        break;
+        case 1:
+            interrupter1_control_Control = INT_EXT_ENA;
+        break;
+        case 2:
+            interrupter1_control_Control = INT_EXT_ENA | INT_EXT_INV;
+        break;
     }
+  
     CyGlobalIntEnable;
 }
 
@@ -233,7 +240,7 @@ uint8_t callback_ext_interrupter(parameter_entry * params, uint8_t index, TERMIN
     }else{
         uint8 sfflag = system_fault_Read();
         sysflt_set(pdFALSE); //halt tesla coil operation during updates!
-        interrupter1_control_Control = 0b0000;
+        interrupter1_control_Control = INT_KILL_ALL;
         system_fault_Control = sfflag;
     }
     return pdPASS;

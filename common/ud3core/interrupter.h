@@ -36,6 +36,12 @@ Its a 16 bit PWM clocked at 1MHz, so thats 1uS per count.
 #include "timers.h"
 
 #define INTERRUPTER_CLK_FREQ 1000000
+    
+#define INT_KILL_ALL    0b0000
+#define INT_ENA         0b0001
+#define INT_AUTO_RELOAD 0b0010
+#define INT_EXT_ENA     0b0100
+#define INT_EXT_INV     0b1000
 
 /* DMA Configuration for int1_dma */
 #define int1_dma_BYTES_PER_BURST 8

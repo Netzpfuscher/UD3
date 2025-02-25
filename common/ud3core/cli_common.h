@@ -132,6 +132,8 @@ struct config_struct{
     uint8_t compressor_sustain;
     uint8_t compressor_release;
     uint8_t compressor_maxDutyOffset;
+    
+    float drive_factor;
 }; 
 typedef struct config_struct cli_config;
 

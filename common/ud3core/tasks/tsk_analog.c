@@ -95,9 +95,7 @@ rms_t voltage_bus;
 rms_t voltage_batt;
 
 uint8_t ADC_mux_ctl[4] = {0x05, 0x02, 0x03, 0x00};
-
-uint16_t vdriver_lut[9] = {0,3500,7000,10430,13840,17310,20740,24200,27657};
-
+static uint32_t drive_top_r_corrected = DRIVEV_R_TOP;
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */
@@ -124,13 +122,14 @@ uint32_t read_bus_mv(uint16_t raw_adc) {
 	return bus_voltage;
 }
 
+void tsk_analog_recalc_drive_top(float factor){
+    float scaled_val = (float)DRIVEV_R_TOP * factor;
+    drive_top_r_corrected = roundf(scaled_val);
+}
+
 uint16_t read_driver_mv(uint16_t raw_adc){
     uint32_t driver_voltage;
-    uint8_t lut = raw_adc / 256;
-    uint16_t span = vdriver_lut[lut+1]-vdriver_lut[lut];
-    
-    driver_voltage = vdriver_lut[lut]+(span * (raw_adc%256) / 256);
-    
+	driver_voltage = ((drive_top_r_corrected + DRIVEV_R_BOT) * raw_adc) / (DRIVEV_R_BOT * 819 / 1000);
     return driver_voltage;
 }
 

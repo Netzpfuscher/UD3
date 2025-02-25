@@ -161,6 +161,8 @@ void init_config(){
     configuration.hw_rev = SYS_detect_hw_rev();
     configuration.autostart = pdFALSE;
     
+    configuration.drive_factor = 1.0f;
+    
     interrupter.mod = INTR_MOD_PW;
     
     param.pw = 0;
@@ -215,9 +217,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"sid_noise_volume", SID_filterData.noiseVolume    , 0      ,MAX_VOL,0      ,NULL                        ,"sid noise volume [0-MAX_VOL] = [0-32767]")    
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"sid_ch1_volume"  , SID_filterData.channelVolume[0], 0     ,MAX_VOL,0      ,NULL                        ,"sid channel 1 volume [0-MAX_VOL] = [0-32767]")    
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"sid_ch2_volume"  , SID_filterData.channelVolume[1], 0     ,MAX_VOL,0      ,NULL                        ,"sid channel 2 volume [0-MAX_VOL] = [0-32767]")    
-    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"sid_ch3_volume"  , SID_filterData.channelVolume[2], 0     ,MAX_VOL,0      ,NULL                        ,"sid channel 3 volume [0-MAX_VOL] = [0-32767]")    
-    
-    
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"sid_ch3_volume"  , SID_filterData.channelVolume[2], 0     ,MAX_VOL,0      ,NULL                        ,"sid channel 3 volume [0-MAX_VOL] = [0-32767]")     
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"watchdog"        , configuration.watchdog        , 0      ,1      ,0      ,callback_ConfigFunction     ,"Watchdog Enable")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"watchdog_timeout", configuration.watchdog_timeout, 1      ,10000  ,0      ,callback_ConfigFunction     ,"Watchdog timeout [ms]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_tr_pw"       , configuration.max_tr_pw       , 0      ,10000  ,0      ,callback_ConfigFunction     ,"Maximum TR PW [uSec]")
@@ -264,7 +264,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ntc_b"           , configuration.ntc_b           , 0      ,10000  ,0      ,callback_ntc                ,"NTC beta [k]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ntc_r25"         , configuration.ntc_r25         , 0      ,33000  ,1000   ,callback_ntc                ,"NTC R25 [kOhm]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ntc_idac"        , configuration.idac            , 0      ,2000   ,0      ,callback_ntc                ,"iDAC measured [uA]")
-    ADD_PARAM(PARAM_CONFIG  ,pdFALSE,"d_calib"         , vdriver_lut                   , 0      ,0      ,0      ,NULL                        ,"For voltage measurement")
+    ADD_PARAM(PARAM_CONFIG  ,pdFALSE,"d_factor"        , configuration.drive_factor    , 0      ,10     ,0      ,callback_ConfigFunction     ,"Factor for drive voltage measurement")
     ADD_PARAM(PARAM_CONFIG  ,pdFALSE,"hwGauge_cfg"     , hwGauges.rawData              , 0      ,0      ,0      ,callback_hwGauge            ,"gauge configs, configure with the \"hwGauge\" command")
     ADD_PARAM(PARAM_CONFIG  ,pdFALSE,"display_cfg"     , DISP_zones.rawData            , 0      ,0      ,0      ,callback_display            ,"display/led configs, configure with the \"display\" command")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"vdrive"          , configuration.vdrive          , 10     ,24     ,0      ,callback_ConfigFunction     ,"Change Vdrive voltage (digipot)")
@@ -496,6 +496,8 @@ uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, TERMINA
     if(configuration.hw_rev > 0){
         dcdc_ena_Write(1); //enable DCDC
     }
+    tsk_analog_recalc_drive_top(configuration.drive_factor);
+    
 	system_fault_Control = sfflag;
     return 1;
 }
@@ -594,40 +596,46 @@ uint8_t CMD_con(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
 * Calibrate Vdriver
 ******************************************************************************/
 uint8_t CMD_calib(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
-   // uint16_t vdriver_lut[9] = {0,3500,7000,10430,13840,17310,20740,24200,27657};
-    uint32_t temp;
-    TERM_sendVT100Code(handle, _VT100_CURSOR_DISABLE, 0);
-    TERM_sendVT100Code(handle, _VT100_CLS, 0);
-    ttprintf("Driver voltage measurement calibration [y] for next [a] for abort\r\n");
-    ttprintf("Set Vdriver to 7V\r\n");
-    if(getch(handle, portMAX_DELAY) != 'y') return TERM_CMD_EXIT_SUCCESS;
-    temp = 7000*512/ADC_active_sample_buf[0].v_driver;
-    vdriver_lut[2]= temp;
-    vdriver_lut[1]= temp/2;
-    ttprintf("Set Vdriver to 10V\r\n");
-    if(getch(handle, portMAX_DELAY) != 'y') return TERM_CMD_EXIT_SUCCESS;
-    temp = 10000*768/ADC_active_sample_buf[0].v_driver;
-    vdriver_lut[3]= temp;
-    ttprintf("Set Vdriver to 14V\r\n");
-    if(getche(handle, portMAX_DELAY) != 'y') return TERM_CMD_EXIT_SUCCESS;
-    temp = 14000*1024/ADC_active_sample_buf[0].v_driver;
-    vdriver_lut[4]= temp;
-    ttprintf("Set Vdriver to 17V\r\n");
-    if(getch(handle, portMAX_DELAY) != 'y') return TERM_CMD_EXIT_SUCCESS;
-    temp = 17000*1280/ADC_active_sample_buf[0].v_driver;
-    vdriver_lut[5]= temp;
-    ttprintf("Set Vdriver to 20V\r\n");
-    if(getch(handle, portMAX_DELAY) != 'y') return TERM_CMD_EXIT_SUCCESS;
-    temp = 20000*1536/ADC_active_sample_buf[0].v_driver;
-    vdriver_lut[6]= temp;
-    ttprintf("Set Vdriver to 24V\r\n");
-    if(getch(handle, portMAX_DELAY) != 'y') return TERM_CMD_EXIT_SUCCESS;
-    temp = 24000*1792/ADC_active_sample_buf[0].v_driver;
-    vdriver_lut[7]= temp;
-    temp = temp*2048/1792;
-    vdriver_lut[8]= temp;
-    ttprintf("Calibration finished\r\n");
-    TERM_sendVT100Code(handle, _VT100_CURSOR_ENABLE, 0);
+    
+    #define NUM_CALIB_SAMPLES 16    
+    
+    if(argCount==0 || strcmp(args[0], "-?") == 0){
+        ttprintf("calib [measured voltage]\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+
+    float voltage = atof(args[0]);
+    tsk_analog_recalc_drive_top(1.0f);
+    
+    ttprintf("Collecting samples for %f drive Voltage ...\r\n", voltage);
+    Term_check_break(handle,100);
+    
+    
+    uint32_t i=NUM_CALIB_SAMPLES;
+    
+    uint32_t accu = 0;
+    
+    while(i){
+        uint32_t sample = read_driver_mv(ADC_active_sample_buf[0].v_driver);
+        accu += sample;
+        ttprintf("Sample %u: %u mv\r\n", i, sample); 
+        
+        if(Term_check_break(handle,100) == pdFALSE){
+            ttprintf("Canceled by user\r\n");
+            goto abort;
+        }
+    }
+    
+    accu = accu / NUM_CALIB_SAMPLES;
+    
+    configuration.drive_factor = (float)accu / voltage;
+    
+    ttprintf ("New factor: %f\r\n", configuration.drive_factor);
+    
+    abort:
+    
+    tsk_analog_recalc_drive_top(configuration.drive_factor);
+    
     return TERM_CMD_EXIT_SUCCESS;
 }
 

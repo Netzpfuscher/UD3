@@ -629,7 +629,7 @@ uint8_t CMD_calib(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     
     accu = accu / NUM_CALIB_SAMPLES;
     
-    configuration.drive_factor = (float)accu / voltage;
+    configuration.drive_factor =  voltage * 1000.0f / (float)accu;
     
     ttprintf ("New factor: %f\r\n", configuration.drive_factor);
     

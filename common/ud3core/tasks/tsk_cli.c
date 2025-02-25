@@ -370,7 +370,8 @@ void tsk_cli_Start(void) {
         TERM_addCommand(CMD_ntc, "ntc","Calibrate NTC iDAC",0,&TERM_cmdListHead);
         TERM_addCommandConstAC(CMD_hwGauge, "hwGauge","adjust hardware gauge parameters",AC_hwGauge,&TERM_cmdListHead);
         TERM_addCommandConstAC(CMD_display, "display","adjust WS2812 parameters",AC_display,&TERM_cmdListHead);
-     
+        TERM_addCommand(CMD_hwrev, "hwrev","Display hardware revision",0,&TERM_cmdListHead);
+        
         if(configuration.minprot==pdTRUE){
             for(uint8_t i=0;i<NUM_MIN_CON;i++){
                 min_port[i].type = PORT_TYPE_MIN;

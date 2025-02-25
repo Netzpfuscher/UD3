@@ -129,7 +129,14 @@ void tsk_analog_recalc_drive_top(float factor){
 
 uint16_t read_driver_mv(uint16_t raw_adc){
     uint32_t driver_voltage;
-	driver_voltage = ((drive_top_r_corrected + DRIVEV_R_BOT) * raw_adc) / (DRIVEV_R_BOT * 819 / 1000);
+	driver_voltage = (drive_top_r_corrected + DRIVEV_R_BOT) * raw_adc;
+    
+    if(configuration.hw_rev > 0){
+        driver_voltage /= (DRIVEV_R_BOT * 819 / 1000);
+    } else {
+        driver_voltage /= (DRIVEV_R_BOT_V3 * 819 / 1000);
+    }
+    
     return driver_voltage;
 }
 
@@ -188,7 +195,7 @@ void calculate_rms(void) {
 		tt.n.avg_power.value = tt.n.batt_i.value * tt.n.bus_v.value / 10;
 	}
     
-    tt.n.primary_i.value = CT1_Get_Current(CT_PRIMARY);
+    tt.n.primary_i.value = CT1_Get_Current();
       
    
 	control_precharge();

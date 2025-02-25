@@ -45,7 +45,7 @@
 #define BUSV_R_BOT          5000UL           //Bus voltage bottom resistor
 #define DRIVEV_R_TOP        10000UL          //Drive voltage top resistor
 #define DRIVEV_R_BOT        2200UL           //Drive voltage bottom resistor
-
+#define DRIVEV_R_BOT_V3     1000UL           //Drive voltage bottom resistor (for UD3.0)
     
 //Synthesizer
 #define N_QUEUE_SID     64          //Size of the SID frame buffer

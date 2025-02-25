@@ -270,7 +270,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"vdrive"          , configuration.vdrive          , 10     ,24     ,0      ,callback_ConfigFunction     ,"Change Vdrive voltage (digipot)")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ivo_led"         , configuration.ivo_led         , 0      ,1      ,0      ,callback_ivoLED             ,"LED invert option")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"uvlo_analog"     , configuration.uvlo_analog     , 0      ,32000  ,1000   ,NULL                        ,"UVLO from ADC 0=GPIO UVLO")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"hw_rev"          , configuration.hw_rev          , 0      ,1      ,0      ,callback_ConfigFunction     ,"Hardware revision 0=3.0 1=3.1")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"hw_rev"          , configuration.hw_rev          , 0      ,2      ,0      ,callback_ConfigFunction     ,"Hardware revision 0=3.0-3.1a 1=3.1b 2=3.1c")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"autostart"       , configuration.autostart       , 0      ,1      ,0      ,NULL                        ,"Autostart")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"min_fb_current"  , configuration.min_fb_current  , 0      ,255    ,0      ,callback_ConfigFunction     ,"Current at which to switch to feedback")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"minDutyOffset"   , configuration.SigGen_minOtOffset  , 0      ,100    ,0      ,callback_siggen         ,"Minimum pulsewidth in percent of maximum pulsewidth")
@@ -915,6 +915,20 @@ uint8_t CMD_pwm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     return TERM_CMD_EXIT_SUCCESS;
 }
 
+
+/*****************************************************************************
+* Read hardware revision bits
+******************************************************************************/
+uint8_t CMD_hwrev(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
+    ttprintf("Hardware revision is set to: %u = %s\r\n", configuration.hw_rev, SYS_get_rev_string(configuration.hw_rev));
+    
+    uint8_t rev = SYS_detect_hw_rev();
+    
+    ttprintf("Hardware revision bits: %u = %s\r\n", rev, SYS_get_rev_string(rev));
+    
+
+    return TERM_CMD_EXIT_SUCCESS;
+}
 
 /*****************************************************************************
 * Signal debugging

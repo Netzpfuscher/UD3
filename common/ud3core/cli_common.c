@@ -624,6 +624,7 @@ uint8_t CMD_calib(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
             ttprintf("Canceled by user\r\n");
             goto abort;
         }
+        i--;
     }
     
     accu = accu / NUM_CALIB_SAMPLES;

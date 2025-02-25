@@ -25,9 +25,11 @@
 #include "digipot.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "cli_common.h"
 
 #define R_DCDC_TOP 82000.0
-#define R_DCDC_BOTTOM 2700.0
+#define R_DCDC_BOTTOM_V3 2700.0
+#define R_DCDC_BOTTOM 3300.0
 #define R_DIGIPOT 5000.0
 
 void digipot_write(uint8_t value){
@@ -65,7 +67,13 @@ void digipot_write(uint8_t value){
 
 void digipot_set_voltage(float voltage){
     
-    float r_pot = (voltage * R_DCDC_BOTTOM - 0.8 * R_DCDC_BOTTOM - 0.8 * R_DCDC_TOP) / -voltage + 0.8;
+    float r_bottom = R_DCDC_BOTTOM;
+    
+    if(configuration.hw_rev < 2){
+        r_bottom = R_DCDC_BOTTOM_V3;
+    }
+    
+    float r_pot = (voltage * r_bottom - 0.8 * r_bottom - 0.8 * R_DCDC_TOP) / -voltage + 0.8;
     
     float data = 255.0 - 255.0 / R_DIGIPOT * r_pot;
     

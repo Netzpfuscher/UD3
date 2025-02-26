@@ -97,7 +97,7 @@ void set_switch_without_fb(uint32_t en){
 
 void handle_UVLO(void) {
     // read the driver voltage
-    tt.n.driver_v.value = read_driver_mv(ADC_active_sample_buf[0].v_driver);
+    tt.n.driver_v.value = read_driver_mv();
     
     uint8_t undervoltage = pdFALSE;
     

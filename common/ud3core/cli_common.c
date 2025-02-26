@@ -616,7 +616,7 @@ uint8_t CMD_calib(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     uint32_t accu = 0;
     
     while(i){
-        uint32_t sample = read_driver_mv(ADC_active_sample_buf[0].v_driver);
+        uint32_t sample = read_driver_mv();
         accu += sample;
         ttprintf("Sample %u: %u mv\r\n", i, sample); 
         

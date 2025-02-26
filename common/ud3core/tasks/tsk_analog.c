@@ -97,6 +97,8 @@ rms_t voltage_batt;
 uint8_t ADC_mux_ctl[4] = {0x05, 0x02, 0x03, 0x00};
 static uint32_t drive_top_r_corrected = DRIVEV_R_TOP;
 
+static uint32_t vdriver_raw;
+
 /* `#END` */
 /* ------------------------------------------------------------------------ */
 /*
@@ -127,9 +129,8 @@ void tsk_analog_recalc_drive_top(float factor){
     drive_top_r_corrected = roundf(scaled_val);
 }
 
-uint16_t read_driver_mv(uint16_t raw_adc){
-    uint32_t driver_voltage;
-	driver_voltage = (drive_top_r_corrected + DRIVEV_R_BOT) * raw_adc;
+uint16_t read_driver_mv(){
+	uint32_t driver_voltage = (drive_top_r_corrected + DRIVEV_R_BOT) * vdriver_raw;
     
     if(configuration.hw_rev > 0){
         driver_voltage /= (DRIVEV_R_BOT * 819 / 1000);
@@ -177,6 +178,8 @@ uint16_t average_filter(uint32_t *ptr, uint16_t sample) {
 
 void calculate_rms(void) {
     
+    uint32_t vdriver_accu=0;
+    
     for(uint8_t i=0;i<ADC_BUFFER_CNT;i++){
 
 		// read the battery voltage
@@ -193,7 +196,12 @@ void calculate_rms(void) {
         }
 
 		tt.n.avg_power.value = tt.n.batt_i.value * tt.n.bus_v.value / 10;
+        
+        vdriver_accu += ADC_active_sample_buf[i].v_driver;  
+        
 	}
+    
+    vdriver_raw = vdriver_accu / ADC_BUFFER_CNT;
     
     tt.n.primary_i.value = CT1_Get_Current();
       

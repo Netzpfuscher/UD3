@@ -103,7 +103,6 @@ struct config_struct{
     uint8_t ps_scheme;
     uint8_t autotune_s;
     char ud_name[16];
-    uint8_t minprot;
     uint32_t baudrate;
     uint8_t ct2_type;
     uint16_t ct2_current;

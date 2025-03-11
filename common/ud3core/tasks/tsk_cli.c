@@ -239,7 +239,6 @@ static const char * min_names[] = {
 #include "cli_common.h"
 
 #include "tsk_priority.h"
-#include "tsk_uart.h"
 #include "tsk_usb.h"
 #include "tsk_hwGauge.h"
 #include <project.h>
@@ -372,35 +371,22 @@ void tsk_cli_Start(void) {
         TERM_addCommandConstAC(CMD_display, "display","adjust WS2812 parameters",AC_display,&TERM_cmdListHead);
         TERM_addCommand(CMD_hwrev, "hwrev","Display hardware revision",0,&TERM_cmdListHead);
         
-        if(configuration.minprot==pdTRUE){
-            for(uint8_t i=0;i<NUM_MIN_CON;i++){
-                min_port[i].type = PORT_TYPE_MIN;
-                min_port[i].num = i;
-                min_port[i].term_mode = PORT_TERM_VT100;
-                min_port[i].term_send_alarms = false;
-                min_port[i].term_block = xSemaphoreCreateBinary();
-                min_port[i].rx = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
-                min_port[i].tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,256);
-                xSemaphoreGive(min_port[i].term_block);
-                
-                min_handle[i] = TERM_createNewHandle(stream_printf,&min_port[i],pdTRUE,&TERM_cmdListHead,NULL,min_names[i]);
-                
-                xTaskCreate(tsk_cli_TaskProc, min_names[i], STACK_TERMINAL, min_handle[i], PRIO_TERMINAL, &MIN_Terminal_TaskHandle[i]);
-            }
-        }else{
-            min_port[0].type = PORT_TYPE_SERIAL;
-            min_port[0].num = 0;
-            min_port[0].term_mode = PORT_TERM_VT100;
-            min_port[0].term_send_alarms = false;
-            min_port[0].term_block = xSemaphoreCreateBinary();
-            min_port[0].rx = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
-            min_port[0].tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,1);
-            xSemaphoreGive(min_port[0].term_block);
+
+        for(uint8_t i=0;i<NUM_MIN_CON;i++){
+            min_port[i].type = PORT_TYPE_MIN;
+            min_port[i].num = i;
+            min_port[i].term_mode = PORT_TERM_VT100;
+            min_port[i].term_send_alarms = false;
+            min_port[i].term_block = xSemaphoreCreateBinary();
+            min_port[i].rx = xStreamBufferCreate(STREAMBUFFER_RX_SIZE,1);
+            min_port[i].tx = xStreamBufferCreate(STREAMBUFFER_TX_SIZE,256);
+            xSemaphoreGive(min_port[i].term_block);
             
-            min_handle[0] = TERM_createNewHandle(stream_printf,&min_port[0],pdTRUE,&TERM_cmdListHead,NULL,"Serial");
+            min_handle[i] = TERM_createNewHandle(stream_printf,&min_port[i],pdTRUE,&TERM_cmdListHead,NULL,min_names[i]);
             
-            xTaskCreate(tsk_cli_TaskProc, "UART-CLI", STACK_TERMINAL, min_handle[0], PRIO_TERMINAL, &UART_Terminal_TaskHandle);
+            xTaskCreate(tsk_cli_TaskProc, min_names[i], STACK_TERMINAL, min_handle[i], PRIO_TERMINAL, &MIN_Terminal_TaskHandle[i]);
         }
+        
 
 		/*
 	 	* Create the task and then leave. When FreeRTOS starts up the scheduler

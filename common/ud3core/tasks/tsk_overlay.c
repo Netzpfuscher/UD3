@@ -49,7 +49,6 @@
 #include "cli_common.h"
 #include "telemetry.h"
 #include "tsk_analog.h"
-#include "tsk_uart.h"
 #include "tsk_cli.h"
 #include <project.h>
 #include "helper/printf.h"

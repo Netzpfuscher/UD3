@@ -28,7 +28,6 @@
 #include "tsk_min.h"
 #include "tsk_sid.h"
 #include "tsk_midi.h"
-#include "tsk_uart.h"
 #include "tsk_cli.h"
 #include "tsk_fault.h"
 #include "tsk_overlay.h"

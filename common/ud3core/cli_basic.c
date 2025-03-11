@@ -28,7 +28,6 @@
 #include <device.h>
 #include "TTerm.h"
 #ifndef BOOT
-#include "tasks/tsk_uart.h"
 #include "tasks/tsk_usb.h"
 #include "tasks/tsk_eth_common.h"
 #include "alarmevent.h"

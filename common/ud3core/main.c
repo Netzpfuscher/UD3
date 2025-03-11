@@ -43,7 +43,6 @@
 #include "tasks/tsk_midi.h"
 #include "tasks/tsk_sid.h"
 #include "tasks/tsk_thermistor.h"
-#include "tasks/tsk_uart.h"
 #include "tasks/tsk_usb.h"
 #include "tasks/tsk_min.h"
 #include "tasks/tsk_display.h"
@@ -93,12 +92,8 @@ int main() {
 	
 
 	//Starting Tasks
-    if(configuration.minprot){
-        tsk_min_Start();        //Handles UART-Hardware and queues with MIN-Protocol
-    }else{
-	    tsk_uart_Start();       //Handles UART-Hardware and queues
-    }
-    
+
+    tsk_min_Start();        //Handles UART-Hardware and queues with MIN-Protocol
 	tsk_usb_Start();        //Handles USB-Hardware and queues
     
     tsk_cli_Start();		//Commandline interface

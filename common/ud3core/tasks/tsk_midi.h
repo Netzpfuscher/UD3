@@ -24,6 +24,8 @@
 
 #if !defined(tsk_midi_TASK_H)
 #define tsk_midi_TASK_H
+    
+#define N_MIDICHANNEL 16
 
 /*
  * Add user task definitions, types, includes and other things in the below
@@ -63,6 +65,8 @@ void tsk_midi_Start(void);
 void tsk_midi_reset_skip();
 
 void update_midi_duty();
+
+void queue_midi_message(uint8 *midiMsg);
 
 //void switch_synth(uint8_t synth);
 

@@ -1,4 +1,4 @@
-#include "USBMIDI_1.h"
+#include "USBUART_1.h"
 #include "console.h"
 
 #include <stdio.h>
@@ -33,27 +33,27 @@ int _kbhit(void)
   return 0;
 }
 
-uint8_t USBMIDI_1_initVar=0;
+uint8_t USBUART_1_initVar=0;
 
-uint8_t USBMIDI_1_IsConfigurationChanged(){
+uint8_t USBUART_1_IsConfigurationChanged(){
 	return 0;
 }
 
-uint8_t USBMIDI_1_GetConfiguration(){
+uint8_t USBUART_1_GetConfiguration(){
 	return 1;
 }
 
-void USBMIDI_1_PutData(uint8_t * buffer, uint16_t count){
+void USBUART_1_PutData(uint8_t * buffer, uint16_t count){
 	console_print("%.*s",count,buffer);
 
 }
 
 uint8_t c;
-uint8_t USBMIDI_1_CDCIsReady(){
+uint8_t USBUART_1_CDCIsReady(){
 	return 1;
 }
 
-uint8_t USBMIDI_1_DataIsReady(){
+uint8_t USBUART_1_DataIsReady(){
 	if (_kbhit()){
 		c= getchar();
 
@@ -62,7 +62,7 @@ uint8_t USBMIDI_1_DataIsReady(){
 	return 0;
 }
 
-uint16_t USBMIDI_1_GetAll(uint8_t * buffer){
+uint16_t USBUART_1_GetAll(uint8_t * buffer){
 	if (c == '\n') {
 		// TTerm treats \n as backspace. Since none of the "usual" terminals send it this does not matter outside the
 		// simulator, and in the sim we just special-case it to send the "correct" \r instead

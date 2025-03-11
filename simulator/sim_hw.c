@@ -227,3 +227,19 @@ uint8_t EEPROM_1_Write(const uint8 * rowData, uint8 rowNumber){
 uint8_t EEPROM_1_ReadByte(uint16 address){
 	return eeprom[address];
 }
+
+void vTaskEnterCritical() {}
+void vTaskExitCritical() {}
+
+static uint8_t interrupterTimebaseCtrl = 0;
+
+void interrupterTimebase_WriteControlRegister(uint8_t value) {
+    interrupterTimebaseCtrl = value;
+}
+uint8_t interrupterTimebase_ReadControlRegister() {
+    return interrupterTimebaseCtrl;
+}
+uint8_t interrupterTimebase_ReadStatusRegister() {
+    // TODO implement?
+    return 0;
+}

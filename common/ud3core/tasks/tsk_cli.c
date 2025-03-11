@@ -148,6 +148,10 @@ static const char * AC_set_get[] = {
     "boff",
     "bon",
     "charge_delay",
+    "comp_attac",
+    "comp_dutyOffset",
+    "comp_release",
+    "comp_sustain",
     "ct1_burden",
     "ct1_ratio",
     "ct2_burden",
@@ -165,9 +169,9 @@ static const char * AC_set_get[] = {
     "ivo_led",
     "ivo_uart",
     "lead_time",
+    "maxDutyOffset",
+    "minDutyOffset",
     "max_const_i",
-    "max_dc_curr",
-    "max_fault_i",
     "max_fb_errors",
     "max_qcw_current",
     "max_qcw_duty",
@@ -182,8 +186,6 @@ static const char * AC_set_get[] = {
     "noise_div",
     "offtime",
     "pca9685",
-    "pid_curr_i",
-    "pid_curr_p",
     "pid_temp_i",
     "pid_temp_mode",
     "pid_temp_p",
@@ -197,11 +199,12 @@ static const char * AC_set_get[] = {
     "qcw_ramp",
     "qcw_repeat",
     "r_bus",
+    "sid_hpv_enabled",
+    "sid_noise_volume",
     "spi_speed",
     "start_cycles",
     "start_freq",
     "synth",
-    "synth_filter",
     "temp1_max",
     "temp1_setpoint",
     "temp2_max",
@@ -347,7 +350,6 @@ void tsk_cli_Start(void) {
         TERM_addCommand(CMD_features, "features","Get supported features",0,&TERM_cmdListHead);
         TERM_addCommandConstAC(CMD_eeprom, "eeprom","Save/Load config [load/save]",AC_eeprom,&TERM_cmdListHead);
         TERM_addCommand(CMD_udkill, "kill","Stops the output",0,&TERM_cmdListHead);
-        TERM_addCommand(CMD_fuse, "fuse_reset","Reset the internal fuse",0,&TERM_cmdListHead);
         TERM_addCommand(CMD_load_defaults, "load_default","Loads the default parameters",0,&TERM_cmdListHead);
         
         TERM_addCommandConstAC(CMD_get, "get", "Usage get [param]", AC_set_get,&TERM_cmdListHead);     
@@ -368,7 +370,8 @@ void tsk_cli_Start(void) {
         TERM_addCommand(CMD_ntc, "ntc","Calibrate NTC iDAC",0,&TERM_cmdListHead);
         TERM_addCommandConstAC(CMD_hwGauge, "hwGauge","adjust hardware gauge parameters",AC_hwGauge,&TERM_cmdListHead);
         TERM_addCommandConstAC(CMD_display, "display","adjust WS2812 parameters",AC_display,&TERM_cmdListHead);
-     
+        TERM_addCommand(CMD_hwrev, "hwrev","Display hardware revision",0,&TERM_cmdListHead);
+        
         if(configuration.minprot==pdTRUE){
             for(uint8_t i=0;i<NUM_MIN_CON;i++){
                 min_port[i].type = PORT_TYPE_MIN;

@@ -65,6 +65,7 @@ uint8_t CMD_qcw(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 uint8_t CMD_relay(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 uint8_t CMD_pwm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 uint8_t CMD_reset(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+uint8_t CMD_hwrev(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 
 void send_signal_state_new(uint8_t signal, uint8_t inverted, TERMINAL_HANDLE * handle);
 void send_signal_state_wo_new(uint8_t signal, uint8_t inverted, TERMINAL_HANDLE * handle);
@@ -85,10 +86,8 @@ struct config_struct{
     uint8_t temp2_max;
     uint16_t ct1_ratio;
     uint16_t ct2_ratio;
-    uint16_t ct3_ratio;
     uint16_t ct1_burden;
     uint16_t ct2_burden;
-    uint16_t ct3_burden;
     uint16_t lead_time;
     uint16_t start_freq;
     uint8_t  start_cycles;
@@ -105,8 +104,6 @@ struct config_struct{
     uint8_t autotune_s;
     char ud_name[16];
     uint8_t minprot;
-    uint16_t max_const_i;
-    uint16_t max_fault_i;
     uint32_t baudrate;
     uint8_t ct2_type;
     uint16_t ct2_current;
@@ -116,9 +113,6 @@ struct config_struct{
     uint16_t chargedelay;
     uint8_t ivo_uart;
     uint8_t enable_display;
-    float pid_curr_p;
-    float pid_curr_i;
-    uint16_t max_dc_curr;
     uint8_t ext_interrupter;
     uint8_t is_qcw;
     uint8_t pca9685;
@@ -126,21 +120,28 @@ struct config_struct{
     uint16_t ntc_b;
     uint16_t ntc_r25;
     uint16_t idac;
-    uint16_t noise_vol_div;
     uint8_t ivo_led;
     uint16_t uvlo_analog;
-    char synth_filter[32];
     float vdrive;
     uint8_t hw_rev;
     uint8_t autostart;
     uint8_t min_fb_current;
-};
+    
+    uint8_t SigGen_minOtOffset;
+    
+    uint8_t compressor_attac;
+    uint8_t compressor_sustain;
+    uint8_t compressor_release;
+    uint8_t compressor_maxDutyOffset;
+    
+    float drive_factor;
+}; 
 typedef struct config_struct cli_config;
 
 struct parameter_struct{
     uint16_t    pw;
-    uint16_t    pwp;
-	uint16_t    pwd;
+    uint16_t    pwd;
+    uint16_t    vol;
     uint16_t    tune_start;
     uint16_t    tune_end;
     uint16_t    tune_pw;
@@ -153,10 +154,8 @@ struct parameter_struct{
     uint16_t    qcw_repeat;
     uint16_t    burst_on;
     uint16_t    burst_off;
-    int8_t      transpose;
     uint8_t     synth;
     uint16_t    temp_duty;
-    uint8_t     mch;
 };
 typedef struct parameter_struct cli_parameter;
 

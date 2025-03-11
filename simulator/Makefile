@@ -21,6 +21,7 @@ INCLUDE_DIRS += -I${CORE_DIR}/ud3core/helper
 INCLUDE_DIRS += -I${CORE_DIR}/tterm
 INCLUDE_DIRS += -I${CORE_DIR}/min
 INCLUDE_DIRS += -I${CORE_DIR}/vms
+INCLUDE_DIRS += -I${CORE_DIR}/Modules
 
 SOURCE_FILES := $(wildcard *.c)
 SOURCE_FILES += $(wildcard ${FREERTOS_DIR}/*.c)
@@ -41,6 +42,7 @@ SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_hwGauge.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_midi.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_min.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_overlay.c
+SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_sid.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_thermistor.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_uart.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_usb.c
@@ -52,8 +54,6 @@ SOURCE_FILES += ${CORE_DIR}/ud3core/clock.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/DMA.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/interrupter.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/SignalGenerator.c
-SOURCE_FILES += ${CORE_DIR}/ud3core/SignalGeneratorSID.c
-SOURCE_FILES += ${CORE_DIR}/ud3core/SignalGeneratorMIDI.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/system.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/qcw.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/ZCDtoPWM.c
@@ -62,6 +62,7 @@ SOURCE_FILES += $(wildcard ${CORE_DIR}/ud3core/helper/*.c)
 SOURCE_FILES += $(wildcard ${CORE_DIR}/tterm/*.c)
 SOURCE_FILES += $(wildcard ${CORE_DIR}/min/*.c)
 SOURCE_FILES += $(wildcard ${CORE_DIR}/vms/*.c)
+SOURCE_FILES += $(wildcard ${CORE_DIR}/Modules/*/*.c)
 
 
 CFLAGS := -ggdb3 -Os -DprojCOVERAGE_TEST=0 -std=gnu11

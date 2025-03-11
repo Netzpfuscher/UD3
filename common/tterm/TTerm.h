@@ -152,6 +152,7 @@ const extern char TERM_startupText3[];
 
 #if EXTENDED_PRINTF
 #define ttprintf(format, ...) (*handle->print)(handle->port, format, ##__VA_ARGS__)
+#define ttprintnlf(format, ...) TERM_sendVT100Code(handle, _VT100_ERASE_LINE_END, 0); (*handle->print)(handle->port, format, ##__VA_ARGS__)
 #define ttdf(format, ...) (min_handle[1]->print)(min_handle[1]->port, format, ##__VA_ARGS__)
 #define ttprintb(buffer, len) (*handle->print)(handle->port, "", (uint8_t*)buffer, (uint32_t)len)
 #else

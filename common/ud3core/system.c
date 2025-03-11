@@ -31,6 +31,28 @@ const char * SYS_getTaskStateString(eTaskState state){
 }
 
 uint8_t SYS_detect_hw_rev(void){
+    uint8_t bits = 0;
     
-    return 1;   
+    bits |= VB0_Read() ? 0 : 1;
+    bits |= (VB1_Read() ? 0 : 1) << 1;
+    bits |= (VB2_Read() ? 0 : 1) << 2;
+    bits |= (VB3_Read() ? 0 : 1) << 3;
+    bits |= (VB4_Read() ? 0 : 1) << 4;
+    bits |= (VB5_Read() ? 0 : 1) << 5;
+
+    return bits;   
+}
+
+char * SYS_get_rev_string(uint8_t rev){
+    
+    switch(rev){
+    case 0:
+        return "3.0 or 3.1a";
+    case 1:
+        return "3.1b";
+    case 2:
+        return "3.1c";
+    default:
+        return "unknown";
+    }
 }

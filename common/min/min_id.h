@@ -15,6 +15,7 @@
 #define MIN_ID_ALARM    41
 #define MIN_ID_DEBUG    42
 #define MIN_ID_VMS      43
+#define MIN_ID_OS_INFO  44
     
 #define SYNTH_CMD_FLUSH     1
 #define SYNTH_CMD_SID       2
@@ -29,15 +30,18 @@
 #define CMD_FEATURE_FRAME   0x02
 #define CMD_LINK            0x03
     
-#define EVENT_GET_INFO      1 
-#define EVENT_ETH_INIT_FAIL 2 
-#define EVENT_ETH_INIT_DONE 3
-#define EVENT_ETH_LINK_UP   4
-#define EVENT_ETH_LINK_DOWN 5
-#define EVENT_ETH_DHCP_SUCCESS 6
-#define EVENT_ETH_DHCP_FAIL 7
+#define EVENT_GET_INFO          1 
+#define EVENT_ETH_INIT_FAIL     2    
+#define EVENT_ETH_INIT_DONE     3
+#define EVENT_ETH_LINK_UP       4
+#define EVENT_ETH_LINK_DOWN     5
+#define EVENT_ETH_DHCP_SUCCESS  6
+#define EVENT_ETH_DHCP_FAIL     7
 #define EVENT_FS_CARD_CONNECTED 8
-#define EVENT_FS_CARD_REMOVED 9
- 
+#define EVENT_FS_CARD_REMOVED   9
+
+    
+#define EVENT_STRUCT_VERSION    1
+#define OS_INFO_STRUCT_VERSION    1
     
 #endif

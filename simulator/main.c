@@ -66,6 +66,7 @@
 #include "DMA.h"
 #include "ZCDtoPWM.h"
 #include "interrupter.h"
+#include "tasks/tsk_sid.h"
 #include "telemetry.h"
 #include "helper/printf.h"
 #include <device.h>
@@ -85,6 +86,7 @@
 #include "tasks/tsk_duty.h"
 #include "tsk_sim.h"
 #include "tsk_audio.h"
+#include "nvm.h"
 
 
 /*
@@ -140,6 +142,7 @@ int main( void )
 	init_config();
 	
     EEPROM_1_Start();
+    load_flash();
 	SG_Timer_Start();
     
     null_port.type = PORT_TYPE_NULL;
@@ -192,6 +195,8 @@ int main( void )
 	tsk_fault_Start();		//Handles fault conditions
 	console_print("Duty init...\n");
     tsk_duty_Start();
+	console_print("SID init...\n");
+    tsk_sid_Start();
     
     if(configuration.enable_display){
 		console_print("Display init...\n");

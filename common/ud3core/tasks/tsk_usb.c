@@ -30,8 +30,8 @@
 #include <cytypes.h>
 #include <stdio.h>
 
-#include "USBMIDI_1.h"
-#include "USBMIDI_1_cdc.h"
+#include "USBUART_1.h"
+#include "USBUART_1_cdc.h"
 #include "tsk_priority.h"
 #include "tsk_usb.h"
 #include "tsk_fault.h"
@@ -64,12 +64,12 @@ void tsk_usb_Start(void) {
 void tsk_usb_Init(void) {
 	/*  Initialize the USB COM port */
 
-	if (USBMIDI_1_initVar == 0) {
+	if (USBUART_1_initVar == 0) {
 /* Start USBFS Operation with 3V operation */
 #if (CYDEV_VDDIO1_MV < 5000)
-		USBMIDI_1_Start(0u, USBMIDI_1_3V_OPERATION);
+		USBUART_1_Start(0u, USBUART_1_3V_OPERATION);
 #else
-		USBMIDI_1_Start(0u, USBMIDI_1_5V_OPERATION);
+		USBUART_1_Start(0u, USBUART_1_5V_OPERATION);
 #endif
 	}
 
@@ -96,30 +96,25 @@ void tsk_usb_Task(void *pvParameters) {
     alarm_push(ALM_PRIO_INFO, "TASK: USB started", ALM_NO_VALUE);
 	for (;;) {
 		/* Handle enumeration of USB port */
-		if (USBMIDI_1_IsConfigurationChanged() != 0u) /* Host could send double SET_INTERFACE request */
+		if (USBUART_1_IsConfigurationChanged() != 0u) /* Host could send double SET_INTERFACE request */
 		{
-			if (USBMIDI_1_GetConfiguration() != 0u) /* Init IN endpoints when device configured */
+			if (USBUART_1_GetConfiguration() != 0u) /* Init IN endpoints when device configured */
 			{
 				/* Enumeration is done, enable OUT endpoint for receive data from Host */
-				USBMIDI_1_CDC_Init();
-				USBMIDI_1_MIDI_Init();
+				USBUART_1_CDC_Init();
 			}
 		}
 		/*
 		 *
 		 */
-		if (USBMIDI_1_GetConfiguration() != 0u) {
+		if (USBUART_1_GetConfiguration() != 0u) {
 /*
 			 * Process received data from the USB, and store it in to the
 			 * receiver message Q.
 			 */
 
-#if (!USBMIDI_1_EP_MANAGEMENT_DMA_AUTO)
-			USBMIDI_1_MIDI_OUT_Service();
-#endif
-
-			if (USBMIDI_1_DataIsReady() != 0u) {
-				count = USBMIDI_1_GetAll(buffer);
+			if (USBUART_1_DataIsReady() != 0u) {
+				count = USBUART_1_GetAll(buffer);
 				if (count != 0u) {
 					/* insert data in to Receive FIFO */
                     LED_com_Write(LED_ON);
@@ -136,7 +131,7 @@ void tsk_usb_Task(void *pvParameters) {
             count = xStreamBufferBytesAvailable(usb_port.tx);
 
 			/* When component is ready to send more data to the PC */
-			if ((USBMIDI_1_CDCIsReady() != 0u) && (count > 0)) {
+			if ((USBUART_1_CDCIsReady() != 0u) && (count > 0)) {
 				/*
 				 * Read the data from the transmit queue and buffer it
 				 * locally so that the data can be utilized.
@@ -145,7 +140,7 @@ void tsk_usb_Task(void *pvParameters) {
 				/* Send data back to host */
                 LED_com_Write(LED_ON);
                 usb_bytes_tx+=count;
-				USBMIDI_1_PutData(buffer, count);
+				USBUART_1_PutData(buffer, count);
 
 				/* If the last sent packet is exactly maximum packet size, 
             	 *  it shall be followed by a zero-length packet to assure the
@@ -153,14 +148,14 @@ void tsk_usb_Task(void *pvParameters) {
              	 */
 				if (count == tsk_usb_BUFFER_LEN) {
 					/* Wait till component is ready to send more data to the PC */
-					while (USBMIDI_1_CDCIsReady() == 0u) {
+					while (USBUART_1_CDCIsReady() == 0u) {
 						vTaskDelay(1);
 					}
-					USBMIDI_1_PutData(NULL, 0u); /* Send zero-length packet to PC */
+					USBUART_1_PutData(NULL, 0u); /* Send zero-length packet to PC */
 				}
 			}
 		}
-        if(xStreamBufferBytesAvailable(usb_port.tx)==0 || xStreamBufferBytesAvailable(usb_port.rx)==0 || USBMIDI_1_CDCIsReady()==0){
+        if(xStreamBufferBytesAvailable(usb_port.tx)==0 || xStreamBufferBytesAvailable(usb_port.rx)==0 || USBUART_1_CDCIsReady()==0){
 		    vTaskDelay(2 / portTICK_PERIOD_MS);
         }
 	}

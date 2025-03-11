@@ -37,11 +37,6 @@
 #define CT_PRIMARY 0
 #define CT_SECONDARY 1
  
-enum I2T {
-    I2T_NORMAL,
-    I2T_WARNING,
-    I2T_LIMIT
-};
 
 #define AC_PRECHARGE_TIMEOUT 100  //
 
@@ -96,16 +91,14 @@ typedef struct
 /* `#END` */
 
 void tsk_analog_Start(void);
-uint32_t CT1_Get_Current(uint8_t channel);
-float CT1_Get_Current_f(uint8_t channel);
+uint32_t CT1_Get_Current();
+float CT1_Get_Current_f();
 uint16_t get_max(void);
-void i2t_set_limit(uint32_t const_current, uint32_t ovr_current, uint32_t limit_ms);
-void i2t_set_warning(uint8_t percent);
-void i2t_reset();
 void reconfig_charge_timer();
 uint8_t callback_pid(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 extern adc_sample_t *ADC_active_sample_buf;
-uint16_t read_driver_mv(uint16_t raw_adc);
+uint16_t read_driver_mv();
+void tsk_analog_recalc_drive_top(float factor);
 
 extern adc_sample_t ADC_sample_buf_0[ADC_BUFFER_CNT];
 extern adc_sample_t ADC_sample_buf_1[ADC_BUFFER_CNT];

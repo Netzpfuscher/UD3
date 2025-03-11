@@ -46,10 +46,6 @@ xSemaphoreHandle tx_Semaphore;
 #include "tsk_cli.h"
 #include "tsk_priority.h"
 
-volatile uint8_t midi_count = 0;
-volatile uint8_t midiMsg[3];
-
-
 /* `#END` */
 /* ------------------------------------------------------------------------ */
 /*
@@ -65,41 +61,14 @@ CY_ISR(isr_uart_tx) {
 	}
 }
 CY_ISR(isr_uart_rx) {
-	char c;
+    char c;
     LED_com_Write(LED_ON);
-	while (UART_GetRxBufferSize()) {
-		c = UART_GetByte();
-		if (c & 0x80) {
-			midi_count = 1;
-			midiMsg[0] = c;
-
-			goto end;
-		} else if (!midi_count) {
-            if(xStreamBufferSendFromISR(min_port[0].rx, &c, 1, 0)==0){
-                alarm_push(ALM_PRIO_WARN, "COM: Serial buffer overrun",ALM_NO_VALUE);   
-            }
-			goto end;
-		}
-		switch (midi_count) {
-		case 1:
-			midiMsg[1] = c;
-			midi_count = 2;
-			break;
-		case 2:
-			midiMsg[2] = c;
-			midi_count = 0;
-			if (midiMsg[0] == 0xF0) {
-				if (midiMsg[1] == 0x0F) {
-					WD_reset_from_ISR();
-					goto end;
-				}
-			}
-
-			USBMIDI_1_callbackLocalMidiEvent(0, (uint8_t*)midiMsg);
-			break;
-		}
-	end:;
-	}
+    while (UART_GetRxBufferSize()) {
+        c = UART_GetByte();
+        if(!(c & 0x80) && xStreamBufferSendFromISR(min_port[0].rx, &c, 1, 0)==0){
+            alarm_push(ALM_PRIO_WARN, "COM: Serial buffer overrun",ALM_NO_VALUE);
+        }
+    }
 }
 
 /* `#END` */

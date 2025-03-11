@@ -139,8 +139,6 @@ uint8_t TERM_doListAC(AC_LIST_HEAD * head, char * currInput, uint8_t length, cha
                     commandsFound ++;
                     //UART_print(" -> found match (count is now %d)", commandsFound);
                 }
-            }else{
-                if(commandsFound > 0) return commandsFound;
             }
         }
         //UART_print("\r\n-----list done-----\r\n");
@@ -153,8 +151,6 @@ uint8_t TERM_doListAC(AC_LIST_HEAD * head, char * currInput, uint8_t length, cha
                     commandsFound ++;
                     //UART_print("found %s (count is now %d)\r\n", buff[commandsFound], commandsFound);
                 }
-            }else{
-                if(commandsFound > 0) return commandsFound;
             }
             curr = ACL_getNext(curr);
             if(curr == 0) break;

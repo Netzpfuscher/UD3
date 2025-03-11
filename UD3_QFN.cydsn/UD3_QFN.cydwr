@@ -1724,12 +1724,13 @@
       <Data key="02f2cf2c-2c7a-49df-9246-7a3435c21be3" value="SCL_1" />
       <Data key="3a960253-138e-4757-af7c-c31e478282fd" value="Rx" />
       <Data key="4ae2603f-6bff-43e6-915a-eafa3248ff68" value="ws2812" />
-      <Data key="4af5aad7-f42e-46eb-a353-83d53c26ab07" value="LED4" />
+      <Data key="4af5aad7-f42e-46eb-a353-83d53c26ab07" value="LED_com" />
       <Data key="4c15b41e-e284-4978-99e7-5aaee19bd0ce" value="RX_422" />
       <Data key="4de8b778-eb40-4f1c-bc3f-98f57730fff7" value="TX_422_EN" />
       <Data key="4e0ba977-981e-4aa2-a3bc-c02da9d2f7c6" value="therm2" />
       <Data key="05a9c8de-3ba2-4909-8250-95fdc61c0bf4" value="ZCDA" />
       <Data key="5b10b89f-b451-4ef8-a137-cb307c33a33c" value="OCref" />
+      <Data key="5bd5f1c2-92b5-48ad-b4fe-194a667926d2" value="FB_Debug" />
       <Data key="5c1decb5-69e3-4a8d-bb0c-281221d15217" value="UVLO" />
       <Data key="06d4fcad-2164-4492-9838-df946d446c53" value="Relay1" />
       <Data key="6d60edf3-e349-4689-bea2-2ba7bb0e8e84" value="TX_422" />
@@ -1740,30 +1741,34 @@
       <Data key="8ecba497-612c-422e-8426-91832f4dc07d" value="GD2B" />
       <Data key="9ddc42ab-facd-495c-962a-8d45bfc4862c" value="Vdriver" />
       <Data key="13d5721e-017e-4f36-866d-01a4b6a3504a" value="Ibus" />
-      <Data key="52f31aa9-2f0a-497d-9a1f-1424095e13e6" value="LED1" />
+      <Data key="42a69613-7e63-4dba-a260-65eb97f2b91b" value="digipot_data" />
+      <Data key="52f31aa9-2f0a-497d-9a1f-1424095e13e6" value="LED_int" />
       <Data key="64d2766f-7fd2-455b-88c8-2fabd65c34c4" value="GD1A" />
       <Data key="83b2fde2-60ad-45b6-9e5c-cb3baa6e3f9a" value="SCLK" />
       <Data key="83fc8610-854c-47f6-b3ec-8847b2c290d3" value="RX_422_EN" />
       <Data key="299df0a5-d2ed-4b72-b3d7-ae900bca29ed" value="CTout" />
+      <Data key="411f99db-5ed2-4369-9793-9bae11298441" value="digipot_ncs" />
       <Data key="549a4e41-b717-44bb-b13e-c01052667238" value="Relay3" />
       <Data key="958e9411-0a95-4df9-865e-f68273cf2d90" value="Vin" />
+      <Data key="4107d955-094b-44ec-b878-732d04118082" value="ZCD_Debug" />
       <Data key="6400ba9d-054d-4648-a80b-c36ed9080f64" value="CT_SEC" />
       <Data key="6533b513-81b1-46af-8e19-d98fd9cc0e1c/16a808f6-2e13-45b9-bce0-b001c8655113" value="ADC_peak_Bypass" />
       <Data key="22863ebe-a37b-476f-b252-6e49a8c00b12" value="SDA_1" />
+      <Data key="64771f96-2472-47b5-997d-0adfb7ac011f" value="dcdc_ena" />
       <Data key="183169da-5db0-456e-85f3-54d1ef93695d" value="TP6" />
       <Data key="1425177d-0d0e-4468-8bcc-e638e5509a9b" value="MISO" />
       <Data key="77715107-f8d5-47e5-a629-0fb83101ac6b" value="DEBUG_DA" />
       <Data key="a1af635c-2735-4a6b-8435-ff30029b58ef" value="Vbus" />
       <Data key="a4c246a0-55f8-4012-a160-95210e380870" value="Tx" />
-      <Data key="a33d362e-32d3-4bd2-a4e3-6ca8b8e69c1f" value="LED3" />
+      <Data key="a33d362e-32d3-4bd2-a4e3-6ca8b8e69c1f" value="LED_OCD" />
       <Data key="a2257d0d-8c7b-45f0-af4f-8a67896d6b11" value="ZCDB" />
       <Data key="b1db877c-9dfd-4400-a351-2f7b40c83b5f" value="TP2" />
       <Data key="d5c222a8-f340-47f3-b3e2-82b5110cc0f6" value="TRIG" />
       <Data key="d1817f9f-1083-43a0-873b-9935f73c2a53" value="TP4" />
       <Data key="df864acb-3838-45e6-8b11-23d8f35057fe" value="Relay2" />
-      <Data key="e4c8597c-026f-4cf9-a17f-7d69962e088d" value="LED2" />
+      <Data key="e4c8597c-026f-4cf9-a17f-7d69962e088d" value="LED_sysfault" />
       <Data key="e92e0d69-8885-4c0d-a0b4-208d2aa95cb7" value="therm1" />
-      <Data key="e851a3b9-efb8-48be-bbb8-b303b216c393" value="ETH_CSN" />
+      <Data key="e851a3b9-efb8-48be-bbb8-b303b216c393" value="digipot_clk" />
       <Data key="ed092b9b-d398-4703-be89-cebf998501f6" value="MOSI" />
       <Data key="ef67386f-6004-4f68-bee5-5150f41b270c" value="GD2A" />
       <Data key="efe99b71-ea8e-4255-954e-cd80c2ccf46e" value="TP1" />
@@ -5022,11 +5027,6 @@
         <Data key="Port Format" value="2,5" />
       </Group>
     </Group>
-    <Group key="958e9411-0a95-4df9-865e-f68273cf2d90">
-      <Group key="0">
-        <Data key="Port Format" value="0,1" />
-      </Group>
-    </Group>
     <Group key="6400ba9d-054d-4648-a80b-c36ed9080f64">
       <Group key="0">
         <Data key="Port Format" value="0,7" />
@@ -5141,6 +5141,9 @@
       </Group>
       <Group key="549a4e41-b717-44bb-b13e-c01052667238">
         <Data key="0" value="132793514392090191" />
+      </Group>
+      <Group key="958e9411-0a95-4df9-865e-f68273cf2d90">
+        <Data key="0" value="133609652633504697" />
       </Group>
     </Group>
     <Group key="Unlocked Pins" />

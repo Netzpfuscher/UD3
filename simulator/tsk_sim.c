@@ -2,7 +2,6 @@
 
 
 #include "FreeRTOS.h"
-#include "SignalGeneratorSID.h"
 #include "qcw.h"
 #include "task.h"
 #include "queue.h"
@@ -36,7 +35,8 @@ static void populate_buffer(adc_sample_t* ptr){
     }
 	
 	if(interrupter.mode!=INTR_MODE_OFF && system_fault_Control){
-		float temp = (((55000 - param.pwd)/1000) * param.pwp)/10;
+		//float temp = (((55000 - param.pwd)/1000) * param.pwp)/10;
+		float temp = (((55000 - param.pwd)/1000) * param.pw)/10;
 		temp = temp * ((float)tt.n.bus_v.value / 493.0);
 		bus_i = temp;
 	}else{
@@ -78,22 +78,7 @@ void isr_synth() {
         qcw_handle();
         return;
     }
-    switch(param.synth){
-        case SYNTH_MIDI:
-            synthcode_MIDI();
-            break;
-        case SYNTH_SID:
-            synthcode_SID(r);
-            break;
-        case SYNTH_MIDI_QCW:
-            //synthcode_QMIDI(r);
-            break;
-        case SYNTH_SID_QCW:
-            synthcode_QSID(r);
-            break;
-        default:
-            break;
-    }
+    // TODO do we need to call anything here now? Probably not?
 }
 
 void tsk_sim_isr(void *pvParameters) {

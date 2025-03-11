@@ -41,6 +41,7 @@
 #include "tasks/tsk_cli.h"
 #include "tasks/tsk_fault.h"
 #include "tasks/tsk_midi.h"
+#include "tasks/tsk_sid.h"
 #include "tasks/tsk_thermistor.h"
 #include "tasks/tsk_uart.h"
 #include "tasks/tsk_usb.h"
@@ -102,7 +103,8 @@ int main() {
     
     tsk_cli_Start();		//Commandline interface
     
-	tsk_midi_Start();       //MIDI synth
+	tsk_midi_Start();       //MIDI & SID synth
+    tsk_sid_Start();
 	
 	tsk_analog_Start();		//Reads bus voltage and currents
 	tsk_thermistor_Start(); //Reads thermistors

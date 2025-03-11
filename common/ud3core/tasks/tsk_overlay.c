@@ -55,6 +55,7 @@
 #include "helper/printf.h"
 #include "ZCDtoPWM.h"
 #include "TTerm.h"
+#include "SignalGenerator.h"
 
 
 
@@ -241,7 +242,7 @@ void init_telemetry(){
     tt.n.dutycycle.unit = TT_UNIT_PERCENT;
     tt.n.dutycycle.divider = 10;
     tt.n.dutycycle.high_res = pdTRUE;
-    tt.n.dutycycle.resend_time = TT_SLOW;
+    tt.n.dutycycle.resend_time = TT_FAST;
     tt.n.dutycycle.chart = TT_NO_TELEMETRY;
     tt.n.dutycycle.gauge = 6;
     
@@ -399,7 +400,7 @@ void show_overlay_400ms(TERMINAL_HANDLE * handle) {
 
         if(portM->term_mode!=PORT_TERM_MQTT){
             send_status(tt.n.bus_status.value!=BUS_OFF,
-                        interrupter.mode!=INTR_MODE_OFF,
+                        param.synth == SYNTH_TR,
                         configuration.ps_scheme!=AC_NO_RELAY_BUS_SCHEME,
                         (tsk_fault_is_fault()) ? 1 : 0,
                         handle);

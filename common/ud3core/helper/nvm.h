@@ -25,16 +25,18 @@
 #define nvm_H
 
     #include "TTerm.h"
-    #include "vms_types.h"
+    #include "VMS.h"
     
     #ifndef SIMULATOR
         extern const volatile uint8_t* NVM_mapMem;
         extern const volatile uint8_t * NVM_blockMem;
-        extern const VMS_BLOCK* VMS_BLKS;
+        extern const volatile VMS_Block_t * NVM_blocks;
     #else
         extern uint8_t * NVM_mapMem;
         extern uint8_t * NVM_blockMem;
-        extern VMS_BLOCK* VMS_BLKS;
+        extern VMS_Block_t * NVM_blocks;
+
+        void load_flash();
     #endif
     
     #define MAPMEM_SIZE   16384
@@ -44,6 +46,6 @@
     uint8_t CMD_nvm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
     uint8_t nvm_write_buffer(uint16_t index, uint8_t* buffer, int32_t len);
     uint8_t nvm_flush();
-    uint32_t nvm_get_blk_cnt(const VMS_BLOCK* blk);
+    uint32_t nvm_get_blk_cnt(const VMS_Block_t * blk);
     
 #endif

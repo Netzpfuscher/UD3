@@ -10,6 +10,6 @@ const char * SYS_getTaskStateString(eTaskState state);
 
 
 uint8_t SYS_detect_hw_rev(void);
-    
+char * SYS_get_rev_string(uint8_t rev);    
     
 #endif

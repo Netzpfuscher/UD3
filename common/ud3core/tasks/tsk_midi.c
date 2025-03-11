@@ -29,8 +29,9 @@
 #include "tsk_fault.h"
 #include "clock.h"
 #include "SignalGenerator.h"
-#include "MidiController.h"
-#include "ADSREngine.h"
+#include "MidiProcessor.h"
+#include "NoteMapper.h"
+#include "VMSWrapper.h"
 
 xTaskHandle tsk_midi_TaskHandle;
 uint8 tsk_midi_initVar = 0u;
@@ -53,6 +54,7 @@ uint8 tsk_midi_initVar = 0u;
 #include "helper/printf.h"
 #include <device.h>
 #include <stdlib.h>
+#include "tsk_cli.h"
 
 
 void reflect();
@@ -73,9 +75,8 @@ xQueueHandle qMIDI_rx;
 
 
 
-void USBMIDI_1_callbackLocalMidiEvent(uint8 cable, uint8 *midiMsg) {
-    uint8_t ret=pdTRUE;
-    ret = xQueueSend(qMIDI_rx, midiMsg,4);
+void queue_midi_message(uint8 *midiMsg) {
+    uint8_t ret = xQueueSend(qMIDI_rx, midiMsg,4);
 	if(ret==errQUEUE_FULL){
         alarm_push(ALM_PRIO_WARN, "COM: MIDI buffer overrun",ALM_NO_VALUE);
     }
@@ -90,7 +91,7 @@ void USBMIDI_1_callbackLocalMidiEvent(uint8 cable, uint8 *midiMsg) {
  * to add functionality to the task.
  */
 
-#define MIDI_MSG_SIZE 3
+#define MIDI_MSG_SIZE 4
 
 void tsk_midi_TaskProc(void *pvParameters) {
 	/*
@@ -100,7 +101,7 @@ void tsk_midi_TaskProc(void *pvParameters) {
 	/* `#START TASK_VARIABLES` */
 	qMIDI_rx = xQueueCreate(N_QUEUE_MIDI, MIDI_MSG_SIZE);
     
-	uint8_t msg[MIDI_MSG_SIZE+1];
+	uint8_t msg[MIDI_MSG_SIZE];
     msg[0] = 0;
     
 #if USE_DEBUG_DAC
@@ -116,9 +117,9 @@ void tsk_midi_TaskProc(void *pvParameters) {
 	 */
 	/* `#START TASK_INIT_CODE` */
 
-    VMS_init();
-    Midi_init();
-    Midi_setEnabled(1);
+    MidiProcessor_init();
+    Mapper_init();
+    VMSW_init();
    
        
 		/* `#END` */
@@ -128,14 +129,18 @@ void tsk_midi_TaskProc(void *pvParameters) {
 
         if(param.synth==SYNTH_MIDI){
             
-    		if (xQueueReceive(qMIDI_rx, msg+1, 1)) { //+1 copy only midi msg not midi-cable (byte 0)
-                Midi_SOFHandler();
-    			Midi_run(msg);
-    			while (xQueueReceive(qMIDI_rx, msg+1, 0)) { //+1 copy only midi msg not midi-cable (byte 0)
-    				Midi_run(msg);
-    			}
+    		while (xQueueReceive(qMIDI_rx, msg, 1)) {
+
+                uint8_t cable = 0;
+                uint8_t channel = msg[0] & 0xf;
+                uint8_t cmd = msg[0] & 0xf0;
+                uint8_t param1 = msg[1];
+                uint8_t param2 = msg[2];
+
+                if(cmd == 0) break;
+
+                MidiProcessor_processCmd(cable, channel, cmd, param1, param2);
     		}
-            VMS_run();
             
         }else{
             vTaskDelay(200 /portTICK_RATE_MS);

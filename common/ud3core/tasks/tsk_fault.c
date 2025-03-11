@@ -97,7 +97,7 @@ void set_switch_without_fb(uint32_t en){
 
 void handle_UVLO(void) {
     // read the driver voltage
-    tt.n.driver_v.value = read_driver_mv(ADC_active_sample_buf[0].v_driver);
+    tt.n.driver_v.value = read_driver_mv();
     
     uint8_t undervoltage = pdFALSE;
     
@@ -202,7 +202,7 @@ void vWD_Timer_Callback(TimerHandle_t xTimer){
     interrupter1_control_Control = 0;
 	QCW_enable_Control = 0;
     interrupter_kill();
-    USBMIDI_1_callbackLocalMidiEvent(0, (uint8_t*)kill_msg);
+    queue_midi_message((uint8_t*)kill_msg);
     xTimerReset(xTimer,0);
 }
 

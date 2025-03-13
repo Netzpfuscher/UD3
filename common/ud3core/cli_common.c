@@ -545,9 +545,23 @@ uint8_t con_minstat(TERMINAL_HANDLE * handle){
     TERM_sendVT100Code(handle, _VT100_CLS,0);
     TERM_sendVT100Code(handle, _VT100_CURSOR_DISABLE,0);
   
-    while(Term_check_break(handle,200)){
+    while(true){
+
+        uint8_t c = getch(handle, 200 /portTICK_RATE_MS);
+        if(c == CTRL_C || c == 'q'){  //0x03 = CTRL+C
+            break;   
+        }else if ( c == 'r'){
+            min_ctx.transport_fifo.dropped_frames = 0;
+            min_ctx.transport_fifo.spurious_acks = 0;
+            min_ctx.transport_fifo.resets_received = 0;
+            min_ctx.transport_fifo.sequence_mismatch_drop = 0;
+            min_ctx.transport_fifo.n_frames_max = 0;
+            min_ctx.transport_fifo.crc_fails = 0;
+            min_time.resync = 0;
+        }
+        
         TERM_sendVT100Code(handle, _VT100_CURSOR_POS1,0);
-        ttprintf("MIN monitor    (press [CTRL+C] for quit)\r\n");
+        ttprintf("MIN monitor    (press [CTRL+C] for quit or press [r] for reset stats)\r\n");
         ttprintf("%sDropped frames        : %lu\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0), min_ctx.transport_fifo.dropped_frames);
         ttprintf("%sSpurious acks         : %lu\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0),min_ctx.transport_fifo.spurious_acks);
         ttprintf("%sResets received       : %lu\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0),min_ctx.transport_fifo.resets_received);

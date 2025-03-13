@@ -78,7 +78,6 @@
 #include "tasks/tsk_fault.h"
 #include "tasks/tsk_midi.h"
 #include "tasks/tsk_thermistor.h"
-#include "tasks/tsk_uart.h"
 #include "tasks/tsk_usb.h"
 #include "tasks/tsk_min.h"
 #include "tasks/tsk_display.h"
@@ -173,14 +172,8 @@ int main( void )
 	
 
 	//Starting Tasks
-    if(configuration.minprot){
 		console_print("MIN init...\n");
         tsk_min_Start();        //Handles UART-Hardware and queues with MIN-Protocol
-    }else{
-		console_print("UART init...\n");
-	    tsk_uart_Start();       //Handles UART-Hardware and queues
-    }
-    
 	console_print("USB init...\n");
 	tsk_usb_Start();        //Handles USB-Hardware and queues
     console_print("CLI init...\n");

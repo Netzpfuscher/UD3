@@ -183,6 +183,24 @@ uint8_t Relay4_Read(){
 	return relay[3];
 }
 
+uint8_t VB0_Read(){
+	return 1;
+}
+uint8_t VB1_Read(){
+	return 0;
+}
+uint8_t VB2_Read(){
+	return 1;
+}
+uint8_t VB3_Read(){
+	return 1;
+}
+uint8_t VB4_Read(){
+	return 1;
+}
+uint8_t VB5_Read(){
+	return 1;
+}
 uint8_t Fan=0;
 void Fan_Write(uint8_t val){
 	Fan = val;

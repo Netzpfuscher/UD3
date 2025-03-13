@@ -44,7 +44,6 @@ SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_min.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_overlay.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_sid.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_thermistor.c
-SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_uart.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_usb.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/alarmevent.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/autotune.c

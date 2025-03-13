@@ -201,6 +201,14 @@ void Relay4_Write(uint8_t val);
 uint8_t Relay3_Read();
 uint8_t Relay4_Read();
 
+uint8_t VB0_Read();
+uint8_t VB1_Read();
+uint8_t VB2_Read();
+uint8_t VB3_Read();
+uint8_t VB4_Read();
+uint8_t VB5_Read();
+
+
 void Fan_Write(uint8_t val);
 uint8_t Fan_Read();
 

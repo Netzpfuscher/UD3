@@ -151,6 +151,8 @@ struct parameter_struct{
     uint8_t     qcw_offset;
     uint8_t     qcw_max;
     uint16_t    qcw_repeat;
+    uint16_t     qcw_freq;
+    uint8_t     qcw_vol;
     uint16_t    burst_on;
     uint16_t    burst_off;
     uint8_t     synth;

@@ -58,6 +58,11 @@ void qcw_handle_synth(){
 }
 
 void qcw_regenerate_ramp(){
+    static uint8_t toggle =0;
+    
+    float divider = (1.0f / (float)param.qcw_freq) / 0.00025f;
+    uint32_t div = roundf(divider);
+    
     if(ramp.changed){
         float ramp_val=param.qcw_offset;
         
@@ -69,7 +74,22 @@ void qcw_regenerate_ramp(){
         for(uint16_t i=0;i<max_index;i++){
             if(ramp_val>param.qcw_max)ramp_val=param.qcw_max;
             ramp.data[i]=floor(ramp_val);
-            if(i>param.qcw_holdoff) ramp_val+=ramp_increment;
+            if(i>param.qcw_holdoff){
+                ramp_val+=ramp_increment;
+             
+                if(param.qcw_vol > 0 && (i % div) == 0){
+                    if(toggle == 0){
+                        toggle = 1;
+                        uint32_t dat = ramp.data[i];
+                        dat += param.qcw_vol;
+                        if(dat > 255) dat = 255;
+                        ramp.data[i] = dat;
+                    }else{
+                        toggle = 0;   
+                    }
+                }   
+            }
+            
         }
         ramp.changed = pdFALSE;
     }

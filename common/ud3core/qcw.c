@@ -77,16 +77,18 @@ void qcw_regenerate_ramp(){
             if(i>param.qcw_holdoff){
                 ramp_val+=ramp_increment;
              
-                if(param.qcw_vol > 0 && (i % div) == 0){
-                    if(toggle == 0){
+                if(param.qcw_vol > 0){
+                    
+			if((i % div) == 0){
+				toggle = toggle == 0 ? 1 : 0;
+			}
+			if(toggle == 1){
                         toggle = 1;
                         uint32_t dat = ramp.data[i];
                         dat += param.qcw_vol;
                         if(dat > 255) dat = 255;
                         ramp.data[i] = dat;
-                    }else{
-                        toggle = 0;   
-                    }
+			}
                 }   
             }
             

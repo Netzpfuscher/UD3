@@ -104,11 +104,6 @@ void tsk_midi_TaskProc(void *pvParameters) {
 	uint8_t msg[MIDI_MSG_SIZE];
     msg[0] = 0;
     
-#if USE_DEBUG_DAC
-    DEBUG_DAC_Start();
-    Opamp_1_Start();
-#endif
-
 	/* `#END` */
 
 	/*

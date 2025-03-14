@@ -499,6 +499,10 @@ uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, TERMINA
     }
     tsk_analog_recalc_drive_top(configuration.drive_factor);
     
+    if(configuration.is_qcw){
+        qcw_regenerate_ramp();   
+    }
+    
 	system_fault_Control = sfflag;
     return 1;
 }

@@ -1,5 +1,6 @@
 
 #include "system.h"
+#include "hardware.h"
 
 
 uint32_t SYS_getCPULoadFine(TaskStatus_t * taskStats, uint32_t taskCount, uint32_t sysTime){
@@ -31,6 +32,9 @@ const char * SYS_getTaskStateString(eTaskState state){
 }
 
 uint8_t SYS_detect_hw_rev(void){
+#if IS_QFN
+    return 0;
+#else
     uint8_t bits = 0;
     
     bits |= VB0_Read() ? 0 : 1;
@@ -41,6 +45,7 @@ uint8_t SYS_detect_hw_rev(void){
     bits |= (VB5_Read() ? 0 : 1) << 5;
 
     return bits;   
+#endif
 }
 
 char * SYS_get_rev_string(uint8_t rev){

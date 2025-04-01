@@ -66,7 +66,7 @@ void qcw_regenerate_ramp(){
     uint32_t temp_max = param.qcw_max;
     
     if((temp_max + param.qcw_vol) > 255){
-        temp_max -= (temp_max - 255);  //Scale the max down to fit the volume
+        temp_max -= ((temp_max + param.qcw_vol) - 255);  //Scale the max down to fit the volume
     }
     
     if(ramp.changed){

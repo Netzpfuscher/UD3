@@ -180,7 +180,7 @@ void init_config(){
     param.qcw_max = 255;
     param.qcw_offset = 0;
     param.qcw_ramp = 200;
-    param.qcw_freq = 500;
+    param.qcw_freq = 5000;
     param.qcw_vol = 0;
     
     update_ivo();
@@ -211,7 +211,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_offset"      , param.qcw_offset              , 0      ,255    ,0      ,callback_rampFunction       ,"QCW Ramp start value")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_hold"        , param.qcw_holdoff             , 0      ,255    ,0      ,callback_rampFunction       ,"QCW Ramp time to start ramp [125 us]")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_max"         , param.qcw_max                 , 0      ,255    ,0      ,callback_rampFunction       ,"QCW Ramp end value")
-    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_freq"        , param.qcw_freq                , 0      ,4000   ,0      ,callback_rampFunction       ,"QCW Ramp modulation frequency")
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_freq"        , param.qcw_freq                , 0      ,40000  ,10     ,callback_rampFunction       ,"QCW Ramp modulation frequency")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_vol"         , param.qcw_vol                 , 0      ,255    ,0      ,callback_rampFunction       ,"QCW Ramp modulation volume")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"qcw_repeat"      , param.qcw_repeat              , 0      ,1000   ,0      ,NULL                        ,"QCW pulse repeat time [ms] <100=single shot")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"synth"           , param.synth                   , 0      ,3      ,0      ,callback_SynthFunction      ,"0=off 1=MIDI 2=SID 3=TR")    
@@ -707,7 +707,7 @@ uint8_t CMD_udkill(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     
     if(strcmp(args[0], "set") == 0){
         interrupter_kill();
-    	queue_midi_message((uint8_t*)kill_msg);
+    	tsk_midi_kill();
     	bus_command = BUS_COMMAND_OFF;
         
         QCW_delete_timer();

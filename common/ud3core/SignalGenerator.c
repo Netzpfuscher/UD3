@@ -105,7 +105,11 @@ CY_ISR(SigGen_PulseTimerISR){
     interrupterIRQ_ClearPending();
     
     //start the previous pulse
-    if(!(readPulse.current == 0 || readPulse.onTime == 0)) interrupter_oneshotRaw(readPulse.onTime, readPulse.current);
+    if(!(readPulse.current == 0 || readPulse.onTime == 0)){
+        if(configuration.is_qcw == 0){ //Don't command a pulse in QCW mode... For now.
+            interrupter_oneshotRaw(readPulse.onTime, readPulse.current);
+        }
+    }
     
     //try to read the next pulse
     while(1){
@@ -249,6 +253,9 @@ static void SigGen_setVoiceParams(uint32_t voice, uint32_t enabled, int32_t puls
     if(!taskData->voice[voice].enabled && willBeOn){
         //yes => reset the timebase for the note
         taskData->voice[voice].counter = 0;
+        if(configuration.is_qcw){
+            qcw_cmd_midi_pulse(volume, frequencyTenths);   
+        }
     }
     
     taskData->voice[voice].enabled = willBeOn;

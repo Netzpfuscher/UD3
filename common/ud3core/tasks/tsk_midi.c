@@ -29,7 +29,6 @@
 #include "tsk_fault.h"
 #include "clock.h"
 #include "SignalGenerator.h"
-#include "MidiProcessor.h"
 #include "NoteMapper.h"
 #include "VMSWrapper.h"
 
@@ -55,13 +54,9 @@ uint8 tsk_midi_initVar = 0u;
 #include <device.h>
 #include <stdlib.h>
 #include "tsk_cli.h"
+#include "MidiProcessor.h"
 
-
-void reflect();
-
-const uint8_t kill_msg[3] = {0xb0, 0x77, 0x00};
 xQueueHandle qMIDI_rx;
-
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */
@@ -73,10 +68,60 @@ xQueueHandle qMIDI_rx;
 /* `#START USER_TASK_LOCAL_CODE` */
 
 
+uint8_t CMD_midi_inject(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
+    
+    if(argCount==0 || strcmp(args[0], "-?") == 0){
+        ttprintf("midi [event] [note] [velocity]\r\n");
+        ttprintf("midi kill\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    if(argCount==1){
+        if(strcmp(args[0], "kill") == 0){  
+            tsk_midi_kill();
+            ttprintf("Kill\r\n");
+        }
+    }
+    
+    if(argCount==3){
+        uint8_t cmd = 0;
+        uint8_t note = 0;
+        uint8_t vel = 0;
+        if(strcmp(args[0], "on") == 0){
+            cmd = MIDI_CMD_NOTE_ON;
+        }else if(strcmp(args[0], "off") == 0){
+            cmd = MIDI_CMD_NOTE_OFF;
+        }
+        note = atoi(args[1]);
+        vel = atoi(args[2]);
+        if(note > 127) note = 127;
+        if(vel > 127) vel = 127;
+        
+        uint8_t msg[MIDI_MSG_SIZE];
+        msg[0] = cmd;
+        msg[1] = note;
+        msg[2] = vel;
+        msg[3] = 0x00;
+        queue_midi_message(msg);
+        ttprintf("Queued a '%s'-event Note: %u Vel: %u\r\n" , args[0], note, vel);
+    }
+    
+    
+    
+    
+    return TERM_CMD_EXIT_SUCCESS;
+}
+
+
+void tsk_midi_kill(){
+    xQueueReset(qMIDI_rx);
+    MidiProcessor_resetMidi();
+    vTaskDelay(20);
+    MidiProcessor_resetMidi();
+}
 
 
 void queue_midi_message(uint8 *midiMsg) {
-    uint8_t ret = xQueueSend(qMIDI_rx, midiMsg,4);
+    uint8_t ret = xQueueSend(qMIDI_rx, midiMsg,MIDI_MSG_SIZE);
 	if(ret==errQUEUE_FULL){
         alarm_push(ALM_PRIO_WARN, "COM: MIDI buffer overrun",ALM_NO_VALUE);
     }
@@ -91,7 +136,7 @@ void queue_midi_message(uint8 *midiMsg) {
  * to add functionality to the task.
  */
 
-#define MIDI_MSG_SIZE 4
+
 
 void tsk_midi_TaskProc(void *pvParameters) {
 	/*

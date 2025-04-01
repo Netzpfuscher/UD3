@@ -202,7 +202,7 @@ void vWD_Timer_Callback(TimerHandle_t xTimer){
     interrupter1_control_Control = 0;
 	QCW_enable_Control = 0;
     interrupter_kill();
-    queue_midi_message((uint8_t*)kill_msg);
+    tsk_midi_kill();
     xTimerReset(xTimer,0);
 }
 

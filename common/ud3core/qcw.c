@@ -60,11 +60,11 @@ void qcw_handle_synth(){
 void qcw_regenerate_ramp(){
     
     uint8_t toggle =0;
-    float divider = (1.0f / (float)param.qcw_freq) / 0.00025f;
+    float divider = (10.0f / (float)param.qcw_freq) / 0.00025f;  //Frequency in tenths
     uint32_t div = roundf(divider);
     
     if(ramp.changed){
-        float ramp_val=param.qcw_offset;
+        float ramp_val = param.qcw_offset;
         
         uint32_t max_index = (configuration.max_qcw_pw*10)/MIDI_ISR_US;   
         if (max_index > sizeof(ramp.data)) max_index = sizeof(ramp.data);
@@ -72,10 +72,10 @@ void qcw_regenerate_ramp(){
         float ramp_increment = param.qcw_ramp / 100.0;
       
         for(uint16_t i=0;i<max_index;i++){
-            if(ramp_val>param.qcw_max)ramp_val=param.qcw_max;
-            ramp.data[i]=floor(ramp_val);
+            if(ramp_val>param.qcw_max)ramp_val= param.qcw_max;
+            ramp.data[i]=floorf(ramp_val);
             if(i>param.qcw_holdoff){
-                ramp_val+=ramp_increment;
+                ramp_val += ramp_increment;
              
                 if(param.qcw_vol > 0){
                     
@@ -93,6 +93,15 @@ void qcw_regenerate_ramp(){
             
         }
         ramp.changed = pdFALSE;
+    }
+}
+
+void qcw_cmd_midi_pulse(int32_t volume, int32_t frequencyTenths){
+    param.qcw_freq = frequencyTenths;
+    if(!QCW_enable_Control){
+        ramp.changed = pdTRUE;  
+        qcw_regenerate_ramp();
+        qcw_start();
     }
 }
 

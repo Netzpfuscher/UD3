@@ -26,6 +26,7 @@
 #define tsk_midi_TASK_H
     
 #define N_MIDICHANNEL 16
+#define MIDI_MSG_SIZE 4
 
 /*
  * Add user task definitions, types, includes and other things in the below
@@ -68,19 +69,10 @@ void update_midi_duty();
 
 void queue_midi_message(uint8 *midiMsg);
 
-//void switch_synth(uint8_t synth);
-
-//void kill_accu();
-
-//extern xQueueHandle qSID;
+void tsk_midi_kill();
+uint8_t CMD_midi_inject(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 
 extern MIDICH midich[N_MIDICHANNEL];
-
-extern const uint8_t kill_msg[3];
-
-//extern volatile uint32_t next_frame;
-
-
 
 /*
  * Add user function prototypes in the below merge region to add user

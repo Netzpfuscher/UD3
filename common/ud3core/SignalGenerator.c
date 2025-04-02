@@ -94,7 +94,7 @@ uint32_t IsOkToPrint = 0;
 
 CY_ISR(isr_synth) {   
     clock_tick();
-    if(qcw_reg){
+    if(QCW_enable_Control){
         qcw_handle();
         return;
     }

@@ -71,7 +71,6 @@ void send_signal_state_new(uint8_t signal, uint8_t inverted, TERMINAL_HANDLE * h
 void send_signal_state_wo_new(uint8_t signal, uint8_t inverted, TERMINAL_HANDLE * handle);
 
 extern parameter_entry confparam[];
-volatile uint8_t qcw_reg;
 
 struct config_struct{
     uint8_t watchdog;
@@ -111,7 +110,6 @@ struct config_struct{
     uint32_t r_top;
     uint16_t chargedelay;
     uint8_t ivo_uart;
-    uint8_t enable_display;
     uint8_t ext_interrupter;
     uint8_t is_qcw;
     uint8_t pca9685;

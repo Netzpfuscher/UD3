@@ -104,28 +104,6 @@ static const char * AC_hwGauge[] = {
     "transition"
 };
 
-static const char * AC_display[] = {
-    "assign",
-    "blue",
-    "bus",
-    "clear",
-    "cyan",
-    "gauge0",
-    "gauge1",
-    "gauge2",
-    "gauge3",
-    "gauge4",
-    "gauge5",
-    "green",
-    "magenta",
-    "off",
-    "red",
-    "select",
-    "synth",
-    "white",
-    "yellow"
-};
-
 static const char * AC_eeprom[] = {
     "load",
     "save"
@@ -370,7 +348,6 @@ void tsk_cli_Start(void) {
         TERM_addCommand(CMD_debug, "debug","Debug mode",0,&TERM_cmdListHead);
         TERM_addCommand(CMD_ntc, "ntc","Calibrate NTC iDAC",0,&TERM_cmdListHead);
         TERM_addCommandConstAC(CMD_hwGauge, "hwGauge","adjust hardware gauge parameters",AC_hwGauge,&TERM_cmdListHead);
-        TERM_addCommandConstAC(CMD_display, "display","adjust WS2812 parameters",AC_display,&TERM_cmdListHead);
         TERM_addCommand(CMD_hwrev, "hwrev","Display hardware revision",0,&TERM_cmdListHead);
         TERM_addCommand(CMD_midi_inject, "midi","Inject a MIDI message",0,&TERM_cmdListHead);
 

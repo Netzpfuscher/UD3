@@ -46,7 +46,6 @@
 #include "tasks/tsk_min.h"
 #include "tasks/tsk_fault.h"
 #include "tasks/tsk_hwGauge.h"
-#include "tasks/tsk_display.h"
 #include "min_id.h"
 #include "helper/teslaterm.h"
 #include "math.h"
@@ -133,7 +132,6 @@ void init_config(){
     configuration.ct2_current = 0;
     configuration.chargedelay = 1000;
     configuration.ivo_uart = UART_IVO_NONE;
-    configuration.enable_display = 0;
     configuration.ext_interrupter = 0;
     configuration.pca9685 = 0;
     configuration.max_fb_errors = 0;
@@ -257,7 +255,6 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"baudrate"        , configuration.baudrate        , 1200   ,4000000,0      ,callback_baudrateFunction   ,"Serial baudrate")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ivo_uart"        , configuration.ivo_uart        , 0      ,11     ,0      ,callback_ivoUART            ,"[RX][TX] 0=not inverted 1=inverted")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"r_bus"           , configuration.r_top           , 100    ,1000000,1000   ,callback_TTupdateFunction   ,"Series resistor of voltage input [kOhm]")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ena_display"     , configuration.enable_display  , 0      ,6      ,0      ,NULL                        ,"Enables the WS2812 display")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ena_ext_int"     , configuration.ext_interrupter , 0      ,2      ,0      ,callback_ext_interrupter    ,"Enable external interrupter 2=inverted")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"qcw_coil"        , configuration.is_qcw          , 0      ,1      ,0      ,NULL                        ,"Is QCW 1=true 0=false")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"pca9685"         , configuration.pca9685         , 0      ,1      ,0      ,NULL                        ,"0=off 1=on")
@@ -267,7 +264,6 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ntc_idac"        , configuration.idac            , 0      ,2000   ,0      ,callback_ntc                ,"iDAC measured [uA]")
     ADD_PARAM(PARAM_CONFIG  ,pdFALSE,"d_factor"        , configuration.drive_factor    , 0      ,10     ,0      ,callback_ConfigFunction     ,"Factor for drive voltage measurement")
     ADD_PARAM(PARAM_CONFIG  ,pdFALSE,"hwGauge_cfg"     , hwGauges.rawData              , 0      ,0      ,0      ,callback_hwGauge            ,"gauge configs, configure with the \"hwGauge\" command")
-    ADD_PARAM(PARAM_CONFIG  ,pdFALSE,"display_cfg"     , DISP_zones.rawData            , 0      ,0      ,0      ,callback_display            ,"display/led configs, configure with the \"display\" command")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"vdrive"          , configuration.vdrive          , 10     ,24     ,0      ,callback_ConfigFunction     ,"Change Vdrive voltage (digipot)")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ivo_led"         , configuration.ivo_led         , 0      ,1      ,0      ,callback_ivoLED             ,"LED invert option")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"uvlo_analog"     , configuration.uvlo_analog     , 0      ,32000  ,1000   ,NULL                        ,"UVLO from ADC 0=GPIO UVLO")

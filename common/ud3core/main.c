@@ -45,7 +45,6 @@
 #include "tasks/tsk_thermistor.h"
 #include "tasks/tsk_usb.h"
 #include "tasks/tsk_min.h"
-#include "tasks/tsk_display.h"
 #include "tasks/tsk_hwGauge.h"
 #include "tasks/tsk_duty.h"
 #include "tasks/tsk_hypervisor.h"
@@ -106,9 +105,6 @@ int main() {
 	tsk_fault_Start();		//Handles fault conditions
     tsk_duty_Start();
     
-    if(configuration.enable_display){
-        tsk_display_Start();
-    }
     if(configuration.pca9685){
         tsk_hwGauge_init();
     }

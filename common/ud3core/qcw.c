@@ -39,7 +39,6 @@ TimerHandle_t xQCW_Timer;
 void qcw_handle(){
     if(SG_Timer_ReadCounter() < timer.time_stop){
         qcw_modulate(0);
-        qcw_reg = 0;
         QCW_enable_Control = 0;
         return;
     }
@@ -60,10 +59,11 @@ void qcw_handle_synth(){
 void qcw_regenerate_ramp(){
     
     uint8_t toggle =0;
-    float divider = (10.0f / (float)param.qcw_freq) / 0.00025f;  //Frequency in tenths
-    uint32_t div = roundf(divider);
-    
+    uint32_t div = (40000 / param.qcw_freq);  //4000Hz ISR frequency * 10
+
     uint32_t temp_max = param.qcw_max;
+    
+    uint32_t Q16_16_increment;
     
     if((temp_max + param.qcw_vol) > 255){
         temp_max -= ((temp_max + param.qcw_vol) - 255);  //Scale the max down to fit the volume
@@ -184,7 +184,6 @@ void qcw_modulate(uint16_t val){
 }
 
 void qcw_stop(){
-    qcw_reg = 0;
     QCW_enable_Control = 0;
 }
 
@@ -257,7 +256,6 @@ uint8_t CMD_ramp(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
 void vQCW_Timer_Callback(TimerHandle_t xTimer){
     qcw_regenerate_ramp();
     qcw_start();
-    qcw_reg = 1;
     if(param.qcw_repeat<100) param.qcw_repeat = 100;
     xTimerChangePeriod( xTimer, param.qcw_repeat / portTICK_PERIOD_MS, 0 );
 }
@@ -303,7 +301,6 @@ uint8_t CMD_qcw(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         }else{
             qcw_regenerate_ramp();
 		    qcw_start();
-            qcw_reg = 1;
             ttprintf("QCW single shot\r\n");
         }
 		

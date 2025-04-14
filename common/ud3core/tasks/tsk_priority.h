@@ -29,7 +29,7 @@
 #define PRIO_OVERLAY 1
 #define PRIO_ANALOG 1
 #define PRIO_THERMISTOR 1
-#define PRIO_DUTY 1
+#define PRIO_DUTY 4
 #define PRIO_UART 3
 #define PRIO_USB 3
 #define PRIO_ETH 3

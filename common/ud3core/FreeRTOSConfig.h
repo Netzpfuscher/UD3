@@ -123,7 +123,7 @@
     #define configGENERATE_RUN_TIME_STATS	1  
 	#ifndef SIMULATOR
     #define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() vConfigureTimerForRunTimeStats()
-    #define portGET_RUN_TIME_COUNTER_VALUE() ((uint32_t)(4294967296ul-SG_Timer_ReadCounter())/64ul)
+    #define portGET_RUN_TIME_COUNTER_VALUE() ((uint32_t)(4294967296ul-interrupterTimebase_ReadCounter())/1024ul)
 	#endif
     //#define configUSE_STATS_FORMATTING_FUNCTIONS 1
     #define configUSE_TRACE_FACILITY	         1

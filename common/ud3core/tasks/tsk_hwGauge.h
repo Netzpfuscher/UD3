@@ -34,7 +34,6 @@
 #include "cli_basic.h"
 #include "telemetry.h"
 #include "TTerm.h"  
-#include "tsk_display.h"
 
 typedef struct{
     TELE* src;
@@ -44,10 +43,8 @@ typedef struct{
     int16_t calMax;
     int32_t scalMin;
     int32_t scalMax;
-    uint8_t lightZone;
-    SMALL_COLOR colorA;
-    SMALL_COLOR colorB;
-    uint16_t colorTransition;
+//    uint8_t lightZone;
+//    uint16_t colorTransition;
 }HWGauge_s;
 
 typedef union{

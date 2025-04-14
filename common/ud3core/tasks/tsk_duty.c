@@ -12,27 +12,27 @@
 #include "telemetry.h"
 #include "tsk_priority.h"
 
+#define TSK_DUTY_PERIOD_MS  100   //ms
+
 void tsk_duty_task(void *pvParameters) {
 	OnTimeCounter_Start();
-    uint32_t lastTickCount = SG_Timer_ReadCounter();
     
     while(1){
-        vTaskDelay(pdMS_TO_TICKS(250));
+        vTaskDelay(pdMS_TO_TICKS(TSK_DUTY_PERIOD_MS));
         
         //read and reset counters
-        uint32_t onTime = 0xffffff - OnTimeCounter_ReadCounter();
-        uint32_t period = lastTickCount - SG_Timer_ReadCounter();
+        uint32_t onTime_us = 0xffffff - OnTimeCounter_ReadCounter();
         
         OnTimeCounter_WriteCounter(0xffffff);
-        lastTickCount = SG_Timer_ReadCounter();
-        // dutycycle := onTime / period
-        // the period is 3,125 times slower
+        // dutycycle := onTime_us / period
+        // the period is 1000 times slower
         // to get the scaling (0,1% resolution) we do dutycycle * 1000
         // together with fixed point division that results in
         //      
-        //      dutycycleScaled := (onTime * 1000) / ((period * 3125) / 1000)
+        //      dutycycleScaled := (onTime_us * 1000) / ((TSK_DUTY_PERIOD_MS * 1e6) / 1000)
         
-        tt.n.dutycycle.value = (onTime * 1000) / ((period * 3125) / 1000);
+        tt.n.dutycycle.value = (onTime_us * 1000) / ((TSK_DUTY_PERIOD_MS * 1e6) / 1000);
+       
     }
 }
 

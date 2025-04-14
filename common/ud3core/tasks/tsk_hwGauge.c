@@ -104,36 +104,6 @@ void tsk_hwGauge_proc(){
     }
 }
 
-uint32_t HWGauge_getGaugeColor(uint8_t id){
-    if(id > NUM_HWGAUGE) return Disp_GREEN;
-    
-    //TERM_printDebug(min_handle[1], "getting color of gauge %d:\r\n", id);
-    
-    if(hwGauges.gauge[id].colorTransition == 0xffff){
-        uint32_t red   = ((hwGauges.gauge[id].colorB.red * gaugeValues[id]) + (hwGauges.gauge[id].colorA.red * (0xfff-gaugeValues[id]))) / 512;
-        uint32_t green = ((hwGauges.gauge[id].colorB.green * gaugeValues[id]) + (hwGauges.gauge[id].colorA.green * (0xfff-gaugeValues[id]))) / 1024;
-        uint32_t blue  = ((hwGauges.gauge[id].colorB.blue * gaugeValues[id]) + (hwGauges.gauge[id].colorA.blue * (0xfff-gaugeValues[id]))) / 512;
-        if(red > 0xff)      red = 0xff;
-        if(green > 0xff)    green = 0xff;
-        if(blue > 0xff)     blue = 0xff;
-        uint32_t ret = ((blue << 16) & 0xff0000) | ((green << 8) & 0xff00) | ((red) & 0xff);
-        //TERM_printDebug(min_handle[1], "\t using dynamic transition gives 0x%06x\r\n", ret);
-        return ret;
-    }else{
-        if(gaugeValues[id] > hwGauges.gauge[id].colorTransition){
-            uint32_t ret = smallColorToColor(hwGauges.gauge[id].colorB);
-            //TERM_printDebug(min_handle[1], "\t using normal transition gives > 0x%06x\r\n", ret);
-            return ret;
-        }else{
-            uint32_t ret = smallColorToColor(hwGauges.gauge[id].colorA);
-            //TERM_printDebug(min_handle[1], "\t using normal transition gives < 0x%06x\r\n", ret);
-            return ret;
-        }
-    }
-        
-    return 0xff000000;    
-}
-
 int32_t HWGauge_scaleTelemetry(TELE * src, int32_t cMin, int32_t cMax, unsigned allowNegative){
     if(src == NULL) return 0;
     int32_t teleScaled = ((src->value - (cMin * src->divider)) * 4096) / (int32_t) ((cMax - cMin) * src->divider);
@@ -292,39 +262,7 @@ uint8_t CMD_hwGauge(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         }
 	}
     
-	if(strcmp(args[0], "startColor") == 0 && argCount == 5){
-        uint32_t gauge = atoi(args[1]);
-        if(gauge < NUM_HWGAUGE){
-            hwGauges.gauge[gauge].colorA.red =      atoi(args[2]);
-            hwGauges.gauge[gauge].colorA.green =    atoi(args[3]);
-            hwGauges.gauge[gauge].colorA.blue =     atoi(args[4]);
-            ttprintf("set start color of gauge %d to (r=%d,g=%d,b=%d)\r\n", gauge, hwGauges.gauge[gauge].colorA.red, hwGauges.gauge[gauge].colorA.green, hwGauges.gauge[gauge].colorA.blue);
-            return returnCode;
-        }
-    }
-    
-	if(strcmp(args[0], "endColor") == 0 && argCount == 5){
-        uint32_t gauge = atoi(args[1]);
-        if(gauge < NUM_HWGAUGE){
-            hwGauges.gauge[gauge].colorB.red =      atoi(args[2]);
-            hwGauges.gauge[gauge].colorB.green =    atoi(args[3]);
-            hwGauges.gauge[gauge].colorB.blue =     atoi(args[4]);
-            ttprintf("set end color of gauge %d to (r=%d,g=%d,b=%d)\r\n", gauge, hwGauges.gauge[gauge].colorB.red, hwGauges.gauge[gauge].colorB.green, hwGauges.gauge[gauge].colorB.blue);
-            return returnCode;
-        }
-    }
-    
-	if(strcmp(args[0], "transition") == 0 && argCount == 3){
-        uint32_t gauge = atoi(args[1]);
-        if(gauge < NUM_HWGAUGE){
-            uint32_t transition = atoi(args[2]);
-            if(transition > 0xfff) transition = 0xffff;
-            hwGauges.gauge[gauge].colorTransition = transition;
-            ttprintf("set transition value of gauge %d to %d\r\n", gauge, hwGauges.gauge[gauge].colorTransition);
-            return returnCode;
-        }
-    }
-    
+
 	if(strcmp(args[0], "calibrate") == 0 && argCount == 2){
         uint32_t gauge = atoi(args[1]);
         if(gauge < NUM_HWGAUGE){

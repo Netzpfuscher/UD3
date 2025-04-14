@@ -35,20 +35,12 @@ typedef struct
 {
     uint8_t changed;
     uint16_t index;
+    uint16_t stop_index;
     uint8_t data[400];
 } ramp_params;
 
 ramp_params volatile ramp; //added volatile
 
-typedef struct
-{
-    uint32_t time_start;
-    uint32_t time_stop;
-    uint32_t last_time;
-} timer_params;
-
-
-timer_params timer;
 
 void qcw_start();
 void qcw_modulate(uint16_t val);

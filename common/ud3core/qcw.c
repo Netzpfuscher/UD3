@@ -33,27 +33,18 @@
 #include "helper/teslaterm.h"
 #include "tasks/tsk_overlay.h"
 #include "tasks/tsk_midi.h"
+#include "telemetry.h"
 
 TimerHandle_t xQCW_Timer;
 
 void qcw_handle(){
-    if(SG_Timer_ReadCounter() < timer.time_stop){
+    if(ramp.index >= ramp.stop_index){
         qcw_modulate(0);
-        qcw_reg = 0;
         QCW_enable_Control = 0;
-        return;
-    }
-    
-    if (ramp.index < sizeof(ramp.data)) {
+        ramp.index = 0;
+    }else{
         qcw_modulate(ramp.data[ramp.index]);
-        ramp.index++;
-	}
-}
-
-void qcw_handle_synth(){
-    if(SG_Timer_ReadCounter() < timer.time_stop){
-        QCW_enable_Control = 0;
-        return;
+        ramp.index++;    
     }
 }
 
@@ -74,6 +65,8 @@ void qcw_regenerate_ramp(){
         
         uint32_t max_index = (configuration.max_qcw_pw*10)/MIDI_ISR_US;   
         if (max_index > sizeof(ramp.data)) max_index = sizeof(ramp.data);
+        
+        ramp.stop_index = max_index;
         
         float ramp_increment = param.qcw_ramp / 100.0;
       
@@ -152,17 +145,8 @@ void qcw_ramp_visualize(CHART *chart, TERMINAL_HANDLE * handle){
 }
 
 void qcw_start(){
-    timer.time_start = SG_Timer_ReadCounter();
-    uint32_t sg_period = SG_PERIOD_NS;
-    uint32_t cycles_to_stop = (configuration.max_qcw_pw*10000)/sg_period;
-    uint32_t cycles_since_last_pulse = timer.time_stop-timer.time_start;
-    
-    uint32_t cycles_to_stop_limited = (cycles_since_last_pulse * configuration.max_qcw_duty) / 500;
-	if ((cycles_to_stop_limited > cycles_to_stop) || (cycles_to_stop_limited == 0)) {
-		cycles_to_stop_limited = cycles_to_stop;
-	}
-
-    timer.time_stop = timer.time_start - cycles_to_stop_limited;
+    if(tt.n.dutycycle.value > configuration.max_qcw_duty) return;  //Don't command a pulse if duty is too high
+       
     ramp.index=0;
 	//the next stuff is time sensitive, so disable interrupts to avoid glitches
 	CyGlobalIntDisable;
@@ -184,7 +168,6 @@ void qcw_modulate(uint16_t val){
 }
 
 void qcw_stop(){
-    qcw_reg = 0;
     QCW_enable_Control = 0;
 }
 
@@ -257,7 +240,6 @@ uint8_t CMD_ramp(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
 void vQCW_Timer_Callback(TimerHandle_t xTimer){
     qcw_regenerate_ramp();
     qcw_start();
-    qcw_reg = 1;
     if(param.qcw_repeat<100) param.qcw_repeat = 100;
     xTimerChangePeriod( xTimer, param.qcw_repeat / portTICK_PERIOD_MS, 0 );
 }
@@ -303,7 +285,6 @@ uint8_t CMD_qcw(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         }else{
             qcw_regenerate_ramp();
 		    qcw_start();
-            qcw_reg = 1;
             ttprintf("QCW single shot\r\n");
         }
 		

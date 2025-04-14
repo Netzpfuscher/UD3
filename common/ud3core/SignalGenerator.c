@@ -94,7 +94,7 @@ uint32_t IsOkToPrint = 0;
 
 CY_ISR(isr_synth) {   
     clock_tick();
-    if(qcw_reg){
+    if(QCW_enable_Control){
         qcw_handle();
         return;
     }
@@ -106,7 +106,7 @@ CY_ISR(SigGen_PulseTimerISR){
     
     //start the previous pulse
     if(!(readPulse.current == 0 || readPulse.onTime == 0)){
-        if(configuration.is_qcw == 0){ //Don't command a pulse in QCW mode... For now.
+        if(configuration.is_qcw == 0 || synthMode == SYNTH_TR){ //Don't command a pulse in QCW mode... For now.
             interrupter_oneshotRaw(readPulse.onTime, readPulse.current);
         }
     }
@@ -253,7 +253,7 @@ static void SigGen_setVoiceParams(uint32_t voice, uint32_t enabled, int32_t puls
     if(!taskData->voice[voice].enabled && willBeOn){
         //yes => reset the timebase for the note
         taskData->voice[voice].counter = 0;
-        if(configuration.is_qcw){
+        if(configuration.is_qcw && synthMode != SYNTH_TR){
             qcw_cmd_midi_pulse(volume, frequencyTenths);   
         }
     }

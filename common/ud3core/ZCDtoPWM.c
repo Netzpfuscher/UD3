@@ -171,6 +171,27 @@ void configure_ZCD_to_PWM(void) {
 	}
     
     FB_THRSH_DAC_Data = (uint8_t) FB_THRSH_DAC_value;
+    
+    //Init deadtime generators
+    
+    deadtime_1_Start();
+    deadtime_2_Start();
+    deadtime_3_Start();
+    deadtime_4_Start();
+    
+    float period = 1.0 / 32e6;  //PWMCLK
+    uint8_t dt[4];
+    for(uint8_t i = 0; i<4;i++){
+        float temp = (float)configuration.deadtime[i] / period;
+        if(temp > 250.0) temp = 250.0;
+        dt[i] = temp;
+    }
+    
+    deadtime_1_WriteCompare(dt[0]);
+    deadtime_2_WriteCompare(dt[1]);
+    deadtime_3_WriteCompare(dt[2]);
+    deadtime_4_WriteCompare(dt[3]);
+    
 }
 
 /* [] END OF FILE */

@@ -70,7 +70,6 @@ typedef struct __tele_human__ {
     TELE bus_status;
     TELE avg_power;
     TELE batt_i;
-    TELE i2t_i;
     TELE primary_i;
     TELE midi_voices;
     TELE fres;

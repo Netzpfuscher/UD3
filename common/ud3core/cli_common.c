@@ -275,6 +275,10 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"comp_sustain"    , configuration.compressor_sustain  , 0      ,255    ,0      ,NULL                    ,"Compressor Sustain Setting")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"comp_release"    , configuration.compressor_release  , 0      ,255    ,0      ,NULL                    ,"Compressor Release Setting")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"comp_dutyOffset" , configuration.compressor_maxDutyOffset  , 0      ,255    ,0      ,NULL              ,"Maximum Dutycycle offset before hard limit")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"dt1"             , configuration.deadtime[0]     , 0      ,7000   ,0      ,callback_ConfigFunction     ,"Deadtime GD1A [ns] (31ns resolution)")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"dt2"             , configuration.deadtime[1]     , 0      ,7000   ,0      ,callback_ConfigFunction     ,"Deadtime GD1B [ns] (31ns resolution)")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"dt3"             , configuration.deadtime[2]     , 0      ,7000   ,0      ,callback_ConfigFunction     ,"Deadtime GD2A [ns] (31ns resolution)")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"dt4"             , configuration.deadtime[3]     , 0      ,7000   ,0      ,callback_ConfigFunction     ,"Deadtime GD2B [ns] (31ns resolution)")
 };
 
    
@@ -401,6 +405,7 @@ uint8_t callback_TTupdateFunction(parameter_entry * params, uint8_t index, TERMI
     
     if(configuration.max_tr_current>max_current_cmp || configuration.max_qcw_current>max_current_cmp){
         ttprintf("Warning: Max CT1 current with the current setup is %uA for OCD and %uA for peak measurement\r\n",max_current_cmp,max_current_meas);
+        alarm_push(ALM_PRIO_CRITICAL, "CONF: Max current in saturation", max_current_cmp);
         if(configuration.max_tr_current>max_current_cmp) configuration.max_tr_current = max_current_cmp;
         if(configuration.max_qcw_current>max_current_cmp) configuration.max_qcw_current = max_current_cmp;
     }

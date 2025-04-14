@@ -71,19 +71,7 @@ uint8_t chart;
 TELEMETRY tt;
 
 void init_telemetry(){
-    
-    tt.n.i2t_i.name = "Fuse";
-    tt.n.i2t_i.value = 0;
-    tt.n.i2t_i.min = 0;
-    tt.n.i2t_i.max = 100;
-    tt.n.i2t_i.offset = 0;
-    tt.n.i2t_i.unit = TT_UNIT_PERCENT;
-    tt.n.i2t_i.divider = 1;
-    tt.n.i2t_i.high_res = pdFALSE;
-    tt.n.i2t_i.resend_time = TT_FAST;
-    tt.n.i2t_i.chart = TT_NO_TELEMETRY;
-    tt.n.i2t_i.gauge = TT_NO_TELEMETRY;
-    
+   
     tt.n.fres.name = "Fres";
     tt.n.fres.value = 0;
     tt.n.fres.min = 0;

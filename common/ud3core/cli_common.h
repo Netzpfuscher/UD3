@@ -132,6 +132,7 @@ struct config_struct{
     uint8_t compressor_maxDutyOffset;
     
     float drive_factor;
+    uint16_t deadtime[4];
 }; 
 typedef struct config_struct cli_config;
 

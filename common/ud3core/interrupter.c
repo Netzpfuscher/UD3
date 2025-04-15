@@ -257,6 +257,7 @@ void interrupter_updateTR() {
     if(param.synth != SYNTH_TR) return;
     
     //interrupter no longer generates pulses itself, thats all done by siggen. So instead of updating the hardware we just update siggen with the new TR parameters
+    if(param.pwd == 0) return;
     int32_t frequency_dHz = 10000000 / param.pwd;
     SigGen_setVoiceTR(1, param.pw, MAX_VOL, frequency_dHz, param.burst_on * 1000, (param.burst_on == 0) ? 0 : param.burst_off * 1000);
 }

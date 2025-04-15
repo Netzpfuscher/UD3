@@ -74,7 +74,7 @@ void isr_synth() {
 	for(int i=0;i<20;i++){
 		clock_tick();
 	}
-    if(qcw_reg){
+    if(QCW_enable_Control){
         qcw_handle();
         return;
     }

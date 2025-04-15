@@ -80,7 +80,6 @@
 #include "tasks/tsk_thermistor.h"
 #include "tasks/tsk_usb.h"
 #include "tasks/tsk_min.h"
-#include "tasks/tsk_display.h"
 #include "tasks/tsk_hwGauge.h"
 #include "tasks/tsk_duty.h"
 #include "tsk_sim.h"
@@ -191,10 +190,6 @@ int main( void )
 	console_print("SID init...\n");
     tsk_sid_Start();
     
-    if(configuration.enable_display){
-		console_print("Display init...\n");
-        tsk_display_Start();
-    }
     if(configuration.pca9685){
 		console_print("HW gauge init...\n");
         tsk_hwGauge_init();

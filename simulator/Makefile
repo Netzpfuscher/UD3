@@ -34,7 +34,6 @@ SOURCE_FILES += portable/port.c
 # Demo library.
 SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_analog.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_cli.c
-SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_display.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_duty.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_eth_common.c
 SOURCE_FILES += ${CORE_DIR}/ud3core/tasks/tsk_fault.c

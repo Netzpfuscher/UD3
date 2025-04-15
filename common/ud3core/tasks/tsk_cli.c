@@ -193,6 +193,7 @@ static const char * AC_set_get[] = {
     "ps_scheme",
     "pw",
     "pwd",
+    "qcw_coil",
     "qcw_freq",
     "qcw_hold",
     "qcw_max",

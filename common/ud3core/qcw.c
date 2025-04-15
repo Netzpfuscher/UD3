@@ -44,7 +44,7 @@ void qcw_handle(){
         ramp.index = 0;
     }else{
         qcw_modulate(ramp.data[ramp.index]);
-        ramp.index++;    
+        ramp.index++;
     }
 }
 

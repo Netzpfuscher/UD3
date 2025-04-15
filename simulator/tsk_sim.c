@@ -34,11 +34,12 @@ static void populate_buffer(adc_sample_t* ptr){
         }
     }
 	
-	if(interrupter.mode!=INTR_MODE_OFF && system_fault_Control){
-		//float temp = (((55000 - param.pwd)/1000) * param.pwp)/10;
+	if(tt.n.midi_voices.value && system_fault_Control){
 		float temp = (((55000 - param.pwd)/1000) * param.pw)/10;
 		temp = temp * ((float)tt.n.bus_v.value / 493.0);
 		bus_i = temp;
+		temp = (((55000 - param.pwd)/1000) * param.pw)/10;
+		OnTimeCounter_WriteCounter(0xffffff - temp);
 	}else{
 		bus_i = 0;
 	}

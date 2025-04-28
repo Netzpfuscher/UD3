@@ -41,6 +41,7 @@ void qcw_handle(){
     if(ramp.index >= ramp.stop_index){
         qcw_modulate(0);
         QCW_enable_Control = 0;
+        params.pwmb_psb_val = 0;
         ramp.index = 0;
     }else{
         qcw_modulate(ramp.data[ramp.index]);
@@ -169,6 +170,7 @@ void qcw_modulate(uint16_t val){
 
 void qcw_stop(){
     QCW_enable_Control = 0;
+    params.pwmb_psb_val = 0;
 }
 
 uint8_t callback_rampFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){

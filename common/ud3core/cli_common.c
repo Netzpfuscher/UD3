@@ -1001,8 +1001,8 @@ uint8_t CMD_signals(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         send_signal_state_new(sysfault.charge,pdFALSE,handle);
         ttprintf("Sysfault watchdog: ");
         send_signal_state_wo_new(sysfault.watchdog,pdFALSE,handle);
-        ttprintf(" updating: ");
-        send_signal_state_new(sysfault.update,pdFALSE,handle);
+        ttprintf(" eeprom: ");
+        send_signal_state_new(sysfault.eeprom,pdFALSE,handle);
         ttprintf("Sysfault bus uvlo: ");
         send_signal_state_wo_new(sysfault.bus_uv,pdFALSE,handle);
         ttprintf(" feedback: ");

@@ -38,6 +38,7 @@ uint8_t EEPROM_Read_Row(uint8_t row, uint8_t * buffer);
 uint8_t EEPROM_1_Write_Row(uint8_t row, uint8_t * buffer);
 
 uint16_t byte_cnt;
+static uint8_t dataset_not_valid = pdFALSE;
 
 #define EEPROM_READ_BYTE(x) EEPROM_1_ReadByte(x)
 #define EEPROM_WRITE_ROW(x,y) EEPROM_1_Write(y,x)
@@ -604,6 +605,11 @@ void EEPROM_write_conf(parameter_entry * params, uint8_t param_size, uint16_t ee
 		EEPROM_buffer_write(0x00, count,1);
         alarm_push(ALM_PRIO_INFO, "EEPROM: Dataset written changes", change_count);
 		ttprintf("%i / %i new config params written. %i bytes from 2048 used.\r\n", change_count, param_count, byte_cnt);
+        dataset_not_valid = pdFALSE;
+}
+
+uint8_t EEPROM_not_valid(){   
+    return dataset_not_valid;
 }
 
 void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eeprom_offset ,TERMINAL_HANDLE * handle){
@@ -621,6 +627,7 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
             #ifndef BOOT
             alarm_push(ALM_PRIO_WARN, "EEPROM: No or old dataset found", ALM_NO_VALUE);
             ttprintf("WARNING: No or old EEPROM dataset found\r\n");
+            dataset_not_valid = pdTRUE;
             #endif
             return;
         }
@@ -637,12 +644,27 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
             if(params[current_parameter].parameter_type==PARAM_CONFIG){
                 temp_hash=djb_hash(params[current_parameter].name);
                 if((uint8_t)temp_hash == data[0] && (uint8_t)(temp_hash>>8) == data[1]&& (uint8_t)(temp_hash>>16) == data[2]&& (uint8_t)(temp_hash>>24) == data[3]){
-                    for(uint8_t i=0;i<data[4];i++){
-                        *(i+(uint8_t * )params[current_parameter].value) = EEPROM_READ_BYTE(addr);
-                        addr++;
+                    if(params[current_parameter].size == data[4]){
+                        for(uint8_t i=0;i<data[4];i++){   //Dataset layout: 4byte hash + 1 byte size + data
+                            *(i+(uint8_t * )params[current_parameter].value) = EEPROM_READ_BYTE(addr);
+                            addr++;
+                        }
+                        change_count++;
+                        change_flag=1;
+                    } else {  //Size mismatch
+                        uint32_t val = (params[current_parameter].size * 10000) + data[4];
+                        dataset_not_valid = pdTRUE;
+                        #ifndef BOOT
+                        char * buffer = pvPortMalloc(64);                  
+                        ttprintf("ERROR: Parameter [%s] size mismatch expected: %u dataset: %u\r\n", params[current_parameter].name, params[current_parameter].size, data[4]); 
+                        if(buffer != NULL){
+                            snprintf(buffer, 64, "EEPROM: Parameter [%s] size mismatch", params[current_parameter].name);
+                            alarm_push(ALM_PRIO_CRITICAL, buffer, val);  //Buffer is freed during alarm push to Teslaterm
+                        } else {
+                            alarm_push(ALM_PRIO_CRITICAL, "EEPROM: Parameter size mismatch and malloc failed", val);
+                        }
+                        #endif
                     }
-                    change_count++;
-                    change_flag=1;
                     break;
                 }
             }
@@ -675,14 +697,20 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
                 }
             }
             if(!found_param){
+                #ifndef BOOT
                 alarm_push(ALM_PRIO_WARN, "EEPROM: Found unknown parameter", current_parameter);
                 ttprintf("WARNING: Param [%s] not found in EEPROM\r\n",params[current_parameter].name);
+                #endif
+                dataset_not_valid = pdTRUE;
             }
         }
     }
     #ifndef BOOT
     alarm_push(ALM_PRIO_INFO, "EEPROM: Dataset loaded", ALM_NO_VALUE);
     ttprintf("%i / %i config params loaded\r\n", change_count, param_count);
+    if(dataset_not_valid){
+        ttprintf("There were critical errors during load. Check configuration and run [eeprom save] to clear this error\r\n");    
+    }
     #endif
 }
 

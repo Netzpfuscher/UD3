@@ -28,6 +28,7 @@
 #include "tsk_fault.h"
 #include "tsk_midi.h"
 #include "alarmevent.h"
+#include "cli_basic.h"
 
 
 /* RTOS includes. */
@@ -236,6 +237,8 @@ void tsk_fault_TaskProc(void *pvParameters) {
 	/* `#END` */
 	for (;;) {
 		/* `#START TASK_LOOP_CODE` */
+        sysfault.eeprom = EEPROM_not_valid();
+        
 		handle_UVLO();
         handle_FAULT();
         LED_com_Write(LED_OFF);

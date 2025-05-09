@@ -244,12 +244,12 @@ void send_chart_text_center(int16_t x, int16_t y, uint8_t color, uint8_t size, c
 
 
 
-void send_status(uint8_t bus_active, uint8_t transient_active, uint8_t bus_controlled,uint8_t killbit ,TERMINAL_HANDLE * handle) {
+void send_status(uint8_t bus_active, uint8_t transient_active, uint8_t bus_controlled,uint8_t killbit, TERMINAL_HANDLE * handle) {
     uint8_t buf[8];
     buf[0] = 0xFF;
     buf[1] = sizeof(buf)-2;
     buf[2] = TT_STATUS;
-	buf[3] = bus_active|(transient_active<<1)|(bus_controlled<<2)|(killbit<<3);
+	buf[3] = bus_active|(transient_active<<1)|(bus_controlled<<2)|(killbit<<3)|(configuration.is_qcw<<4);
 	buf[4] = configuration.max_tr_pw;
 	buf[5] = configuration.max_tr_pw >> 8;
 	buf[6] = configuration.max_tr_prf;

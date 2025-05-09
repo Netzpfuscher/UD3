@@ -115,6 +115,7 @@ uint8_t updateDefaultFunction(parameter_entry * params, char * newValue, uint8_t
 void EEPROM_check_hash(parameter_entry * params, uint8_t param_size, TERMINAL_HANDLE * handle);
 void EEPROM_write_conf(parameter_entry * params, uint8_t param_size, uint16_t eeprom_offset ,TERMINAL_HANDLE * handle);
 void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eeprom_offset ,TERMINAL_HANDLE * handle);
+uint8_t EEPROM_not_valid();
 void print_param_help(parameter_entry * params, uint8_t param_size, TERMINAL_HANDLE * handle);
 void print_param(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 void print_param_buffer(char * buffer, parameter_entry * params, uint8_t index);

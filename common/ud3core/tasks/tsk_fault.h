@@ -41,7 +41,7 @@ uint8_t temp2;
 uint8_t fuse;    
 uint8_t charge;
 uint8_t watchdog;
-uint8_t update;    
+uint8_t eeprom;    
 uint8_t bus_uv;   
 uint8_t interlock;
 uint8_t link_state;

@@ -55,11 +55,10 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 * and makes a second run with +-6kHz around the peak
 ******************************************************************************/
 uint8_t CMD_tune(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
-    if(strcmp(args[0], "-?") == 0){
+    if(argCount && strcmp(args[0], "-?") == 0){
         ttprintf("Usage: tune\r\n");
         return TERM_CMD_EXIT_SUCCESS;
     }
-    
     
     ttprintf("Warning: The bridge will switch hard, make sure that the bus voltage is appropriate\r\n");
     uint32_t busVolts = tt.n.bus_v.value / tt.n.bus_v.divider;
@@ -198,6 +197,7 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 			max_curr_num = f;
 		}
 	}
+    
 
 	//Draw Diagram TODO: y axis scale :)
 
@@ -263,6 +263,15 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
         send_chart_line(x_val_1+OFFSET_X, TTERM_HEIGHT+OFFSET_Y, x_val_1+OFFSET_X, TTERM_HEIGHT +10+OFFSET_Y, TT_COLOR_WHITE, handle);
         x_val_1+=15;
         send_chart_text(x_val_1+OFFSET_X,OFFSET_Y+TTERM_HEIGHT+20,TT_COLOR_WHITE,8,"khz",handle);
+        
+        uint16_t curr_inc = max_curr / 11;
+        int32_t act_curr = max_curr;
+        for (f = 0; f <= TTERM_HEIGHT; f += 25) {
+            if(act_curr < 0) act_curr = 0;
+            snprintf(buffer, sizeof(buffer), "%i,%iA", act_curr / 10, act_curr % 10);
+            act_curr -= curr_inc;
+            send_chart_text(OFFSET_X-15,f+OFFSET_Y-4,TT_COLOR_WHITE,8,buffer,handle);
+	    }
 
     }
     

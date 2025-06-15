@@ -436,7 +436,7 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
             min_event(min_payload[0], &min_payload[1],--len_payload);
             return;
         case MIN_ID_ALARM:
-            alarm_push_c(min_payload[0],(char*)&min_payload[5],len_payload-5,min_payload[1] | (min_payload[2] << 2) | (min_payload[3] << 16) | (min_payload[4] << 24));
+            alarm_push_c(min_payload[0],(char*)&min_payload[5],len_payload-5,min_payload[1] | (min_payload[2] << 8) | (min_payload[3] << 16) | (min_payload[4] << 24));
             return;
         case MIN_ID_DEBUG:
        

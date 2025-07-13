@@ -164,4 +164,6 @@ extern cli_parameter param;
 
 #define CONF_SIZE sizeof(confparam) / sizeof(parameter_entry)
 
+uint8_t complete_parameter_name(TERMINAL_HANDLE * handle, void * params);
+
 #endif

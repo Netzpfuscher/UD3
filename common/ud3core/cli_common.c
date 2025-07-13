@@ -1062,3 +1062,26 @@ uint8_t CMD_signals(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     return TERM_CMD_EXIT_SUCCESS;
 }
 
+uint8_t complete_parameter_name(TERMINAL_HANDLE * handle, void * parameters) {
+    char* prefix = pvPortMalloc(128);
+    uint8_t prefix_length;
+    memset(prefix, 0, 128);
+    handle->autocompleteStart = TERM_findLastArg(handle, prefix, &prefix_length);
+
+    uint8_t num_candidates = sizeof(confparam) / sizeof(parameter_entry);
+    handle->autocompleteBuffer = pvPortMalloc(num_candidates * sizeof(char*));
+    handle->currAutocompleteCount = 0;
+    handle->autocompleteBufferLength = 0;
+    for (uint8_t current_parameter = 0; current_parameter < num_candidates; current_parameter++) {
+        if (!confparam[current_parameter].visible) { continue; }
+        char* current_name = (char*) confparam[current_parameter].name;
+        if(strncmp(prefix, current_name, prefix_length) == 0){
+            handle->autocompleteBuffer[handle->autocompleteBufferLength] = current_name;
+            ++handle->autocompleteBufferLength;
+        }
+    }
+
+    vPortFree(prefix);
+    return handle->autocompleteBufferLength;
+}
+

@@ -141,89 +141,6 @@ static const char * AC_nvm[] = {
     "maps"
 };
 
-static const char * AC_set_get[] = {
-    "autostart",
-    "autotune_s",
-    "baudrate",
-    "boff",
-    "bon",
-    "charge_delay",
-    "comp_attac",
-    "comp_dutyOffset",
-    "comp_release",
-    "comp_sustain",
-    "ct1_burden",
-    "ct1_ratio",
-    "ct2_burden",
-    "ct2_current",
-    "ct2_offset",
-    "ct2_ratio",
-    "ct2_type",
-    "ct2_voltage",
-    "ct3_burden",
-    "ct3_ratio",
-    "d_calib",
-    "ena_display",
-    "ena_ext_int",
-    "hw_rev",
-    "ivo_led",
-    "ivo_uart",
-    "lead_time",
-    "maxDutyOffset",
-    "minDutyOffset",
-    "max_const_i",
-    "max_fb_errors",
-    "max_qcw_current",
-    "max_qcw_duty",
-    "max_qcw_pw",
-    "max_tr_current",
-    "max_tr_duty",
-    "max_tr_prf",
-    "max_tr_pw",
-    "min_enable",
-    "min_fb_current",
-    "min_tr_current",
-    "noise_div",
-    "offtime",
-    "pca9685",
-    "pid_temp_i",
-    "pid_temp_mode",
-    "pid_temp_p",
-    "pid_temp_set",
-    "ps_scheme",
-    "pw",
-    "pwd",
-    "qcw_coil",
-    "qcw_freq",
-    "qcw_hold",
-    "qcw_max",
-    "qcw_offset",
-    "qcw_ramp",
-    "qcw_repeat",
-    "qcw_vol",
-    "r_bus",
-    "sid_hpv_enabled",
-    "sid_noise_volume",
-    "spi_speed",
-    "start_cycles",
-    "start_freq",
-    "synth",
-    "temp1_max",
-    "temp1_setpoint",
-    "temp2_max",
-    "temp2_mode",
-    "temp2_setpoint",
-    "transpose",
-    "tune_delay",
-    "tune_end",
-    "tune_pw",
-    "tune_start",
-    "ud_name",
-    "uvlo_analog",
-    "vdrive",
-    "watchdog"
-};
-
 static const char * min_names[] = {
     "MIN0",
     "MIN1",
@@ -353,9 +270,9 @@ void tsk_cli_Start(void) {
         TERM_addCommandConstAC(CMD_eeprom, "eeprom","Save/Load config [load/save]",AC_eeprom,&TERM_cmdListHead);
         TERM_addCommand(CMD_udkill, "kill","Stops the output",0,&TERM_cmdListHead);
         TERM_addCommand(CMD_load_defaults, "load_default","Loads the default parameters",0,&TERM_cmdListHead);
-        
-        TERM_addCommandConstAC(CMD_get, "get", "Usage get [param]", AC_set_get,&TERM_cmdListHead);     
-        TERM_addCommandConstAC(CMD_set, "set","Usage set [param] [value]",AC_set_get,&TERM_cmdListHead);
+
+        TERM_addCommandAC(TERM_addCommand(CMD_get, "get", "Usage get [param]", 0, &TERM_cmdListHead), complete_parameter_name, NULL);
+        TERM_addCommandAC(TERM_addCommand(CMD_set, "set", "Usage set [param] [value]", 0, &TERM_cmdListHead), complete_parameter_name, NULL);
 
         TERM_addCommand(CMD_oneshot, "oneshot","oneshot <ontime> <volume>, volume from 0 to 32767",0,&TERM_cmdListHead);
         

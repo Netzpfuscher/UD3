@@ -29,8 +29,10 @@
 #include <device.h>
 #include <math.h>
 
+volatile parameters params;
 uint16_t fb_filter_in=1;
 uint16_t fb_filter_out=1;
+uint8_t ct1_dac_val[3];
 
 void initialize_ZCD_to_PWM(void) {
 	//initialize all the timers/counters/PWMs

@@ -47,12 +47,12 @@ typedef struct
 	uint16_t idc_ma_count;
     uint16_t ct2_offset_cnt;
 } parameters;
-volatile parameters params;
+extern volatile parameters params;
 
 //variables read by DMA for PWM stuffs
 extern uint16_t fb_filter_in;
 extern uint16_t fb_filter_out;
-uint8_t ct1_dac_val[3];
+extern uint8_t ct1_dac_val[3];
 
 void initialize_ZCD_to_PWM(void);
 void configure_ZCD_to_PWM(void);

@@ -41,7 +41,7 @@ typedef struct
     uint8_t data[QCW_RAMP_SAMPLES];
 } ramp_params;
 
-ramp_params volatile ramp; //added volatile
+extern ramp_params volatile ramp;
 
 
 void qcw_start();

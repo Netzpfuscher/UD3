@@ -35,6 +35,8 @@
 #include "tasks/tsk_midi.h"
 #include "telemetry.h"
 
+ramp_params volatile ramp;
+
 TimerHandle_t xQCW_Timer;
 
 void qcw_handle(){

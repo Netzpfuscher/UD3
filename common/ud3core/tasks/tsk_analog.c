@@ -51,6 +51,8 @@ xQueueHandle adc_data;
 
 TimerHandle_t xCharge_Timer;
 
+volatile uint8 bus_command;
+
 
 /* ------------------------------------------------------------------------ */
 /*

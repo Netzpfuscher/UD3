@@ -86,7 +86,7 @@ typedef struct
     TimerHandle_t xBurst_Timer;
 } interrupter_params;
 
-interrupter_params interrupter;
+extern interrupter_params interrupter;
 
 // These are only exposed for use in the simulator, do not use in actual UD3 code!
 extern uint16_t int1_prd, int1_cmp;

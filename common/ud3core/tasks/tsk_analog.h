@@ -72,7 +72,7 @@
     #define relay_read_charge_end(val) Relay2_Read()
 #endif
 
-volatile uint8 bus_command;
+extern volatile uint8 bus_command;
 
 void initialize_charging(void);
 void control_precharge(void);

@@ -42,6 +42,7 @@
 #include <stdlib.h>
 
 uint16_t int1_prd, int1_cmp;
+interrupter_params interrupter;
 
 void interrupter_kill(void){
     sysfault.interlock = 1;

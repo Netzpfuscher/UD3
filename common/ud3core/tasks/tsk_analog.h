@@ -96,13 +96,12 @@ float CT1_Get_Current_f();
 uint16_t get_max(void);
 void reconfig_charge_timer();
 uint8_t callback_pid(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
-extern adc_sample_t *ADC_active_sample_buf;
+adc_sample_t* tsk_analog_get_readable_buffer();
 uint16_t read_driver_mv();
 void tsk_analog_recalc_drive_top(float factor);
 
 extern adc_sample_t ADC_sample_buf_0[ADC_BUFFER_CNT];
 extern adc_sample_t ADC_sample_buf_1[ADC_BUFFER_CNT];
-extern adc_sample_t *ADC_active_sample_buf;
 extern SemaphoreHandle_t adc_ready_Semaphore;
 
 /*

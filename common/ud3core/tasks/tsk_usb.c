@@ -26,6 +26,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /* ======================================================================== */
+
+/**
+ * @file tsk_usb.c
+ * @brief USB CDC communication task implementation
+ *
+ * See tsk_usb.h for function documentation.
+ */
+
 #include <CyLib.h>
 #include <cytypes.h>
 #include <stdio.h>

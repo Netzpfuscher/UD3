@@ -1,3 +1,10 @@
+/**
+ * @file NoteManager.c
+ * @brief MIDI note list manager implementation
+ *
+ * See NoteManager.h for function documentation.
+ */
+
 #if PIC32
     #include <xc.h>
 #endif
@@ -5,9 +12,9 @@
 #include "NoteManager.h"
 #include "FreeRTOS.h"
 
-uint8_t NoteManager_currNotes = 0;
+uint8_t NoteManager_currNotes = 0;  //!< Count of active notes (currently unused)
 
-NoteListElement * NoteManager_head = 0;
+NoteListElement * NoteManager_head = 0;  //!< Head of circular doubly-linked list
 
 void NoteManager_init(){
     NoteManager_head = pvPortMalloc(sizeof(NoteListElement));

@@ -22,55 +22,87 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+/**
+ * @file tsk_priority.h
+ * @brief FreeRTOS task priorities and stack sizes
+ *
+ * Defines priority levels and stack allocations for all system tasks.
+ * Higher priority values indicate higher task priority.
+ */
+
 #if !defined(PRIORITY_H)
 #define PRIORITY_H
 
-#define PRIO_TERMINAL 3
-#define PRIO_OVERLAY 1
-#define PRIO_ANALOG 1
-#define PRIO_THERMISTOR 1
-#define PRIO_DUTY 4
-#define PRIO_UART 3
-#define PRIO_USB 3
-#define PRIO_ETH 3
-#define PRIO_FAULT 4
-#define PRIO_MIDI 2
-#define PRIO_QCW 3
-#define PRIO_DISPLAY 1  
-#define PRIO_I2C 1 
-    
-#define STACK_TERMINAL 256
-#define STACK_OVERLAY 256
-#define STACK_ANALOG 128
-#define STACK_THERMISTOR 100
-#define STACK_UART 256
-#define STACK_MIN 256
-#define STACK_USB 128
-#define STACK_ETH 256
-#define STACK_FAULT 100
-#define STACK_MIDI 200
-#define STACK_DISPLAY 200
-#define STACK_I2C 200    
+/** @name Task Priority Levels
+ * FreeRTOS task priorities (higher = more important)
+ * @{
+ */
+#define PRIO_TERMINAL 3    //!< Terminal/CLI task priority
+#define PRIO_OVERLAY 1     //!< Telemetry overlay display priority
+#define PRIO_ANALOG 1      //!< ADC sampling task priority
+#define PRIO_THERMISTOR 1  //!< Temperature monitoring priority
+#define PRIO_DUTY 4        //!< Duty cycle measurement priority (high)
+#define PRIO_UART 3        //!< UART communication priority
+#define PRIO_USB 3         //!< USB CDC communication priority
+#define PRIO_ETH 3         //!< Ethernet communication priority
+#define PRIO_FAULT 4       //!< Fault monitoring priority (critical)
+#define PRIO_MIDI 2        //!< MIDI processing priority
+#define PRIO_QCW 3         //!< QCW mode control priority
+#define PRIO_DISPLAY 1     //!< Display update priority
+#define PRIO_I2C 1         //!< I2C communication priority
+/** @} */
 
-    
-/* Basic bit manipulation macros
-No one should ever have to rewrite these
-*/
+/** @name Task Stack Sizes
+ * Stack sizes in 32-bit words for each task
+ * @{
+ */
+#define STACK_TERMINAL 256   //!< Terminal task stack (256 words = 1KB)
+#define STACK_OVERLAY 256    //!< Overlay task stack (256 words = 1KB)
+#define STACK_ANALOG 128     //!< Analog task stack (128 words = 512 bytes)
+#define STACK_THERMISTOR 100 //!< Thermistor task stack (100 words = 400 bytes)
+#define STACK_UART 256       //!< UART task stack (256 words = 1KB)
+#define STACK_MIN 256        //!< MIN protocol task stack (256 words = 1KB)
+#define STACK_USB 128        //!< USB task stack (128 words = 512 bytes)
+#define STACK_ETH 256        //!< Ethernet task stack (256 words = 1KB)
+#define STACK_FAULT 100      //!< Fault task stack (100 words = 400 bytes)
+#define STACK_MIDI 200       //!< MIDI task stack (200 words = 800 bytes)
+#define STACK_DISPLAY 200    //!< Display task stack (200 words = 800 bytes)
+#define STACK_I2C 200        //!< I2C task stack (200 words = 800 bytes)
+/** @} */
 
-//Set bit y (0-indexed) of x to '1' by generating a a mask with a '1' in the proper bit location and ORing x with the mask.
+/** @name Basic Bit Manipulation Macros
+ * Portable bit manipulation utilities
+ * @{
+ */
 
-#define SET(x,y) x |= (1 << y)
+/**
+ * @brief Set bit y of x to 1
+ * @param x Variable to modify
+ * @param y Bit position (0-indexed)
+ */
+#define SET(x, y) x |= (1 << y)
 
-//Set bit y (0-indexed) of x to '0' by generating a mask with a '0' in the y position and 1's elsewhere then ANDing the mask with x.
+/**
+ * @brief Clear bit y of x to 0
+ * @param x Variable to modify
+ * @param y Bit position (0-indexed)
+ */
+#define CLEAR(x, y) x &= ~(1 << y)
 
-#define CLEAR(x,y) x &= ~(1<< y)
+/**
+ * @brief Read bit y of x
+ * @param x Variable to read
+ * @param y Bit position (0-indexed)
+ * @return 1 if bit is set, 0 if clear
+ */
+#define READ(x, y) ((0u == (x & (1 << y))) ? 0u : 1u)
 
-//Return '1' if the bit value at position y within x is '1' and '0' if it's 0 by ANDing x with a bit mask where the bit in y's position is '1' and '0' elsewhere and comparing it to all 0's.  Returns '1' in least significant bit position if the value of the bit is '1', '0' if it was '0'.
-
-#define READ(x,y) ((0u == (x & (1<<y)))?0u:1u)
-
-//Toggle bit y (0-index) of x to the inverse: '0' becomes '1', '1' becomes '0' by XORing x with a bitmask where the bit in position y is '1' and all others are '0'.
-
-#define TOGGLE(x,y) (x ^= (1<<y))
+/**
+ * @brief Toggle bit y of x
+ * @param x Variable to modify
+ * @param y Bit position (0-indexed)
+ */
+#define TOGGLE(x, y) (x ^= (1 << y))
+/** @} */
 
 #endif

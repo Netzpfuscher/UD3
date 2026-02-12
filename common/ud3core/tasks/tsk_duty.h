@@ -1,3 +1,10 @@
+/**
+ * @file tsk_duty.h
+ * @brief Duty cycle measurement task
+ *
+ * Measures interrupter duty cycle using hardware counter at 100ms intervals.
+ */
+
 #ifndef tsk_duty_inc
 #define tsk_duty_inc
 
@@ -25,7 +32,9 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-
+/**
+ * @brief Start duty cycle measurement task
+ */
 void tsk_duty_Start();
 
 #endif

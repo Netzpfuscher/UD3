@@ -22,15 +22,27 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+/**
+ * @file digipot.c
+ * @brief Digital potentiometer implementation
+ *
+ * See digipot.h for function documentation.
+ */
+
 #include "digipot.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "cli_common.h"
 
-#define R_DCDC_TOP 82000.0
-#define R_DCDC_BOTTOM_V3 2700.0
-#define R_DCDC_BOTTOM 3300.0
-#define R_DIGIPOT 5000.0
+/** @name DC-DC Voltage Divider Constants
+ * Values in ohms for calculating digipot setting from target voltage.
+ * @{
+ */
+#define R_DCDC_TOP 82000.0           //!< Upper divider resistor (82kΩ)
+#define R_DCDC_BOTTOM_V3 2700.0      //!< Lower divider resistor for HW v3.0 (2.7kΩ)
+#define R_DCDC_BOTTOM 3300.0         //!< Lower divider resistor for HW v3.1+ (3.3kΩ)
+#define R_DIGIPOT 5000.0             //!< Digital potentiometer full-scale resistance (5kΩ)
+/** @} */
 
 void digipot_write(uint8_t value){
  

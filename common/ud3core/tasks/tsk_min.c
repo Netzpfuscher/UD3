@@ -22,6 +22,13 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+/**
+ * @file tsk_min.c
+ * @brief MIN protocol task implementation
+ *
+ * See tsk_min.h for function documentation.
+ */
+
 #include "cyapicallbacks.h"
 #include <cytypes.h>
 
@@ -115,13 +122,12 @@ typedef struct {
 
 average_buff sample;
 
-
-/*******************************************************************************************
-Makes avaraging of given values
-In	= buffer (avarage_buff) for storing samples
-IN	= new_sample (int)
-OUT = avaraged value (int) 
-********************************************************************************************/
+/**
+ * @brief Computes moving average for time synchronization
+ * @param buffer Pointer to average buffer structure
+ * @param new_sample New sample value to add to the filter
+ * @return Averaged value (32-sample moving average)
+ */
 int average (average_buff *buffer, int new_sample){
 	buffer->total -= buffer->samples[buffer->i];
 	buffer->total += new_sample;
@@ -131,48 +137,88 @@ int average (average_buff *buffer, int new_sample){
 	return buffer->last;
 }
 
-
+/**
+ * @brief MIN protocol callback - returns available TX buffer space
+ * @param port Port number (unused, UART is fixed)
+ * @return Number of bytes available in UART TX buffer
+ */
 uint16_t min_tx_space(uint8_t port){
     return (UART_TX_BUFFER_SIZE - UART_GetTxBufferSize());
 }
 
+/**
+ * @brief MIN protocol callback - returns available RX buffer space
+ * @param port Port number (unused, UART is fixed)
+ * @return Number of bytes available in UART RX buffer
+ */
 uint32_t min_rx_space(uint8_t port){
     return (UART_RX_BUFFER_SIZE - UART_GetRxBufferSize());
 }
 
+/**
+ * @brief MIN protocol callback - transmit single byte
+ * @param port Port number (unused, UART is fixed)
+ * @param byte Byte to transmit over UART
+ */
 void min_tx_byte(uint8_t port, uint8_t byte){
     uart_bytes_tx++;
     UART_PutChar(byte);
 }
 
+/**
+ * @brief MIN protocol callback - get current system time
+ * @return Current time in milliseconds since system start
+ */
 uint32_t min_time_ms(void){
   return (xTaskGetTickCount() * portTICK_RATE_MS);
 }
 
+/**
+ * @brief MIN protocol callback - called when protocol reset is detected
+ * @param port Port number (unused)
+ */
 void min_reset(uint8_t port){
     //USBMIDI_1_callbackLocalMidiEvent(0, (uint8_t*)kill_msg);   
     alarm_push(ALM_PRIO_WARN, "COM: MIN reset",ALM_NO_VALUE);
 }
 
+/**
+ * @brief MIN protocol callback - called before starting frame transmission
+ * @param port Port number (unused)
+ * @note Simulator-only: marks frame boundary for debugging
+ */
 void min_tx_start(uint8_t port){
 	#ifdef SIMULATOR
 	UART_start_frame();
 	#endif
 }
+
+/**
+ * @brief MIN protocol callback - called after finishing frame transmission
+ * @param port Port number (unused)
+ * @note Simulator-only: marks frame boundary for debugging
+ */
 void min_tx_finished(uint8_t port){
 	#ifdef SIMULATOR
 	UART_end_frame();
 	#endif
 }
+
+/**
+ * @brief Time synchronization callback - syncs local clock with remote time
+ * @param remote_time Remote system time in milliseconds
+ * @note Uses moving average to smooth jitter. Hard reset if drift >1 second.
+ */
 void time_cb(uint32_t remote_time){
     min_time.remote = remote_time;
     min_time.diff_raw = min_time.remote-l_time;
     min_time.diff = average(&sample,min_time.diff_raw);
     if(min_time.diff>1000 ||min_time.diff<-1000){
+        // Large drift - force resync
         clock_set(min_time.remote);
         min_time.resync++;
-        //clock_reset_inc();
     }else{
+        // Small drift - trim incrementally
         clock_trim(min_time.diff);
     }   
 }
@@ -185,6 +231,11 @@ static const uint8_t min_start = 'o';
 
 struct _socket_info socket_info[NUM_MIN_CON];
 
+/**
+ * @brief Process synthesizer control commands (SID/MIDI/OFF)
+ * @param min_payload Pointer to command payload (first byte is command)
+ * @param len_payload Length of payload in bytes
+ */
 void process_synth(uint8_t *min_payload, uint8_t len_payload){
     len_payload--;
     switch(*min_payload++){
@@ -208,6 +259,12 @@ void process_synth(uint8_t *min_payload, uint8_t len_payload){
   }
 }
 
+/**
+ * @brief Queue a command frame with string argument
+ * @param ctx MIN protocol context
+ * @param cmd Command byte
+ * @param str String argument (truncated to 39 bytes if longer)
+ */
 void send_command(struct min_context *ctx, uint8_t cmd, char *str){
     uint8_t len=0;
     uint8_t buf[40];
@@ -217,8 +274,16 @@ void send_command(struct min_context *ctx, uint8_t cmd, char *str){
     memcpy(&buf[1],str,len);
     min_queue_frame(ctx,MIN_ID_COMMAND,buf,len+1);
 }
+
+// Feature transmission counter - counts down from total features to 0
 uint8_t transmit_features=0;
 
+/**
+ * @brief Process incoming command messages
+ * @param command Command byte
+ * @param min_payload Pointer to command payload
+ * @param len_payload Length of payload in bytes
+ */
 void min_command(uint8_t command, uint8_t *min_payload, uint8_t len_payload){
     switch(command){
         case CMD_LINK:
@@ -247,6 +312,12 @@ struct __os_info {
 
 typedef struct __os_info os_info;
 
+/**
+ * @brief Process incoming event messages (fibernet status, device info, etc)
+ * @param command Event type
+ * @param min_payload Pointer to event payload
+ * @param len_payload Length of payload in bytes
+ */
 void min_event(uint8_t command, uint8_t *min_payload, uint8_t len_payload){
     event_resonse response;
     switch(command){
@@ -254,7 +325,8 @@ void min_event(uint8_t command, uint8_t *min_payload, uint8_t len_payload){
             response.id = EVENT_GET_INFO;
             response.struct_version = EVENT_STRUCT_VERSION;
             CyGetUniqueId(response.unique_id);
-            strncpy(response.udname, configuration.ud_name, sizeof(configuration.ud_name));
+            strncpy(response.udname, configuration.ud_name, sizeof(response.udname));
+            response.udname[sizeof(response.udname)-1] = '\0';
             min_send_frame(&min_ctx,MIN_ID_EVENT,(uint8_t*)&response,sizeof(response));
             break;
         case EVENT_ETH_INIT_FAIL:
@@ -293,6 +365,17 @@ void min_event(uint8_t command, uint8_t *min_payload, uint8_t len_payload){
 #define VMS_WRT_FLUSH      4
 #define VMS_WIRE_SIZE (sizeof(VMS_WIRE_DATA_t)) 
 
+/**
+ * @brief Process VMS (Voice Memory System) data writes to EEPROM
+ * @param min_payload Pointer to VMS command payload
+ * @param len_payload Length of payload in bytes
+ * 
+ * Handles multi-packet VMS transfers:
+ * - VMS_WRT_BLOCK: Write individual VMS audio blocks
+ * - VMS_WRT_MAP_HEADER: Receive map table header, allocate buffers
+ * - VMS_WRT_MAP_DATA: Accumulate map entries, write when complete
+ * - VMS_WRT_FLUSH: Finalize EEPROM writes and cleanup buffers
+ */
 void min_vms(uint8_t *min_payload, uint8_t len_payload){
     
     uint8_t packet_type = *min_payload;
@@ -302,7 +385,7 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
     
     static MAP_HEADER_WIRE_DATA_t* map_header;
     static MAPTABLE_ENTRY_t* map_entries;
-    volatile static MAP_ENTRY_WIRE_DATA_t* map_entry;
+    static MAP_ENTRY_WIRE_DATA_t* map_entry;
     static uint8_t n_map_entry=0;
     static uint16_t last_write_index=0;
     
@@ -326,6 +409,7 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
             memcpy(map_header, min_payload, sizeof(MAP_HEADER_WIRE_DATA_t));
             
             if (map_header->header.listEntries != 0) {
+                if(map_entries != NULL) vPortFree(map_entries);
                 map_entries = pvPortMalloc(sizeof(MAPTABLE_ENTRY_t) * map_header->header.listEntries);
                 
                 TERM_printDebug(min_handle[1], "got header for %s with count %d\r\n", map_header->header.name, map_header->header.listEntries);
@@ -338,7 +422,7 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
             n_map_entry = 0;
             break;
         case VMS_WRT_MAP_DATA:
-            if(map_header != NULL || map_entries != NULL){
+            if(map_header != NULL && map_entries != NULL){
                 
                 //copy the data 
                 map_entry = (MAP_ENTRY_WIRE_DATA_t*) min_payload;
@@ -367,9 +451,14 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
         case VMS_WRT_FLUSH:
             last_write_index=0;
             nvm_flush();
-            if(map_entries != NULL) vPortFree(map_entries);
-            if(map_header != NULL) vPortFree(map_header);
-            map_header = NULL;
+            if(map_entries != NULL) {
+                vPortFree(map_entries);
+                map_entries = NULL;
+            }
+            if(map_header != NULL) {
+                vPortFree(map_header);
+                map_header = NULL;
+            }
             for(uint8_t i=0;i<NUM_MIN_CON;i++){
                 if(socket_info[i].socket==SOCKET_CONNECTED){
                     TERMINAL_HANDLE* handle = min_handle[i];
@@ -384,6 +473,20 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
     }
 }
 
+/**
+ * @brief Main MIN protocol frame dispatcher
+ * @param min_id MIN frame ID (channel 0-9, or protocol ID)
+ * @param min_payload Pointer to frame payload
+ * @param len_payload Length of payload in bytes
+ * @param port Port number (unused, always UART)
+ * 
+ * Routes incoming MIN frames to appropriate handlers:
+ * - 0-9: Terminal/CLI data for socket connections
+ * - MIN_ID_MIDI/SID: Audio synthesis data
+ * - MIN_ID_WD: Watchdog and time sync
+ * - MIN_ID_COMMAND/EVENT: Control messages
+ * - MIN_ID_VMS: Voice Memory System uploads
+ */
 void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_payload, uint8_t port)
 {
     if(min_id==debug_id && debug_port!=NULL){
@@ -416,6 +519,7 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
             if(*min_payload>(NUM_MIN_CON-1)) return;
             socket_info[*min_payload].socket = *(min_payload+1);
             strncpy(socket_info[*min_payload].info,(char*)min_payload+2,sizeof(socket_info[0].info));
+            socket_info[*min_payload].info[sizeof(socket_info[0].info)-1] = '\0';
             if(socket_info[*min_payload].socket==SOCKET_CONNECTED){
                 if(!transmit_features){
                     transmit_features=sizeof(version)/sizeof(char*);
@@ -430,10 +534,12 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
             return;
         case MIN_ID_COMMAND:
             if(len_payload<1) return;
-            min_command(min_payload[0], &min_payload[1],--len_payload);
+            len_payload--;
+            min_command(min_payload[0], &min_payload[1], len_payload);
             return;
         case MIN_ID_EVENT:
-            min_event(min_payload[0], &min_payload[1],--len_payload);
+            len_payload--;
+            min_event(min_payload[0], &min_payload[1], len_payload);
             return;
         case MIN_ID_ALARM:
             alarm_push_c(min_payload[0],(char*)&min_payload[5],len_payload-5,min_payload[1] | (min_payload[2] << 8) | (min_payload[3] << 16) | (min_payload[4] << 24));
@@ -452,7 +558,12 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
     }
 }
 
-
+/**
+ * @brief Poll UART for received bytes and process MIN protocol
+ * 
+ * Called regularly from main task loop. Reads all available bytes from
+ * UART RX buffer, feeds them to MIN decoder, and polls MIN state machine.
+ */
 void poll_UART(){
     uint16_t bytes = UART_GetRxBufferSize();
     if(bytes){
@@ -467,6 +578,13 @@ void poll_UART(){
     
 }
 
+/**
+ * @brief Send command frame immediately (without queueing)
+ * @param ctx MIN protocol context
+ * @param cmd Command byte
+ * @param str String argument (truncated to 39 bytes if longer)
+ * @note Does NOT use semaphore protection - use during initialization only
+ */
 void send_command_wq(struct min_context *ctx, uint8_t cmd, char *str){
     uint8_t len=0;
     uint8_t buf[40];
@@ -477,10 +595,25 @@ void send_command_wq(struct min_context *ctx, uint8_t cmd, char *str){
     min_send_frame(ctx,MIN_ID_COMMAND,buf,len+1);
 }
 
+/**
+ * @brief Reset SID flow control to stopped state
+ * @note Thread-safe: protected by min_Semaphore
+ */
 void min_reset_flow(void){
-    flow_ctl=0;
+    if(xSemaphoreTake(min_Semaphore, portMAX_DELAY)){
+        flow_ctl=0;
+        xSemaphoreGive(min_Semaphore);
+    }
 }
 
+/**
+ * @brief Queue a MIN frame for transmission (thread-safe)
+ * @param id MIN frame ID
+ * @param data Pointer to frame payload
+ * @param len Length of payload in bytes
+ * @param ticks Timeout in FreeRTOS ticks to wait for semaphore
+ * @return pdTRUE on success, pdFAIL if queue full or semaphore timeout
+ */
 uint8_t min_queue(uint8_t id, uint8_t *data, uint8_t len, TickType_t ticks){
     if(min_queue_has_space_for_frame(&min_ctx,len)== false) return pdFAIL;
     
@@ -493,6 +626,15 @@ uint8_t min_queue(uint8_t id, uint8_t *data, uint8_t len, TickType_t ticks){
     }      
 }
 
+/**
+ * @brief Send a MIN frame immediately (thread-safe)
+ * @param id MIN frame ID
+ * @param data Pointer to frame payload
+ * @param len Length of payload in bytes
+ * @param ticks Timeout in FreeRTOS ticks to wait for semaphore
+ * @return pdTRUE on success, pdFAIL on semaphore timeout
+ * @note Bypasses queue, sends immediately. Use for time-critical data.
+ */
 uint8_t min_send(uint8_t id, uint8_t *data, uint8_t len, TickType_t ticks){
     if(xSemaphoreTake(min_Semaphore,ticks)){
         min_send_frame(&min_ctx,id,data,len);      
@@ -506,10 +648,16 @@ uint8_t min_send(uint8_t id, uint8_t *data, uint8_t len, TickType_t ticks){
 
 /* `#END` */
 /* ------------------------------------------------------------------------ */
-/*
- * This is the main procedure that comprises the task.  Place the code required
- * to preform the desired function within the merge regions of the task procedure
- * to add functionality to the task.
+/**
+ * @brief MIN protocol task - handles UART communication and MIN framing
+ * @param pvParameters Task parameters (unused)
+ * 
+ * Main responsibilities:
+ * - Poll UART for incoming data and decode MIN frames
+ * - Transmit queued MIN frames from terminal/CLI tasks
+ * - Handle SID audio flow control (stop/start messages)
+ * - Transmit feature list on socket connection
+ * - Maintain MIN protocol state machine
  */
 void tsk_min_TaskProc(void *pvParameters) {
 	/*
@@ -525,7 +673,6 @@ void tsk_min_TaskProc(void *pvParameters) {
    
 
 	/* `#END` */
-
 	/*
 	 * Add the task initialzation code in the below merge region to be included
 	 * in the task.
@@ -533,7 +680,7 @@ void tsk_min_TaskProc(void *pvParameters) {
 	/* `#START TASK_INIT_CODE` */
     
 
-    //Init MIN Protocol
+    // Init MIN Protocol
     min_init_context(&min_ctx, 0);
     
     for(uint8_t i=0;i<NUM_MIN_CON;i++){
@@ -609,6 +756,12 @@ void tsk_min_TaskProc(void *pvParameters) {
 	}
 }
 /* ------------------------------------------------------------------------ */
+/**
+ * @brief Initialize and start the MIN protocol task
+ * 
+ * Called during system startup. Initializes UART hardware, creates binary
+ * semaphore for thread-safe access, and creates the MIN service task.
+ */
 void tsk_min_Start(void) {
 	/*
 	 * Insert task global memeory initialization here. Since the OS does not

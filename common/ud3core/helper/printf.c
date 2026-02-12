@@ -30,6 +30,14 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
+/**
+ * @file printf.c
+ * @brief Tiny printf implementation for embedded systems
+ *
+ * See printf.h for function documentation.
+ * Original implementation by Marco Paland, modified for UD3.
+ */
+
 #include <stdbool.h>
 #include <stdint.h>
 

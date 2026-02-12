@@ -22,6 +22,13 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+/**
+ * @file tsk_analog.c
+ * @brief Analog task implementation
+ *
+ * See tsk_analog.h for function documentation.
+ */
+
 #include "cyapicallbacks.h"
 #include <cytypes.h>
 

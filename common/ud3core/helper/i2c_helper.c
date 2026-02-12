@@ -22,6 +22,13 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+/**
+ * @file i2c_helper.c
+ * @brief I2C helper implementation
+ *
+ * See i2c_helper.h for function documentation.
+ */
+
 #include "i2c_helper.h"
 #include <device.h>
 #include "FreeRTOS.h"

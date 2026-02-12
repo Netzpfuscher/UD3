@@ -22,6 +22,13 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+/**
+ * @file tsk_overlay.c
+ * @brief Terminal overlay task implementation
+ *
+ * See tsk_overlay.h for function documentation.
+ */
+
 #include "cyapicallbacks.h"
 #include <cytypes.h>
 #include <stdlib.h>

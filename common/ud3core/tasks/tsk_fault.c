@@ -22,6 +22,13 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+/**
+ * @file tsk_fault.c
+ * @brief Fault monitoring task implementation
+ *
+ * See tsk_fault.h for function documentation.
+ */
+
 #include "cyapicallbacks.h"
 #include <cytypes.h>
 

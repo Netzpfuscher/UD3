@@ -5,6 +5,13 @@
  * Created on 12 September 2023, 23:15
  */
 
+/**
+ * @file SidFilter.c
+ * @brief SID voice filtering implementation
+ *
+ * See SidFilter.h for function documentation.
+ */
+
 #include "NoteMapper.h"
 #include "MidiFilter.h"
 #include "TTerm.h"

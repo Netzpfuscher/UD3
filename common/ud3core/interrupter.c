@@ -1,5 +1,11 @@
- /*
- * UD3
+/**
+ * @file interrupter.c
+ * @brief Interrupter control and pulse generation implementation
+ *
+ * Implements the core pulse timing system for the Tesla coil. Manages DMA-driven
+ * PWM updates, transient mode operation, MIDI/SID synthesis integration, burst
+ * timing, and external interrupter input. Coordinates with signal generator and
+ * duty compressor for automated modulation.
  *
  * Copyright (c) 2018 Jens Kerrinnes
  * Copyright (c) 2015 Steve Ward
@@ -41,8 +47,18 @@
 #include <math.h>
 #include <stdlib.h>
 
-uint16_t int1_prd, int1_cmp;
+/** @brief Interrupter period register value */
+uint16_t int1_prd;
 
+/** @brief Interrupter compare register value */
+uint16_t int1_cmp;
+
+/**
+ * @brief Emergency stop - disable all interrupter output
+ *
+ * Sets interlock flag to prevent operation, kills all audio synthesis,
+ * zeros pulse width parameter, and updates hardware to safe state.
+ */
 void interrupter_kill(void){
     sysfault.interlock = 1;
     SigGen_killAudio();
@@ -50,28 +66,61 @@ void interrupter_kill(void){
     interrupter_updateTR();
 }
 
+/**
+ * @brief Release interlock to allow interrupter operation
+ *
+ * Clears the interlock flag. Does not automatically restart operation.
+ */
 void interrupter_unkill(void){
     sysfault.interlock=0;
 }
 
+/** @brief Interrupter DMA channel handle */
 uint8 int1_dma_Chan;
 
+/** @brief Number of transfer descriptors per channel */
 #define N_TD 4
+
+/** @brief DMA channel handles for multi-channel operation */
 uint8 ch_dma_Chan[N_CHANNEL];
+
+/** @brief Transfer descriptors for multi-channel DMA */
 uint8_t ch_dma_TD[N_CHANNEL][N_TD];
 
+/** @brief DMA bytes per burst for current modulation mode */
 #define MODULATION_CUR_BYTES 1
+
+/** @brief DMA bytes per burst for pulse width modulation mode */
 #define MODULATION_PW_BYTES  8
+
+/** @brief DMA requests per burst */
 #define MODULATION_REQUEST_PER_BURST  1
 
-// Adds an alarm with the specified message to the alarm queue and stops the UD3
-// TODO: Make this a global function so it can be used everywhere resources and memory are allocated.
+/**
+ * @brief Push critical error alarm and stop UD3
+ * @param message Error message string
+ * @param val Error value/code
+ *
+ * Adds alarm to queue with critical priority and calls interrupter_kill().
+ * TODO: Make this a global function for use throughout codebase.
+ */
 void critical_error(const char *message, int32_t val) {
     alarm_push(ALM_PRIO_CRITICAL, message, val);
     interrupter_kill();
 }
 
-// One-time initialization of the interrupter components (called once at system startup)
+/**
+ * @brief One-time initialization of interrupter hardware and DMA
+ *
+ * Initializes:
+ * - Signal generator and duty compressor
+ * - Op-amp for analog feedback
+ * - PWM timer with safe default values (65000 period, minimal on-time)
+ * - DMA channel for automated PWM register updates (4 TDs in circular chain)
+ *
+ * DMA transfers int1_prd and int1_cmp to interrupter1 PWM component registers.
+ * Must be called once at system startup.
+ */
 void initialize_interrupter(void) {
     //initialize both signal generator and duty compressor
     SigGen_init();
@@ -117,6 +166,13 @@ void initialize_interrupter(void) {
     configure_interrupter();
 }
 
+/**
+ * @brief Initialize interrupter to safe default state
+ *
+ * Kills interrupter output, sets large period (65000) and minimal compare
+ * value (64999) for safe 1µs pulse width. Used during configuration changes
+ * or fault recovery.
+ */
 void interrupter_init_safe(){
         // Safe defaults in case anything fails.
     interrupter_kill();
@@ -131,7 +187,13 @@ void interrupter_init_safe(){
   
 }
 
-// Called whenever an interrupter-related param is changed or eeprom is loaded.
+/**
+ * @brief Configure interrupter based on current parameter settings
+ *
+ * Initializes to safe state, calculates minimum transient mode period from
+ * configured maximum PRF (pulse repetition frequency), and disables interrupter.
+ * Called when EEPROM is loaded or interrupter settings change.
+ */
 void configure_interrupter()
 {
 
@@ -145,6 +207,16 @@ void configure_interrupter()
     interrupter.mode = INTR_MODE_OFF;
 }
 
+/**
+ * @brief Fire a single pulse with specified parameters (scaled volume)
+ * @param pw Pulse width in microseconds
+ * @param vol Volume (0 to INT16_MAX, scaled to current limit DAC)
+ *
+ * Generates a single transient-mode pulse. Volume is scaled to DAC value
+ * based on min/max current limit settings. Enforces max_tr_pw safety limit.
+ * Returns immediately if fault exists or external interrupter is active.
+ * Updates hardware with atomic interrupt disable during register writes.
+ */
 void interrupter_oneshot(uint32_t pw, uint32_t vol) {
     if(tsk_fault_is_fault() || configuration.ext_interrupter) return;
     
@@ -167,6 +239,15 @@ void interrupter_oneshot(uint32_t pw, uint32_t vol) {
     CyGlobalIntEnable;
 }
 
+/**
+ * @brief Fire a single pulse with raw DAC value (no scaling)
+ * @param pw_us Pulse width in microseconds
+ * @param dacValue_counts Raw DAC value in counts for current limit
+ *
+ * Generates a single pulse with direct DAC control (no volume scaling).
+ * Used for precise current limit control. Enforces max_tr_pw safety limit.
+ * Returns immediately if fault exists or external interrupter is active.
+ */
 void interrupter_oneshotRaw(uint32_t pw_us, uint32_t dacValue_counts) {
     //is sysfault triggered?
     if(tsk_fault_is_fault() || configuration.ext_interrupter) return;
@@ -202,7 +283,14 @@ void interrupter_oneshotRaw(uint32_t pw_us, uint32_t dacValue_counts) {
     CyGlobalIntEnable;
 }
 
-
+/**
+ * @brief Update interrupter for external input mode
+ *
+ * Configures hardware to accept external gate/trigger signals. Sets current
+ * limit DAC to maximum and pulse width to configured max_tr_pw. External
+ * signal controls actual pulse timing. Supports normal and inverted polarity
+ * based on configuration.ext_interrupter (0=off, 1=normal, 2=inverted).
+ */
 void interrupter_update_ext() {
 
 	ct1_dac_val[0] = params.max_tr_cl_dac_val;
@@ -233,6 +321,16 @@ void interrupter_update_ext() {
     CyGlobalIntEnable;
 }
 
+/**
+ * @brief Callback when external interrupter setting changes
+ * @param params Parameter array (unused)
+ * @param index Parameter index (unused)
+ * @param handle Terminal handle (unused)
+ * @return pdPASS
+ *
+ * If external interrupter enabled: pushes warning alarm and configures hardware.
+ * If disabled: halts tesla coil operation and disables interrupter control.
+ */
 uint8_t callback_ext_interrupter(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     if(configuration.ext_interrupter){
         alarm_push(ALM_PRIO_WARN, "INT: External interrupter active", configuration.ext_interrupter);
@@ -246,12 +344,29 @@ uint8_t callback_ext_interrupter(parameter_entry * params, uint8_t index, TERMIN
     return pdPASS;
 }
 
+/**
+ * @brief Callback when modulation mode parameter changes
+ * @param params Parameter array (unused)
+ * @param index Parameter index (unused)
+ * @param handle Terminal handle (unused)
+ * @return pdPASS
+ *
+ * Note: Modulation mode changes (PW vs current) no longer supported.
+ */
 uint8_t callback_interrupter_mod(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     //modulation change no longer supported!
     
     return pdPASS;
 }
 
+/**
+ * @brief Update signal generator with current TR (transient) mode parameters
+ *
+ * Pushes pulse width, volume, frequency, and burst parameters from param struct
+ * to the signal generator. Interrupter no longer generates pulses directly in TR
+ * mode - all pulse generation delegated to SigGen. Returns early if not in TR mode
+ * or if period (pwd) is zero (to avoid division by zero).
+ */
 void interrupter_updateTR() {
     //are we in tr mode?
     if(param.synth != SYNTH_TR) return;
@@ -262,7 +377,16 @@ void interrupter_updateTR() {
     SigGen_setVoiceTR(1, param.pw, MAX_VOL, frequency_dHz, param.burst_on * 1000, (param.burst_on == 0) ? 0 : param.burst_off * 1000);
 }
 
-//synth parameter was changed => update siggen mode
+/**
+ * @brief Callback when synthesizer mode parameter changes
+ * @param params Parameter array (unused)
+ * @param index Parameter index (unused)
+ * @param handle Terminal handle (unused)
+ * @return pdTRUE (accept change)
+ *
+ * Resets both MIDI and SID processors and switches signal generator to new mode.
+ * Mode options: SYNTH_OFF, SYNTH_TR, SYNTH_MIDI, SYNTH_SID.
+ */
 uint8_t callback_SynthFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     //this also needs to reset both vms and sid
     SidProcessor_resetSid();
@@ -271,10 +395,19 @@ uint8_t callback_SynthFunction(parameter_entry * params, uint8_t index, TERMINAL
     return 1;
 }
 
-/*****************************************************************************
-* Callback if a transient mode parameter is changed
-* Updates the interrupter hardware
-******************************************************************************/
+/**
+ * @brief Callback when pulse width or period parameters change
+ * @param params Parameter array (unused)
+ * @param index Parameter index (unused)
+ * @param handle Terminal handle (unused)
+ * @return pdPASS
+ *
+ * Handles parameter changes in pulse width (pw) or period (pwd). Routes update
+ * to appropriate subsystem based on current mode:
+ * - External interrupter: Updates external gate configuration
+ * - TR mode: Updates signal generator TR parameters
+ * - MIDI mode: Notifies MIDI processor of pulse width change
+ */
 uint8_t callback_PWFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle) {
     
    if(configuration.ext_interrupter){
@@ -288,28 +421,50 @@ uint8_t callback_PWFunction(parameter_entry * params, uint8_t index, TERMINAL_HA
 	return pdPASS;
 }
 
-/*****************************************************************************
-* Callback if a transient mode parameter is changed (percent ontime)
-* Updates the interrupter hardware
-******************************************************************************/
+/**
+ * @brief Callback when volume parameter changes
+ * @param params Parameter array (unused)
+ * @param index Parameter index (unused)
+ * @param handle Terminal handle (unused)
+ * @return pdPASS
+ *
+ * Updates master volume in signal generator. Volume is percentage of maximum
+ * current limit (0-100%).
+ */
 uint8_t callback_VolFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle) {
     SigGen_setMasterVol(param.vol);
 	return pdPASS;
 }
 
-/*****************************************************************************
-* Callback if a burst mode parameter is changed
-******************************************************************************/
+/**
+ * @brief Callback when burst mode parameters change
+ * @param params Parameter array (unused)
+ * @param index Parameter index (unused)
+ * @param handle Terminal handle (unused)
+ * @return pdPASS
+ *
+ * Triggered by changes to burst_on or burst_off parameters. Updates signal
+ * generator with new burst timing in TR mode.
+ */
 uint8_t callback_BurstFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle) {
     interrupter_updateTR();
 	return pdPASS;
 }
 
 
-/*****************************************************************************
-* starts or stops the transient mode (classic mode)
-* also spawns a timer for the burst mode.
-******************************************************************************/
+/**
+ * @brief CLI command to start or stop transient (TR) mode
+ * @param handle Terminal handle for output
+ * @param argCount Number of arguments (expects 1)
+ * @param args Argument array: args[0] = "start" or "stop"
+ * @return TERM_CMD_EXIT_SUCCESS
+ *
+ * Usage: `tr start` - Switch to TR mode and configure signal generator
+ *        `tr stop`  - Switch to SYNTH_OFF mode and halt output
+ *
+ * TR mode is the classic continuous interrupter mode with configurable pulse
+ * width, period, and burst timing.
+ */
 uint8_t CMD_tr(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     
     if(argCount==0 || strcmp(args[0], "-?") == 0){
@@ -337,8 +492,17 @@ uint8_t CMD_tr(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     return TERM_CMD_EXIT_SUCCESS;
 }
 
-/**Triggers a single TR/classic pulse with the specified ontime and volume. Volume is interpreted as SigGen volume, i.e.
- * from 0 to INT16_MAX.
+/**
+ * @brief CLI command to fire a single pulse with specified parameters
+ * @param handle Terminal handle for output
+ * @param argCount Number of arguments (expects 2)
+ * @param args Argument array: args[0] = ontime (µs), args[1] = volume (0-INT16_MAX)
+ * @return TERM_CMD_EXIT_SUCCESS on success, TERM_CMD_EXIT_ERROR on invalid input
+ *
+ * Usage: `oneshot <ontime_us> <volume>`
+ *
+ * Volume is interpreted as SigGen volume (0 to INT16_MAX), mapped to current
+ * limit DAC values. Ontime must be positive and within safety limits.
  */
 uint8_t CMD_oneshot(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     if (argCount != 2) {
@@ -364,6 +528,17 @@ uint8_t CMD_oneshot(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
 
 
 
+/**
+ * @brief Display MIDI synthesizer status in real-time
+ * @param handle Terminal handle for output
+ *
+ * Prints current state of all MIDI voices and channel program mappings:
+ * - Voice data: note, channel, volume, on/off state, frequency, pulse width,
+ *   hypervoice count, noise level
+ * - Channel maps: program names loaded on each MIDI channel (0-15)
+ *
+ * Helper function for CMD_SynthMon() display loop.
+ */
 void Synthmon_printMIDI(TERMINAL_HANDLE * handle){
     uint32_t freq=0;
 
@@ -418,6 +593,16 @@ void Synthmon_printMIDI(TERMINAL_HANDLE * handle){
     }
 }
 
+/**
+ * @brief Display SID synthesizer status in real-time
+ * @param handle Terminal handle for output
+ *
+ * Prints current state of all SID channels:
+ * - Channel data: frequency, envelope volume, waveform type
+ * - ADSR state and master volume per channel
+ *
+ * Helper function for CMD_SynthMon() display loop.
+ */
 void Synthmon_printSID(TERMINAL_HANDLE * handle){
     
     for(uint8_t i=0;i<N_SIDCHANNEL;i++){
@@ -429,6 +614,22 @@ void Synthmon_printSID(TERMINAL_HANDLE * handle){
     }
 }
 
+/**
+ * @brief CLI command to monitor synthesizer status in real-time
+ * @param handle Terminal handle for output
+ * @param argCount Number of arguments (unused)
+ * @param args Argument array (unused)
+ * @return TERM_CMD_EXIT_SUCCESS
+ *
+ * Usage: `synthmon`
+ *
+ * Displays continuous real-time status of active synthesizer (MIDI or SID):
+ * - Voice/channel state (frequencies, volumes, notes, waveforms)
+ * - Compressor state (gain level, state machine)
+ * - Updates every 1 second until CTRL+C pressed
+ *
+ * Screen is cleared and cursor hidden during display for clean output.
+ */
 uint8_t CMD_SynthMon(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     TERM_sendVT100Code(handle, _VT100_CURSOR_DISABLE,0);
     TERM_sendVT100Code(handle, _VT100_CLS,0);

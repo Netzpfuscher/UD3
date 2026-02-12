@@ -29,6 +29,16 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
+/**
+ * @file printf.h
+ * @brief Tiny printf implementation for embedded systems
+ *
+ * Lightweight, thread-safe printf/sprintf/snprintf implementation optimized for
+ * embedded systems. Avoids malloc and is much smaller than newlib printf.
+ *
+ * Original code by Marco Paland (info@paland.com), modified for UD3.
+ */
+
 #ifndef _PRINTF_H_
 #define _PRINTF_H_
 
@@ -96,7 +106,22 @@ int vsnprintf_(char* buffer, size_t count, const char* format, va_list va);
  * \return The number of characters that are sent to the output function, not counting the terminating null character
  */
 int fctprintf(void (*out)(char character, void* arg), void* arg, const char* format, ...);
+
+/**
+ * @brief Stream-based printf (UD3-specific)
+ * @param port Pointer to FreeRTOS stream buffer
+ * @param format Format string
+ * @return Number of characters written
+ */
 uint32_t stream_printf(void * port, char* format, ...);
+
+/**
+ * @brief Write binary data to stream buffer (UD3-specific)
+ * @param port Pointer to FreeRTOS stream buffer
+ * @param buffer Data to write
+ * @param len Length of data
+ * @return Number of bytes written
+ */
 uint32_t stream_buffer(void * port, uint8_t * buffer, uint32_t len);
 
 #ifdef __cplusplus

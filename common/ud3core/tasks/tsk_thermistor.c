@@ -22,6 +22,13 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+/**
+ * @file tsk_thermistor.c
+ * @brief Temperature monitoring and fan control task implementation
+ *
+ * See tsk_thermistor.h for function documentation.
+ */
+
 #include "cyapicallbacks.h"
 #include <cytypes.h>
 #include <math.h>

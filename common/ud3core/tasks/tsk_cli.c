@@ -22,6 +22,13 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+/**
+ * @file tsk_cli.c
+ * @brief CLI task implementation
+ *
+ * See tsk_cli.h for function documentation.
+ */
+
 #include "cyapicallbacks.h"
 #include <cytypes.h>
 #include <stdarg.h>

@@ -22,6 +22,13 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+/**
+ * @file tsk_sid.c
+ * @brief SID chip emulation task implementation
+ *
+ * See tsk_sid.h for function documentation.
+ */
+
 #include "cyapicallbacks.h"
 #include <cytypes.h>
 

@@ -22,6 +22,13 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+/**
+ * @file tsk_hwGauge.c
+ * @brief Hardware gauge control task implementation
+ *
+ * See tsk_hwGauge.h for function documentation.
+ */
+
 #include <stdint.h>
 #include <device.h>
 #include "tsk_priority.h"

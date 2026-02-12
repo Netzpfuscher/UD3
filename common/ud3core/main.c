@@ -1,5 +1,14 @@
-/*
- * UD3
+/**
+ * @file main.c
+ * @brief UD3 Tesla Coil Controller - Main entry point and system initialization
+ *
+ * UD3 is a DRSSTC/QCW controller running on Cypress PSoC with FreeRTOS.
+ * This file handles:
+ * - Hardware initialization (DMA, interrupter, ZCD, charging circuit)
+ * - FreeRTOS setup and interrupt vector installation
+ * - Task creation and startup sequencing
+ * - Configuration loading from EEPROM
+ * - Safety system initialization (fault detection, interlocks)
  *
  * Copyright (c) 2018 Jens Kerrinnes
  * Copyright (c) 2015 Steve Ward
@@ -49,11 +58,40 @@
 #include "tasks/tsk_duty.h"
 #include "tasks/tsk_hypervisor.h"
 
-/*
- * Installs the RTOS interrupt handlers and starts the peripherals.
+/**
+ * @brief Installs FreeRTOS interrupt handlers into Cypress RAM vector table
+ *
+ * Configures PSoC interrupt vectors for FreeRTOS context switching and tick timer.
+ * Must be called before vTaskStartScheduler().
  */
 static void prvFreeRTOSSetup( void );
 
+/**
+ * @brief Main entry point - initializes hardware and starts FreeRTOS scheduler
+ * @return Never returns (scheduler runs indefinitely)
+ *
+ * Initialization sequence:
+ * 1. Disable safety relays (bus and charge relays off)
+ * 2. Install FreeRTOS interrupt handlers
+ * 3. Initialize alarm/event system
+ * 4. Suppress system fault to prevent startup sparking
+ * 5. Load configuration from EEPROM
+ * 6. Initialize hardware subsystems (DMA, interrupter, ZCD, charging)
+ * 7. Create and start all FreeRTOS tasks
+ * 8. Start FreeRTOS scheduler (never returns)
+ *
+ * Tasks started in order:
+ * - MIN protocol (UART communication)
+ * - USB communication
+ * - CLI (command-line interface)
+ * - MIDI and SID synthesizers
+ * - Analog sensing (voltage/current)
+ * - Thermistor monitoring
+ * - Fault detection
+ * - Duty cycle monitoring
+ * - Hardware gauge display (optional, if PCA9685 enabled)
+ * - Hypervisor
+ */
 int main() {
     
     relay_write_bus(0);
@@ -118,6 +156,16 @@ int main() {
 	}
 }
 
+/**
+ * @brief Install FreeRTOS interrupt handlers into Cypress PSoC RAM vector table
+ *
+ * Replaces default Cortex-M3 exception handlers with FreeRTOS versions:
+ * - Vector 11: SVC (Supervisor Call) - used for task creation
+ * - Vector 14: PendSV - used for context switching
+ * - Vector 15: SysTick - FreeRTOS tick timer (typically 1ms)
+ *
+ * This allows FreeRTOS to manage task scheduling and preemption on PSoC hardware.
+ */
 void prvFreeRTOSSetup( void )
 {
 /* Port layer functions that need to be copied into the vector table. */
@@ -136,6 +184,17 @@ extern cyisraddress CyRamVectors[];
 }
 
 
+/**
+ * @brief FreeRTOS stack overflow hook - called when task overflows stack
+ * @param pxTask Handle to the task that overflowed
+ * @param pcTaskName Name of the task that overflowed
+ *
+ * Emergency handler for stack overflow detection. Disables interrupts and halts
+ * system in infinite loop. Stack overflow indicates insufficient stack allocation
+ * in task creation (see tsk_priority.h for stack size constants).
+ *
+ * @note This is a critical error - system must be reset. Check task stack sizes.
+ */
 void vApplicationStackOverflowHook( TaskHandle_t pxTask, char *pcTaskName )
 {
 	/* The stack space has been execeeded for a task, considering allocating more. */
@@ -143,6 +202,17 @@ void vApplicationStackOverflowHook( TaskHandle_t pxTask, char *pcTaskName )
     for(;;);
 }/*---------------------------------------------------------------------------*/
 
+/**
+ * @brief FreeRTOS heap exhaustion hook - called when pvPortMalloc() fails
+ *
+ * Emergency handler for heap memory exhaustion. Disables interrupts and halts
+ * system in infinite loop. Heap exhaustion indicates:
+ * - Too many tasks/queues/semaphores created
+ * - Insufficient heap size (see HEAP_SIZE in config.h: 48KB firmware, 512KB sim)
+ * - Memory leak in application code
+ *
+ * @note This is a critical error - system must be reset. Review heap usage.
+ */
 void vApplicationMallocFailedHook( void )
 {
 	/* The heap space has been execeeded. */
@@ -151,6 +221,15 @@ void vApplicationMallocFailedHook( void )
 }
 /*---------------------------------------------------------------------------*/
 
+/**
+ * @brief Configure timer for FreeRTOS runtime statistics (stub)
+ *
+ * FreeRTOS hook for configuring high-resolution timer for task runtime tracking.
+ * Currently unimplemented (no timer configured). If implemented, would provide
+ * CPU usage statistics per task via vTaskGetRunTimeStats().
+ *
+ * @note Stub function - no runtime stats currently collected.
+ */
 void vConfigureTimerForRunTimeStats(void){
     
 }

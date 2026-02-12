@@ -5,6 +5,13 @@
  * Created on 17 January 2023, 20:25
  */
 
+/**
+ * @file VMSWrapper.c
+ * @brief VMS wrapper implementation
+ *
+ * See VMSWrapper.h for function documentation.
+ */
+
 #include "SignalGenerator.h"
 #include "VMS.h"
 #include "FreeRTOS.h"

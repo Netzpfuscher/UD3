@@ -22,6 +22,14 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+/**
+ * @file cli_common.c
+ * @brief CLI parameter system implementation for UD3
+ *
+ * Implements configuration management, parameter callbacks, and command handlers
+ * for the UD3 Tesla coil controller CLI interface.
+ */
+
 #include "cli_common.h"
 #include "ZCDtoPWM.h"
 #include "autotune.h"
@@ -58,42 +66,70 @@
 #include "helper/digipot.h"
 
 
+/** @brief Suppress unused variable warnings */
 #define UNUSED_VARIABLE(N) \
 	do {                   \
 		(void)(N);         \
 	} while (0)
         
+/**
+ * @name Parameter Change Callbacks
+ * @{
+ */
 	
+/** @brief Callback for configuration parameters (halt, reconfigure, restart) */
 uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+/** @brief Default callback (no action) */
 uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+/** @brief Callback for autotune parameters (validates start < end) */
 uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+/** @brief Callback for Teslaterm update params (validates current limits) */
 uint8_t callback_TTupdateFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+/** @brief Callback for offtime parameter */
 uint8_t callback_OfftimeFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+/** @brief Callback for i2t (current-time) parameter */
 uint8_t callback_i2tFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+/** @brief Callback for baudrate change */
 uint8_t callback_baudrateFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+/** @brief Callback for SPI speed change */
 uint8_t callback_SPIspeedFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+/** @brief Callback to update parameter visibility */
 uint8_t callback_VisibleFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+/** @brief Callback for MCH parameter */
 uint8_t callback_MchFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+/** @brief Callback for MCH copy */
 uint8_t callback_MchCopyFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+/** @brief Callback for UART inversion option */
 uint8_t callback_ivoUART(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+/** @brief Callback for LED inversion option */
 uint8_t callback_ivoLED(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+/** @} */
 
+/** @brief Update IVO hardware control bits */
 void update_ivo();
 
+/** @brief Global configuration instance */
 cli_config configuration;
+/** @brief Global runtime parameter instance */
 cli_parameter param;
 
+/**
+ * @brief UART invert option values
+ */
 enum uart_ivo{
-    UART_IVO_NONE=0,
-    UART_IVO_TX=1,
-    UART_IVO_RX=10,
-    UART_IVO_RX_TX=11
+    UART_IVO_NONE=0,   /**< No inversion */
+    UART_IVO_TX=1,     /**< TX inverted only */
+    UART_IVO_RX=10,    /**< RX inverted only */
+    UART_IVO_RX_TX=11  /**< Both RX and TX inverted */
 };
 
 
-/*****************************************************************************
-* Initializes parameters with default values
-******************************************************************************/
+/**
+ * @brief Initialize all configuration parameters to default values
+ *
+ * Sets up default values for all configuration and runtime parameters.
+ * Called at startup and when user requests defaults to be loaded.
+ */
 void init_config(){
     configuration.watchdog = 1;
     configuration.watchdog_timeout = 1000;
@@ -190,9 +226,18 @@ void init_config(){
 
 // clang-format off
 
-/*****************************************************************************
-* Parameter struct
-******************************************************************************/
+/**
+ * @brief Global parameter table
+ *
+ * Defines all configurable parameters with their properties:
+ * - Parameter type (PARAM_CONFIG = saved to EEPROM, PARAM_DEFAULT = runtime only)
+ * - Visibility flag
+ * - Name string (used in CLI)
+ * - Pointer to variable
+ * - Min/max values and divisor for display
+ * - Callback function (called when parameter changes)
+ * - Help text
+ */
 
 parameter_entry confparam[] = {
     //       Parameter Type ,Visible,"Text   "         , Value ptr                     ,Min     ,Max    ,Div    ,Callback Function           ,Help text
@@ -280,6 +325,10 @@ parameter_entry confparam[] = {
 };
 
    
+/**
+ * @brief Load configuration from EEPROM and apply all settings
+ * @param handle Terminal handle for output messages
+ */
 void eeprom_load(TERMINAL_HANDLE * handle){
     EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,handle);
     if(param.offtime<3) param.offtime=3;
@@ -296,6 +345,12 @@ void eeprom_load(TERMINAL_HANDLE * handle){
 
 
 
+/**
+ * @brief Update parameter visibility based on configuration
+ *
+ * Hides/shows CT2 parameters based on ct2_type (current vs voltage mode).
+ * Also controls vdrive visibility based on hardware revision.
+ */
 void update_visibilty(void){
 
     switch(configuration.ct2_type){
@@ -321,6 +376,10 @@ void update_visibilty(void){
 
 // clang-format on
 
+/**
+ * @brief Initialize Teslaterm interface if terminal mode supports it
+ * @param handle Terminal handle to check and initialize
+ */
 void init_tt_if_enabled(TERMINAL_HANDLE* handle) {
     if (portM->term_mode!=PORT_TERM_VT100) {
         uint8_t include_chart;
@@ -333,10 +392,11 @@ void init_tt_if_enabled(TERMINAL_HANDLE* handle) {
     }
 }
 
-/*****************************************************************************
-* Callback for invert option UART
-******************************************************************************/
-
+/**
+ * @brief Update IVO (invert option) hardware control register
+ *
+ * Applies ivo_uart and ivo_led configuration to IVO_Control hardware register.
+ */
 void update_ivo(){
     switch(configuration.ivo_uart){
     case UART_IVO_NONE:
@@ -364,6 +424,13 @@ void update_ivo(){
     
 }
 
+/**
+ * @brief Callback when UART inversion parameter changes
+ * @param params Parameter array
+ * @param index Index of changed parameter
+ * @param handle Terminal handle for error messages
+ * @return pdTRUE if valid value, pdFALSE otherwise
+ */
 uint8_t callback_ivoUART(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     if(configuration.ivo_uart == UART_IVO_NONE || configuration.ivo_uart == UART_IVO_TX || configuration.ivo_uart == UART_IVO_RX || configuration.ivo_uart == UART_IVO_RX_TX){
         update_ivo();   
@@ -378,24 +445,43 @@ uint8_t callback_ivoUART(parameter_entry * params, uint8_t index, TERMINAL_HANDL
     }
 }
 
+/**
+ * @brief Callback when LED inversion parameter changes
+ * @param params Parameter array
+ * @param index Index of changed parameter
+ * @param handle Terminal handle
+ * @return pdTRUE always
+ */
 uint8_t callback_ivoLED(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     update_ivo();
     return 1;
 }
 
 
-/*****************************************************************************
-* Callback if the offtime parameter is changed
-******************************************************************************/
+/**
+ * @brief Callback when visibility-affecting parameter changes
+ * @param params Parameter array
+ * @param index Index of changed parameter
+ * @param handle Terminal handle
+ * @return pdTRUE always
+ */
 uint8_t callback_VisibleFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     update_visibilty();
     return 1;
 }
 
 
-/*****************************************************************************
-* Callback if the maximum current is changed
-******************************************************************************/
+/**
+ * @brief Callback when maximum current parameters change
+ *
+ * Validates max currents against CT1 measurement range. Halts operation,
+ * reconfigures ZCD to PWM, and updates Teslaterm.
+ *
+ * @param params Parameter array
+ * @param index Index of changed parameter
+ * @param handle Terminal handle for warnings
+ * @return pdTRUE always
+ */
 uint8_t callback_TTupdateFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle) {
     
     uint32_t max_current_cmp = ((4080ul * configuration.ct1_ratio) / configuration.ct1_burden)/100; //Amperes
@@ -418,9 +504,16 @@ uint8_t callback_TTupdateFunction(parameter_entry * params, uint8_t index, TERMI
 	return 1;
 }
 
-/*****************************************************************************
-* Callback if a autotune parameter is changed
-******************************************************************************/
+/**
+ * @brief Callback when autotune parameters change
+ *
+ * Validates that tune_start < tune_end.
+ *
+ * @param params Parameter array
+ * @param index Index of changed parameter
+ * @param handle Terminal handle for error messages
+ * @return pdTRUE always
+ */
 uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle) {
     if(param.tune_start >= param.tune_end){
         ttprintf("ERROR: tune_start > tune_end\r\n");
@@ -431,9 +524,14 @@ uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, TERMINAL_
 
 
 
-/*****************************************************************************
-* Callback if the baudrate is changed
-******************************************************************************/
+/**
+ * @brief Set UART baudrate by calculating optimal clock divider
+ *
+ * Calculates clock divider that produces baudrate closest to requested value.
+ * Updates UART hardware and Teslaterm datarate limits.
+ *
+ * @param baudrate Desired baudrate in bits per second
+ */
 void uart_baudrate(uint32_t baudrate){
     float divider = (float)(BCLK__BUS_CLK__HZ/8)/(float)baudrate;
     uint16_t divider_selected=1;
@@ -462,6 +560,13 @@ void uart_baudrate(uint32_t baudrate){
     
 }
 
+/**
+ * @brief Callback when baudrate parameter changes
+ * @param params Parameter array
+ * @param index Index of changed parameter
+ * @param handle Terminal handle
+ * @return pdTRUE always
+ */
 uint8_t callback_baudrateFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     uart_baudrate(configuration.baudrate);
  
@@ -469,9 +574,17 @@ uint8_t callback_baudrateFunction(parameter_entry * params, uint8_t index, TERMI
 }
 
 
-/*****************************************************************************
-* Callback if a configuration relevant parameter is changed
-******************************************************************************/
+/**
+ * @brief Callback for configuration parameter changes
+ *
+ * Halts Tesla coil, reconfigures hardware (watchdog, interrupter, charging,
+ * ZCD to PWM, telemetry), updates visibility, and reinitializes Teslaterm.
+ *
+ * @param params Parameter array
+ * @param index Index of changed parameter
+ * @param handle Terminal handle
+ * @return pdTRUE always
+ */
 uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     uint8 sfflag = system_fault_Read();
     sysflt_set(pdTRUE); //halt tesla coil operation during updates!
@@ -506,15 +619,23 @@ uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, TERMINA
     return 1;
 }
 
-/*****************************************************************************
-* Default function if a parameter is changes (not used)
-******************************************************************************/
+/**
+ * @brief Default callback (no action)
+ * @param params Parameter array
+ * @param index Index of changed parameter
+ * @param handle Terminal handle
+ * @return pdTRUE always
+ */
 uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     
     return 1;
 }
 
 
+/**
+ * @brief Display connected client information
+ * @param handle Terminal handle for output
+ */
 void con_info(TERMINAL_HANDLE * handle){
     #define COL_A 9
     #define COL_B 15
@@ -535,6 +656,10 @@ void con_info(TERMINAL_HANDLE * handle){
     TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
 }
 
+/**
+ * @brief Display number of connected clients
+ * @param handle Terminal handle for output
+ */
 void con_numcon(TERMINAL_HANDLE * handle){
     uint8_t cnt=0;
     for(uint8_t i=0;i<NUM_MIN_CON;i++){
@@ -545,9 +670,14 @@ void con_numcon(TERMINAL_HANDLE * handle){
     ttprintf("CLI-Sessions: %u/%u\r\n",cnt ,NUM_MIN_CON);
 }
 
-/*****************************************************************************
-* Displays the statistics of the min protocol
-******************************************************************************/
+/**
+ * @brief Interactive MIN protocol statistics monitor
+ *
+ * Displays real-time MIN protocol statistics. Press CTRL+C to exit, 'r' to reset stats.
+ *
+ * @param handle Terminal handle for I/O
+ * @return TERM_CMD_EXIT_SUCCESS
+ */
 uint8_t con_minstat(TERMINAL_HANDLE * handle){
     TERM_sendVT100Code(handle, _VT100_CLS,0);
     TERM_sendVT100Code(handle, _VT100_CURSOR_DISABLE,0);
@@ -584,9 +714,13 @@ uint8_t con_minstat(TERMINAL_HANDLE * handle){
     return 1; 
 }
 
-/*****************************************************************************
-* Prints the ethernet connections
-******************************************************************************/
+/**
+ * @brief Command: Display connection info and MIN protocol stats
+ * @param handle Terminal handle
+ * @param argCount Number of arguments
+ * @param args args[0] = "info", "numcon", or "min"
+ * @return TERM_CMD_EXIT_SUCCESS
+ */
 uint8_t CMD_con(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     if(argCount==0 || strcmp(args[0], "-?") == 0){
         ttprintf("con [info|numcon|min]\r\n");
@@ -610,9 +744,17 @@ uint8_t CMD_con(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     return TERM_CMD_EXIT_SUCCESS;
 }
 
-/*****************************************************************************
-* Calibrate Vdriver
-******************************************************************************/
+/**
+ * @brief Command: Calibrate drive voltage measurement
+ *
+ * Collects ADC samples and calculates calibration factor based on
+ * user-provided measured voltage.
+ *
+ * @param handle Terminal handle
+ * @param argCount Number of arguments
+ * @param args args[0] = measured voltage in volts
+ * @return TERM_CMD_EXIT_SUCCESS
+ */
 uint8_t CMD_calib(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     
     #define NUM_CALIB_SAMPLES 16    
@@ -658,9 +800,13 @@ uint8_t CMD_calib(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     return TERM_CMD_EXIT_SUCCESS;
 }
 
-/*****************************************************************************
-* Sends the features to teslaterm
-******************************************************************************/
+/**
+ * @brief Command: Send feature list to Teslaterm
+ * @param handle Terminal handle
+ * @param argCount Number of arguments
+ * @param args Argument array
+ * @return TERM_CMD_EXIT_SUCCESS
+ */
 uint8_t CMD_features(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
 	for (uint8_t i = 0; i < sizeof(version)/sizeof(char*); i++) {
        send_features(version[i],handle); 
@@ -668,9 +814,13 @@ uint8_t CMD_features(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     return TERM_CMD_EXIT_SUCCESS; 
 }
 
-/*****************************************************************************
-* Sends the configuration to teslaterm
-******************************************************************************/
+/**
+ * @brief Command: Send configuration to Teslaterm
+ * @param handle Terminal handle
+ * @param argCount Number of arguments
+ * @param args Argument array
+ * @return TERM_CMD_EXIT_SUCCESS
+ */
 uint8_t CMD_config_get(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     char buffer[80];
 	for (uint8_t current_parameter = 0; current_parameter < sizeof(confparam) / sizeof(parameter_entry); current_parameter++) {
@@ -683,9 +833,13 @@ uint8_t CMD_config_get(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args)
     return TERM_CMD_EXIT_SUCCESS; 
 }
 
-/*****************************************************************************
-* Kicks the controller into the bootloader
-******************************************************************************/
+/**
+ * @brief Command: Jump to bootloader for firmware update
+ * @param handle Terminal handle
+ * @param argCount Number of arguments
+ * @param args Argument array
+ * @return TERM_CMD_EXIT_SUCCESS
+ */
 uint8_t CMD_bootloader(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
 #if USE_BOOTLOADER
     Bootloadable_Load();
@@ -694,9 +848,19 @@ uint8_t CMD_bootloader(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args)
 }
 
 
-/*****************************************************************************
-* sets the kill bit, stops the interrupter and switches the bus off
-******************************************************************************/
+/**
+ * @brief Command: Kill/unkill interrupter and control bus
+ *
+ * Subcommands:
+ * - set: Emergency stop (kill interrupter, stop MIDI, turn off bus)
+ * - reset: Clear killbit and faults
+ * - get: Display killbit status
+ *
+ * @param handle Terminal handle
+ * @param argCount Number of arguments
+ * @param args args[0] = "set", "reset", or "get"
+ * @return TERM_CMD_EXIT_SUCCESS
+ */
 uint8_t CMD_udkill(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     
     if(argCount==0 || strcmp(args[0], "-?") == 0){
@@ -737,9 +901,17 @@ uint8_t CMD_udkill(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
 }
 
 
-/*****************************************************************************
-* Get a value from a parameter or print all parameters
-******************************************************************************/
+/**
+ * @brief Command: Get parameter value(s)
+ *
+ * No args: prints all visible parameters
+ * With parameter name: prints that specific parameter
+ *
+ * @param handle Terminal handle
+ * @param argCount Number of arguments
+ * @param args args[0] = parameter name (optional)
+ * @return TERM_CMD_EXIT_SUCCESS or 0 on error
+ */
 uint8_t CMD_get(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     
     if(argCount==0){
@@ -765,9 +937,16 @@ uint8_t CMD_get(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
 	return 0;
 }
 
-/*****************************************************************************
-* Set a new value to a parameter
-******************************************************************************/
+/**
+ * @brief Command: Set parameter to new value
+ *
+ * Finds parameter by name, validates value, calls callback if present.
+ *
+ * @param handle Terminal handle
+ * @param argCount Number of arguments (must be >= 2)
+ * @param args args[0] = parameter name, args[1] = value
+ * @return TERM_CMD_EXIT_SUCCESS
+ */
 uint8_t CMD_set(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
 
 	if(argCount<2){
@@ -813,9 +992,18 @@ uint8_t CMD_set(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
 }
 
 
-/*****************************************************************************
-* Saves confparams to eeprom
-******************************************************************************/
+/**
+ * @brief Command: Save or load EEPROM configuration
+ *
+ * Subcommands:
+ * - save: Write current configuration to EEPROM
+ * - load: Read configuration from EEPROM and apply
+ *
+ * @param handle Terminal handle
+ * @param argCount Number of arguments
+ * @param args args[0] = "save" or "load"
+ * @return TERM_CMD_EXIT_SUCCESS
+ */
 uint8_t CMD_eeprom(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     if(argCount==0 || strcmp(args[0], "-?") == 0){
         ttprintf("Usage: eeprom [load|save]\r\n");
@@ -841,9 +1029,13 @@ uint8_t CMD_eeprom(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
 	return TERM_CMD_EXIT_SUCCESS;
 }
 
-/*****************************************************************************
-* Switches the bus on/off
-******************************************************************************/
+/**
+ * @brief Command: Control bus power
+ * @param handle Terminal handle
+ * @param argCount Number of arguments
+ * @param args args[0] = "on" or "off"
+ * @return TERM_CMD_EXIT_SUCCESS
+ */
 uint8_t CMD_bus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     if(argCount==0 || strcmp(args[0], "-?") == 0){
         ttprintf("Usage: bus [on|off]\r\n");
@@ -863,26 +1055,38 @@ uint8_t CMD_bus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     return TERM_CMD_EXIT_SUCCESS;
 }
 
-/*****************************************************************************
-* Loads the default parametes out of flash
-******************************************************************************/
+/**
+ * @brief Command: Load default parameters
+ * @param handle Terminal handle
+ * @param argCount Number of arguments
+ * @param args Argument array
+ * @return TERM_CMD_EXIT_SUCCESS
+ */
 uint8_t CMD_load_defaults(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     ttprintf("Default parameters loaded\r\n");
     init_config();
     return TERM_CMD_EXIT_SUCCESS;
 }
 
-/*****************************************************************************
-* Reset of the controller
-******************************************************************************/
+/**
+ * @brief Command: Software reset the controller
+ * @param handle Terminal handle
+ * @param argCount Number of arguments
+ * @param args Argument array
+ * @return TERM_CMD_EXIT_SUCCESS
+ */
 uint8_t CMD_reset(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     CySoftwareReset();
     return TERM_CMD_EXIT_SUCCESS;
 }
 
-/*****************************************************************************
-* Switches the user relay 3 or 4
-******************************************************************************/
+/**
+ * @brief Command: Control user relay 3 or 4
+ * @param handle Terminal handle
+ * @param argCount Number of arguments
+ * @param args args[0] = relay number (3/4), args[1] = state (0/1)
+ * @return TERM_CMD_EXIT_SUCCESS
+ */
 uint8_t CMD_relay(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     if(argCount<2 || strcmp(args[0], "-?") == 0){
         ttprintf("Usage: relay 3/4 [1|0]\r\n");
@@ -907,9 +1111,13 @@ uint8_t CMD_relay(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     return TERM_CMD_EXIT_SUCCESS;
 }
 
-/*****************************************************************************
-* Switches the user relay 3 or 4
-******************************************************************************/
+/**
+ * @brief Command: Set PWM duty for user relay 3 or 4
+ * @param handle Terminal handle
+ * @param argCount Number of arguments
+ * @param args args[0] = PWM number (3/4), args[1] = duty (0-255)
+ * @return TERM_CMD_EXIT_SUCCESS
+ */
 uint8_t CMD_pwm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     if(argCount<2 || strcmp(args[0], "-?") == 0){
         ttprintf("Usage: pwm 3/4 [0-255]\r\n");
@@ -934,9 +1142,13 @@ uint8_t CMD_pwm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
 }
 
 
-/*****************************************************************************
-* Read hardware revision bits
-******************************************************************************/
+/**
+ * @brief Command: Read and display hardware revision
+ * @param handle Terminal handle
+ * @param argCount Number of arguments
+ * @param args Argument array
+ * @return TERM_CMD_EXIT_SUCCESS
+ */
 uint8_t CMD_hwrev(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     ttprintf("Hardware revision is set to: %u = %s\r\n", configuration.hw_rev, SYS_get_rev_string(configuration.hw_rev));
     
@@ -948,10 +1160,15 @@ uint8_t CMD_hwrev(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     return TERM_CMD_EXIT_SUCCESS;
 }
 
-/*****************************************************************************
-* Signal debugging
-******************************************************************************/
-
+/**
+ * @brief Display signal state with color and newline
+ *
+ * Displays signal as colored text (red=true, green=false) with newline.
+ *
+ * @param signal Signal value (0 or 1)
+ * @param inverted If true, invert signal before display
+ * @param handle Terminal handle for output
+ */
 void send_signal_state_new(uint8_t signal, uint8_t inverted, TERMINAL_HANDLE * handle){
     if(inverted) signal = !signal; 
     if(signal){
@@ -964,6 +1181,13 @@ void send_signal_state_new(uint8_t signal, uint8_t inverted, TERMINAL_HANDLE * h
         TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
     }
 }
+
+/**
+ * @brief Display signal state with color without newline
+ * @param signal Signal value (0 or 1)
+ * @param inverted If true, invert signal before display
+ * @param handle Terminal handle for output
+ */
 void send_signal_state_wo_new(uint8_t signal, uint8_t inverted, TERMINAL_HANDLE * handle){
     if(inverted) signal = !signal; 
     if(signal){
@@ -977,6 +1201,17 @@ void send_signal_state_wo_new(uint8_t signal, uint8_t inverted, TERMINAL_HANDLE 
     }
 }
 
+/**
+ * @brief Command: Display real-time signal states and diagnostics
+ *
+ * Interactive monitor showing system signals, faults, temperatures, voltages, relays,
+ * and bus status. Press CTRL+C to exit.
+ *
+ * @param handle Terminal handle
+ * @param argCount Number of arguments
+ * @param args Argument array
+ * @return TERM_CMD_EXIT_SUCCESS
+ */
 uint8_t CMD_signals(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     TERM_sendVT100Code(handle, _VT100_CLS, 0);
     TERM_sendVT100Code(handle, _VT100_CURSOR_DISABLE, 0);
@@ -1065,6 +1300,16 @@ uint8_t CMD_signals(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     return TERM_CMD_EXIT_SUCCESS;
 }
 
+/**
+ * @brief Autocomplete handler for parameter names
+ *
+ * Searches parameter table for names matching the user's prefix.
+ * Populates autocomplete buffer with matching visible parameters.
+ *
+ * @param handle Terminal handle containing autocomplete state
+ * @param parameters Parameter pointer (unused)
+ * @return Number of matching parameters found
+ */
 uint8_t complete_parameter_name(TERMINAL_HANDLE * handle, void * parameters) {
     char* prefix = pvPortMalloc(128);
     uint8_t prefix_length;

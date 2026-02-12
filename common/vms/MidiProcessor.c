@@ -1,8 +1,15 @@
- /*
+/*
  * File:   midiProcessor.c
  * Author: Thorb
  *
  * Created on 10 January 2023, 23:16
+ */
+
+/**
+ * @file MidiProcessor.c
+ * @brief MIDI command processing implementation
+ *
+ * See MidiProcessor.h for function documentation.
  */
 
 #include <math.h>

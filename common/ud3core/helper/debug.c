@@ -31,11 +31,11 @@
 #include "tasks/tsk_min.h"
 #include "tasks/tsk_cli.h"
 
-TERMINAL_HANDLE * debug_port;
-uint8_t debug_id=0xFF;
+TERMINAL_HANDLE * debug_port;  //!< Active debug terminal handle
+uint8_t debug_id=0xFF;         //!< Active debug MIN ID
 
-#define CTRL_C        0x03
-#define DEBUG_LOOP_MS 10
+#define CTRL_C        0x03       //!< ASCII Control-C (exit debug mode)
+#define DEBUG_LOOP_MS 10         //!< Debug loop polling interval
 
 uint8_t print_debug(TERMINAL_HANDLE * handle, uint8_t id, uint8_t fibernet){
     debug_port = handle;
@@ -65,6 +65,14 @@ uint8_t print_debug(TERMINAL_HANDLE * handle, uint8_t id, uint8_t fibernet){
     return 1;
 }
 
+/**
+ * @brief Show MIN protocol debug output
+ *
+ * Enables verbose MIN protocol frame logging. Press CTRL+C to exit.
+ *
+ * @param handle Terminal handle for output
+ * @return 1 on exit
+ */
 uint8_t print_min_debug(TERMINAL_HANDLE * handle){
     TERM_sendVT100Code(handle, _VT100_CLS, 0);
     ttprintf("Entering min debug [CTRL+C] for exit\r\n");

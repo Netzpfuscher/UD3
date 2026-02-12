@@ -17,6 +17,13 @@
     along with the MidiStick Firmware.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+/**
+ * @file DutyCompressor.c
+ * @brief Duty cycle compressor implementation
+ *
+ * See DutyCompressor.h for function documentation.
+ */
+
 #include <stdint.h>
 
 #include "FreeRTOS.h"

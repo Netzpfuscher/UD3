@@ -22,6 +22,15 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+/**
+ * @file tsk_analog.h
+ * @brief Analog task - ADC sampling and bus voltage control
+ *
+ * Handles continuous ADC sampling via DMA for bus voltage, battery voltage,
+ * currents, and gate driver voltage. Manages bus precharge/relay control
+ * for various power supply schemes. Runs at 8 kHz sample rate.
+ */
+
 #if !defined(tsk_analog_TASK_H)
 #define tsk_analog_TASK_H
 
@@ -34,27 +43,41 @@
 #include "cli_basic.h"
 #include "config.h"
 
-#define CT_PRIMARY 0
-#define CT_SECONDARY 1
+#define CT_PRIMARY 0   //!< Primary current transformer
+#define CT_SECONDARY 1 //!< Secondary current transformer
  
 
-#define AC_PRECHARGE_TIMEOUT 100  //
+#define AC_PRECHARGE_TIMEOUT 100  //!< Timeout for AC precharge detection (cycles)
 
-#define BAT_PRECHARGE_BUS_SCHEME   0   //battery "directly" supplies bus voltage
-#define BAT_BOOST_BUS_SCHEME       1   //battery is boosted via SLR converter
-#define AC_PRECHARGE_BUS_SCHEME    2   //no batteries, mains powered
-#define AC_DUAL_MEAS_SCHEME        3   //measures the input voltage and the capacitor voltage
-#define AC_NO_RELAY_BUS_SCHEME     4   //mains powered without a builtin precharging relay
-#define AC_PRECHARGE_FIXED_DELAY   5
+/** @name Power Supply Schemes
+ * Bus voltage control/precharge schemes
+ * @{
+ */
+#define BAT_PRECHARGE_BUS_SCHEME   0   //!< Battery directly supplies bus voltage
+#define BAT_BOOST_BUS_SCHEME       1   //!< Battery boosted via SLR converter
+#define AC_PRECHARGE_BUS_SCHEME    2   //!< AC mains with precharge relay
+#define AC_DUAL_MEAS_SCHEME        3   //!< Dual voltage measurement (input + capacitor)
+#define AC_NO_RELAY_BUS_SCHEME     4   //!< AC mains without precharge relay
+#define AC_PRECHARGE_FIXED_DELAY   5   //!< AC mains with fixed delay precharge
+/** @} */
 
-#define RELAY_CHARGE 1
-#define RELAY_OFF 0
-#define RELAY_CHARGE_OFF 2
-#define RELAY_ON 3
+/** @name Relay States
+ * @{
+ */
+#define RELAY_CHARGE 1     //!< Charging relay on
+#define RELAY_OFF 0        //!< Relay off
+#define RELAY_CHARGE_OFF 2 //!< Charge relay off
+#define RELAY_ON 3         //!< Relay on
+/** @} */
 
-#define BUS_COMMAND_OFF 0
-#define BUS_COMMAND_ON 1
-#define BUS_COMMAND_FAULT 2
+/** @name Bus Commands
+ * Commands for bus voltage control
+ * @{
+ */
+#define BUS_COMMAND_OFF 0   //!< Turn bus off
+#define BUS_COMMAND_ON 1    //!< Turn bus on
+#define BUS_COMMAND_FAULT 2 //!< Bus fault state
+/** @} */
 
 #if RELAY1_INVERTED
     #define relay_write_bus(val) Relay1_Write(val ? 0 : 1)
@@ -72,38 +95,90 @@
     #define relay_read_charge_end(val) Relay2_Read()
 #endif
 
-volatile uint8 bus_command;
+volatile uint8 bus_command; //!< Current bus control command
 
+/**
+ * @brief Initialize charging state machine
+ */
 void initialize_charging(void);
+
+/**
+ * @brief Control bus precharge logic (called at 8 kHz)
+ */
 void control_precharge(void);
-extern uint16_t vdriver_lut[9];
+
+extern uint16_t vdriver_lut[9]; //!< Gate driver voltage lookup table
 
 
+/**
+ * @brief ADC sample structure (DMA buffer element)
+ */
 typedef struct
 {
-	uint16_t v_bus;
-	uint16_t v_batt;
-    uint16_t i_bus;
-    uint16_t v_driver;
+	uint16_t v_bus;    //!< Bus voltage ADC count
+	uint16_t v_batt;   //!< Battery voltage ADC count
+    uint16_t i_bus;    //!< Bus current ADC count
+    uint16_t v_driver; //!< Gate driver voltage ADC count
 } adc_sample_t;
 
 
 /* `#END` */
 
+/**
+ * @brief Start analog task
+ */
 void tsk_analog_Start(void);
+
+/**
+ * @brief Get primary current transformer reading
+ * @return Current in mA
+ */
 uint32_t CT1_Get_Current();
+
+/**
+ * @brief Get primary current as float
+ * @return Current in amperes
+ */
 float CT1_Get_Current_f();
+
+/**
+ * @brief Get maximum ADC value
+ * @return Maximum ADC count
+ */
 uint16_t get_max(void);
+
+/**
+ * @brief Reconfigure charge timer period
+ */
 void reconfig_charge_timer();
+
+/**
+ * @brief Parameter callback for PID settings
+ * @param params Parameter array
+ * @param index Parameter index
+ * @param handle Terminal handle
+ * @return pdTRUE on success
+ */
 uint8_t callback_pid(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
-extern adc_sample_t *ADC_active_sample_buf;
+
+extern adc_sample_t *ADC_active_sample_buf; //!< Pointer to active ADC buffer
+
+/**
+ * @brief Read gate driver voltage in millivolts
+ * @return Voltage in mV
+ */
 uint16_t read_driver_mv();
+
+/**
+ * @brief Recalculate driver top resistor with correction factor
+ * @param factor Scaling factor for resistor divider
+ */
 void tsk_analog_recalc_drive_top(float factor);
 
-extern adc_sample_t ADC_sample_buf_0[ADC_BUFFER_CNT];
-extern adc_sample_t ADC_sample_buf_1[ADC_BUFFER_CNT];
-extern adc_sample_t *ADC_active_sample_buf;
-extern SemaphoreHandle_t adc_ready_Semaphore;
+extern adc_sample_t ADC_sample_buf_0[ADC_BUFFER_CNT]; //!< ADC DMA buffer 0
+extern adc_sample_t ADC_sample_buf_1[ADC_BUFFER_CNT]; //!< ADC DMA buffer 1
+extern adc_sample_t *ADC_active_sample_buf;           //!< Pointer to active buffer
+extern SemaphoreHandle_t adc_ready_Semaphore;         //!< Semaphore signaled when ADC buffer ready
 
 /*
  * Add user function prototypes in the below merge region to add user

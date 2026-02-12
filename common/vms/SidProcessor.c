@@ -1,3 +1,10 @@
+/**
+ * @file SidProcessor.c
+ * @brief SID chip emulation implementation
+ *
+ * See SidProcessor.h for function documentation.
+ */
+
 #include "SidProcessor.h"
 #include <device.h>
 #include <stdint.h>

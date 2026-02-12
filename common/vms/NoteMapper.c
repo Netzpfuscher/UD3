@@ -1,3 +1,9 @@
+/**
+ * @file NoteMapper.c
+ * @brief MIDI note to frequency mapping implementation
+ *
+ * See NoteMapper.h for function documentation.
+ */
 
 #include <stdint.h>
 #include <string.h>

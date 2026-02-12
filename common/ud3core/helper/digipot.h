@@ -22,12 +22,37 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+/**
+ * @file digipot.h
+ * @brief Digital potentiometer control for DC-DC converter output voltage
+ *
+ * Controls an SPI-interfaced digital potentiometer (8-bit) to set the feedback
+ * voltage divider for the bus voltage DC-DC converter. Used to adjust the drive
+ * voltage dynamically.
+ */
+
 #if !defined(DIGIPOT_H)
 #define DIGIPOT_H
 
 #include <stdint.h>
 
+/**
+ * @brief Write raw value to digital potentiometer
+ *
+ * Sends an 8-bit value to the digipot via SPI bit-banging.
+ *
+ * @param value Resistance setting (0-255, higher = higher resistance)
+ */
 void digipot_write(uint8_t value);
+/**
+ * @brief Set DC-DC converter output voltage
+ *
+ * Calculates the required digipot resistance to achieve the target voltage
+ * and programs the digipot. Accounts for hardware revision differences in
+ * voltage divider resistor values.
+ *
+ * @param voltage Desired output voltage (clamped to safe range)
+ */
 void digipot_set_voltage(float voltage);   
 
 #endif

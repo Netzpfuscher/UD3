@@ -21,6 +21,13 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
+/**
+ * @file cli_basic.c
+ * @brief Core parameter system implementation
+ * 
+ * Implements parameter parsing, EEPROM storage/retrieval, terminal I/O,
+ * and parameter display formatting for the UD3 CLI system.
+ */
 #include "tasks/tsk_cli.h"
 #include "cli_basic.h"
 #include "helper/printf.h"
@@ -34,15 +41,27 @@
 
 #endif
 
+/** @brief Internal function declarations for EEPROM operations */
 uint8_t EEPROM_Read_Row(uint8_t row, uint8_t * buffer);
 uint8_t EEPROM_1_Write_Row(uint8_t row, uint8_t * buffer);
 
+/** @brief Byte counter for EEPROM write statistics */
 uint16_t byte_cnt;
+/** @brief Flag indicating EEPROM dataset validation status */
 static uint8_t dataset_not_valid = pdFALSE;
 
+/** @brief EEPROM read byte macro */
 #define EEPROM_READ_BYTE(x) EEPROM_1_ReadByte(x)
+/** @brief EEPROM write row macro */
 #define EEPROM_WRITE_ROW(x,y) EEPROM_1_Write(y,x)
 
+/**
+ * @brief Calculate number of decimal digits in a number
+ * @param n Number to analyze
+ * @return Number of digits (1-10)
+ * 
+ * Used for formatting parameter output with proper zero-padding.
+ */
 uint8_t n_number(uint32_t n){
   if(n < 100000) {
     if(n < 1000) {
@@ -72,6 +91,18 @@ uint8_t n_number(uint32_t n){
     return 10;   
 }
 
+/**
+ * @brief Update parameter value from string
+ * @param params Parameter array
+ * @param newValue String containing new value
+ * @param index Parameter index
+ * @param handle Terminal handle for error messages
+ * @return 1 if successful, 0 if failed (out of range)
+ * 
+ * Parses newValue based on parameter type, validates range, and updates
+ * the parameter variable. Supports fixed-point decimal conversion using
+ * the div field.
+ */
 uint8_t updateDefaultFunction(parameter_entry * params, char * newValue, uint8_t index, TERMINAL_HANDLE * handle) {
     int32_t value;
     float fvalue;
@@ -165,11 +196,24 @@ uint8_t updateDefaultFunction(parameter_entry * params, char * newValue, uint8_t
 
 
 
+/**
+ * @brief Internal helper to print parameters of specific type
+ * @param params Parameter array
+ * @param param_size Number of parameters
+ * @param handle Terminal handle
+ * @param param_type PARAM_CONFIG or PARAM_DEFAULT
+ * 
+ * Prints formatted table with VT100 color codes:
+ * - Cyan for parameter names
+ * - Green for values
+ * - White for labels and help text
+ */
 void print_param_helperfunc(parameter_entry * params, uint8_t param_size, TERMINAL_HANDLE * handle, uint8_t param_type){
-    #define COL_A 9
-    #define COL_B 33
-    #define COL_C 64
-    uint8_t current_parameter;
+	/** @brief Column positions for parameter display */
+	#define COL_A 9   /**< Parameter name column */
+	#define COL_B 33  /**< Value column */
+	#define COL_C 64  /**< Help text column */
+	uint8_t current_parameter;
     uint32_t u_temp_buffer=0;
     int32_t i_temp_buffer=0;
     TERM_sendVT100Code(handle, _VT100_CURSOR_SET_COLUMN, COL_A);
@@ -264,13 +308,27 @@ void print_param_helperfunc(parameter_entry * params, uint8_t param_size, TERMIN
     }
 }
 
+/**
+ * @brief Print all parameters with help text
+ * @param params Parameter array
+ * @param param_size Number of parameters
+ * @param handle Terminal handle
+ * 
+ * Displays runtime parameters first, then configuration parameters.
+ */
 void print_param_help(parameter_entry * params, uint8_t param_size, TERMINAL_HANDLE * handle){
-    ttprintf("Parameters:\r\n");
-    print_param_helperfunc(params, param_size, handle,PARAM_DEFAULT);
-    ttprintf("\r\nConfiguration:\r\n");
-    print_param_helperfunc(params, param_size, handle,PARAM_CONFIG);
+	ttprintf("Parameters:\r\n");
+	print_param_helperfunc(params, param_size, handle,PARAM_DEFAULT);
+	ttprintf("\r\nConfiguration:\r\n");
+	print_param_helperfunc(params, param_size, handle,PARAM_CONFIG);
 }
 
+/**
+ * @brief Print single parameter value to terminal
+ * @param params Parameter array
+ * @param index Parameter index
+ * @param handle Terminal handle
+ */
 void print_param(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     uint32_t u_temp_buffer=0;
     int32_t i_temp_buffer=0;
@@ -337,28 +395,48 @@ void print_param(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * hand
         }
 }
 
+/**
+ * @brief Set parameter visibility by name
+ * @param params Parameter array
+ * @param param_size Number of parameters
+ * @param text Parameter name or prefix to match
+ * @param visible New visibility value (0=hidden, non-zero=visible)
+ * @return pdTRUE if parameter found and updated, pdFALSE if not found
+ * 
+ * Searches for longest matching parameter name (allows prefix matching)
+ * and sets its visibility flag.
+ */
 uint8_t set_visibility(parameter_entry * params, uint8_t param_size, char* text, uint8_t visible){
-    int8_t max_len=-1;
-    int8_t max_index=-1;
-    
+	int8_t max_len=-1;
+	int8_t max_index=-1;
+	
 	for (uint8_t current_parameter = 0; current_parameter < param_size; current_parameter++) {
-        uint8_t text_len = strlen(params[current_parameter].name);
+		uint8_t text_len = strlen(params[current_parameter].name);
 		if (memcmp(text, params[current_parameter].name, text_len) == 0) {
-            if(text_len > max_len){
-			    max_len = text_len;
-                max_index = current_parameter;
-            }
+			if(text_len > max_len){
+				max_len = text_len;
+				max_index = current_parameter;
+			}
 		}
 	}
-    
-    if(max_index != -1){
-       params[max_index].visible = visible;
-       return pdTRUE; 
-    } else {
-        return pdFALSE;
-    }
+	
+	if(max_index != -1){
+	   params[max_index].visible = visible;
+	   return pdTRUE; 
+	} else {
+		return pdFALSE;
+	}
 }
 
+/**
+ * @brief Format parameter to string buffer
+ * @param buffer Output buffer (must be large enough)
+ * @param params Parameter array
+ * @param index Parameter index
+ * 
+ * Formats parameter in semicolon-separated format for serial transmission:
+ * name;value;type;size;min;max
+ */
 void print_param_buffer(char * buffer, parameter_entry * params, uint8_t index){
     uint32_t u_temp_buffer=0;
     int32_t i_temp_buffer=0;
@@ -465,16 +543,32 @@ void print_param_buffer(char * buffer, parameter_entry * params, uint8_t index){
 }
 
 
+/**
+ * @brief Read one EEPROM row
+ * @param row Row number (0-127 for 2KB EEPROM)
+ * @param buffer Buffer to receive 16 bytes
+ * @return 1 on success
+ */
 uint8_t EEPROM_Read_Row(uint8_t row, uint8_t * buffer){
-    uint16_t addr;
-    addr = row * CY_EEPROM_SIZEOF_ROW;
-    for(uint8_t i = 0; i<CY_EEPROM_SIZEOF_ROW;i++){
-        *buffer=EEPROM_READ_BYTE(addr+i);
-        buffer++;
-    }
-    return 1;
+	uint16_t addr;
+	addr = row * CY_EEPROM_SIZEOF_ROW;
+	for(uint8_t i = 0; i<CY_EEPROM_SIZEOF_ROW;i++){
+		*buffer=EEPROM_READ_BYTE(addr+i);
+		buffer++;
+	}
+	return 1;
 }
 
+/**
+ * @brief Buffered EEPROM write to minimize wear
+ * @param byte Byte to write
+ * @param address EEPROM address
+ * @param flush Force write of current row buffer if non-zero
+ * @return 1 if byte changed, 0 if unchanged
+ * 
+ * Buffers writes by row, only writing when row changes or flush requested.
+ * This minimizes EEPROM wear by avoiding redundant writes.
+ */
 uint8_t EEPROM_buffer_write(uint8_t byte, uint16_t address, uint8_t flush){
     byte_cnt++;
     static uint8_t eeprom_buffer[CY_EEPROM_SIZEOF_ROW];
@@ -513,14 +607,31 @@ uint8_t EEPROM_buffer_write(uint8_t byte, uint16_t address, uint8_t flush){
     return ret_change;
 }
 
+/**
+ * @brief Calculate djb2 hash of string
+ * @param cp Null-terminated string
+ * @return 32-bit hash value
+ * 
+ * Uses djb2 algorithm: hash = hash * 33 ^ byte
+ * Used for parameter name hashing in EEPROM storage.
+ */
 uint32_t djb_hash(const char* cp)
 {
-    uint32_t hash = 5381;
-    while (*cp)
-        hash = 33 * hash ^ (unsigned char) *cp++;
-    return hash;
+	uint32_t hash = 5381;
+	while (*cp)
+		hash = 33 * hash ^ (unsigned char) *cp++;
+	return hash;
 }
 
+/**
+ * @brief Check for parameter name hash collisions
+ * @param params Parameter array
+ * @param param_size Number of parameters
+ * @param handle Terminal handle for output
+ * 
+ * Validates that all PARAM_CONFIG parameters have unique djb2 hashes.
+ * Hash collisions would cause EEPROM storage conflicts.
+ */
 void EEPROM_check_hash(parameter_entry * params, uint8_t param_size, TERMINAL_HANDLE * handle){
     uint32_t temp_hash1;
     uint32_t temp_hash2;
@@ -553,6 +664,23 @@ void EEPROM_check_hash(parameter_entry * params, uint8_t param_size, TERMINAL_HA
     }
 }
 
+/**
+ * @brief Write configuration parameters to EEPROM
+ * @param params Parameter array
+ * @param param_size Number of parameters
+ * @param eeprom_offset Starting EEPROM address (usually 0)
+ * @param handle Terminal handle for output
+ * 
+ * EEPROM format:
+ * - Header: 0x00 0xC0 0xFF 0xEE 0x00
+ * - For each PARAM_CONFIG parameter:
+ *   - 4 bytes: djb2 hash of parameter name
+ *   - 1 byte: parameter size
+ *   - N bytes: parameter value
+ * - Trailer: 0xDE 0xAD 0xBE 0xEF 0x00
+ * 
+ * Only writes changed bytes to minimize EEPROM wear.
+ */
 void EEPROM_write_conf(parameter_entry * params, uint8_t param_size, uint16_t eeprom_offset ,TERMINAL_HANDLE * handle){
     byte_cnt=0;
 	uint16_t count = eeprom_offset;
@@ -608,10 +736,30 @@ void EEPROM_write_conf(parameter_entry * params, uint8_t param_size, uint16_t ee
         dataset_not_valid = pdFALSE;
 }
 
+/**
+ * @brief Check if EEPROM dataset is valid
+ * @return pdTRUE if dataset has errors, pdFALSE if valid
+ */
 uint8_t EEPROM_not_valid(){   
-    return dataset_not_valid;
+	return dataset_not_valid;
 }
 
+/**
+ * @brief Read configuration parameters from EEPROM
+ * @param params Parameter array
+ * @param param_size Number of parameters
+ * @param eeprom_offset Starting EEPROM address (usually 0)
+ * @param handle Terminal handle for output
+ * 
+ * Validates magic header (0x00 0xC0 0xFF 0xEE), reads parameters by
+ * matching djb2 hash, checks parameter sizes, and reports errors for:
+ * - Missing magic header (old or corrupt dataset)
+ * - Unknown parameter IDs in EEPROM
+ * - Parameter size mismatches (code/EEPROM mismatch)
+ * - Missing parameters (code has new params not in EEPROM)
+ * 
+ * Sets dataset_not_valid flag if any errors detected.
+ */
 void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eeprom_offset ,TERMINAL_HANDLE * handle){
     uint16_t addr=eeprom_offset;
     uint32_t temp_hash=0;
@@ -717,48 +865,80 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
 
 
 
+/**
+ * @brief Get character from terminal without echo
+ * @param handle Terminal handle
+ * @param xTicksToWait Timeout in ticks (0 = no wait, portMAX_DELAY = wait forever)
+ * @return Character received, or 0 if timeout
+ * 
+ * Releases terminal semaphore during wait to allow other tasks access.
+ */
 uint8_t getch(TERMINAL_HANDLE * handle, TickType_t xTicksToWait){
-    uint8_t c=0;
-    if(xTicksToWait>0){
-        xSemaphoreGive(portM->term_block);
-    }
-    xStreamBufferReceive(portM->rx,&c,1,xTicksToWait);
-    if(xTicksToWait>0){
-        xSemaphoreTake(portM->term_block, portMAX_DELAY);
-    }
-    return c;
+	uint8_t c=0;
+	if(xTicksToWait>0){
+		xSemaphoreGive(portM->term_block);
+	}
+	xStreamBufferReceive(portM->rx,&c,1,xTicksToWait);
+	if(xTicksToWait>0){
+		xSemaphoreTake(portM->term_block, portMAX_DELAY);
+	}
+	return c;
 }
 
+/**
+ * @brief Get character from terminal with echo
+ * @param handle Terminal handle
+ * @param xTicksToWait Timeout in ticks
+ * @return Character received, or 0 if timeout
+ * 
+ * Like getch() but echoes received character back to terminal.
+ */
 uint8_t getche(TERMINAL_HANDLE * handle, TickType_t xTicksToWait){
-    uint8_t c=0;
-    if(xTicksToWait>0){
-        xSemaphoreGive(portM->term_block);
-    }
-    xStreamBufferReceive(portM->rx,&c,1,xTicksToWait);
-    if(xTicksToWait>0){
-        xSemaphoreTake(portM->term_block, portMAX_DELAY);
-    }
-    if(c){
-        xStreamBufferSend(portM->tx,&c,1,0);
-    }
-    return c;
+	uint8_t c=0;
+	if(xTicksToWait>0){
+		xSemaphoreGive(portM->term_block);
+	}
+	xStreamBufferReceive(portM->rx,&c,1,xTicksToWait);
+	if(xTicksToWait>0){
+		xSemaphoreTake(portM->term_block, portMAX_DELAY);
+	}
+	if(c){
+		xStreamBufferSend(portM->tx,&c,1,0);
+	}
+	return c;
 }
 
+/**
+ * @brief Check if character available in receive buffer
+ * @param handle Terminal handle
+ * @return pdTRUE if character waiting, pdFALSE if buffer empty
+ */
 uint8_t kbhit(TERMINAL_HANDLE * handle){
-    if(xStreamBufferIsEmpty(portM->rx)){
-        return pdFALSE;
-    }else{
-        return pdTRUE;
-    }
+	if(xStreamBufferIsEmpty(portM->rx)){
+		return pdFALSE;
+	}else{
+		return pdTRUE;
+	}
 }
 
+/** @brief Ctrl+C character code */
 #define CTRL_C  0x03
 
+/**
+ * @brief Wait for break character (Ctrl+C or 'q')
+ * @param handle Terminal handle
+ * @param ms_to_wait Wait time in milliseconds
+ * @return pdTRUE to continue loop, pdFALSE if break detected
+ * 
+ * Used in command loops to allow user interruption. Checks for:
+ * - Ctrl+C (0x03)
+ * - 'q' key
+ */
 uint8_t Term_check_break(TERMINAL_HANDLE * handle, uint32_t ms_to_wait){
-    uint8_t c = getch(handle,ms_to_wait /portTICK_RATE_MS);
-    if(c == CTRL_C || c == 'q'){  //0x03 = CTRL+C
-        return pdFALSE;
-    }else{
-        return pdTRUE;
-    } 
+	uint8_t c = getch(handle,ms_to_wait /portTICK_RATE_MS);
+	if(c == CTRL_C || c == 'q'){  //0x03 = CTRL+C
+		return pdFALSE;
+	}else{
+		return pdTRUE;
+	} 
 }

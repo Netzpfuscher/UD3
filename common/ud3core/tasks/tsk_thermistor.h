@@ -22,6 +22,14 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+/**
+ * @file tsk_thermistor.h
+ * @brief Temperature monitoring and fan control task
+ *
+ * Monitors system temperatures via thermistors and controls cooling fans
+ * with optional PID temperature regulation.
+ */
+
 #if !defined(tsk_thermistor_TASK_H)
 #define tsk_thermistor_TASK_H
 
@@ -36,12 +44,40 @@
 
 /* `#END` */
 
+/**
+ * @brief Start the thermistor monitoring task
+ */
 void tsk_thermistor_Start(void);
 
-uint8_t callback_ntc(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
-uint8_t callback_temp_pid(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+/**
+ * @brief Callback for NTC parameter changes
+ *
+ * @param params Parameter array
+ * @param index Parameter index that changed
+ * @param handle Terminal handle
+ * @return pdTRUE if change accepted, pdFALSE otherwise
+ */
+uint8_t callback_ntc(parameter_entry *params, uint8_t index, TERMINAL_HANDLE *handle);
 
-uint8_t CMD_ntc(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+/**
+ * @brief Callback for temperature PID parameter changes
+ *
+ * @param params Parameter array
+ * @param index Parameter index that changed
+ * @param handle Terminal handle
+ * @return pdTRUE if change accepted, pdFALSE otherwise
+ */
+uint8_t callback_temp_pid(parameter_entry *params, uint8_t index, TERMINAL_HANDLE *handle);
+
+/**
+ * @brief Command handler for NTC thermistor configuration
+ *
+ * @param handle Terminal handle
+ * @param argCount Number of arguments
+ * @param args Array of argument strings
+ * @return pdTRUE if command succeeded, pdFALSE otherwise
+ */
+uint8_t CMD_ntc(TERMINAL_HANDLE *handle, uint8_t argCount, char **args);
 
 
 

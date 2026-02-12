@@ -22,6 +22,16 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+/**
+ * @file autotune.c
+ * @brief Primary coil frequency sweep implementation
+ * 
+ * Implements automated frequency tuning through current response measurement.
+ * Sweeps across a frequency range, measures primary current at each point,
+ * and identifies the resonant peak. Results are displayed graphically in
+ * both VT100 (Braille) and Teslaterm terminal modes.
+ */
+
 #include <device.h>
 #include <math.h>
 #include "helper/printf.h"
@@ -38,22 +48,44 @@
 #include "tasks/tsk_overlay.h"
 #include "tasks/tsk_cli.h"
 
-#define FREQ 0
-#define CURR 1
+/** @defgroup autotune_constants Autotune Display Constants
+ * @{
+ */
+#define FREQ 0  /**< Frequency index */
+#define CURR 1  /**< Current index */
 
-#define TTERM_HEIGHT 300L
-#define TTERM_WIDTH 400L
+#define TTERM_HEIGHT 300L  /**< Teslaterm chart height in pixels */
+#define TTERM_WIDTH 400L   /**< Teslaterm chart width in pixels */
 
-#define OFFSET_X 20
-#define OFFSET_Y 20
+#define OFFSET_X 20  /**< Chart X-axis offset */
+#define OFFSET_Y 20  /**< Chart Y-axis offset */
+/** @} */
 
+/**
+ * @brief Internal function to run ADC frequency sweep
+ * @param F_min Minimum frequency in 0.1kHz units (e.g., 1000 = 100kHz)
+ * @param F_max Maximum frequency in 0.1kHz units
+ * @param pulsewidth Pulse width in microseconds
+ * @param delay Delay between pulses in milliseconds
+ * @param handle Terminal handle for output
+ * @return Frequency of peak current response in 0.1kHz units
+ */
 uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint8_t delay, TERMINAL_HANDLE * handle);
 
 
-/*****************************************************************************
-* commands a frequency sweep for the primary coil. It searches for a peak
-* and makes a second run with +-6kHz around the peak
-******************************************************************************/
+/**
+ * @brief Terminal command for primary coil frequency tuning
+ * @param handle Terminal handle
+ * @param argCount Number of arguments
+ * @param args Command arguments
+ * @return TERM_CMD_EXIT_SUCCESS
+ * 
+ * Performs automated frequency sweep to find primary resonant frequency.
+ * Requires user confirmation before proceeding (press 'y'). Warns if bus
+ * voltage is high (>50V). Results displayed as graph.
+ * 
+ * @warning Hard-switches the bridge with configured parameters
+ */
 uint8_t CMD_tune(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     if(argCount && strcmp(args[0], "-?") == 0){
         ttprintf("Usage: tune\r\n");
@@ -83,6 +115,12 @@ uint8_t CMD_tune(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     return TERM_CMD_EXIT_SUCCESS;
 }
 
+/**
+ * @brief Draw Teslaterm chart axes and grid
+ * @param handle Terminal handle
+ * 
+ * Draws white coordinate axes with grid lines for frequency sweep display.
+ */
 void autotune_draw_d(TERMINAL_HANDLE * handle){
     uint16_t f;
     send_chart_line(OFFSET_X, TTERM_HEIGHT+OFFSET_Y, TTERM_WIDTH+OFFSET_X, TTERM_HEIGHT+OFFSET_Y, TT_COLOR_WHITE, handle);
@@ -94,15 +132,48 @@ void autotune_draw_d(TERMINAL_HANDLE * handle){
 	}
 
 }
+/** @brief Number of frequency response data columns */
 #define COLS 2
+/** @brief Number of frequency sweep measurement points */
 #define ROWS 128
 
+/**
+ * @brief Frequency response data structure
+ * 
+ * Stores current measurements and corresponding frequencies for
+ * all 128 sweep points.
+ */
 typedef struct freq_struct freq_str;
 struct freq_struct {
-    uint16_t curr[ROWS];
-    uint16_t freq[ROWS];
+	uint16_t curr[ROWS];  /**< Current measurements (in 0.1A units) */
+	uint16_t freq[ROWS];  /**< Frequency values (in 0.1kHz units) */
 };
 
+/**
+ * @brief Execute frequency sweep and measure current response
+ * @param F_min Minimum frequency in 0.1kHz units (e.g., 1000 = 100kHz)
+ * @param F_max Maximum frequency in 0.1kHz units
+ * @param pulsewidth Pulse width in microseconds
+ * @param delay Delay between pulses in milliseconds
+ * @param handle Terminal handle for output
+ * @return Frequency of peak current response in 0.1kHz units
+ * 
+ * Algorithm:
+ * 1. Allocates heap memory for frequency response data
+ * 2. Saves and modifies system configuration for sweep
+ * 3. Sweeps 128 frequency points from F_min to F_max
+ * 4. At each frequency:
+ *    - Configures PWM for frequency
+ *    - Fires multiple oneshot pulses (configuration.autotune_s)
+ *    - Measures and averages primary current
+ * 5. Restores original configuration
+ * 6. Finds peak current frequency
+ * 7. Displays graph (VT100 Braille or Teslaterm)
+ * 8. Returns peak frequency
+ * 
+ * @note Temporarily modifies configuration.start_freq, min_fb_current,
+ *       start_cycles, and max_fb_errors during sweep
+ */
 uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint8_t delay, TERMINAL_HANDLE * handle) {
 
     freq_str *freq_resp;

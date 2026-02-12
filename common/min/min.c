@@ -1,6 +1,12 @@
-// Copyright (c) 2014-2017 JK Energy Ltd.
-//
-// Use authorized under the MIT license.
+/**
+ * @file min.c
+ * @brief MIN Protocol v2.0 implementation
+ *
+ * Copyright (c) 2014-2017 JK Energy Ltd.
+ * Use authorized under the MIT license.
+ *
+ * See min.h for function documentation.
+ */
 
 #include "min.h"
 
@@ -66,11 +72,13 @@ static uint32_t now;
 static void send_reset(struct min_context *self);
 #endif
 
+/** @brief Initialize CRC32 context to initial state */
 static void crc32_init_context(struct crc32_context *context)
 {
     context->crc = 0xffffffffU;
 }
 
+/** @brief Process one byte through CRC32 calculation */
 static void crc32_step(struct crc32_context *context, uint8_t byte)
 {
     context->crc ^= byte;
@@ -80,12 +88,14 @@ static void crc32_step(struct crc32_context *context, uint8_t byte)
     }
 }
 
+/** @brief Finalize CRC32 calculation and return checksum value */
 static uint32_t crc32_finalize(struct crc32_context *context)
 {
     return ~context->crc;
 }
 
 
+/** @brief Transmit byte with byte-stuffing and CRC update */
 static void stuffed_tx_byte(struct min_context *self, uint8_t byte)
 {
     // Transmit the byte
@@ -104,6 +114,7 @@ static void stuffed_tx_byte(struct min_context *self, uint8_t byte)
     }
 }
 
+/** @brief Transmit byte with byte-stuffing but without CRC update */
 static void stuffed_tx_byte_wo_crc(struct min_context *self, uint8_t byte)
 {
     // Transmit the byte
@@ -121,6 +132,7 @@ static void stuffed_tx_byte_wo_crc(struct min_context *self, uint8_t byte)
     }
 }
 
+/** @brief Construct and transmit a complete MIN frame on the wire */
 static void on_wire_bytes(struct min_context *self, uint8_t id_control, uint32_t seq, uint8_t *payload_base, uint16_t payload_offset, uint16_t payload_mask, uint8_t payload_len)
 {
     uint8_t n, i;
@@ -171,7 +183,7 @@ static void on_wire_bytes(struct min_context *self, uint8_t id_control, uint32_t
 
 #ifdef TRANSPORT_PROTOCOL
 
-// Pops frame from front of queue, reclaims its ring buffer space
+/** @brief Pop frame from front of transport FIFO and reclaim ring buffer space */
 static void transport_fifo_pop(struct min_context *self)
 {
 #ifdef ASSERTION_CHECKING
@@ -190,7 +202,7 @@ static void transport_fifo_pop(struct min_context *self)
     self->transport_fifo.n_ring_buffer_bytes -= frame->payload_len;
 }
 
-// Claim a buffer slot from the FIFO. Returns 0 if there is no space.
+/** @brief Claim a buffer slot from the FIFO, returns NULL if no space */
 static struct transport_frame *transport_fifo_push(struct min_context *self, uint16_t data_size)
 {
     // A frame is only queued if there aren't too many frames in the FIFO and there is space in the
@@ -231,14 +243,15 @@ static struct transport_frame *transport_fifo_push(struct min_context *self, uin
     return ret;
 }
 
-// Return the nth frame in the FIFO
+/** @brief Return the nth frame in the transport FIFO */
+/** @brief Return the nth frame in the transport FIFO */
 static struct transport_frame *transport_fifo_get(struct min_context *self, uint8_t n)
 {
     uint8_t idx = self->transport_fifo.head_idx;
     return &self->transport_fifo.frames[(idx + n) & TRANSPORT_FIFO_SIZE_FRAMES_MASK];
 }
 
-// Sends the given frame to the serial line
+/** @brief Send the given transport frame to the serial line */
 static void transport_fifo_send(struct min_context *self, struct transport_frame *frame)
 {
    // min_debug_print("transport_fifo_send: min_id=%u, seq=%u, payload_len=%d\n", frame->min_id, frame->seq, frame->payload_len);
@@ -246,7 +259,7 @@ static void transport_fifo_send(struct min_context *self, struct transport_frame
     frame->last_sent_time_ms = now;
 }
 
-// We don't queue an ACK frame - we send it straight away (if there's space to do so)
+/** @brief Send ACK frame immediately (not queued) if buffer space available */
 static void send_ack(struct min_context *self)
 {
     // In the embedded end we don't reassemble out-of-order frames and so never ask for retransmits. Payload is
@@ -269,7 +282,7 @@ static void send_ack(struct min_context *self)
     }
 }
 
-// We don't queue an RESET frame - we send it straight away (if there's space to do so)
+/** @brief Send RESET frame immediately (not queued) if buffer space available */
 static void send_reset(struct min_context *self)
 {
     min_debug_print("send RESET\r\n");
@@ -278,6 +291,7 @@ static void send_reset(struct min_context *self)
     }
 }
 
+/** @brief Reset transport FIFO to initial state, clearing all queued frames */
 static void transport_fifo_reset(struct min_context *self)
 {
     // Clear down the transmission FIFO queue
@@ -342,7 +356,7 @@ bool min_queue_has_space_for_frame(struct min_context *self, uint8_t payload_len
            self->transport_fifo.n_ring_buffer_bytes <= TRANSPORT_FIFO_MAX_FRAME_DATA - payload_len;
 }
 
-// Finds the frame in the window that was sent least recently
+/** @brief Find the frame in the window that was sent least recently for retransmission */
 static struct transport_frame *find_retransmit_frame(struct min_context *self)
 {
     uint8_t window_size = self->transport_fifo.sn_max - self->transport_fifo.sn_min;
@@ -371,8 +385,7 @@ static struct transport_frame *find_retransmit_frame(struct min_context *self)
 }
 #endif // TRANSPORT_PROTOCOL
 
-// This runs the receiving half of the transport protocol, acknowledging frames received, discarding
-// duplicates received, and handling RESET requests.
+/** @brief Process a valid received frame (transport protocol receive handler) */
 static void valid_frame_received(struct min_context *self)
 {
     uint8_t id_control = self->rx_frame_id_control;

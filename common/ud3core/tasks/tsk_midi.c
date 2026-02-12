@@ -22,6 +22,13 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+/**
+ * @file tsk_midi.c
+ * @brief MIDI processing task implementation
+ *
+ * See tsk_midi.h for function documentation.
+ */
+
 #include "cyapicallbacks.h"
 #include <cytypes.h>
 

@@ -21,6 +21,13 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+/**
+ * @file nvm.c
+ * @brief NVM implementation for VMS flash storage
+ *
+ * See nvm.h for function documentation.
+ */
+
 #include "nvm.h"
 #include "NoteMapper.h"
 #include "VMS.h"
@@ -31,13 +38,17 @@
 #include <stdio.h>
 #endif
 
+/** @name Flash Memory Layout
+ * PSoC flash memory addresses and constants for VMS storage.
+ * @{
+ */
+#define NVM_START_ADDR 0x38000  //!< Flash start address (array 3)
+#define NVM_ARRAY 3             //!< Flash array number
+#define NVM_START_PAGE 128      //!< Starting page within array
+#define NVM_PAGE_SIZE 256       //!< Page size in bytes
+/** @} */
 
-#define NVM_START_ADDR 0x38000
-#define NVM_ARRAY 3
-#define NVM_START_PAGE 128
-#define NVM_PAGE_SIZE 256
-
-#define NVM_DEBUG 0
+#define NVM_DEBUG 0  //!< Enable debug output for flash operations
 
 
 #ifndef SIMULATOR
@@ -84,9 +95,9 @@
 #endif
 
 
-static uint8_t *page_content=NULL;
-static uint16_t last_page=0xFFFF;
-static uint16_t page;
+static uint8_t *page_content=NULL;  //!< Buffered flash page for write operations
+static uint16_t last_page=0xFFFF;   //!< Last buffered page number
+static uint16_t page;               //!< Current page being written
 
 
 uint8_t nvm_flush(){

@@ -10,6 +10,14 @@
  * ========================================
 */
 
+/**
+ * @file tsk_eth_common.c
+ * @brief Common Ethernet/MIN protocol functions
+ *
+ * Implements MIDI and SID parsing for data received over network or
+ * MIN protocol connections. Handles running status and command assembly.
+ */
+
 /* [] END OF FILE */
 #include "tsk_eth_common.h"
 #include "cyapicallbacks.h"

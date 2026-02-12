@@ -53,3 +53,7 @@ ComponentUpdateLog.txt
 *.v2
 simulator/build
 simulator/eeprom.txt
+
+# Doxygen output #
+##################
+docs/

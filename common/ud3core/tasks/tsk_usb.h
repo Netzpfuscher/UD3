@@ -26,6 +26,15 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /* ======================================================================== */
+
+/**
+ * @file tsk_usb.h
+ * @brief USB CDC communication task
+ *
+ * Handles USB CDC (Communications Device Class) for serial communication
+ * over USB. Provides terminal and data transfer functionality.
+ */
+
 #if !defined(tsk_usb_H)
 #define tsk_usb_H
 
@@ -38,20 +47,36 @@
 #include "queue.h"
 #include "semphr.h"
 
-
+/**
+ * @brief Start the USB task
+ */
 void tsk_usb_Start(void);
+
+/**
+ * @brief Initialize USB hardware
+ */
 void tsk_usb_Init(void);
+
+/**
+ * @brief Enable USB communication
+ */
 void tsk_usb_Enable(void);
 
+/**
+ * @brief Main USB task entry point
+ *
+ * @param pvParameters Task parameters (unused)
+ */
 void tsk_usb_Task(void *pvParameters);
 
-extern uint32_t usb_bytes_rx;
-extern uint32_t usb_bytes_tx;
+extern uint32_t usb_bytes_rx; //!< Total USB bytes received
+extern uint32_t usb_bytes_tx; //!< Total USB bytes transmitted
 
-
-/* The size of the buffer is equal to maximum packet size of the 
-*  IN and OUT bulk endpoints. 
-*/
+/**
+ * @brief USB buffer length
+ *
+ * Set to maximum packet size of IN and OUT bulk endpoints (64 bytes).
+ */
 #define tsk_usb_BUFFER_LEN (64u)
 
 

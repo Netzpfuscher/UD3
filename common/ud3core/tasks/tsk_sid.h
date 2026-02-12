@@ -22,10 +22,18 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+/**
+ * @file tsk_sid.h
+ * @brief SID chip emulation task
+ *
+ * Emulates Commodore 64 SID (Sound Interface Device) chip for music playback.
+ * Supports 3 voices with ADSR envelopes and multiple waveforms.
+ */
+
 #if !defined(tsk_sid_TASK_H)
 #define tsk_sid_TASK_H
-    
-#define N_SIDCHANNEL 3
+
+#define N_SIDCHANNEL 3 //!< Number of SID voices (3 like original SID chip)
 
 /*
  * Add user task definitions, types, includes and other things in the below
@@ -46,77 +54,87 @@
 
 /* `#END` */
 
+/**
+ * @brief Start the SID emulation task
+ */
 void tsk_sid_Start(void);
 
+/**
+ * @brief Reset the SID frame skip counter
+ */
 void tsk_sid_reset_skip();
 
-//WARNING: only 16 bits available for this. Keep that in mind when adding flags
-#define SID_FRAME_FLAG_CH3OFF   0x100
-#define SID_FRAME_FLAG_GATE     0x80
-#define SID_FRAME_FLAG_SYNC     0x40
-#define SID_FRAME_FLAG_RING     0x20
-#define SID_FRAME_FLAG_TEST     0x10
-#define SID_FRAME_FLAG_TRIANGLE 0x08
-#define SID_FRAME_FLAG_SAWTOOTH 0x04
-#define SID_FRAME_FLAG_SQUARE   0x02
-#define SID_FRAME_FLAG_NOISE    0x01   //noice
-    
-typedef enum {ADSR_IDLE, ADSR_ATTACK, ADSR_DECAY, ADSR_SUSTAIN, ADSR_RELEASE} ADSRState_t;
+/** @name SID Frame Flags
+ * Control flags for SID waveform generation (16-bit maximum)
+ * @{
+ */
+#define SID_FRAME_FLAG_CH3OFF 0x100   //!< Disable channel 3
+#define SID_FRAME_FLAG_GATE 0x80      //!< Gate signal (start/stop note)
+#define SID_FRAME_FLAG_SYNC 0x40      //!< Oscillator sync
+#define SID_FRAME_FLAG_RING 0x20      //!< Ring modulation
+#define SID_FRAME_FLAG_TEST 0x10      //!< Test bit (halt oscillator)
+#define SID_FRAME_FLAG_TRIANGLE 0x08  //!< Triangle waveform
+#define SID_FRAME_FLAG_SAWTOOTH 0x04  //!< Sawtooth waveform
+#define SID_FRAME_FLAG_SQUARE 0x02    //!< Square waveform
+#define SID_FRAME_FLAG_NOISE 0x01     //!< Noise waveform
+/** @} */
 
-//contains one set of sid register options
-typedef struct{
-    uint16_t flags[N_SIDCHANNEL];
-    
-    uint16_t attack[N_SIDCHANNEL];
-    uint16_t decay[N_SIDCHANNEL];
-    uint16_t sustain[N_SIDCHANNEL];
-    uint16_t release[N_SIDCHANNEL];
-    
-    uint32_t frequency_dHz[N_SIDCHANNEL];
-    uint32_t pulsewidth[N_SIDCHANNEL];
-    
-    //TODO add filter stuff?
-    
-    //uint16_t master_pw; //TODO: whats this used for?
-    uint32_t next_frame;
+/**
+ * @brief ADSR envelope state machine states
+ */
+typedef enum { ADSR_IDLE, ADSR_ATTACK, ADSR_DECAY, ADSR_SUSTAIN, ADSR_RELEASE } ADSRState_t;
+
+/**
+ * @brief SID frame data structure
+ *
+ * Contains all register data for one frame of SID output.
+ * Sent via queue to SID task for processing.
+ */
+typedef struct {
+	uint16_t flags[N_SIDCHANNEL];          //!< Control flags per channel
+	uint16_t attack[N_SIDCHANNEL];         //!< Attack time per channel
+	uint16_t decay[N_SIDCHANNEL];          //!< Decay time per channel
+	uint16_t sustain[N_SIDCHANNEL];        //!< Sustain level per channel
+	uint16_t release[N_SIDCHANNEL];        //!< Release time per channel
+	uint32_t frequency_dHz[N_SIDCHANNEL];  //!< Frequency in decihertz per channel
+	uint32_t pulsewidth[N_SIDCHANNEL];     //!< Pulse width per channel
+	uint32_t next_frame;                   //!< Timestamp for next frame
 } SIDFrame_t;
-    
-//contains one set of sid register options
-typedef struct{
-    ADSRState_t adsrState;
-    
-    uint32_t flags;
-    
-    uint16_t attack;
-    uint16_t decay;
-    uint16_t sustainVolume;
-    uint16_t release;
-    
-    uint32_t frequency_dHz;
-    uint32_t pulsewidth;
-    
-    uint32_t currentEnvelopeFactor;
-    uint32_t currentEnvelopeStartValue;
-    uint32_t currentEnvelopeVolume;
+
+/**
+ * @brief SID channel runtime data
+ *
+ * Tracks ADSR envelope state and current parameters for one SID voice.
+ */
+typedef struct {
+	ADSRState_t adsrState;             //!< Current ADSR state
+	uint32_t flags;                    //!< Waveform and control flags
+	uint16_t attack;                   //!< Attack time
+	uint16_t decay;                    //!< Decay time
+	uint16_t sustainVolume;            //!< Sustain level
+	uint16_t release;                  //!< Release time
+	uint32_t frequency_dHz;            //!< Frequency in decihertz
+	uint32_t pulsewidth;               //!< Pulse width
+	uint32_t currentEnvelopeFactor;    //!< Envelope interpolation factor
+	uint32_t currentEnvelopeStartValue; //!< Envelope start value for current phase
+	uint32_t currentEnvelopeVolume;    //!< Current envelope volume
 } SIDChannelData_t;
-    
-//contains one set of sid register options
-typedef struct{
-    //channel specific filters
-    uint32_t channelVolume[N_SIDCHANNEL];
-    uint32_t hpvEnabled[N_SIDCHANNEL];
-    
-    //global filter parameters
-    uint32_t flags;
-    
-    uint32_t noiseVolume;
-    uint32_t hpvEnabledGlobally;
+
+/**
+ * @brief SID filter configuration data
+ *
+ * Controls per-channel and global filtering parameters.
+ */
+typedef struct {
+	uint32_t channelVolume[N_SIDCHANNEL]; //!< Volume per channel
+	uint32_t hpvEnabled[N_SIDCHANNEL];    //!< High-pass filter enabled per channel
+	uint32_t flags;                       //!< Global filter flags
+	uint32_t noiseVolume;                 //!< Noise channel volume
+	uint32_t hpvEnabledGlobally;          //!< Global high-pass filter enable
 } SIDFilterData_t;
 
-
-    
-extern xQueueHandle qSID;
-extern SIDFilterData_t SID_filterData;
+extern xQueueHandle qSID;                 //!< Queue for incoming SID frames
+extern SIDFilterData_t SID_filterData;    //!< Global SID filter configuration
 
 
 /*

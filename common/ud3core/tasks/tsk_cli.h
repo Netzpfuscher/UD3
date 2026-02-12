@@ -22,6 +22,15 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+/**
+ * @file tsk_cli.h
+ * @brief CLI (Command Line Interface) task
+ *
+ * Manages terminal instances for USB, UART, and MIN protocol connections.
+ * Processes commands via TTerm library and handles multiple concurrent
+ * terminal sessions.
+ */
+
 #include "FreeRTOS.h"
 #include "task.h"
 #include "cli_basic.h"
@@ -31,7 +40,7 @@
 #if !defined(cli_TASK_H)
 #define cli_TASK_H
     
-#define portM   ((port_str*)handle->port)
+#define portM   ((port_str*)handle->port) //!< Macro to cast handle port to port_str
     
 /*
  * Add user task definitions, types, includes and other things in the below
@@ -41,18 +50,26 @@
 
 /* `#END` */
 
+/**
+ * @brief Start CLI task
+ */
 void tsk_cli_Start(void);
+
+/**
+ * @brief CLI task procedure (terminal handler)
+ * @param pvParameters Task parameters (port_str pointer)
+ */
 void tsk_cli_TaskProc(void *pvParameters);
-extern xTaskHandle MIN_Terminal_TaskHandle[NUM_MIN_CON];
+extern xTaskHandle MIN_Terminal_TaskHandle[NUM_MIN_CON]; //!< MIN terminal task handles
 
-extern port_str min_port[NUM_MIN_CON];
-extern TERMINAL_HANDLE * min_handle[NUM_MIN_CON];
-extern port_str serial_port;
-extern port_str usb_port;
-extern port_str null_port;
-extern TERMINAL_HANDLE * null_handle;
+extern port_str min_port[NUM_MIN_CON];   //!< MIN protocol port structures
+extern TERMINAL_HANDLE * min_handle[NUM_MIN_CON]; //!< MIN terminal handles
+extern port_str serial_port;             //!< UART serial port structure
+extern port_str usb_port;                //!< USB CDC port structure
+extern port_str null_port;               //!< Null port (no output)
+extern TERMINAL_HANDLE * null_handle;    //!< Null terminal handle
 
-extern TERMINAL_HANDLE * usb_handle;
+extern TERMINAL_HANDLE * usb_handle;     //!< USB terminal handle
 
 /*
  * Add user function prototypes in the below merge region to add user

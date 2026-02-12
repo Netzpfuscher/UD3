@@ -1,3 +1,10 @@
+/**
+ * @file tsk_hypervisor.h
+ * @brief Hypervisor task (reserved for future use)
+ *
+ * Placeholder for multi-coil coordination/control features.
+ */
+
 #ifndef tsk_hypervisor_inc
 #define tsk_hypervisor_inc
 
@@ -25,7 +32,9 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-
+/**
+ * @brief Start hypervisor task
+ */
 void tsk_hypervisor_Start();
 
 #endif

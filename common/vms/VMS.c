@@ -1,3 +1,10 @@
+/**
+ * @file VMS.c
+ * @brief Voice Modulation System implementation
+ *
+ * See VMS.h for function documentation.
+ */
+
 #include <stdint.h>
 #include <string.h>
 

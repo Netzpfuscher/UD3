@@ -1,3 +1,9 @@
+/**
+ * @file teslaterm.c
+ * @brief Teslaterm protocol implementation
+ *
+ * See teslaterm.h for function documentation.
+ */
 
 #include "teslaterm.h"
 

@@ -5,6 +5,13 @@
  * Created on 12 September 2023, 23:15
  */
 
+/**
+ * @file MidiFilter.c
+ * @brief MIDI event filtering and routing implementation
+ *
+ * See MidiFilter.h for function documentation.
+ */
+
 #include "NoteMapper.h"
 #include "MidiFilter.h"
 #include "TTerm.h"

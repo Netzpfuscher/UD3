@@ -21,6 +21,13 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+/**
+ * @file buffer.c
+ * @brief Big-endian buffer parsing implementation
+ *
+ * See buffer.h for function documentation.
+ */
+
 #include "buffer.h"
 
 int16_t buffer_get_int16(const uint8_t *buf, int32_t *ind) {

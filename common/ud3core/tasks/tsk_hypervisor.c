@@ -1,3 +1,11 @@
+/**
+ * @file tsk_hypervisor.c
+ * @brief Hypervisor task implementation
+ *
+ * Monitors system health and manages automatic fault recovery,
+ * bus autostart, and external interrupter updates.
+ */
+
 #include "cyapicallbacks.h"
 #include <cytypes.h>
 

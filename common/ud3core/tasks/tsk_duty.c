@@ -1,3 +1,11 @@
+/**
+ * @file tsk_duty.c
+ * @brief Duty cycle measurement task implementation
+ *
+ * Monitors interrupter on-time using a hardware counter (OnTimeCounter).
+ * Calculates duty cycle percentage with 0.1% resolution every 100ms.
+ */
+
 #include "cyapicallbacks.h"
 #include <cytypes.h>
 

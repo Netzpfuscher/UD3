@@ -1,3 +1,10 @@
+/**
+ * @file VMSDefaults.c
+ * @brief Default VMS envelope blocks implementation
+ *
+ * See VMSDefaults.h for block documentation.
+ */
+
 #include "VMS.h"
 
 const VMS_Block_t VMS_DEFAULT_ATTAC = {

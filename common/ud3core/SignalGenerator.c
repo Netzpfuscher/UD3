@@ -1,5 +1,28 @@
-/*
- * UD3 - NVM
+/**
+ * @file SignalGenerator.c
+ * @brief Polyphonic pulse generator implementation
+ *
+ * Core signal generation system providing:
+ * - 6-voice polyphonic synthesis with independent timing and amplitude control
+ * - Real-time pulse generation at 8kHz task rate (MIDI_ISR_Hz)
+ * - Hardware timer ISR for precise pulse timing via ring buffer
+ * - Hypervoice support (multiple sub-pulses per period for harmonic enrichment)
+ * - Duty cycle calculation and limiting across all active voices
+ * - Master volume control with 15-bit fixed-point scaling
+ * - Burst mode for rhythmic on/off patterns
+ * - Integration with DutyCompressor for dynamic range management
+ *
+ * Signal flow:
+ * 1. Audio engines (MIDI/SID/VMS) call SigGen_setVoice*() to update voice parameters
+ * 2. SigGen_task() runs at 8kHz, generates pulses from voice states
+ * 3. SigGen_limit() applies safety constraints (duty, current, min OT/period)
+ * 4. Pulses queued into ring buffer via SigGen_queuePulse()
+ * 5. SigGen_PulseTimerISR() consumes pulses and commands hardware via interrupter_oneshotRaw()
+ *
+ * Thread safety:
+ * - Voice parameters written by audio engines, read by SigGen_task()
+ * - Ring buffer uses ISR-safe primitives for pulse queue
+ * - taskData accessed from both task and ISR contexts
  *
  * Copyright (c) 2021 Jens Kerrinnes
  *
@@ -42,56 +65,121 @@
 #include "tsk_audio.h"
 #endif
 
-//static int32_t SigGen_otDeriv = 0;
-//static int32_t SigGen_otCurveStart = 0;
+/* ===== Static Variables ===== */
+
+/** @brief Minimum on-time threshold (calculated from max_tr_pw * SigGen_minOtOffset%) */
 static int32_t SigGen_minOt = 0;
 
+/** @brief Pointer to main task data (voice array, pulse buffer, TR burst state) */
 static SigGen_taskData_t * taskData;
 
-//static uint32_t isOutputInErrorState = 0;
-
+/** @brief Forward declaration of main signal generation task */
 static void SigGen_task(void * params);
 
+/** @brief Master volume for all voices (0-MAX_VOL, typically 0-100), 15-bit fixed-point scaling */
 static uint32_t masterVolume = MAX_VOL;
+
+/** @brief Current synthesis mode (SYNTH_OFF/MIDI/SID/TR/MIDI_QCW/SID_QCW) */
 static uint8_t synthMode = SYNTH_OFF;
 
-//current pulse the timer is waiting to run
+/** @brief Current pulse being timed by hardware ISR (pre-loaded for next period) */
 static SigGen_pulseData_t readPulse;
 
+/** @brief Per-voice bitmask flags for UI feedback (VoiceFlags[i] = 1<<i) */
 uint32_t VoiceFlags[SIGGEN_VOICECOUNT];
 
+/** @brief Output enable flag (1=enabled, 0=disabled) */
 static uint32_t isEnabled = 1;
 
+/** @brief Bitmask of voices requiring immediate termination (noise mode switching) */
 static volatile uint32_t voicesToEradicate = 0;
 
+/* ===== Conversion Macros ===== */
+
+/** @brief Convert milliseconds to timer period counts (32kHz timer: 32 counts/µs) */
 #define SIGGEN_MS_TO_PERIOD_COUNT(X) (X) * 32000
+/** @brief Convert microseconds to timer period counts (32kHz timer: 32 counts/µs) */
 #define SIGGEN_US_TO_PERIOD_COUNT(X) (X) * 32
-#define SIGGEN_PERIOD_COUNT_TO_US(X) (X) >> 5 // >> 5 = /32
+/** @brief Convert timer period counts to microseconds (right shift by 5 = divide by 32) */
+#define SIGGEN_PERIOD_COUNT_TO_US(X) (X) >> 5
+/** @brief Convert microseconds to on-time counts (1:1 for hardware PWM) */
 #define SIGGEN_US_TO_OT_COUNT(X) (X)
+/** @brief Convert siggen volume (0-INT16_MAX) to DAC current value using linear scaling */
 #define SIGGEN_VOLUME_TO_CURRENT_DAC_VALUE(X) (params.min_tr_cl_dac_val + (((X) * params.diff_tr_cl_dac_val) >> 15))
 
-#define SIGGEN_CLEAR_LONG_PULSE 0x8000
-#define SIGGEN_ERADICATE_REQUIRED 0xff  //TODO maybe make this dynamic? Depending on the voice count we might need more than 8 bits for the flags
+/* ===== Control Flags ===== */
 
+/** @brief Flag bit to indicate long pulse clearing required */
+#define SIGGEN_CLEAR_LONG_PULSE 0x8000
+/** @brief Mask for voices requiring immediate termination (all 8 bits set) */
+#define SIGGEN_ERADICATE_REQUIRED 0xff
+/** @brief Delay threshold for considering a pulse "long" (milliseconds) */
 #define SIGGEN_LONG_DELAY_THRESHOLD_ms 2
 
-#define SigGen_isTimerRunning() (interrupterTimebase_ReadControlRegister() & interrupterTimebase_CTRL_ENABLE)
-#define SigGen_startTimer() interrupterTimebase_WriteControlRegister(interrupterTimebase_ReadControlRegister() | interrupterTimebase_CTRL_ENABLE); SigGen_enableTimerISR();
-#define SigGen_stopTimer() interrupterTimebase_WriteControlRegister(interrupterTimebase_ReadControlRegister() & ~interrupterTimebase_CTRL_ENABLE); SigGen_disableTimerISR();
+/* ===== Timer Control Macros ===== */
 
+/** @brief Check if pulse timer is currently running */
+#define SigGen_isTimerRunning() (interrupterTimebase_ReadControlRegister() & interrupterTimebase_CTRL_ENABLE)
+/** @brief Start pulse timer and enable ISR */
+#define SigGen_startTimer() interrupterTimebase_WriteControlRegister(interrupterTimebase_ReadControlRegister() | interrupterTimebase_CTRL_ENABLE); SigGen_enableTimerISR();
+/** @brief Stop pulse timer and disable ISR */
+#define SigGen_stopTimer() interrupterTimebase_WriteControlRegister(interrupterTimebase_ReadControlRegister() & ~interrupterTimebase_CTRL_ENABLE); SigGen_disableTimerISR();
+/** @brief Check if timer ISR is enabled */
 #define SigGen_isTimerISREnabled() interrupterIRQ_GetState()
+/** @brief Disable timer ISR */
 #define SigGen_disableTimerISR() interrupterIRQ_Disable()
+/** @brief Enable timer ISR */
 #define SigGen_enableTimerISR() interrupterIRQ_Enable()
 
+/* ===== Pulse Manipulation Macros ===== */
+
+/** @brief Extract main pulse from voice state into pulse descriptor */
 #define SIGGEN_GET_PULSE(VOICE, TARGETPULSE) TARGETPULSE.current = VOICE.pulseVolume; TARGETPULSE.period = VOICE.counter; TARGETPULSE.onTime = VOICE.limitedPulseWidth_us;
+/** @brief Extract hypervoice pulse from voice state into pulse descriptor */
 #define SIGGEN_GET_PULSE_HPV(VOICE, TARGETPULSE) TARGETPULSE.current = VOICE.hpvVolume; TARGETPULSE.period = VOICE.currHPVCounter; TARGETPULSE.onTime = VOICE.limitedHpvPulseWidth_us;
+/** @brief Copy pulse descriptor (all three fields: current, period, onTime) */
 #define SIGGEN_COPY_PULSE(TARGETPULSE, SRCPULSE) TARGETPULSE.current = SRCPULSE.current; TARGETPULSE.period = SRCPULSE.period; TARGETPULSE.onTime = SRCPULSE.onTime;
 
+/* ===== Forward Declarations ===== */
+
+/**
+ * @brief Set hypervoice parameters for a voice (internal)
+ * @param voice Voice index (0-5)
+ * @param count Number of hypervoice sub-pulses per period
+ * @param pulseWidth Hypervoice pulse width in microseconds
+ * @param volume Hypervoice volume (0-INT16_MAX)
+ * @param phase Phase offset (0-1024, where 1024=100%)
+ */
 static void SigGen_setHyperVoiceParams(uint32_t voice, uint32_t count, uint32_t pulseWidth, uint32_t volume, uint32_t phase);
+
+/**
+ * @brief Set main voice parameters (internal, used by all voice setter variants)
+ * @param voice Voice index (0-5)
+ * @param enabled Enable (1) or disable (0) voice
+ * @param pulseWidth Pulse width in microseconds
+ * @param volume Volume (0-INT16_MAX)
+ * @param frequencyTenths Frequency in tenths of Hz
+ * @param noiseAmplitude White noise amplitude (0 = disabled)
+ * @param burstOn_us Burst on-time in microseconds (0 = no burst)
+ * @param burstOff_us Burst off-time in microseconds
+ */
 static void SigGen_setVoiceParams(uint32_t voice, uint32_t enabled, int32_t pulseWidth, int32_t volume, int32_t frequencyTenths, int32_t noiseAmplitude, int32_t burstOn_us, int32_t burstOff_us);
 
+/** @brief Debug flag for print throttling (used in simulator mode) */
 uint32_t IsOkToPrint = 0;
 
+/**
+ * @brief 8kHz system tick ISR - clock and QCW control
+ *
+ * High-priority ISR called at MIDI_ISR_Hz (8000 Hz) by hardware timer.
+ * Handles:
+ * - Global clock tick (for uptime tracking)
+ * - QCW mode ramping (if QCW_enable_Control active)
+ *
+ * Execution time: ~10µs (clock_tick) or ~50µs (qcw_handle)
+ *
+ * @note In QCW mode, bypasses normal signal generation to run qcw_handle()
+ */
 CY_ISR(isr_synth) {   
     clock_tick();
     if(QCW_enable_Control){
@@ -100,6 +188,22 @@ CY_ISR(isr_synth) {
     }
 }
     
+/**
+ * @brief Hardware pulse timer ISR - consume pulses from ring buffer
+ *
+ * Called when interrupterTimebase timer expires (variable rate, depends on pulse periods).
+ * Workflow:
+ * 1. Command previous pulse to hardware via interrupter_oneshotRaw()
+ * 2. Read next pulse from ring buffer
+ * 3. Load next pulse period into timer compare register
+ * 4. If buffer empty, stop timer
+ *
+ * Execution time: ~5-15µs depending on buffer state
+ *
+ * @note Uses ISR-safe RingBuffer_readFromISR() for thread safety
+ * @note Zero-period pulses are rejected and retried (invalid state)
+ * @note Timer stops automatically when buffer empty
+ */
 CY_ISR(SigGen_PulseTimerISR){
     interrupterTimebase_ReadStatusRegister();
     interrupterIRQ_ClearPending();
@@ -150,6 +254,17 @@ CY_ISR(SigGen_PulseTimerISR){
     }
 }
 
+/**
+ * @brief Parameter change callback for siggen configuration
+ *
+ * Recalculates derived parameters when siggen settings change:
+ * - SigGen_minOt: minimum on-time threshold = max_tr_pw * SigGen_minOtOffset%
+ *
+ * @param params Parameter table (unused)
+ * @param index Index of changed parameter (unused)
+ * @param handle Terminal handle for error messages (unused)
+ * @return pdPASS always (changes always accepted)
+ */
 uint8_t callback_siggen(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     //update minimum OT parameter
     SigGen_minOt = (configuration.max_tr_pw * configuration.SigGen_minOtOffset) / 100;
@@ -157,6 +272,19 @@ uint8_t callback_siggen(parameter_entry * params, uint8_t index, TERMINAL_HANDLE
     return pdPASS;
 }
 
+/**
+ * @brief Initialize signal generator subsystem
+ *
+ * Performs one-time setup:
+ * - Initialize VoiceFlags[] bitmask array (VoiceFlags[i] = 1<<i)
+ * - Allocate taskData structure (SigGen_taskData_t)
+ * - Create pulse ring buffer (64 entries of SigGen_pulseData_t)
+ * - Initialize hardware timers (interrupterTimebase for pulse timing)
+ * - Register ISRs (SigGen_PulseTimerISR, isr_synth)
+ * - Create SigGen_task FreeRTOS task (8kHz periodic execution)
+ *
+ * Must be called once during system initialization before any voice operations.
+ */
 void SigGen_init(){
     //initialize flags needed for masking voices
     for(uint32_t i = 0; i < SIGGEN_VOICECOUNT; i++){
@@ -181,7 +309,19 @@ void SigGen_init(){
     xTaskCreate(SigGen_task, "SigGen", configMINIMAL_STACK_SIZE+128, (void*) data, tskIDLE_PRIORITY + 4, NULL);
 }
 
-//calculate the dutycycle and return it in percent
+/**
+ * @brief Calculate current duty cycle across all active voices
+ *
+ * Iterates through all 6 voices, computing duty cycle contribution:
+ * - Main pulse duty = (pulseWidth_us * frequencyTenths) / 100000
+ * - Hypervoice duty added if hpvCount > 0 and noiseAmplitude == 0
+ * - Total scaled by DutyCompressor gain if compressor active
+ *
+ * @return Duty cycle as tenths of percent (e.g., 125 = 12.5%)
+ *
+ * @note Hypervoice duty calculation approximates divider effect (TODO: improve accuracy)
+ * @note Used for real-time limit enforcement and telemetry
+ */
 uint32_t SigGen_getCurrDuty(){
     uint32_t totalDuty = 0; //DER TOTAAALE TASTGRAD
     
@@ -209,6 +349,29 @@ uint32_t SigGen_getCurrDuty(){
     return totalDuty;
 }
 
+/**
+ * @brief Set hypervoice parameters for a voice (internal helper)
+ *
+ * Configures sub-pulse generation for harmonic enrichment:
+ * - Validates count > 0, noiseAmplitude == 0, masterVolume > 0, volume > 0
+ * - Calculates hpvOffset = (phase * period) >> 10  (phase is 0-1024 fixed-point)
+ * - Applies master volume scaling: hpvVolume = (volume * masterVolume) >> 15
+ * - Updates hpvCount, currHPVDivider for period subdivision
+ *
+ * Disables hypervoice if:
+ * - count == 0 (no hypervoice)
+ * - noiseAmplitude > 0 (noise mode incompatible)
+ * - masterVolume == 0 or volume == 0 (silent)
+ *
+ * @param voice Voice index (0-5)
+ * @param count Number of hypervoice sub-pulses per period (0 = disabled)
+ * @param pulseWidth Hypervoice pulse width in microseconds
+ * @param volume Hypervoice volume (0-INT16_MAX)
+ * @param phase Phase offset in 0-1024 fixed-point (1024 = 100% = full period)
+ *
+ * @note Called by SigGen_setHyperVoice*() variants
+ * @note Phase provides harmonic tuning by offsetting sub-pulse timing
+ */
 //phase is 0-100% fixed point with a maximum of 1024=1
 static void SigGen_setHyperVoiceParams(uint32_t voice, uint32_t count, uint32_t pulseWidth, uint32_t volume, uint32_t phase){
     if(count == 0 || taskData->voice[voice].noiseAmplitude || masterVolume == 0 || volume == 0){
@@ -235,12 +398,46 @@ static void SigGen_setHyperVoiceParams(uint32_t voice, uint32_t count, uint32_t 
     taskData->voice[voice].hpvOffset = (count > 0) ? (phase * taskData->voice[voice].period) >> 10 : 0;
 }
 
+/**
+ * @brief Query if a voice is currently enabled
+ * @param voice Voice index (0-5)
+ * @return 1 if voice enabled, 0 if disabled
+ */
 uint32_t SigGen_isVoiceOn(uint32_t voice){
     return taskData->voice[voice].enabled;
 }
 
+/** @brief Debug divider for print throttling (unused in production) */
 uint8_t divder = 0xff;
 
+/**
+ * @brief Set main voice parameters (internal, all voice setters delegate to this)
+ *
+ * Core voice parameter update function handling:
+ * - Note-on/note-off detection (resets noteAge, counters on note-on)
+ * - Frequency to period conversion: period = (10000000 / frequencyTenths) ticks at 8kHz
+ * - Master volume scaling: pulseVolume = (volume * masterVolume) >> 15
+ * - Burst mode timing: converts burstOn_us/burstOff_us to task ticks
+ * - Voice eradication flagging for noise mode changes
+ * - Hypervoice period calculation for sub-pulse timing
+ *
+ * Note-on conditions (all must be true):
+ * - enabled == 1
+ * - volume != 0
+ * - frequencyTenths != 0
+ *
+ * @param voice Voice index (0-5)
+ * @param enabled Enable (1) or disable (0) voice
+ * @param pulseWidth Pulse width in microseconds
+ * @param volume Volume (0-INT16_MAX), scaled by master volume
+ * @param frequencyTenths Frequency in tenths of Hz (e.g., 4400 = 440.0 Hz)
+ * @param noiseAmplitude White noise amplitude (0 = disabled, >0 = noise waveform)
+ * @param burstOn_us Burst on-time in microseconds (0 = no burst)
+ * @param burstOff_us Burst off-time in microseconds
+ *
+ * @note All public voice setters (VMS/SID/TR) call this function
+ * @note Noise mode change triggers voicesToEradicate flag to clear stale pulses
+ */
 static void SigGen_setVoiceParams(uint32_t voice, uint32_t enabled, int32_t pulseWidth, int32_t volume, int32_t frequencyTenths, int32_t noiseAmplitude, int32_t burstOn_us, int32_t burstOff_us){
     IsOkToPrint = 1;
     
@@ -306,6 +503,27 @@ static void SigGen_setVoiceParams(uint32_t voice, uint32_t enabled, int32_t puls
     SigGen_limit();
 }
 
+/**
+ * @brief Calculate target on-time for fixed duty cycle mode
+ *
+ * Computes on-time to achieve target duty cycle based on:
+ * - Target duty = max_tr_duty * (pulseWidth / max_tr_pw)
+ * - Target OT = targetDuty / frequency
+ * - Formula: OT_us = ((pulseWidth * max_tr_duty * 100 / max_tr_pw) * 100) / frequencyTenths
+ *
+ * Adjustments:
+ * - Noise mode: OT *= 1.5 (compensate for duty reduction)
+ * - Min clamp: SigGen_minOt (calculated from max_tr_pw * SigGen_minOtOffset%)
+ * - Max clamp: max_tr_pw
+ *
+ * @param pulseWidth Input pulse width slider value (microseconds)
+ * @param frequencyTenths Frequency in tenths of Hz (e.g., 4400 = 440.0 Hz)
+ * @param noiseOn 1 if noise waveform active (increases OT by 50%), 0 otherwise
+ * @return Calculated on-time in microseconds, or 0 if frequency out of range
+ *
+ * @note Frequency range: 0.1 Hz to 20 kHz (frequencyTenths 1-200000)
+ * @note Used by VMS and SID modes to maintain consistent duty cycle across frequency range
+ */
 static uint32_t getFixedDutyOntime(int32_t pulseWidth, int32_t frequencyTenths, uint32_t noiseOn){
     //check for maximum frequency
     if(frequencyTenths > 200000 || frequencyTenths == 0) return 0;
@@ -348,27 +566,98 @@ static uint32_t getFixedDutyOntime(int32_t pulseWidth, int32_t frequencyTenths, 
     return targetOt_us;
 }
 
+/* ===== Public Voice Setter Wrappers ===== */
+
+/**
+ * @brief Set VMS (MIDI) voice parameters - public wrapper
+ *
+ * Wrapper for SYNTH_MIDI mode voice updates. Delegates to SigGen_setVoiceParams()
+ * after converting pulseWidth to fixed-duty on-time via getFixedDutyOntime().
+ *
+ * @param voice Voice index (0-5)
+ * @param enabled Enable (1) or disable (0) voice
+ * @param pulseWidth Pulse width slider value (converted to fixed-duty OT)
+ * @param volume Volume (0-INT16_MAX)
+ * @param frequencyTenths Frequency in tenths of Hz
+ * @param noiseAmplitude White noise amplitude (0 = disabled)
+ * @param burstOn_us Burst on-time in microseconds (0 = no burst)
+ * @param burstOff_us Burst off-time in microseconds
+ *
+ * @note Rejects calls if synthMode != SYNTH_MIDI
+ * @note Called by MIDI processor (VMS engine)
+ */
 //wrappers for writing the voice configs from the different synthesizer modes
 void SigGen_setVoiceVMS(uint32_t voice, uint32_t enabled, int32_t pulseWidth, int32_t volume, int32_t frequencyTenths, int32_t noiseAmplitude, int32_t burstOn_us, int32_t burstOff_us){
     if(synthMode != SYNTH_MIDI) return;
     
     SigGen_setVoiceParams(voice, enabled, getFixedDutyOntime(pulseWidth, frequencyTenths, noiseAmplitude > 0), volume, frequencyTenths, noiseAmplitude, burstOn_us, burstOff_us);
 }
+/**
+ * @brief Set VMS hypervoice parameters - public wrapper
+ * @param voice Voice index (0-5)
+ * @param count Number of hypervoice sub-pulses per period
+ * @param pulseWidth Hypervoice pulse width slider (converted to fixed-duty OT)
+ * @param volume Hypervoice volume (0-INT16_MAX)
+ * @param phase Phase offset (0-1024 fixed-point)
+ *
+ * @note Rejects calls if synthMode != SYNTH_MIDI
+ */
 void SigGen_setHyperVoiceVMS(uint32_t voice, uint32_t count, uint32_t pulseWidth, uint32_t volume, uint32_t phase){
     if(synthMode != SYNTH_MIDI) return;
     SigGen_setHyperVoiceParams(voice, count, getFixedDutyOntime(pulseWidth, taskData->voice[voice].frequencyTenths, 0), volume, phase);
 }
 
+/**
+ * @brief Set SID voice parameters - public wrapper
+ *
+ * Wrapper for SYNTH_SID mode voice updates. No burst mode support.
+ *
+ * @param voice Voice index (0-5)
+ * @param enabled Enable (1) or disable (0) voice
+ * @param pulseWidth Pulse width slider value (converted to fixed-duty OT)
+ * @param volume Volume (0-INT16_MAX)
+ * @param frequencyTenths Frequency in tenths of Hz
+ * @param noiseAmplitude White noise amplitude (0 = disabled)
+ *
+ * @note Rejects calls if synthMode != SYNTH_SID
+ * @note Called by SID processor (6581/8580 emulation)
+ */
 void SigGen_setVoiceSID(uint32_t voice, uint32_t enabled, int32_t pulseWidth, int32_t volume, int32_t frequencyTenths, int32_t noiseAmplitude){
     if(synthMode != SYNTH_SID) return;
     SigGen_setVoiceParams(voice, enabled, getFixedDutyOntime(pulseWidth, frequencyTenths, noiseAmplitude > 0), volume, frequencyTenths, noiseAmplitude, 0, 0);
 }
 
+/**
+ * @brief Set SID hypervoice parameters - public wrapper
+ * @param voice Voice index (0-5)
+ * @param count Number of hypervoice sub-pulses per period
+ * @param pulseWidth Hypervoice pulse width slider (converted to fixed-duty OT)
+ * @param volume Hypervoice volume (0-INT16_MAX)
+ * @param phase Phase offset (0-1024 fixed-point)
+ *
+ * @note Rejects calls if synthMode != SYNTH_SID
+ */
 void SigGen_setHyperVoiceSID(uint32_t voice, uint32_t count, uint32_t pulseWidth, uint32_t volume, uint32_t phase){
     if(synthMode != SYNTH_SID) return;
     SigGen_setHyperVoiceParams(voice, count, getFixedDutyOntime(pulseWidth, taskData->voice[voice].frequencyTenths, 0), volume, phase);
 }
 
+/**
+ * @brief Set TR (transient) mode voice parameters - public wrapper
+ *
+ * TR mode uses fixed voice 0, no hypervoice, no noise, direct pulse width control.
+ *
+ * @param enabled Enable (1) or disable (0) TR voice
+ * @param pulseWidth Pulse width in microseconds (direct, not fixed-duty)
+ * @param volume Volume (0-INT16_MAX)
+ * @param frequencyTenths Frequency in tenths of Hz
+ * @param burstOn_us Burst on-time in microseconds (0 = no burst)
+ * @param burstOff_us Burst off-time in microseconds
+ *
+ * @note Rejects calls if synthMode != SYNTH_TR
+ * @note TR mode always uses voice 0 (single-voice manual control)
+ * @note Called by interrupter module for manual pulse control
+ */
 void SigGen_setVoiceTR(uint32_t enabled, int32_t pulseWidth, int32_t volume, int32_t frequencyTenths, int32_t burstOn_us, int32_t burstOff_us){
     if(synthMode != SYNTH_TR) return;
     
@@ -376,6 +665,28 @@ void SigGen_setVoiceTR(uint32_t enabled, int32_t pulseWidth, int32_t volume, int
     SigGen_setVoiceParams(0, enabled, pulseWidth, volume, frequencyTenths, 0, burstOn_us, burstOff_us);
 }
 
+/**
+ * @brief Apply safety limits to all voice parameters
+ *
+ * Multi-stage limiting process:
+ * 1. Calculate current duty cycle via SigGen_getCurrDuty()
+ * 2. Determine max duty (max_tr_duty/10, scaled by DutyCompressor maxDutyOffset if not TR mode)
+ * 3. If currDuty > maxDuty, calculate scale-down factor: ontimeScale = (maxDuty * MAX_VOL) / currDuty
+ * 4. For each voice:
+ *    - Scale limitedPulseWidth_us by ontimeScale and Comp_getGain()
+ *    - Scale limitedHpvPulseWidth_us similarly if hypervoice active
+ *    - Clamp counter to limitedPeriod (prevent slow note artifacts)
+ * 5. Update telemetry voice count (tt.n.midi_voices)
+ *
+ * Limiting behavior:
+ * - TR mode: Hard duty limit (no maxDutyOffset scaling)
+ * - MIDI/SID modes: Soft duty limit (DutyCompressor can increase headroom)
+ * - Max duty clamped to 99%
+ *
+ * @note Called by SigGen_setVoiceParams() after parameter changes
+ * @note Called by SigGen_task() each iteration for real-time limiting
+ * @note Thread safety: TODO - evaluate if locking needed
+ */
 void SigGen_limit(){
     //get current dutycycle
     uint32_t currDuty = SigGen_getCurrDuty();
@@ -451,6 +762,23 @@ void SigGen_limit(){
     }
 }
 
+/**
+ * @brief Switch synthesis mode and kill audio output
+ *
+ * Changes signal generator operating mode:
+ * - SYNTH_OFF: No synthesis
+ * - SYNTH_MIDI: MIDI polyphonic (VMS engine)
+ * - SYNTH_SID: SID chip emulation
+ * - SYNTH_TR: Manual transient mode
+ * - SYNTH_MIDI_QCW / SYNTH_SID_QCW: QCW long pulse modes (TODO: not fully implemented)
+ *
+ * Always kills audio first to prevent glitches during mode transition.
+ *
+ * @param newMode New synthesis mode from enum SYNTH
+ *
+ * @note Called by interrupter module or CLI commands
+ * @note QCW modes are partially implemented (placeholder switch cases)
+ */
 void SigGen_switchSynthMode(uint8_t newMode){
     //kill output when changing synth mode
     SigGen_killAudio();
@@ -480,6 +808,22 @@ void SigGen_switchSynthMode(uint8_t newMode){
     }
 }
 
+/**
+ * @brief Set master volume and update all voices
+ *
+ * Updates global volume control (0-MAX_VOL, typically 0-100):
+ * - If newVolume > 0: Rescale all voice volumes, enable output
+ * - If newVolume == 0: Disable output (pause generation)
+ *
+ * Volume scaling (15-bit fixed-point):
+ * - pulseVolume = (initialPulseVolume * masterVolume) >> 15
+ * - hpvVolume = (initialHpvVolume * masterVolume) >> 15
+ *
+ * @param newVolume Master volume (0-MAX_VOL), values > MAX_VOL rejected
+ *
+ * @note All voice volumes pre-scaled by master volume for efficiency
+ * @note Zero volume pauses generation without losing voice state
+ */
 void SigGen_setMasterVol(uint32_t newVolume){
     if(newVolume > MAX_VOL) return;
     masterVolume = newVolume;
@@ -498,11 +842,35 @@ void SigGen_setMasterVol(uint32_t newVolume){
     }
 }
 
+/**
+ * @brief Enable or disable signal output
+ * @param en 1 to enable output, 0 to disable and kill audio
+ *
+ * @note Disabling output calls SigGen_killAudio() to flush buffer
+ */
 void SigGen_setOutputEnabled(uint32_t en){
 	isEnabled = en;
 	if(!en) SigGen_killAudio();
 }
 
+/**
+ * @brief Emergency stop - kill all audio output immediately
+ *
+ * Comprehensive shutdown procedure:
+ * 1. Disable all voices (enabled = 0, limitedEnabled = 0)
+ * 2. Disable hypervoice (hpvCount = 0, limitedHpvCount = 0)
+ * 3. Stop hardware timer (SigGen_stopTimer)
+ * 4. Flush pulse ring buffer (RingBuffer_flush)
+ * 5. Reset buffer length counter (bufferLengthInCounts = 0)
+ * 6. Clear telemetry voice count
+ *
+ * Thread safety:
+ * - Disables timer ISR before flushing buffer to prevent concurrent access
+ * - Safe to call during UD3 startup (checks taskData != NULL)
+ *
+ * @note Called by interrupter_kill(), SigGen_setOutputEnabled(0), mode switches
+ * @note Does not clear voice parameters (frequency, volume) - only disables output
+ */
 void SigGen_killAudio(){
     // This can only happen during UD3 startup
     if (!taskData) { return; }
@@ -528,6 +896,27 @@ void SigGen_killAudio(){
     tt.n.midi_voices.value = 0;
 }
 
+/**
+ * @brief Queue a pulse for hardware output (converts units and writes to ring buffer)
+ *
+ * Conversion process:
+ * 1. Input pulse in microseconds and siggen volume (0-INT16_MAX)
+ * 2. Convert period: µs → timer counts (32 counts/µs at 32kHz timer)
+ * 3. Convert onTime: µs → timer counts (1:1 for hardware PWM)
+ * 4. Convert current: siggen volume → DAC counts via linear scaling
+ *    DAC value = min_tr_cl_dac_val + ((current * diff_tr_cl_dac_val) >> 15)
+ * 5. Write to ring buffer, update bufferLengthInCounts
+ *
+ * Thread safety:
+ * - Uses RingBuffer_write() (thread-safe)
+ * - Disables timer ISR during bufferLengthInCounts update
+ *
+ * @param pulse Pointer to pulse descriptor in microseconds (period, onTime, current)
+ * @return 1 if pulse queued successfully, 0 if buffer full
+ *
+ * @note Called by SigGen_task() to feed pulses to hardware ISR
+ * @note Buffer capacity: 64 entries (SIGGEN_PULSEBUFFER_SIZE)
+ */
 uint8_t SigGen_queuePulse(SigGen_pulseData_t* pulse) {
     //convert the period, volume and ontime to the values that will need to be written into the hardware upon pulse execution
     SigGen_pulseData_t raw_pulse;
@@ -548,10 +937,29 @@ uint8_t SigGen_queuePulse(SigGen_pulseData_t* pulse) {
     }
 }
 
+/** @brief Debug flag for pulse addition tracking (unused) */
 volatile uint32_t adding = 0;
 
+/** @brief Debug value for compressor state (unused) */
 volatile uint32_t compDebug = 0;
 
+/**
+ * @brief Overlay a new pulse onto an existing pulse descriptor
+ *
+ * Merging strategy:
+ * - onTime: Maximum of (existing, new)
+ * - current (volume): Sum of (existing + new)
+ *
+ * Called when multiple voices trigger simultaneously (same counter value).
+ * Allows polyphonic mixing without separate pulse buffer entries.
+ *
+ * @param pulse Pointer to existing pulse descriptor (modified in-place)
+ * @param newVolume Volume of new pulse to overlay (0-INT16_MAX)
+ * @param newOntime On-time of new pulse in microseconds
+ *
+ * @note Alternative strategies considered: highest/lowest/average (see commented block)
+ * @note Current strategy: loudest pulse on-time, summed volume
+ */
 static void SigGen_overlayPulse(SigGen_pulseData_t * pulse, int32_t newVolume, int32_t newOntime){
     //a pulse was triggered and we need to decide how to overlay it with any potentially already triggered pulses
     
@@ -588,6 +996,55 @@ static void SigGen_overlayPulse(SigGen_pulseData_t * pulse, int32_t newVolume, i
         pulse->current = newVolume;
     }*/
 }
+    
+/**
+ * @brief Main signal generation task - converts voice states to pulse queue
+ *
+ * FreeRTOS task running at high priority, generates pulses from voice states:
+ *
+ * Main loop (8kHz via vTaskDelay(1)):
+ * 1. Check if output enabled (skip if isEnabled == 0)
+ * 2. Fill pulse buffer to 1ms worth of pulses (bufferLengthInCounts < 32000)
+ * 3. For each buffer fill iteration:
+ *    a. Find voice with smallest counter (next pulse to trigger)
+ *    b. Check for hypervoice pulse vs main pulse
+ *    c. Advance all voice counters by nextPulse.period (time to next pulse)
+ *    d. Trigger pulses for all voices with counter == 0
+ *    e. Overlay simultaneously-triggered pulses via SigGen_overlayPulse()
+ *    f. Apply burst mode muting (if burstCounter < burstOt, zero pulse)
+ *    g. Queue pulse via SigGen_queuePulse()
+ * 4. Kickstart timer if stopped but pulses waiting
+ *
+ * Voice counter management:
+ * - counter: Phase accumulator, wraps at period (resets to period when <= 0)
+ * - currHPVCounter: Hypervoice sub-pulse accumulator
+ * - currHPVDivider: Tracks which hypervoice sub-pulse in cycle
+ *
+ * Hypervoice logic:
+ * - When currHPVDivider == 0 and currHPVCounter < counter: trigger HPV pulse
+ * - currHPVDivider counts down from hpvCount to 0, then resets
+ * - currHPVCounter = counter + hpvOffset (phase-shifted sub-pulse timing)
+ *
+ * Noise mode:
+ * - Randomizes pulse timing: counter += rand() % noiseAmplitude
+ * - Creates white noise waveform effect
+ *
+ * Burst mode:
+ * - burstCounter increments each iteration
+ * - If burstCounter < burstOt: mute pulse (onTime = 0, current = 0)
+ * - Resets at burstPeriod
+ *
+ * TR mode:
+ * - Only voice 0 active (single-voice manual control)
+ * - TR burst state managed separately in data->trBurstState
+ *
+ * @param callData Pointer to SigGen_taskData_t structure
+ *
+ * @note Task priority: tskIDLE_PRIORITY + 4 (PRIO_MIDI from tsk_priority.h)
+ * @note Stack size: configMINIMAL_STACK_SIZE + 128 words
+ * @note Target buffer fill: 1ms (32000 timer counts at 32kHz)
+ * @note Voice age incremented each cycle (for envelope effects)
+ */
     
 static void SigGen_task(void * callData){
     volatile SigGen_taskData_t * data = (SigGen_taskData_t *) callData;

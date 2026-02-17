@@ -101,26 +101,16 @@ void raise_memory_error(TERMINAL_HANDLE * handle){
  * @param c Braille pattern offset from 0x2800 (0x00-0xFF)
  */
 static void set_bytes(char *pbuffer, const unsigned char c) {
+	// UTF-8 encoding for Unicode range U+2800 to U+28FF (Braille patterns)
+	// Byte 1: 0xE2 (constant for this Unicode range)
 	pbuffer[0] = (char)0xE2;
-    
-    /** @todo Could be replaced by simpler/faster:
-     * pbuffer[1] = (char)(0xa0 | (c >> 6));
-     * pbuffer[2] = (char)(0x80 | (c & 0x3f));
-     * Leaving for now because "if it ain't broke, don't fix it"
-     */
-    
-	if (c & pixmap[3][0] && c & pixmap[3][1]) {
-		pbuffer[1] = (char)0xA3;
-	} else if (c & pixmap[3][1]) {
-		pbuffer[1] = (char)0xA2;
-	} else if (c & pixmap[3][0]) {
-		pbuffer[1] = (char)0xA1;
-	} else {
-		pbuffer[1] = (char)0xA0;
-	}
-
-	pbuffer[2] = (char)((0xBF & c) | 0x80);
-}
+	// Byte 2: 0xA0 plus top 2 bits of pattern (0xa0 | (c >> 6))
+	// This encodes bits 6-7 of c into the continuation byte
+    pbuffer[1] = (char)(0xa0 | (c >> 6));
+	// Byte 3: 0x80 plus lower 6 bits of pattern (0x80 | (c & 0x3f))
+	// This encodes bits 0-5 of c into the final continuation byte
+    pbuffer[2] = (char)(0x80 | (c & 0x3f));
+ }
 
 void braille_malloc(TERMINAL_HANDLE * handle){
     if(pix != NULL)

@@ -62,7 +62,7 @@ uint32_t SYS_getCPULoadFine(TaskStatus_t * taskStats, uint32_t taskCount, uint32
  * @param state Task state from eTaskState enumeration
  * @return String representation: "running", "ready", "blocked", "suspended", "deleted", or "invalid"
  *
- * @note Used for CLI "ps" command and telemetry display
+ * @note Used for CLI "top" command and telemetry display
  */
 const char * SYS_getTaskStateString(eTaskState state);    
 

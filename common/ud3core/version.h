@@ -62,7 +62,7 @@
  * - **timebase**: Microseconds per timer tick (1000 = 1ms ticks)
  * - **time_count**: Timer count direction ("up" or "down")
  * - **notelemetry_supported**: Can disable telemetry transmission (1 = yes, 0 = no)
- * - **min_sid_support**: SID (C64 audio) playback support (1 = yes, 0 = no)
+ * - **min_sid_support**: SID (C64 audio) playback over MIN protocol support (1 = yes, 0 = no)
  *
  * @note Adding new capability flags is backward-compatible (old clients ignore unknown keys)
  * @note Changing protocol version requires client updates for compatibility
@@ -73,7 +73,7 @@ static const char *version[] = {
 	"timebase=1000",                                 /**< 1ms (1000µs) timer resolution */
 	"time_count=up",                                 /**< Timer counts upward from 0 */
 	"notelemetry_supported=1",                       /**< Supports disabling telemetry (TT_NO_TELEMETRY) */
-	"min_sid_support=1"                              /**< SID (Commodore 64) audio playback supported */
+	"min_sid_support=1"                              /**< SID (Commodore 64) audio playback over MIN protrocol supported */
 };
 
 #endif

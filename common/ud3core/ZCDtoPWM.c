@@ -92,7 +92,7 @@ void initialize_ZCD_to_PWM(void) {
 	ZCDref_Start();       // Zero-crossing reference voltage
 	FB_THRSH_DAC_Start(); // Minimum feedback current threshold
 
-	//Start operational amplifier for signal conditioning
+	//Start operational amplifier 1 for primary current threshold -> switch to feedback
 	Opamp_1_Start();
 
 	//Start hardware digital filter for period smoothing
@@ -109,8 +109,6 @@ void configure_CT1(void) {
 	float min_tr_cl_dac_val_temp;
 
 	//Calculate maximum transient current limit DAC value
-	//Formula: (current_amps / ct_ratio * burden_ohms) / (volts_per_step * gain)
-	//Gain of 10 from amplifier stage
 	max_tr_cl_dac_val_temp = (((float)configuration.max_tr_current / (float)configuration.ct1_ratio) * configuration.ct1_burden) / (DAC_VOLTS_PER_STEP * 10);
 	if (max_tr_cl_dac_val_temp > 255) {
 		max_tr_cl_dac_val_temp = 255; // Clamp to 8-bit DAC range
@@ -142,12 +140,10 @@ void configure_CT1(void) {
 
 void configure_CT2(void) {
 	if (configuration.ct2_type == CT2_TYPE_CURRENT) {
-		//CT2 in current measurement mode (DC current transformer)
-		//Calculate ADC counts per milliamp
-		//Formula: (ct_ratio * 50mV_shunt * 1000mA/A) / (burden_ohms * 4096_ADC_counts)
+		//CT2 current mode transformer
 		params.idc_ma_count = (uint32_t)((configuration.ct2_ratio * 50 * 1000) / configuration.ct2_burden) / 4096;
 	} else {
-		//CT2 in voltage measurement mode (resistive divider)
+		//CT2 voltage mode transformer (no shunt on UD3 board)
 		//Calculate ADC offset for zero voltage
 		params.ct2_offset_cnt = (uint32_t)(4096ul * (uint32_t)configuration.ct2_offset) / 5000ul;
 

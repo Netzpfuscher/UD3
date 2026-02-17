@@ -160,6 +160,16 @@ void reconfig_charge_timer();
  * @return pdTRUE on success
  */
 uint8_t callback_pid(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+
+/**
+ * @brief Get readable ADC sample buffer
+ * 
+ * Returns a pointer to the most recently completed ADC DMA buffer that is safe
+ * to read. This function provides access to the buffer that is not currently
+ * being written to by the DMA controller.
+ * 
+ * @return Pointer to readable ADC sample buffer
+ */
 adc_sample_t* tsk_analog_get_readable_buffer();
 
 /**

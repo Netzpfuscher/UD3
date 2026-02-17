@@ -52,18 +52,21 @@ static void populate_buffer(adc_sample_t* ptr){
 	xSemaphoreGive(adc_ready_Semaphore);
 }
 
+static bool read_buffer_0 = false;
 
+adc_sample_t* tsk_analog_get_readable_buffer() {
+    return read_buffer_0 ? ADC_sample_buf_0 : ADC_sample_buf_1;
+}
 
 void tsk_sim(void *pvParameters) {
 	while(1){
 		if(adc_ready_Semaphore){
-			if(ADC_active_sample_buf != ADC_sample_buf_0){
+			if(!read_buffer_0){
 				populate_buffer(ADC_sample_buf_0);
-				ADC_active_sample_buf = ADC_sample_buf_0;
 			}else{
 				populate_buffer(ADC_sample_buf_1);		
-				ADC_active_sample_buf = ADC_sample_buf_1;
 			}
+            read_buffer_0 = !read_buffer_0;
 		}
 		
 		vTaskDelay(10);

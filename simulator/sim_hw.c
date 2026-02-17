@@ -261,3 +261,9 @@ uint8_t interrupterTimebase_ReadStatusRegister() {
     // TODO implement?
     return 0;
 }
+
+cystatus CyDmaChStatus(uint8 chHandle, uint8 * currentTd, uint8 * state) {
+    if (currentTd) { *currentTd = 0; }
+    if (state) { *state = 0; }
+    return CYRET_SUCCESS;
+}

@@ -95,13 +95,15 @@ typedef struct
 
 adc_sample_t ADC_sample_buf_0[ADC_BUFFER_CNT];
 adc_sample_t ADC_sample_buf_1[ADC_BUFFER_CNT];
-adc_sample_t *ADC_active_sample_buf = ADC_sample_buf_0;
 
-rms_t current_idc;
-rms_t voltage_bus;
-rms_t voltage_batt;
+static rms_t current_idc;
+static rms_t voltage_bus;
+static rms_t voltage_batt;
 
-uint8_t ADC_mux_ctl[4] = {0x05, 0x02, 0x03, 0x00};
+static uint8_t ADC_mux_ctl[4] = {0x05, 0x02, 0x03, 0x00};
+static uint8 ADC_DMA_Chan;
+static uint8 ADC_DMA_TD[2];
+
 static uint32_t drive_top_r_corrected = DRIVEV_R_TOP;
 
 static uint32_t vdriver_raw;
@@ -116,14 +118,22 @@ static uint32_t vdriver_raw;
 /* `#START USER_TASK_LOCAL_CODE` */
 
 CY_ISR(ADC_data_ready_ISR) {
-    if(ADC_active_sample_buf==ADC_sample_buf_0 ){
-        ADC_active_sample_buf = ADC_sample_buf_1;
-    } else {
-        ADC_active_sample_buf = ADC_sample_buf_0;
-    }
 	xSemaphoreGiveFromISR(adc_ready_Semaphore, NULL);
 }
 
+#ifndef SIMULATOR
+
+adc_sample_t* tsk_analog_get_readable_buffer() {
+    uint8_t current_td;
+    CyDmaChStatus(ADC_DMA_Chan, &current_td, NULL);
+    if (current_td == ADC_DMA_TD[0]) {
+        return ADC_sample_buf_1;
+    } else {
+        return ADC_sample_buf_0;
+    }
+}
+
+#endif
 
 uint32_t read_bus_mv(uint16_t raw_adc) {
 	uint32_t bus_voltage;
@@ -187,24 +197,25 @@ void calculate_rms(void) {
     
     uint32_t vdriver_accu=0;
     
+    adc_sample_t* buffer = tsk_analog_get_readable_buffer();
     for(uint8_t i=0;i<ADC_BUFFER_CNT;i++){
 
 		// read the battery voltage
-		tt.n.batt_v.value = read_bus_mv(rms_filter(&voltage_batt, ADC_active_sample_buf[i].v_batt)) / 1000;
+		tt.n.batt_v.value = read_bus_mv(rms_filter(&voltage_batt, buffer[i].v_batt)) / 1000;
 
 		// read the bus voltage
-		tt.n.bus_v.value = read_bus_mv(rms_filter(&voltage_bus, ADC_active_sample_buf[i].v_bus)) / 1000;
+		tt.n.bus_v.value = read_bus_mv(rms_filter(&voltage_bus, buffer[i].v_bus)) / 1000;
 
 		// read the battery current
         if(configuration.ct2_type==CT2_TYPE_CURRENT){
-		    tt.n.batt_i.value = (((uint32_t)rms_filter(&current_idc, ADC_active_sample_buf[i].i_bus) * params.idc_ma_count) / 100);
+		    tt.n.batt_i.value = (((uint32_t)rms_filter(&current_idc, buffer[i].i_bus) * params.idc_ma_count) / 100);
         }else{
-            tt.n.batt_i.value = ((((int32_t)rms_filter(&current_idc, ADC_active_sample_buf[i].i_bus-params.ct2_offset_cnt)) * params.idc_ma_count) / 100);
+            tt.n.batt_i.value = ((((int32_t)rms_filter(&current_idc, buffer[i].i_bus-params.ct2_offset_cnt)) * params.idc_ma_count) / 100);
         }
 
 		tt.n.avg_power.value = tt.n.batt_i.value * tt.n.bus_v.value / 10;
         
-        vdriver_accu += ADC_active_sample_buf[i].v_driver;  
+        vdriver_accu += buffer[i].v_driver;
         
 	}
     
@@ -226,9 +237,6 @@ void initialize_analogs(void) {
 
 	/* Variable declarations for ADC_DMA */
 	/* Move these variable declarations to the top of the function */
-	uint8 ADC_DMA_Chan;
-	uint8 ADC_DMA_TD[2];
-
 	ADC_DMA_Chan = ADC_DMA_DmaInitialize(ADC_DMA_BYTES_PER_BURST, ADC_DMA_REQUEST_PER_BURST, HI16(ADC_DMA_SRC_BASE), HI16(ADC_DMA_DST_BASE));
 	ADC_DMA_TD[0] = CyDmaTdAllocate();
     ADC_DMA_TD[1] = CyDmaTdAllocate();

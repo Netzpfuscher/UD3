@@ -160,8 +160,7 @@ void reconfig_charge_timer();
  * @return pdTRUE on success
  */
 uint8_t callback_pid(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
-
-extern adc_sample_t *ADC_active_sample_buf; //!< Pointer to active ADC buffer
+adc_sample_t* tsk_analog_get_readable_buffer();
 
 /**
  * @brief Read gate driver voltage in millivolts
@@ -177,7 +176,6 @@ void tsk_analog_recalc_drive_top(float factor);
 
 extern adc_sample_t ADC_sample_buf_0[ADC_BUFFER_CNT]; //!< ADC DMA buffer 0
 extern adc_sample_t ADC_sample_buf_1[ADC_BUFFER_CNT]; //!< ADC DMA buffer 1
-extern adc_sample_t *ADC_active_sample_buf;           //!< Pointer to active buffer
 extern SemaphoreHandle_t adc_ready_Semaphore;         //!< Semaphore signaled when ADC buffer ready
 
 /*

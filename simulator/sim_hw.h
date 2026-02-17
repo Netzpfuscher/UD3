@@ -1,6 +1,7 @@
 #ifndef SIM_HW_H
 #define SIM_HW_H
 
+#include "cytypes.h"
 #include <stdint.h>
 #include <string.h>
 
@@ -327,5 +328,10 @@ uint8_t EEPROM_1_ReadByte(uint16 address) ;
 void interrupterTimebase_WriteControlRegister(uint8_t value);
 uint8_t interrupterTimebase_ReadControlRegister();
 uint8_t interrupterTimebase_ReadStatusRegister();
+
+void vTaskEnterCritical();
+void vTaskExitCritical();
+
+cystatus CyDmaChStatus(uint8 chHandle, uint8 * currentTd, uint8 * state);
 
 #endif

@@ -64,10 +64,14 @@ uint32_t SYS_getCPULoadFine(TaskStatus_t * taskStats, uint32_t taskCount, uint32
     uint32_t currTask = 0;
     for(;currTask < taskCount; currTask++){
         if(strlen(taskStats[currTask].pcTaskName) == 4 && strcmp(taskStats[currTask].pcTaskName, "IDLE") == 0){
-            return configTICK_RATE_HZ - ((taskStats[currTask].ulRunTimeCounter) / sysTimeSec);
+            uint32_t idleAvg = (taskStats[currTask].ulRunTimeCounter) / sysTimeSec;
+            // Protect against underflow if IDLE consumed more than expected
+            if(idleAvg >= configTICK_RATE_HZ) return 0;
+            return configTICK_RATE_HZ - idleAvg;
         }
     }
-    return -1;
+    // IDLE task not found - assume 0% CPU usage (shouldn't happen)
+    return 0;
 }
 
 /**

@@ -181,6 +181,7 @@ typedef struct{
     StreamBufferHandle_t inputStream;
     char ** args;
     uint8_t argCount;
+    void * userData;
 } TermProgram;
 
 struct __TermCommandDescriptor__{

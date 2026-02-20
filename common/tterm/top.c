@@ -155,7 +155,11 @@ void TASK_main(void *pvParameters){
             ttprintf("%sbottom - %d\r\n%sTasks: \t%d\r\n%sCPU: \t%d,%d%%\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0), xTaskGetTickCount(), TERM_getVT100Code(_VT100_ERASE_LINE_END, 0), taskCount, TERM_getVT100Code(_VT100_ERASE_LINE_END, 0), cpuLoad / 10, cpuLoad % 10);
             
             uint32_t heapRemaining = xPortGetFreeHeapSize();
-            ttprintf("%sMem: \t%db total,\t %db free,\t %db used (%d%%)\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0), configTOTAL_HEAP_SIZE, heapRemaining, configTOTAL_HEAP_SIZE - heapRemaining, ((configTOTAL_HEAP_SIZE - heapRemaining) * 100) / configTOTAL_HEAP_SIZE);
+            if(configTOTAL_HEAP_SIZE > 0){
+                ttprintf("%sMem: \t%db total,\t %db free,\t %db used (%d%%)\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0), configTOTAL_HEAP_SIZE, heapRemaining, configTOTAL_HEAP_SIZE - heapRemaining, ((configTOTAL_HEAP_SIZE - heapRemaining) * 100) / configTOTAL_HEAP_SIZE);
+            }else{
+                ttprintf("%sMem: \t%db total,\t %db free,\t %db used\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0), configTOTAL_HEAP_SIZE, heapRemaining, configTOTAL_HEAP_SIZE - heapRemaining);
+            }
             ttprintf("%sSort: %s %s  (p/n/s/c/t/k/h to change, r to reverse)\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0),
                 state->sort_column == SORT_PID ? "PID" :
                 state->sort_column == SORT_NAME ? "Name" :
@@ -177,7 +181,10 @@ void TASK_main(void *pvParameters){
                     strncpy(name, taskStats[currTask].pcTaskName, configMAX_TASK_NAME_LEN);
                      uint32_t load=0;
                     if(sysTime>1000){
-                        load = (taskStats[currTask].ulRunTimeCounter) / (sysTime/configTICK_RATE_HZ);
+                        uint32_t sysTimeSec = sysTime/configTICK_RATE_HZ;
+                        if(sysTimeSec > 0){
+                            load = (taskStats[currTask].ulRunTimeCounter) / sysTimeSec;
+                        }
                     }
                     ttprintf("%s%d\r\x1b[%dC%s\r\x1b[%dC%s\r\x1b[%dC%d,%d\r\x1b[%dC%d\r\x1b[%dC%u\r\x1b[%dC%d\r\n", TERM_getVT100Code(_VT100_ERASE_LINE_END, 0), taskStats[currTask].xTaskNumber, 6, name, 7 + configMAX_TASK_NAME_LEN
                             , SYS_getTaskStateString(taskStats[currTask].eCurrentState), 20 + configMAX_TASK_NAME_LEN, load / 10, load % 10, 27 + configMAX_TASK_NAME_LEN, taskStats[currTask].ulRunTimeCounter

@@ -59,10 +59,12 @@
  */
 uint32_t SYS_getCPULoadFine(TaskStatus_t * taskStats, uint32_t taskCount, uint32_t sysTime){
     if(sysTime<500) return 0;
+    uint32_t sysTimeSec = sysTime/configTICK_RATE_HZ;
+    if(sysTimeSec == 0) return 0;
     uint32_t currTask = 0;
     for(;currTask < taskCount; currTask++){
         if(strlen(taskStats[currTask].pcTaskName) == 4 && strcmp(taskStats[currTask].pcTaskName, "IDLE") == 0){
-            return configTICK_RATE_HZ - ((taskStats[currTask].ulRunTimeCounter) / (sysTime/configTICK_RATE_HZ));
+            return configTICK_RATE_HZ - ((taskStats[currTask].ulRunTimeCounter) / sysTimeSec);
         }
     }
     return -1;

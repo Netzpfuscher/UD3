@@ -191,8 +191,7 @@ void init_average_filter(uint32_t *ptr, uint16_t init_val) {
 uint16_t average_filter(uint32_t *ptr, uint16_t sample) {
 	*ptr -= *ptr / SAMPLES_COUNT;
 	*ptr += (uint32_t)sample;
-	*ptr = *ptr / SAMPLES_COUNT;
-	return *ptr;
+	return *ptr / SAMPLES_COUNT;
 }
 
 void calculate_rms(void) {
@@ -266,6 +265,8 @@ void initialize_analogs(void) {
 	ADC_data_ready_StartEx(ADC_data_ready_ISR);
 
 	init_rms_filter(&current_idc, INITIAL);
+	init_rms_filter(&voltage_bus, INITIAL);
+	init_rms_filter(&voltage_batt, INITIAL);
     
     ADC_Start();
 }

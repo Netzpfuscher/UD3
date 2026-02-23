@@ -100,13 +100,7 @@ typedef struct {
 	uint16_t idc_ma_count;       /**< DC current measurement scaling factor (mA per ADC count) */
 	uint16_t ct2_offset_cnt;     /**< CT2 offset in ADC counts (for voltage measurement mode) */
 } parameters;
-
-/**
- * @brief Global runtime parameters
- *
- * Volatile because accessed by ISRs and DMA.
- */
-volatile parameters params;
+extern volatile parameters params;
 
 /**
  * @brief Feedback filter input value (raw period measurement)
@@ -121,18 +115,7 @@ extern uint16_t fb_filter_in;
  * Output from hardware digital filter, read by DMA to update PWMA period.
  */
 extern uint16_t fb_filter_out;
-
-/**
- * @brief CT1 current limit DAC values for different modes
- *
- * Array indexed by mode:
- * - [0]: Transient mode maximum current limit
- * - [1]: Transient mode maximum current limit (duplicate)
- * - [2]: QCW mode maximum current limit
- *
- * Written to CT1_dac via DMA to dynamically adjust current limits.
- */
-uint8_t ct1_dac_val[3];
+extern uint8_t ct1_dac_val[3];
 
 /**
  * @brief Initialize all ZCD and PWM hardware blocks

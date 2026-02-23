@@ -50,7 +50,8 @@
 #include "tasks/tsk_midi.h"
 #include "telemetry.h"
 
-/** @brief FreeRTOS timer for QCW auto-repeat mode */
+ramp_params volatile ramp;
+
 TimerHandle_t xQCW_Timer;
 
 /**

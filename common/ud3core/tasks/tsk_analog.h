@@ -95,7 +95,7 @@
     #define relay_read_charge_end(val) Relay2_Read()
 #endif
 
-volatile uint8 bus_command; //!< Current bus control command
+extern volatile uint8 bus_command;
 
 /**
  * @brief Initialize charging state machine

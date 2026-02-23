@@ -47,11 +47,8 @@
 #include <math.h>
 #include <stdlib.h>
 
-/** @brief Interrupter period register value */
-uint16_t int1_prd;
-
-/** @brief Interrupter compare register value */
-uint16_t int1_cmp;
+uint16_t int1_prd, int1_cmp;
+interrupter_params interrupter;
 
 /**
  * @brief Emergency stop - disable all interrupter output

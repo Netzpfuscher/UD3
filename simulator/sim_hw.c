@@ -150,7 +150,7 @@ void CyGetUniqueId(uint32_t * val){
 
 uint16_t ADC_therm_Offset=0;
 uint16_t ADC[2]={1800,1800};
-uint16_t* adc_data = &ADC[0];
+static uint16_t* adc_data = &ADC[0];
 void Therm_Mux_Select(uint8_t ch){
 	
 	if(tt.n.avg_power.value<1000){

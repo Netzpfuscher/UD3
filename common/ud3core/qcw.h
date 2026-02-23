@@ -62,8 +62,7 @@ typedef struct
 	uint8_t data[QCW_RAMP_SAMPLES]; /**< Current envelope values (0-255, 0=min current, 255=max) */
 } ramp_params;
 
-/** @brief Global QCW ramp parameters (volatile for ISR access) */
-ramp_params volatile ramp; //added volatile
+extern ramp_params volatile ramp;
 
 
 /* ========== Core QCW Control Functions ========== */

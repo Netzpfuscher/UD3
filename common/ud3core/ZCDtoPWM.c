@@ -52,19 +52,10 @@
 #include <device.h>
 #include <math.h>
 
-/**
- * @brief Feedback filter input buffer (raw period measurements)
- *
- * Initialized to 1 to avoid division by zero during startup.
- */
-uint16_t fb_filter_in = 1;
-
-/**
- * @brief Feedback filter output buffer (smoothed period)
- *
- * Initialized to 1 to avoid division by zero during startup.
- */
-uint16_t fb_filter_out = 1;
+volatile parameters params;
+uint16_t fb_filter_in=1;
+uint16_t fb_filter_out=1;
+uint8_t ct1_dac_val[3];
 
 void initialize_ZCD_to_PWM(void) {
 	//Start PWM generators for gate drive signals

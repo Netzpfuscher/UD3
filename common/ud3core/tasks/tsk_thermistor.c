@@ -107,7 +107,7 @@ void calc_table_128(int16_t t_table[], uint8_t bits, uint16_t table_size, uint32
 
 	int32_t i;
 	uint16_t w=0;
-	for(i=0;i<=max_cnt;i+=steps){
+	for(i=0;i<=max_cnt && w < table_size;i+=steps, ++w){
 		if(i>0){
 			r_cnt = u_ref_mv / max_cnt * i / meas_current;
 		}else{
@@ -118,9 +118,7 @@ void calc_table_128(int16_t t_table[], uint8_t bits, uint16_t table_size, uint32
 		temp_cnt *= 128;
 		
 		t_table[w] = temp_cnt;
-        if(w<table_size) w++;
-		
-	}	
+	}
 }
 
 

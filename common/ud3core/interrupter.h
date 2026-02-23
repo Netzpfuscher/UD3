@@ -125,8 +125,7 @@ typedef struct
 	TimerHandle_t xBurst_Timer;           /**< FreeRTOS timer handle for burst timing */
 } interrupter_params;
 
-/** @brief Global interrupter state */
-interrupter_params interrupter;
+extern interrupter_params interrupter;
 
 /** @brief Interrupter period register value (simulator/debug access only) */
 extern uint16_t int1_prd;

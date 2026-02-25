@@ -14,25 +14,33 @@
 #include "cli_basic.h"
 #include "clock.h"
 #include "SignalGenerator.h"
+#include <math.h>
 
 #define MAX_BUS_CHARGE 4000
+#define MAINS_FREQ 50.0
+#define BUS_RC_TIME_CONSTANT 0.1  // RC time constant in seconds (adjust for desired charge speed)
 
 static int bus_charge = 0;
 static int bus_i = 0;
+static float sine_phase = 0.0;
+static float bus_voltage = 0.0;  // Current bus voltage (smoothed)
 
 static void populate_buffer(adc_sample_t* ptr){
-    if (tt.n.bus_status.value == BUS_READY) {
-        bus_charge = MAX_BUS_CHARGE;
-    } else {
-        int const bus_target = tt.n.bus_status.value == BUS_OFF ? 0 : MAX_BUS_CHARGE;
-        if(bus_charge != bus_target) {
-            int const old_bus_charge = bus_charge;
-            bus_charge += (bus_target - bus_charge)/100;
-            if (bus_charge == old_bus_charge) {
-                bus_charge += (bus_charge > bus_target) ? -1 : 1;
-            }
-        }
-    }
+	float bus_target = 0.0;
+	
+	if (tt.n.bus_status.value == BUS_READY) {
+		bus_target = MAX_BUS_CHARGE;
+	} else if (tt.n.bus_status.value == BUS_CHARGING) {
+		bus_target = MAX_BUS_CHARGE;
+	} else {
+		bus_target = 0;
+	}
+	
+	// RC charging simulation: V(t) = V_target * (1 - e^(-t/RC))
+	// Using discrete exponential smoothing: V_new = V_old + (V_target - V_old) * alpha
+	// where alpha = dt / (RC + dt) approximates RC charging
+	float dt = 1.0 / ADC_SAMPLE_CLK;
+	float alpha = dt / (BUS_RC_TIME_CONSTANT + dt);
 	
 	if(tt.n.midi_voices.value && system_fault_Control){
 		float temp = (((55000 - param.pwd)/1000) * param.pw)/10;
@@ -45,8 +53,17 @@ static void populate_buffer(adc_sample_t* ptr){
 	}
 	
 	for(int i = 0; i<ADC_BUFFER_CNT;i++){
-		if(bus_charge<0) bus_charge =0;
-		ptr[i].v_bus = bus_charge;
+		// Update bus voltage with RC charging behavior
+		float rectified_sine = fabs(sin(sine_phase));
+		float instantaneous_target = bus_target * rectified_sine;
+		bus_voltage += (instantaneous_target - bus_voltage) * alpha;
+		
+		sine_phase += 2.0 * M_PI * MAINS_FREQ / ADC_SAMPLE_CLK;
+		if (sine_phase >= 2.0 * M_PI) {
+			sine_phase -= 2.0 * M_PI;
+		}
+		
+		ptr[i].v_bus = (int)bus_voltage;
 		ptr[i].i_bus = bus_i;
 	}
 	xSemaphoreGive(adc_ready_Semaphore);

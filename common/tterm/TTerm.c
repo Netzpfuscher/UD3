@@ -203,25 +203,33 @@ uint8_t TERM_processBuffer(uint8_t * data, uint16_t length, TERMINAL_HANDLE * ha
 							}
 						}else if(data[currPos] == 'C'){                      //cursor forward
 							if(handle->currEscSeqPos > 1){
-								handle->escSeqBuff[handle->currEscSeqPos] = 0;
+								if(handle->currEscSeqPos < TTERM_ESC_SEQ_BUFFER_SIZE){
+									handle->escSeqBuff[handle->currEscSeqPos] = 0;
+								}
 							}else{
 								TERM_handleInput(_VT100_CURSOR_FORWARD, handle);
 							}
 						}else if(data[currPos] == 'D'){                      //cursor backward
 							if(handle->currEscSeqPos > 1){
-								handle->escSeqBuff[handle->currEscSeqPos] = 0;
+								if(handle->currEscSeqPos < TTERM_ESC_SEQ_BUFFER_SIZE){
+									handle->escSeqBuff[handle->currEscSeqPos] = 0;
+								}
 							}else{
 								TERM_handleInput(_VT100_CURSOR_BACK, handle);
 							}
 						}else if(data[currPos] == 'A'){                      //cursor up
 							if(handle->currEscSeqPos > 1){
-								handle->escSeqBuff[handle->currEscSeqPos] = 0;
+								if(handle->currEscSeqPos < TTERM_ESC_SEQ_BUFFER_SIZE){
+									handle->escSeqBuff[handle->currEscSeqPos] = 0;
+								}
 							}else{
 								TERM_handleInput(_VT100_CURSOR_UP, handle);
 							}
 						}else if(data[currPos] == 'B'){                      //cursor down
 							if(handle->currEscSeqPos > 1){
-								handle->escSeqBuff[handle->currEscSeqPos] = 0;
+								if(handle->currEscSeqPos < TTERM_ESC_SEQ_BUFFER_SIZE){
+									handle->escSeqBuff[handle->currEscSeqPos] = 0;
+								}
 							}else{
 								TERM_handleInput(_VT100_CURSOR_DOWN, handle);
 							}
@@ -241,11 +249,17 @@ uint8_t TERM_processBuffer(uint8_t * data, uint16_t length, TERMINAL_HANDLE * ha
 								TERM_handleInput(_VT100_INVALID, handle);
 							}
 						}else{                      //others
-							handle->escSeqBuff[handle->currEscSeqPos+1] = 0;
+							if(handle->currEscSeqPos + 1 < TTERM_ESC_SEQ_BUFFER_SIZE){
+								handle->escSeqBuff[handle->currEscSeqPos+1] = 0;
+							}
 						}
 						handle->currEscSeqPos = 0xff;
 					}else{
-						handle->escSeqBuff[handle->currEscSeqPos++] = data[currPos];
+						if(handle->currEscSeqPos < TTERM_ESC_SEQ_BUFFER_SIZE - 1){
+							handle->escSeqBuff[handle->currEscSeqPos++] = data[currPos];
+						}else{
+							handle->currEscSeqPos = 0xff;  // Buffer full, reset parser
+						}
 					}
 				}
 			}else{
@@ -536,11 +550,11 @@ uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle){
 				handle->currBufferPosition ++;
 			}else{
 
-				//we are at the end -> just delete the current one
-				handle->inputBuffer[handle->currBufferPosition++] = c;
-				handle->inputBuffer[handle->currBufferPosition] = 0;
-				handle->currBufferLength ++;
-				if(handle->currBufferPosition < TERM_INPUTBUFFER_SIZE -1){
+				//we are at the end -> just append if space available
+				if(handle->currBufferPosition < TERM_INPUTBUFFER_SIZE - 2){
+					handle->inputBuffer[handle->currBufferPosition++] = c;
+					handle->inputBuffer[handle->currBufferPosition] = 0;
+					handle->currBufferLength++;
 					ttprintfEcho("%c", c);
 				}
 			}
@@ -567,11 +581,19 @@ void TERM_checkForCopy(TERMINAL_HANDLE * handle, COPYCHECK_MODE mode){
         
         if(handle->currAutocompleteCount != 0){
             char * dst = handle->inputBuffer + handle->autocompleteStart;
+            const char * src = handle->autocompleteBuffer[handle->currAutocompleteCount - 1];
+            uint32_t available = TERM_INPUTBUFFER_SIZE - handle->autocompleteStart - 1;
+            uint32_t srcLen = strlen(src);
 
-            if(strchr(handle->autocompleteBuffer[handle->currAutocompleteCount - 1], ' ') != 0){
-                sprintf(dst, "\"%s\"", handle->autocompleteBuffer[handle->currAutocompleteCount - 1]);
+            if(strchr(src, ' ') != 0){
+                // Need quotes: "<src>"
+                if(srcLen + 2 < available){
+                    sprintf(dst, "\"%s\"", src);
+                }
             }else{
-                strcpy(dst, handle->autocompleteBuffer[handle->currAutocompleteCount - 1]);
+                if(srcLen < available){
+                    strcpy(dst, src);
+                }
             }
             handle->currBufferLength = strlen(handle->inputBuffer);
             handle->currBufferPosition = handle->currBufferLength;
@@ -582,9 +604,19 @@ void TERM_checkForCopy(TERMINAL_HANDLE * handle, COPYCHECK_MODE mode){
     }
     
     if((mode & TERM_CHECK_HIST) && handle->currHistoryWritePosition != handle->currHistoryReadPosition){
-        strcpy(handle->inputBuffer, handle->historyBuffer[handle->currHistoryReadPosition]);
-        handle->currBufferLength = strlen(handle->inputBuffer);
-        handle->currBufferPosition = handle->currBufferLength;
+        const char * histEntry = handle->historyBuffer[handle->currHistoryReadPosition];
+        uint32_t histLen = strlen(histEntry);
+        if(histLen < TERM_INPUTBUFFER_SIZE - 1){
+            strcpy(handle->inputBuffer, histEntry);
+            handle->currBufferLength = histLen;
+            handle->currBufferPosition = histLen;
+        }else{
+            // Truncate if history entry too long
+            strncpy(handle->inputBuffer, histEntry, TERM_INPUTBUFFER_SIZE - 2);
+            handle->inputBuffer[TERM_INPUTBUFFER_SIZE - 2] = 0;
+            handle->currBufferLength = TERM_INPUTBUFFER_SIZE - 2;
+            handle->currBufferPosition = TERM_INPUTBUFFER_SIZE - 2;
+        }
         handle->currHistoryReadPosition = handle->currHistoryWritePosition;
     }
 }

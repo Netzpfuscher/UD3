@@ -244,7 +244,6 @@ static struct transport_frame *transport_fifo_push(struct min_context *self, uin
 }
 
 /** @brief Return the nth frame in the transport FIFO */
-/** @brief Return the nth frame in the transport FIFO */
 static struct transport_frame *transport_fifo_get(struct min_context *self, uint8_t n)
 {
     uint8_t idx = self->transport_fifo.head_idx;
@@ -407,12 +406,27 @@ static void valid_frame_received(struct min_context *self)
             // The payload byte specifies the number of NACKed frames: how many we want retransmitted because
             // they have gone missing.
             // But we need to make sure we don't accidentally ACK too many because of a stale ACK from an old session
+            
+            // Validate payload length before parsing
+            if(payload_len < 8) {
+                min_debug_print("ACK payload too short: %d bytes\r\n", payload_len);
+                break;
+            }
+            
             num_acked = seq - self->transport_fifo.sn_min;
             num_nacked  = ((uint32_t)payload[0]<<24);
 			num_nacked |= ((uint32_t)payload[1]<<16);
 			num_nacked |= ((uint32_t)payload[2]<<8);
 			num_nacked |= ((uint32_t)payload[3]);
-			num_nacked -= seq;
+			
+			// Prevent underflow: num_nacked should be >= seq
+			if(num_nacked < seq) {
+				min_debug_print("Invalid ACK: num_nacked=%u < seq=%u\r\n", num_nacked, seq);
+				num_nacked = 0;
+			} else {
+				num_nacked -= seq;
+			}
+			
             num_in_window = self->transport_fifo.sn_max - self->transport_fifo.sn_min;
 			
 			self->remote_rx_space  = ((uint32_t)payload[4]<<24);
@@ -420,7 +434,7 @@ static void valid_frame_received(struct min_context *self)
 			self->remote_rx_space |= ((uint32_t)payload[6]<<8);
 			self->remote_rx_space |= ((uint32_t)payload[7]);
             
-            if(payload_len>8){
+            if(payload_len >= 12){
                 uint32_t time;
                 time  = ((uint32_t)payload[8]<<24);
 			    time |= ((uint32_t)payload[9]<<16);
@@ -671,7 +685,7 @@ void min_poll(struct min_context *self, uint8_t *buf, uint32_t buf_len)
 			// There are new frames we can send; but don't even bother if there's no buffer space for them
 			struct transport_frame *frame = transport_fifo_get(self, window_size);
 			uint16_t wire_size = ON_WIRE_SIZE(frame->payload_len);
-			if(wire_size <= min_tx_space(self->port) && wire_size < self->remote_rx_space) {
+			if(wire_size <= min_tx_space(self->port) && wire_size <= self->remote_rx_space) {
 				frame->seq = self->transport_fifo.sn_max;
 				transport_fifo_send(self, frame);
 
@@ -687,22 +701,22 @@ void min_poll(struct min_context *self, uint8_t *buf, uint32_t buf_len)
 				if(now - oldest_frame->last_sent_time_ms >= TRANSPORT_FRAME_RETRANSMIT_TIMEOUT_MS) {
 					uint16_t wire_size = ON_WIRE_SIZE(oldest_frame->payload_len);
 					// Resending oldest frame if there's a chance there's enough space to send it
-					if(wire_size <= min_tx_space(self->port) && wire_size < self->remote_rx_space) {
+					if(wire_size <= min_tx_space(self->port) && wire_size <= self->remote_rx_space) {
 						transport_fifo_send(self, oldest_frame);
 					}
 				}
 			}
 		}
 
-	#ifndef DISABLE_TRANSPORT_ACK_RETRANSMIT
+#ifndef DISABLE_TRANSPORT_ACK_RETRANSMIT
 		// Periodically transmit the ACK with the rn value, unless the line has gone idle
 		if(now - self->transport_fifo.last_sent_ack_time_ms > TRANSPORT_ACK_RETRANSMIT_TIMEOUT_MS) {
 			if(remote_active) {
 				send_ack(self);
 			}
 		}
-	}
 #endif // DISABLE_TRANSPORT_ACK_RETRANSMIT
+	}
 #endif // TRANSPORT_PROTOCOL
 }
 

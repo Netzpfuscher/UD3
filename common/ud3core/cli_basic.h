@@ -203,6 +203,8 @@ struct parameter_entry_struct {
  */
 uint8_t updateDefaultFunction(parameter_entry * params, char * newValue, uint8_t index, TERMINAL_HANDLE * handle);
 
+uint8_t n_number(uint32_t n);
+
 /**
  * @brief Check parameter names for hash collisions
  * @param params Parameter array

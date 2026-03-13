@@ -324,7 +324,10 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"comp_dutyOffset" , configuration.compressor_maxDutyOffset  , 0      ,255    ,0      ,NULL              ,"Maximum Dutycycle offset before hard limit")
 };
 
-   
+uint8_t get_conf_size(void) {
+	return PARAM_SIZE(confparam);
+}
+
 /**
  * @brief Load configuration from EEPROM and apply all settings
  * @param handle Terminal handle for output messages

@@ -21,14 +21,12 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#if !defined(app_apps_H)
-#define app_apps_H
+#if !defined(app_wizard_H)
+#define app_wizard_H
 
 #include "TTerm.h"
 
-#include "top.h"
-#include "wizard.h"
-
-uint8_t REGISTER_apps(TermCommandDescriptor * desc);
+uint8_t REGISTER_wizard(TermCommandDescriptor * desc);
+uint8_t CMD_wizard(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 
 #endif

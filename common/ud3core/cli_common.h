@@ -261,4 +261,6 @@ extern cli_parameter param;
  */
 uint8_t complete_parameter_name(TERMINAL_HANDLE * handle, void * params);
 
+uint8_t get_conf_size(void);
+
 #endif

@@ -24,5 +24,6 @@
 
 uint8_t REGISTER_apps(TermCommandDescriptor * desc){
     REGISTER_top(desc);
+    REGISTER_wizard(desc);
     return pdTRUE;
 }

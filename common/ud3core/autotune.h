@@ -62,6 +62,8 @@
  */
 uint8_t CMD_tune(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 
+uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint8_t delay, TERMINAL_HANDLE * handle);
+
 #endif
 
 //[] END OF FILE

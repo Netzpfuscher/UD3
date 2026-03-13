@@ -134,6 +134,7 @@ static const char * AC_display[] = {
 };
 
 static const char * AC_eeprom[] = {
+    "check",
     "load",
     "save"
 };

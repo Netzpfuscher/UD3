@@ -1006,7 +1006,10 @@ uint8_t CMD_set(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
  */
 uint8_t CMD_eeprom(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     if(argCount==0 || strcmp(args[0], "-?") == 0){
-        ttprintf("Usage: eeprom [load|save]\r\n");
+        ttprintf("Usage: eeprom [load|save|check]\r\n");
+        ttprintf("  load  - Load configuration from EEPROM\r\n");
+        ttprintf("  save  - Save configuration to EEPROM\r\n");
+        ttprintf("  check - Check EEPROM content with debug output\r\n");
         return TERM_CMD_EXIT_SUCCESS;
     }
     EEPROM_1_UpdateTemperature();
@@ -1023,6 +1026,232 @@ uint8_t CMD_eeprom(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
         configure_interrupter();
 	    initialize_charging();
 	    configure_ZCD_to_PWM();
+	}else if(strcmp(args[0], "check") == 0){
+		// EEPROM content check with extensive debug output
+		uint16_t addr = 0;
+		uint8_t data[DATASET_BYTES];
+		uint32_t temp_hash = 0;
+		uint16_t param_num = 0;
+		uint16_t total_bytes = 0;
+		
+		ttprintf("\r\n=== EEPROM Content Check ===\r\n");
+		ttprintf("EEPROM Size: %u bytes\r\n", CY_EEPROM_SIZE);
+		ttprintf("Row Size: %u bytes\r\n", CY_EEPROM_SIZEOF_ROW);
+		ttprintf("Total Rows: %u\r\n\r\n", CY_EEPROM_SIZE / CY_EEPROM_SIZEOF_ROW);
+		
+		// Read and validate header
+		ttprintf("--- Header Check ---\r\n");
+		ttprintf("Address 0x%04X: ", addr);
+		for(int i = 0; i < DATASET_BYTES; i++){
+			data[i] = EEPROM_READ_BYTE(addr);
+			ttprintf("0x%02X ", data[i]);
+			addr++;
+		}
+		ttprintf("\r\n");
+		
+		if(data[0] == 0x00 && data[1] == 0xC0 && data[2] == 0xFF && data[3] == 0xEE){
+			ttprintf("Header VALID (0x00 0xC0 0xFF 0xEE)\r\n\r\n");
+		}else{
+			ttprintf("Header INVALID! Expected: 0x00 0xC0 0xFF 0xEE\r\n");
+			ttprintf("No valid dataset found in EEPROM\r\n\r\n");
+			system_fault_Control = sfflag;
+			return TERM_CMD_EXIT_SUCCESS;
+		}
+		
+		total_bytes = addr;
+		
+		// Parse parameter entries
+		ttprintf("--- Parameter Entries ---\r\n");
+		while(addr < CY_EEPROM_SIZE){
+			// Read parameter header (4 bytes hash + 1 byte size)
+			for(int i = 0; i < DATASET_BYTES; i++){
+				data[i] = EEPROM_READ_BYTE(addr);
+				addr++;
+			}
+			
+			// Check for trailer
+			if(data[0] == 0xDE && data[1] == 0xAD && data[2] == 0xBE && data[3] == 0xEF){
+				ttprintf("\r\n--- Trailer Found ---\r\n");
+				ttprintf("Address 0x%04X: 0x%02X 0x%02X 0x%02X 0x%02X (DEADBEEF)\r\n", 
+						addr - DATASET_BYTES, data[0], data[1], data[2], data[3]);
+				total_bytes = addr;
+				break;
+			}
+			
+			// Reconstruct hash
+			temp_hash = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
+			uint8_t param_size = data[4];
+			
+			param_num++;
+			ttprintf("\r\nParam #%u @ 0x%04X:\r\n", param_num, addr - DATASET_BYTES);
+			ttprintf("  Hash: 0x%08lX ", temp_hash);
+			
+			// Try to find matching parameter
+			uint8_t found = 0;
+			for(uint8_t i = 0; i < PARAM_SIZE(confparam); i++){
+				if(confparam[i].parameter_type == PARAM_CONFIG){
+					uint32_t calc_hash = djb_hash(confparam[i].name);
+					if(calc_hash == temp_hash){
+						ttprintf("[%s]\r\n", confparam[i].name);
+						found = 1;
+						
+						// Check size match
+						if(confparam[i].size != param_size){
+							ttprintf("  SIZE MISMATCH! EEPROM: %u, Code: %u\r\n", 
+									param_size, confparam[i].size);
+						}else{
+							ttprintf("  Size: %u bytes (OK)\r\n", param_size);
+						}
+						
+						// Display data value
+						ttprintf("  Data: ");
+						for(uint8_t j = 0; j < param_size; j++){
+							uint8_t byte_val = EEPROM_READ_BYTE(addr);
+							ttprintf("0x%02X ", byte_val);
+							addr++;
+						}
+						ttprintf("\r\n");
+						
+						// Display interpreted value
+						addr -= param_size; // Go back to read value
+						switch(confparam[i].type){
+							case TYPE_UNSIGNED:
+								if(param_size == 1){
+									uint8_t val = EEPROM_READ_BYTE(addr);
+									if(confparam[i].div){
+										ttprintf("  Value: %u.%u\r\n", val / confparam[i].div, val % confparam[i].div);
+									}else{
+										ttprintf("  Value: %u\r\n", val);
+									}
+								}else if(param_size == 2){
+									uint16_t val = EEPROM_READ_BYTE(addr) | (EEPROM_READ_BYTE(addr + 1) << 8);
+									if(confparam[i].div){
+										ttprintf("  Value: %u.%u\r\n", val / confparam[i].div, val % confparam[i].div);
+									}else{
+										ttprintf("  Value: %u\r\n", val);
+									}
+								}else if(param_size == 4){
+									uint32_t val = EEPROM_READ_BYTE(addr) | (EEPROM_READ_BYTE(addr + 1) << 8) | 
+												   (EEPROM_READ_BYTE(addr + 2) << 16) | (EEPROM_READ_BYTE(addr + 3) << 24);
+									if(confparam[i].div){
+										ttprintf("  Value: %lu.%lu\r\n", val / confparam[i].div, val % confparam[i].div);
+									}else{
+										ttprintf("  Value: %lu\r\n", val);
+									}
+								}
+								break;
+							case TYPE_SIGNED:
+								if(param_size == 1){
+									int8_t val = (int8_t)EEPROM_READ_BYTE(addr);
+									if(confparam[i].div){
+										ttprintf("  Value: %d.%d\r\n", val / confparam[i].div, abs(val % confparam[i].div));
+									}else{
+										ttprintf("  Value: %d\r\n", val);
+									}
+								}else if(param_size == 2){
+									int16_t val = (int16_t)(EEPROM_READ_BYTE(addr) | (EEPROM_READ_BYTE(addr + 1) << 8));
+									if(confparam[i].div){
+										ttprintf("  Value: %d.%d\r\n", val / confparam[i].div, abs(val % confparam[i].div));
+									}else{
+										ttprintf("  Value: %d\r\n", val);
+									}
+								}else if(param_size == 4){
+									int32_t val = (int32_t)(EEPROM_READ_BYTE(addr) | (EEPROM_READ_BYTE(addr + 1) << 8) | 
+															(EEPROM_READ_BYTE(addr + 2) << 16) | (EEPROM_READ_BYTE(addr + 3) << 24));
+									if(confparam[i].div){
+										ttprintf("  Value: %ld.%ld\r\n", val / confparam[i].div, abs(val % confparam[i].div));
+									}else{
+										ttprintf("  Value: %ld\r\n", val);
+									}
+								}
+								break;
+							case TYPE_FLOAT:
+								if(param_size == 4){
+									uint32_t raw = EEPROM_READ_BYTE(addr) | (EEPROM_READ_BYTE(addr + 1) << 8) | 
+												   (EEPROM_READ_BYTE(addr + 2) << 16) | (EEPROM_READ_BYTE(addr + 3) << 24);
+									float *fptr = (float*)&raw;
+									ttprintf("  Value: %f\r\n", *fptr);
+								}
+								break;
+							default:
+								ttprintf("  Type: %u\r\n", confparam[i].type);
+								break;
+						}
+						addr += param_size; // Move forward
+						break;
+					}
+				}
+			}
+			
+			if(!found){
+				ttprintf("[UNKNOWN - not in current config]\r\n");
+				ttprintf("  Size: %u bytes\r\n", param_size);
+				ttprintf("  Data: ");
+				for(uint8_t j = 0; j < param_size; j++){
+					uint8_t byte_val = EEPROM_READ_BYTE(addr);
+					ttprintf("0x%02X ", byte_val);
+					addr++;
+				}
+				ttprintf("\r\n");
+			}
+			
+			total_bytes += DATASET_BYTES + param_size;
+		}
+		
+		// Summary
+		ttprintf("\r\n=== Summary ===\r\n");
+		ttprintf("Total parameters found: %u\r\n", param_num);
+		ttprintf("Total bytes used: %u / %u (%.1f%%)\r\n", 
+				total_bytes, CY_EEPROM_SIZE, (float)total_bytes * 100.0f / (float)CY_EEPROM_SIZE);
+		ttprintf("Free space: %u bytes\r\n", CY_EEPROM_SIZE - total_bytes);
+		
+		// Check for missing parameters in EEPROM
+		ttprintf("\r\n--- Checking for missing parameters ---\r\n");
+		uint16_t config_param_count = 0;
+		uint16_t missing_count = 0;
+		for(uint8_t i = 0; i < PARAM_SIZE(confparam); i++){
+			if(confparam[i].parameter_type == PARAM_CONFIG){
+				config_param_count++;
+				uint32_t calc_hash = djb_hash(confparam[i].name);
+				uint8_t found_in_eeprom = 0;
+				
+				// Search EEPROM for this parameter
+				addr = DATASET_BYTES; // Skip header
+				while(addr < CY_EEPROM_SIZE){
+					for(int j = 0; j < DATASET_BYTES; j++){
+						data[j] = EEPROM_READ_BYTE(addr);
+						addr++;
+					}
+					
+					if(data[0] == 0xDE && data[1] == 0xAD && data[2] == 0xBE && data[3] == 0xEF){
+						break;
+					}
+					
+					temp_hash = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
+					if(temp_hash == calc_hash){
+						found_in_eeprom = 1;
+						break;
+					}
+					addr += data[4]; // Skip parameter data
+				}
+				
+				if(!found_in_eeprom){
+					ttprintf("  MISSING: [%s] (hash: 0x%08lX)\r\n", confparam[i].name, calc_hash);
+					missing_count++;
+				}
+			}
+		}
+		
+		ttprintf("\r\nConfig parameters in code: %u\r\n", config_param_count);
+		if(missing_count > 0){
+			ttprintf("Missing from EEPROM: %u\r\n", missing_count);
+			ttprintf("\r\nWARNING: EEPROM dataset incomplete!\r\n");
+			ttprintf("Run 'eeprom save' to update EEPROM with current configuration.\r\n");
+		}else{
+			ttprintf("All config parameters found in EEPROM.\r\n");
+		}
+		
+		ttprintf("\r\n=== Check Complete ===\r\n");
 	}
     
     system_fault_Control = sfflag;

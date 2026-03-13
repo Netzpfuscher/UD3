@@ -120,7 +120,7 @@ typedef struct {
 } MAP_ENTRY_WIRE_DATA_t;
 
 
-average_buff sample;
+average_buff sample = {0};
 
 /**
  * @brief Computes moving average for time synchronization
@@ -130,8 +130,8 @@ average_buff sample;
  */
 int average (average_buff *buffer, int new_sample){
 	buffer->total -= buffer->samples[buffer->i];
-	buffer->total += new_sample;
 	buffer->samples[buffer->i] = new_sample;
+	buffer->total += new_sample;
 	buffer->i = (buffer->i+1) % ITEMS;
 	buffer->last = buffer->total / ITEMS;
 	return buffer->last;

@@ -135,6 +135,11 @@ enum port{
 
 #define CYDEV_EE_SIZE 0x00000800u          /**< Total EEPROM size (2048 bytes) */
 #define CY_EEPROM_SIZE              (CYDEV_EE_SIZE)
+
+/** @brief EEPROM read byte macro */
+#define EEPROM_READ_BYTE(x) EEPROM_1_ReadByte(x)
+/** @brief EEPROM write row macro */
+#define EEPROM_WRITE_ROW(x,y) EEPROM_1_Write(y,x)
 /** @} */
 
    

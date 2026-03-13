@@ -139,11 +139,11 @@ static void wizard_draw_header(TERMINAL_HANDLE *handle, uint8_t section_idx) {
 	ttprintf(WIZ_COLOR_TITLE);
 	ttprintf("  UD3 Configuration Wizard\r\n");
 	ttprintf(WIZ_COLOR_RESET);
-	ttprintf("  ════════════════════════════════════════════════════\r\n");
+	ttprintf("  ====================================================\r\n");
 
 	ttprintf(WIZ_COLOR_STEP "  Step %d/%d: " WIZ_COLOR_HEADER "%s\r\n" WIZ_COLOR_RESET,
 		section_idx + 1, NUM_SECTIONS, sections[section_idx].title);
-	ttprintf("  ────────────────────────────────────────────────────\r\n\r\n");
+	ttprintf("  ----------------------------------------------------\r\n\r\n");
 }
 
 static void wizard_draw_params(TERMINAL_HANDLE *handle, uint8_t section_idx, int8_t highlight) {
@@ -284,7 +284,7 @@ uint8_t CMD_wizard(TERMINAL_HANDLE *handle, uint8_t argCount, char **args) {
 	TERM_sendVT100Code(handle, _VT100_CLS, 0);
 	TERM_sendVT100Code(handle, _VT100_CURSOR_POS1, 0);
 	ttprintf(WIZ_COLOR_TITLE "\r\n  Wizard Complete\r\n" WIZ_COLOR_RESET);
-	ttprintf("  ════════════════════════════════════════════════════\r\n\r\n");
+	ttprintf("  ================================================\r\n\r\n");
 	ttprintf("  " WIZ_COLOR_HELP "Save configuration to EEPROM? [y/n]" WIZ_COLOR_RESET " ");
 
 	uint8_t c = getch(handle, portMAX_DELAY);
@@ -298,7 +298,7 @@ uint8_t CMD_wizard(TERMINAL_HANDLE *handle, uint8_t argCount, char **args) {
 	}
 
 	ttprintf("\r\n  " WIZ_COLOR_TITLE "Primary Autotune" WIZ_COLOR_RESET "\r\n");
-	ttprintf("  ────────────────────────────────────────────────────\r\n");
+	ttprintf("  ---------------------------------------------------\r\n");
 	ttprintf("\r\n" WIZ_COLOR_ERR "  WARNING: The Tesla coil will be energized!" WIZ_COLOR_RESET "\r\n");
 	ttprintf("  " WIZ_COLOR_HELP "The bridge will hard-switch to sweep frequencies" WIZ_COLOR_RESET "\r\n");
 	ttprintf("  " WIZ_COLOR_HELP "around start_freq (" WIZ_COLOR_VALUE);

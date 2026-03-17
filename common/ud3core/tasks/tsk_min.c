@@ -681,7 +681,9 @@ void tsk_min_TaskProc(void *pvParameters) {
     
 
     // Init MIN Protocol
-    min_init_context(&min_ctx, 0);
+    if (!min_init_context(&min_ctx, 0)) {
+        alarm_push(ALM_PRIO_CRITICAL, "MIN CRC LUT corrupt", 0);
+    }
     
     for(uint8_t i=0;i<NUM_MIN_CON;i++){
         socket_info[i].socket=SOCKET_DISCONNECTED;   

@@ -25,6 +25,8 @@
 #include "cli_common.h"
 #include "cli_basic.h"
 #include "autotune.h"
+#include "telemetry.h"
+#include "tasks/tsk_analog.h"
 #include "string.h"
 #include "stdlib.h"
 
@@ -32,6 +34,7 @@
 #define APP_DESCRIPTION "configuration wizard"
 
 #define INPUT_BUF_SIZE 32
+#define WIZ_BUS_TIMEOUT_MS 30000
 #define WIZ_COLOR_TITLE   "\033[1;36m"
 #define WIZ_COLOR_PARAM   "\033[33m"
 #define WIZ_COLOR_VALUE   "\033[1;32m"
@@ -55,7 +58,7 @@ static const char *sec_resonant[] = {"start_freq", "start_cycles", "lead_time"};
 static const char *sec_safety[] = {"max_tr_pw", "max_tr_prf", "max_tr_duty", "max_qcw_pw", "max_qcw_duty"};
 static const char *sec_current[] = {"max_tr_current", "min_tr_current", "max_qcw_current", "ct1_ratio", "ct1_burden", "ct2_ratio", "ct2_burden"};
 static const char *sec_power[] = {"ps_scheme", "r_bus", "charge_delay", "min_fb_current"};
-static const char *sec_temp[] = {"temp1_max", "temp1_setpoint", "temp2_max"};
+static const char *sec_temp[] = {"temp1_max", "temp1_setpoint", "temp2_max", "pid_temp_mode", "pid_temp_set", "pid_temp_p", "pid_temp_i", "ntc_b", "ntc_r25", "ntc_idac"};
 static const char *sec_hardware[] = {"hw_rev", "vdrive", "baudrate"};
 
 static const wizard_section_t sections[] = {
@@ -69,6 +72,55 @@ static const wizard_section_t sections[] = {
 };
 
 #define NUM_SECTIONS (sizeof(sections) / sizeof(wizard_section_t))
+
+typedef struct {
+	const char *param_name;
+	const char *detail;
+} wizard_help_t;
+
+static const wizard_help_t param_help[] = {
+	{"ud_name",          "A short label for this coil used in status messages and Teslaterm display (max 15 chars)."},
+	{"qcw_coil",         "Set to 1 if this is a QCW (quasi-continuous wave) coil. Set to 0 for standard DRSSTC operation."},
+	{"start_freq",       "Resonant frequency of the primary tank circuit in kHz (1 decimal place, e.g. 250.0 = 2500). Must match the actual LC resonance. Used as the centre frequency for phase-locked feedback."},
+	{"start_cycles",     "Number of bridge switching cycles to run before phase-locked-loop feedback takes over. Increase if the coil fails to start."},
+	{"lead_time",        "Gate lead time in nanoseconds - how far ahead of the zero-crossing the gate signal is fired to compensate for driver propagation delay."},
+	{"max_tr_pw",        "Hard upper limit for transient (burst) pulse width in microseconds. Protects IGBTs from exceeding their single-pulse energy rating."},
+	{"max_tr_prf",       "Maximum transient pulse repetition frequency in Hz. Together with max_tr_duty this limits average power."},
+	{"max_tr_duty",      "Maximum allowed duty cycle for transient mode in percent (1 decimal place). Limits average power and thermal stress."},
+	{"max_qcw_pw",       "Maximum QCW pulse width in milliseconds (2 decimal places). Limits peak energy in a single QCW ramp."},
+	{"max_qcw_duty",     "Maximum duty cycle for QCW mode in percent (1 decimal place). Limits average power during QCW playback."},
+	{"max_tr_current",   "Peak primary current limit for transient mode in amps. The interrupter will cut the pulse if CT1 reads above this value."},
+	{"min_tr_current",   "Minimum primary current in amps for scaling the volume in MIDI/SID mode."},
+	{"max_qcw_current",  "Peak primary current limit for QCW mode in amps. Acts as an over-current trip for QCW ramps."},
+	{"ct1_ratio",        "Turns ratio of CT1 (the feedback/current sense transformer on the primary). Enter the number of primary turns the CT is wound around."},
+	{"ct1_burden",       "Burden resistor value for CT1 in ohms (1 decimal place). Together with ct1_ratio this sets the current-to-voltage scale for feedback and protection."},
+	{"ct2_ratio",        "Turns ratio of CT2 (the bus/DC-link current sense transformer). Used for bus current measurement and protection."},
+	{"ct2_burden",       "Burden resistor value for CT2 in ohms (1 decimal place). Sets the scale for DC bus current measurement."},
+	{"ps_scheme",        "Power supply topology: 0=none, 1=fixed delay, 2=voltage controlled relay, 3=NA, 4=NA, 5=NA. Choose the scheme that matches your PSU hardware."},
+	{"r_bus",            "Series input resistor value for the bus voltage measurement in kilo-ohms (3 decimal places). Used to scale the ADC reading to actual bus voltage."},
+	{"charge_delay",     "Time in milliseconds to wait after the charge relay closes before enabling the interrupter. Allows bus capacitors to reach full voltage."},
+	{"min_fb_current",   "Minimum CT1 current (in amps) at which the controller switches from open-loop start-up to closed-loop phase-locked feedback."},
+	{"temp1_max",        "Maximum allowed temperature for sensor 1 (heatsink/IGBT) in degrees Celsius. Exceeding this trips a fault and kills the interrupter."},
+	{"temp1_setpoint",   "Target temperature setpoint for sensor 1 in degrees Celsius. The cooling fan PWM will ramp up as temperature approaches this value."},
+	{"temp2_max",        "Maximum allowed temperature for sensor 2 (e.g. resonant capacitor bank) in degrees Celsius. Exceeding this trips a fault."},
+	{"pid_temp_mode",    "Temperature PID controller mode: 0=disabled, 1=PID channel 3 using sensor 1, 2=PID channel 4 using sensor 1, 3=PID channel 3 using sensor 2, 4=PID channel 4 using sensor 2."},
+	{"pid_temp_set",     "Target temperature setpoint for the PID controller in degrees Celsius. The PID will regulate fan power to hold this temperature."},
+	{"pid_temp_p",       "Proportional gain (Kp) for the temperature PID controller. Increase to respond faster; too high will cause oscillation."},
+	{"pid_temp_i",       "Integral gain (Ki) for the temperature PID controller. Eliminates steady-state error; too high will cause windup and overshoot."},
+	{"ntc_b",            "Beta coefficient of the NTC thermistor in Kelvin. Found in the thermistor datasheet (typical values 3000-4500 K)."},
+	{"ntc_r25",          "Resistance of the NTC thermistor at 25 degrees Celsius in kilo-ohms (3 decimal places). Found in the thermistor datasheet."},
+	{"ntc_idac",         "Calibrated IDAC current in microamps used to bias the NTC thermistor. Run the 'ntc' calibration command to set this automatically."},
+	{"hw_rev",           "Hardware revision of the UD3 board: 0 = v3.0 to v3.1a, 1 = v3.1b, 2 = v3.1c. Selects the correct drive voltage divider constants."},
+	{"vdrive",           "Gate driver supply voltage in volts, adjusted via the on-board digipot. Typical range 12-18 V. Higher voltage increases switching speed but also switching losses."},
+	{"baudrate",         "UART baud rate for the serial interface in bits per second. Change requires a reconnect. Common values: 115200, 921600, 2000000."},
+};
+
+static const char *wizard_get_help(const char *name) {
+	for (uint8_t i = 0; i < sizeof(param_help) / sizeof(wizard_help_t); i++) {
+		if (strcmp(param_help[i].param_name, name) == 0) return param_help[i].detail;
+	}
+	return NULL;
+}
 
 static int8_t find_param_index(const char *name) {
 	for (uint8_t i = 0; i < get_conf_size(); i++) {
@@ -208,6 +260,11 @@ static uint8_t wizard_edit_param(TERMINAL_HANDLE *handle, uint8_t section_idx, u
 	if (pidx < 0) return 1;
 	parameter_entry *p = &confparam[pidx];
 
+	const char *detail = wizard_get_help(p->name);
+	if (detail) {
+		ttprintf("\r\n  " WIZ_COLOR_HELP "%s" WIZ_COLOR_RESET "\r\n", detail);
+	}
+
 	ttprintf("\r\n  " WIZ_COLOR_PARAM "%s" WIZ_COLOR_RESET " = ", p->name);
 	ttprintf(WIZ_COLOR_VALUE);
 	wizard_print_value(handle, p);
@@ -311,6 +368,27 @@ uint8_t CMD_wizard(TERMINAL_HANDLE *handle, uint8_t argCount, char **args) {
 	if (c == 'y' || c == 'Y') {
 		ttprintf("\r\n\r\n");
 
+		ttprintf("  " WIZ_COLOR_HELP "Activating bus..." WIZ_COLOR_RESET "\r\n");
+		bus_command = BUS_COMMAND_ON;
+
+		uint32_t elapsed = 0;
+		while (tt.n.bus_status.value != BUS_READY && elapsed < WIZ_BUS_TIMEOUT_MS) {
+			vTaskDelay(pdMS_TO_TICKS(100));
+			elapsed += 100;
+			ttprintf("  " WIZ_COLOR_RANGE "Bus: %s  %uV  (%ums)\r" WIZ_COLOR_RESET,
+				tt.n.bus_status.value == BUS_CHARGING ? "charging" : "waiting ",
+				tt.n.bus_v.value, elapsed);
+		}
+		ttprintf("\r\n");
+
+		if (tt.n.bus_status.value != BUS_READY) {
+			ttprintf("  " WIZ_COLOR_ERR "Bus did not become ready (timeout). Autotune aborted." WIZ_COLOR_RESET "\r\n");
+			bus_command = BUS_COMMAND_OFF;
+			goto done;
+		}
+
+		ttprintf("  " WIZ_COLOR_OK "Bus ready: %uV" WIZ_COLOR_RESET "\r\n\r\n", tt.n.bus_v.value);
+
 		uint16_t center = configuration.start_freq;
 		uint16_t f_min = (center > 200) ? (center - 200) : 1;
 		uint16_t f_max = center + 200;
@@ -320,6 +398,8 @@ uint8_t CMD_wizard(TERMINAL_HANDLE *handle, uint8_t argCount, char **args) {
 			f_min / 10, f_min % 10, f_max / 10, f_max % 10);
 
 		uint16_t peak = run_adc_sweep(f_min, f_max, param.tune_pw, param.tune_delay, handle);
+
+		bus_command = BUS_COMMAND_OFF;
 
 		if (peak > 0) {
 			ttprintf("\r\n  " WIZ_COLOR_OK "Peak found at: %u.%ukHz" WIZ_COLOR_RESET "\r\n", peak / 10, peak % 10);

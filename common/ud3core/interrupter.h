@@ -320,18 +320,6 @@ void interrupter_unkill(void);
  * ============================================================================ */
 
 /**
- * @brief Synthesizer monitor command - displays real-time synth status
- * @param handle Terminal handle
- * @param argCount Argument count
- * @param args Command arguments
- * @return TERM_CMD_EXIT_SUCCESS
- *
- * Shows voice status for MIDI or SID synthesizer, compressor state, and
- * note mappings. Updates display every 1 second until Ctrl+C pressed.
- */
-uint8_t CMD_SynthMon(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
-
-/**
  * @brief Callback when synthesizer filter settings change
  * @param params Parameter array
  * @param index Parameter index

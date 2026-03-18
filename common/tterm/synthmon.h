@@ -21,15 +21,11 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#if !defined(app_apps_H)
-#define app_apps_H
+#if !defined(app_synthmon_H)
+#define app_synthmon_H
 
 #include "TTerm.h"
 
-#include "top.h"
-#include "wizard.h"
-#include "synthmon.h"
-
-uint8_t REGISTER_apps(TermCommandDescriptor * desc);
+uint8_t REGISTER_synthmon(TermCommandDescriptor *desc);
 
 #endif

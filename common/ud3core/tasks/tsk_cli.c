@@ -269,7 +269,6 @@ void tsk_cli_Start(void) {
         TERM_addCommandConstAC(CMD_tr, "tr", "Transient [start/stop]", AC_start_stop,&TERM_cmdListHead);
         TERM_addCommandConstAC(CMD_con, "con","Prints the connections",AC_con,&TERM_cmdListHead);
         TERM_addCommandConstAC(CMD_alarms, "alarms","Alarms [get/roll/reset]",AC_alarms,&TERM_cmdListHead);
-        TERM_addCommand(CMD_SynthMon, "synthmon","Synthesizer status",0,&TERM_cmdListHead);
         TERM_addCommand(CMD_bootloader, "bootloader","Enters the bootloader",0,&TERM_cmdListHead);
         TERM_addCommandConstAC(CMD_bus, "bus","bus [on/off]",AC_on_off,&TERM_cmdListHead);
         TERM_addCommand(CMD_calib, "calib","Calibrate Vdriver",0,&TERM_cmdListHead);

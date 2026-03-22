@@ -40,6 +40,7 @@
 
 #define BAR_WIDTH  14
 #define COL_W      66
+#define EL         TERM_getVT100Code(_VT100_ERASE_LINE_END, 0)
 
 uint8_t CMD_synthmon_main(TERMINAL_HANDLE *handle, uint8_t argCount, char **args);
 void TASK_synthmon(void *pvParameters);
@@ -100,10 +101,11 @@ static void print_hline(TERMINAL_HANDLE *handle) {
 	for (uint8_t i = 1; i < COL_W - 1; i++) line[i] = '-';
 	line[COL_W - 1] = '+';
 	line[COL_W] = '\0';
-	ttprintf("%s%s%s\r\n",
+	ttprintf("%s%s%s%s\r\n",
 		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_CYAN),
 		line,
-		TERM_getVT100Code(_VT100_RESET_ATTRIB, 0));
+		TERM_getVT100Code(_VT100_RESET_ATTRIB, 0),
+		EL);
 }
 
 static void print_section_header(TERMINAL_HANDLE *handle, const char *title) {
@@ -112,14 +114,15 @@ static void print_section_header(TERMINAL_HANDLE *handle, const char *title) {
 	uint8_t trail_len = COL_W - 6 - tlen;
 	for (uint8_t i = 0; i < trail_len; i++) trail[i] = '-';
 	trail[trail_len] = '\0';
-	ttprintf("%s+-- %s%s%s %s%s+%s\r\n",
+	ttprintf("%s+-- %s%s%s %s%s+%s%s\r\n",
 		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_CYAN),
 		TERM_getVT100Code(_VT100_BRIGHT, 0),
 		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_WHITE),
 		title,
 		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_CYAN),
 		trail,
-		TERM_getVT100Code(_VT100_RESET_ATTRIB, 0));
+		TERM_getVT100Code(_VT100_RESET_ATTRIB, 0),
+		EL);
 }
 
 /* ── MIDI display ─────────────────────────────────────────────────────────── */
@@ -132,10 +135,11 @@ static const char *note_name(uint8_t note) {
 static void print_midi(TERMINAL_HANDLE *handle) {
 	print_section_header(handle, "MIDI Voices");
 
-	ttprintf("%s| %sV# Note  Ch Freq bar         PW bar           Vol bar%s\r\n",
+	ttprintf("%s| %sV# Note  Ch Freq bar         PW bar           Vol bar%s%s\r\n",
 		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_CYAN),
 		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_YELLOW),
-		TERM_getVT100Code(_VT100_RESET_ATTRIB, 0));
+		TERM_getVT100Code(_VT100_RESET_ATTRIB, 0),
+		EL);
 	print_hline(handle);
 
 	for (uint8_t i = 0; i < SIGGEN_VOICECOUNT; i++) {
@@ -157,9 +161,9 @@ static void print_midi(TERMINAL_HANDLE *handle) {
 		ttprintf(" ");
 		print_bar(handle, v->volumeCurrent, 0xffff, active ? _VT100_GREEN : _VT100_BLUE);
 		if (v->hypervoiceCount > 0) {
-			ttprintf(" H%u\r\n", v->hypervoiceCount);
+			ttprintf(" H%u%s\r\n", v->hypervoiceCount, EL);
 		} else {
-			ttprintf("\r\n");
+			ttprintf("%s\r\n", EL);
 		}
 	}
 
@@ -167,7 +171,7 @@ static void print_midi(TERMINAL_HANDLE *handle) {
 	for (uint8_t i = 0; i < MIDI_CHANNELCOUNT; i += 2) {
 		const char *n0 = Mapper_getProgrammName(i);
 		const char *n1 = (i + 1 < MIDI_CHANNELCOUNT) ? Mapper_getProgrammName(i + 1) : NULL;
-			ttprintf("%s|%s %s[%2d]%s %-22s  %s[%2d]%s %-22s%s|%s\r\n",
+			ttprintf("%s|%s %s[%2d]%s %-22s  %s[%2d]%s %-22s%s|%s%s\r\n",
 			TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_CYAN),
 			TERM_getVT100Code(_VT100_RESET_ATTRIB, 0),
 			TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_YELLOW), i,
@@ -177,7 +181,8 @@ static void print_midi(TERMINAL_HANDLE *handle) {
 			TERM_getVT100Code(_VT100_RESET_ATTRIB, 0),
 			n1 ? n1 : "-",
 			TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_CYAN),
-			TERM_getVT100Code(_VT100_RESET_ATTRIB, 0));
+			TERM_getVT100Code(_VT100_RESET_ATTRIB, 0),
+			EL);
 	}
 	print_hline(handle);
 }
@@ -197,10 +202,11 @@ static const char *adsr_state_name(uint8_t s) {
 static void print_sid(TERMINAL_HANDLE *handle) {
 	print_section_header(handle, "SID Channels");
 
-	ttprintf("%s| %s Ch  Wave     ADSR  Freq(dHz)            Vol%s\r\n",
+	ttprintf("%s| %s Ch  Wave     ADSR  Freq(dHz)            Vol%s%s\r\n",
 		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_CYAN),
 		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_YELLOW),
-		TERM_getVT100Code(_VT100_RESET_ATTRIB, 0));
+		TERM_getVT100Code(_VT100_RESET_ATTRIB, 0),
+		EL);
 	print_hline(handle);
 
 	for (uint8_t i = 0; i < N_SIDCHANNEL; i++) {
@@ -217,13 +223,13 @@ static void print_sid(TERMINAL_HANDLE *handle) {
 			adsr_state_name(ch->adsrState));
 		ttprintf("%s", TERM_getVT100Code(_VT100_RESET_ATTRIB, 0));
 		print_bar(handle, ch->frequency_dHz, 200000, active ? _VT100_CYAN : _VT100_BLUE);
-		ttprintf(" %6u dHz\r\n", ch->frequency_dHz);
+		ttprintf(" %6u dHz%s\r\n", ch->frequency_dHz, EL);
 
 		ttprintf("%s|%s                     Vol: ",
 			TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_CYAN),
 			TERM_getVT100Code(_VT100_RESET_ATTRIB, 0));
 		print_bar(handle, ch->currentEnvelopeVolume, 0xffff, active ? _VT100_GREEN : _VT100_BLUE);
-		ttprintf(" %04x  mVol:%d\r\n", ch->currentEnvelopeVolume, SID_filterData.channelVolume[i]);
+		ttprintf(" %04x  mVol:%d%s\r\n", ch->currentEnvelopeVolume, SID_filterData.channelVolume[i], EL);
 
 		print_hline(handle);
 	}
@@ -251,7 +257,7 @@ static void print_compressor(TERMINAL_HANDLE *handle) {
 		TERM_getVT100Code(_VT100_RESET_ATTRIB, 0),
 		sname);
 	print_bar(handle, gain, COMP_UNITYGAIN, gain_color);
-	ttprintf(" %5u  maxDuty:%u\r\n", gain, maxDuty);
+	ttprintf(" %5u  maxDuty:%u%s\r\n", gain, maxDuty, EL);
 	print_hline(handle);
 }
 
@@ -299,11 +305,11 @@ static void print_banner(TERMINAL_HANDLE *handle, uint8_t synth) {
 					TERM_getVT100Code(_VT100_RESET_ATTRIB, 0));
 			}
 		}
-		ttprintf("\r\n");
+		ttprintf("%s\r\n", EL);
 	}
-    if (!synth){
-    	print_hline(handle);
-    }
+	if (!synth) {
+		print_hline(handle);
+	}
 }
 
 /* ── main task ────────────────────────────────────────────────────────────── */
@@ -313,10 +319,10 @@ void TASK_synthmon(void *pvParameters) {
 	char c = 0;
 
 	TERM_sendVT100Code(handle, _VT100_CURSOR_DISABLE, 0);
+	TERM_sendVT100Code(handle, _VT100_CLS, 0);
 
 	do {
-		TERM_sendVT100Code(handle, _VT100_CLS, 0);
-		TERM_sendVT100Code(handle, _VT100_CURSOR_POS1, 0);
+		TERM_setCursorPos(handle, 1, 1);
 
 		uint8_t synth = param.synth;
 
@@ -329,12 +335,14 @@ void TASK_synthmon(void *pvParameters) {
 			print_midi(handle);
 			print_compressor(handle);
 		} else {
-			ttprintf("%s  %sNo synthesizer active%s\r\n",
-				TERM_getVT100Code(_VT100_ERASE_LINE_END, 0),
+			ttprintf("  %sNo synthesizer active%s%s\r\n",
 				TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_RED),
-				TERM_getVT100Code(_VT100_RESET_ATTRIB, 0));
+				TERM_getVT100Code(_VT100_RESET_ATTRIB, 0),
+				EL);
 			print_hline(handle);
 		}
+
+		ttprintf("\x1b[J");
 
 		xStreamBufferReceive(handle->currProgram->inputStream, &c, sizeof(c), pdMS_TO_TICKS(500));
 	} while (c != CTRL_C);

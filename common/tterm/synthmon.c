@@ -22,6 +22,7 @@
 */
 
 #include "synthmon.h"
+#include <stdio.h>
 #include "string.h"
 #include "system.h"
 #include "SignalGenerator.h"
@@ -375,14 +376,62 @@ uint8_t INPUT_synthmon(TERMINAL_HANDLE *handle, uint16_t c) {
 
 /* ── NVM map browser ──────────────────────────────────────────────────────── */
 
-#define NVMMON_MAX_MAPS  64
+#define NVMMON_MAX_MAPS   64
 #define NVMMON_MODE_LIST   0
 #define NVMMON_MODE_DETAIL 1
+#define NVMMON_MODE_BLOCK  2
+
+#define NVMMON_CHAIN_DEPTH 32
+
+static const char *vms_type_name(VMS_MODTYPE t) {
+	switch (t) {
+		case VMS_EXP:     return "EXP    ";
+		case VMS_EXP_INV: return "EXP_INV";
+		case VMS_LIN:     return "LIN    ";
+		case VMS_SIN:     return "SIN    ";
+		case VMS_JUMP:    return "JUMP   ";
+		default:          return "?      ";
+	}
+}
+
+static const char *vms_target_name(KNOWN_VALUE t) {
+	switch (t) {
+		case onTime:        return "onTime";
+		case maxOnTime:     return "maxOnTime";
+		case minOnTime:     return "minOnTime";
+		case otCurrent:     return "otCurrent";
+		case otTarget:      return "otTarget";
+		case otFactor:      return "otFactor";
+		case frequency:     return "frequency";
+		case freqCurrent:   return "freqCurrent";
+		case freqTarget:    return "freqTarget";
+		case freqFactor:    return "freqFactor";
+		case noise:         return "noise";
+		case pTime:         return "pTime";
+		case circ1:         return "circ1";
+		case circ2:         return "circ2";
+		case circ3:         return "circ3";
+		case circ4:         return "circ4";
+		case HyperVoice_Count:  return "HV_Count";
+		case HyperVoice_Phase:  return "HV_Phase";
+		case HyperVoice_Volume: return "HV_Volume";
+		case volume:        return "volume";
+		case volumeTarget:  return "volumeTarget";
+		case volumeCurrent: return "volumeCurrent";
+		case volumeFactor:  return "volumeFactor";
+		default:
+			if (t >= CC_102 && t <= CC_119) return "CC_10x";
+			return "?";
+	}
+}
 
 typedef struct {
-	uint8_t mode;
-	int16_t selected;
-	int16_t map_count;
+	uint8_t  mode;
+	int16_t  selected;
+	int16_t  map_count;
+	int16_t  entry_selected;
+	uint16_t block_chain[NVMMON_CHAIN_DEPTH];
+	uint8_t  chain_depth;
 	MAPTABLE_HEADER_t *maps[NVMMON_MAX_MAPS];
 } nvmmon_state_t;
 
@@ -432,7 +481,7 @@ static void print_nvmmon_list(TERMINAL_HANDLE *handle, nvmmon_state_t *state) {
 	}
 
 	print_hline(handle);
-	ttprintf("%s|%s [\u2191\u2193] navigate  [Enter/\u2192] view entries  [q] quit%s%s\r\n",
+	ttprintf("%s|%s [UP/DOWN] navigate  [Enter/->] view entries  [q] quit%s%s\r\n",
 		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_CYAN),
 		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_WHITE),
 		TERM_getVT100Code(_VT100_RESET_ATTRIB, 0), EL);
@@ -456,12 +505,15 @@ static void print_nvmmon_detail(TERMINAL_HANDLE *handle, nvmmon_state_t *state) 
 		TERM_getVT100Code(_VT100_RESET_ATTRIB, 0), EL);
 	print_hline(handle);
 
-	for (uint32_t i = 0; i < m->listEntries; i++) {
+	for (int16_t i = 0; i < (int16_t)m->listEntries; i++) {
 		MAPTABLE_ENTRY_t *e = MAPPER_ENTRY_FROM_HEADER(m, i);
-		ttprintf("%s|%s  %s%s%3d - %3d%s  %6d   %3u   0x%02x   0x%04x%s%s\r\n",
+		uint8_t sel = (i == state->entry_selected);
+		ttprintf("%s|%s%s%s%s%3d - %3d%s  %6d   %3u   0x%02x   0x%04x%s%s\r\n",
 			TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_CYAN),
-			TERM_getVT100Code(_VT100_RESET_ATTRIB, 0),
-			TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_GREEN),
+			sel ? TERM_getVT100Code(_VT100_BRIGHT, 0) : "",
+			sel ? TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_GREEN) :
+			      TERM_getVT100Code(_VT100_RESET_ATTRIB, 0),
+			sel ? "> " : "  ",
 			note_name(e->startNote), e->startNote,
 			e->endNote,
 			TERM_getVT100Code(_VT100_RESET_ATTRIB, 0),
@@ -473,8 +525,158 @@ static void print_nvmmon_detail(TERMINAL_HANDLE *handle, nvmmon_state_t *state) 
 	}
 
 	print_hline(handle);
-	ttprintf("%s|%s [\u2190/b] back  [q] quit%s%s\r\n",
+	ttprintf("%s|%s [UP/DOWN] navigate  [Enter/->] view block chain  [<-/b] back  [q] quit%s%s\r\n",
 		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_CYAN),
+		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_WHITE),
+		TERM_getVT100Code(_VT100_RESET_ATTRIB, 0), EL);
+	print_hline(handle);
+}
+
+static void print_nvmmon_block(TERMINAL_HANDLE *handle, nvmmon_state_t *state) {
+	uint32_t blk_cnt = nvm_get_blk_cnt(NVM_blocks);
+	uint16_t id = state->block_chain[state->chain_depth];
+
+	char title[32];
+	snprintf(title, sizeof(title), "Block %u", id);
+	print_section_header(handle, title);
+
+	if (id == VMS_BLOCKID_INVALID || id == 0 || id > blk_cnt) {
+		ttprintf("%s|%s  (invalid block ID 0x%04x)%s%s\r\n",
+			TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_CYAN),
+			TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_RED),
+			id,
+			TERM_getVT100Code(_VT100_RESET_ATTRIB, 0), EL);
+		print_hline(handle);
+		ttprintf("%s|%s [<-/b] back  [q] quit%s%s\r\n",
+			TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_CYAN),
+			TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_WHITE),
+			TERM_getVT100Code(_VT100_RESET_ATTRIB, 0), EL);
+		print_hline(handle);
+		return;
+	}
+
+	const VMS_Block_t *blk = &NVM_blocks[id];
+
+	ttprintf("%s| %sType%s     %-9s %sTarget%s %-14s %sPeriod%s %u ms%s%s\r\n",
+		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_CYAN),
+		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_YELLOW),
+		TERM_getVT100Code(_VT100_RESET_ATTRIB, 0),
+		vms_type_name(blk->type),
+		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_YELLOW),
+		TERM_getVT100Code(_VT100_RESET_ATTRIB, 0),
+		vms_target_name(blk->target),
+		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_YELLOW),
+		TERM_getVT100Code(_VT100_RESET_ATTRIB, 0),
+		blk->periodMs,
+		TERM_getVT100Code(_VT100_RESET_ATTRIB, 0), EL);
+
+	ttprintf("%s|%s  targetFactor: %-10d  param1: %-10d  param2: %-10d  param3: %-10d%s%s\r\n",
+		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_CYAN),
+		TERM_getVT100Code(_VT100_RESET_ATTRIB, 0),
+		blk->targetFactor, blk->param1, blk->param2, blk->param3,
+		TERM_getVT100Code(_VT100_RESET_ATTRIB, 0), EL);
+
+	ttprintf("%s|%s  behavior: %-8s  flags: 0x%08x%s%s\r\n",
+		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_CYAN),
+		TERM_getVT100Code(_VT100_RESET_ATTRIB, 0),
+		(blk->behavior == NORMAL) ? "NORMAL" : "INVERTED",
+		blk->flags,
+		TERM_getVT100Code(_VT100_RESET_ATTRIB, 0), EL);
+
+	print_hline(handle);
+
+	ttprintf("%s| %s offBlock%s   ",
+		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_CYAN),
+		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_YELLOW),
+		TERM_getVT100Code(_VT100_RESET_ATTRIB, 0));
+	if (blk->offBlock == VMS_BLOCKID_INVALID) {
+		ttprintf("%s----%s",
+			TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_WHITE),
+			TERM_getVT100Code(_VT100_RESET_ATTRIB, 0));
+	} else {
+		ttprintf("%s#%-4u%s",
+			TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_CYAN),
+			blk->offBlock,
+			TERM_getVT100Code(_VT100_RESET_ATTRIB, 0));
+	}
+	ttprintf("%s%s\r\n", TERM_getVT100Code(_VT100_RESET_ATTRIB, 0), EL);
+
+	ttprintf("%s| %snextBlocks%s  ",
+		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_CYAN),
+		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_YELLOW),
+		TERM_getVT100Code(_VT100_RESET_ATTRIB, 0));
+	for (uint8_t i = 0; i < VMS_MAX_BRANCHES; i++) {
+		if (blk->nextBlocks[i] == VMS_BLOCKID_INVALID) {
+			ttprintf("[%s----%s] ",
+				TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_WHITE),
+				TERM_getVT100Code(_VT100_RESET_ATTRIB, 0));
+		} else {
+			ttprintf("[%s#%-3u%s] ",
+				TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_GREEN),
+				blk->nextBlocks[i],
+				TERM_getVT100Code(_VT100_RESET_ATTRIB, 0));
+		}
+	}
+	ttprintf("%s%s\r\n", TERM_getVT100Code(_VT100_RESET_ATTRIB, 0), EL);
+
+	print_section_header(handle, "Block Chain");
+	ttprintf("%s| %s",
+		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_CYAN),
+		TERM_getVT100Code(_VT100_RESET_ATTRIB, 0));
+	const VMS_Block_t *cur = blk;
+	uint16_t cur_id = id;
+	uint8_t steps = 0;
+	uint8_t visited[64];
+	memset(visited, 0, sizeof(visited));
+	while (cur_id != VMS_BLOCKID_INVALID && cur_id != 0 && cur_id <= blk_cnt && steps < 20) {
+		if (cur_id < 64) {
+			if (visited[cur_id]) {
+				ttprintf("%s#%u (loop)%s",
+					TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_RED),
+					cur_id,
+					TERM_getVT100Code(_VT100_RESET_ATTRIB, 0));
+				break;
+			}
+			visited[cur_id] = 1;
+		}
+		ttprintf("%s#%u%s[%s%s%s]%s",
+			TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_GREEN),
+			cur_id,
+			TERM_getVT100Code(_VT100_RESET_ATTRIB, 0),
+			TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_YELLOW),
+			vms_type_name(cur->type),
+			TERM_getVT100Code(_VT100_RESET_ATTRIB, 0),
+			TERM_getVT100Code(_VT100_RESET_ATTRIB, 0));
+		uint16_t next = cur->nextBlocks[0];
+		if (next == VMS_BLOCKID_INVALID || next == 0 || next > blk_cnt) {
+			ttprintf(" %s-->%s end",
+				TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_WHITE),
+				TERM_getVT100Code(_VT100_RESET_ATTRIB, 0));
+			break;
+		}
+		ttprintf(" %s-->%s ",
+			TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_WHITE),
+			TERM_getVT100Code(_VT100_RESET_ATTRIB, 0));
+		cur_id = next;
+		cur = &NVM_blocks[cur_id];
+		steps++;
+	}
+	ttprintf("%s%s\r\n", TERM_getVT100Code(_VT100_RESET_ATTRIB, 0), EL);
+
+	print_hline(handle);
+	ttprintf("%s|%s [<-/b] back  ",
+		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_CYAN),
+		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_WHITE));
+	for (uint8_t i = 0; i < VMS_MAX_BRANCHES; i++) {
+		if (blk->nextBlocks[i] != VMS_BLOCKID_INVALID) {
+			ttprintf("%s[%u] next[%u]  %s",
+				TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_GREEN),
+				i + 1,
+				blk->nextBlocks[i],
+				TERM_getVT100Code(_VT100_RESET_ATTRIB, 0));
+		}
+	}
+	ttprintf("%s[q] quit%s%s\r\n",
 		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_WHITE),
 		TERM_getVT100Code(_VT100_RESET_ATTRIB, 0), EL);
 	print_hline(handle);
@@ -495,8 +697,10 @@ void TASK_nvmmon(void *pvParameters) {
 
 		if (state->mode == NVMMON_MODE_LIST) {
 			print_nvmmon_list(handle, state);
-		} else {
+		} else if (state->mode == NVMMON_MODE_DETAIL) {
 			print_nvmmon_detail(handle, state);
+		} else {
+			print_nvmmon_block(handle, state);
 		}
 
 		ttprintf("\x1b[J");
@@ -522,19 +726,71 @@ uint8_t INPUT_nvmmon(TERMINAL_HANDLE *handle, uint16_t c) {
 		case _VT100_CURSOR_UP:
 			if (state->mode == NVMMON_MODE_LIST && state->selected > 0)
 				state->selected--;
+			else if (state->mode == NVMMON_MODE_DETAIL && state->entry_selected > 0)
+				state->entry_selected--;
 			return TERM_CMD_CONTINUE;
 		case _VT100_CURSOR_DOWN:
 			if (state->mode == NVMMON_MODE_LIST && state->selected < state->map_count - 1)
 				state->selected++;
+			else if (state->mode == NVMMON_MODE_DETAIL) {
+				MAPTABLE_HEADER_t *m = state->maps[state->selected];
+				if (state->entry_selected < (int16_t)m->listEntries - 1)
+					state->entry_selected++;
+			}
 			return TERM_CMD_CONTINUE;
 		case '\r':
 		case _VT100_CURSOR_FORWARD:
-			if (state->mode == NVMMON_MODE_LIST && state->map_count > 0)
+			if (state->mode == NVMMON_MODE_LIST && state->map_count > 0) {
+				state->entry_selected = 0;
 				state->mode = NVMMON_MODE_DETAIL;
+			} else if (state->mode == NVMMON_MODE_DETAIL) {
+				MAPTABLE_HEADER_t *m = state->maps[state->selected];
+				MAPTABLE_ENTRY_t *e = MAPPER_ENTRY_FROM_HEADER(m, state->entry_selected);
+				if (e->data.startblockID != VMS_BLOCKID_INVALID) {
+					state->chain_depth = 0;
+					state->block_chain[0] = e->data.startblockID;
+					state->mode = NVMMON_MODE_BLOCK;
+				}
+			} else if (state->mode == NVMMON_MODE_BLOCK) {
+				uint16_t cur_id = state->block_chain[state->chain_depth];
+				uint32_t blk_cnt = nvm_get_blk_cnt(NVM_blocks);
+				if (cur_id != VMS_BLOCKID_INVALID && cur_id != 0 && cur_id <= blk_cnt) {
+					const VMS_Block_t *blk = &NVM_blocks[cur_id];
+					uint16_t next = blk->nextBlocks[0];
+					if (next != VMS_BLOCKID_INVALID && next != 0 && next <= blk_cnt
+					    && state->chain_depth + 1 < NVMMON_CHAIN_DEPTH) {
+						state->chain_depth++;
+						state->block_chain[state->chain_depth] = next;
+					}
+				}
+			}
+			return TERM_CMD_CONTINUE;
+		case '1': case '2': case '3': case '4':
+			if (state->mode == NVMMON_MODE_BLOCK) {
+				uint8_t branch = (uint8_t)(c - '1');
+				uint16_t cur_id = state->block_chain[state->chain_depth];
+				uint32_t blk_cnt = nvm_get_blk_cnt(NVM_blocks);
+				if (cur_id != VMS_BLOCKID_INVALID && cur_id != 0 && cur_id <= blk_cnt) {
+					const VMS_Block_t *blk = &NVM_blocks[cur_id];
+					uint16_t next = blk->nextBlocks[branch];
+					if (next != VMS_BLOCKID_INVALID && next != 0 && next <= blk_cnt
+					    && state->chain_depth + 1 < NVMMON_CHAIN_DEPTH) {
+						state->chain_depth++;
+						state->block_chain[state->chain_depth] = next;
+					}
+				}
+			}
 			return TERM_CMD_CONTINUE;
 		case 'b':
 		case _VT100_CURSOR_BACK:
-			state->mode = NVMMON_MODE_LIST;
+			if (state->mode == NVMMON_MODE_BLOCK) {
+				if (state->chain_depth > 0)
+					state->chain_depth--;
+				else
+					state->mode = NVMMON_MODE_DETAIL;
+			} else {
+				state->mode = NVMMON_MODE_LIST;
+			}
 			return TERM_CMD_CONTINUE;
 		default:
 			return TERM_CMD_CONTINUE;
@@ -547,6 +803,9 @@ uint8_t CMD_nvmmon_main(TERMINAL_HANDLE *handle, uint8_t argCount, char **args) 
 	state->mode = NVMMON_MODE_LIST;
 	state->selected = 0;
 	state->map_count = 0;
+	state->entry_selected = 0;
+	state->chain_depth = 0;
+	memset(state->block_chain, 0xff, sizeof(state->block_chain));
 
 	TermProgram *prog = pvPortMalloc(sizeof(TermProgram));
 	if (!prog) {

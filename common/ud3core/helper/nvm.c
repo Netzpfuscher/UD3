@@ -184,19 +184,15 @@ void VMS_print_blk(TERMINAL_HANDLE* handle,uint32_t id ,const VMS_Block_t* blk, 
     for(int i=0;i<VMS_MAX_BRANCHES;i++){
         if(blk->nextBlocks[i] == VMS_BLOCKID_INVALID){
             ttprintf("%*sNext %i: No Block\r\n", indent, "", i);   
-        }else if(blk->nextBlocks[i] < (VMS_Block_t*)4096){
-            ttprintf("%*sNext %i: ID %u\r\n", indent, "", i, blk->nextBlocks[i]);
         }else{
-            ttprintf("%*sNext %i: 0x%08X\r\n", indent, "", i, blk->nextBlocks[i]);
+            ttprintf("%*sNext %i: ID %u\r\n", indent, "", i, blk->nextBlocks[i]);
         }
     }
     
     if(blk->offBlock == VMS_BLOCKID_INVALID){
         ttprintf("%*soffBlock: No Block\r\n", indent, "");   
-    }else if(blk->offBlock < (VMS_Block_t*)4096){
-        ttprintf("%*soffBlock: ID %u\r\n", indent, "", blk->offBlock);
     }else{
-        ttprintf("%*soffBlock: 0x%08X\r\n", indent, "", blk->offBlock);
+        ttprintf("%*soffBlock: ID %u\r\n", indent, "", blk->offBlock);
     }
     
 
@@ -380,7 +376,7 @@ uint8_t CMD_nvm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
         uint32_t n_blocks = nvm_get_blk_cnt((const VMS_Block_t*) NVM_blocks);
         ttprintf("NVM block count: %u\r\n", n_blocks);
         
-        for(uint32_t i=0;i<n_blocks;i++){
+        for(uint32_t i=1;i<=n_blocks;i++){
             VMS_print_blk(handle,i ,(const VMS_Block_t*)&NVM_blocks[i], 4);
         }
         return TERM_CMD_EXIT_SUCCESS;
@@ -390,7 +386,7 @@ uint8_t CMD_nvm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
         int32_t n_blocks = nvm_get_blk_cnt((const VMS_Block_t*) NVM_blocks);
         
         int32_t num = atoi(args[1]);
-        if(num < 0 || num > n_blocks){
+        if(num < 1 || num > n_blocks){
             ttprintf("Invalid block\r\n");
             return TERM_CMD_EXIT_SUCCESS; 
         }

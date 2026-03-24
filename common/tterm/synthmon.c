@@ -33,6 +33,7 @@
 #include "NoteMapper.h"
 #include "DutyCompressor.h"
 #include "tasks/tsk_sid.h"
+#include "nvm.h"
 
 #define APP_NAME        "synthmon"
 #define APP_DESCRIPTION "Synthesizer status monitor"
@@ -46,8 +47,13 @@ uint8_t CMD_synthmon_main(TERMINAL_HANDLE *handle, uint8_t argCount, char **args
 void TASK_synthmon(void *pvParameters);
 uint8_t INPUT_synthmon(TERMINAL_HANDLE *handle, uint16_t c);
 
+uint8_t CMD_nvmmon_main(TERMINAL_HANDLE *handle, uint8_t argCount, char **args);
+void TASK_nvmmon(void *pvParameters);
+uint8_t INPUT_nvmmon(TERMINAL_HANDLE *handle, uint16_t c);
+
 uint8_t REGISTER_synthmon(TermCommandDescriptor *desc) {
 	TERM_addCommand(CMD_synthmon_main, APP_NAME, APP_DESCRIPTION, 0, desc);
+	TERM_addCommand(CMD_nvmmon_main, "nvmmon", "Interactive NVM map browser", 0, desc);
 	return pdTRUE;
 }
 
@@ -365,4 +371,201 @@ uint8_t INPUT_synthmon(TERMINAL_HANDLE *handle, uint16_t c) {
 		default:
 			return TERM_CMD_CONTINUE;
 	}
+}
+
+/* ── NVM map browser ──────────────────────────────────────────────────────── */
+
+#define NVMMON_MAX_MAPS  64
+#define NVMMON_MODE_LIST   0
+#define NVMMON_MODE_DETAIL 1
+
+typedef struct {
+	uint8_t mode;
+	int16_t selected;
+	int16_t map_count;
+	MAPTABLE_HEADER_t *maps[NVMMON_MAX_MAPS];
+} nvmmon_state_t;
+
+static void nvm_build_index(nvmmon_state_t *state) {
+	state->map_count = 0;
+	MAPTABLE_HEADER_t *map = (MAPTABLE_HEADER_t *)NVM_mapMem;
+	const uint8_t *map_end = (const uint8_t *)NVM_mapMem + MAPMEM_SIZE;
+	while (state->map_count < NVMMON_MAX_MAPS) {
+		if ((const uint8_t *)map >= map_end) break;
+		if (!map->listEntries) break;
+		state->maps[state->map_count++] = map;
+		MAPTABLE_ENTRY_t *ptr = MAPPER_ENTRY_FROM_HEADER(map, 0);
+		ptr += map->listEntries;
+		map = (MAPTABLE_HEADER_t *)ptr;
+	}
+}
+
+static void print_nvmmon_list(TERMINAL_HANDLE *handle, nvmmon_state_t *state) {
+	print_section_header(handle, "NVM Map Browser");
+	ttprintf("%s| %s #   Prog range  Entries  Name%s%s\r\n",
+		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_CYAN),
+		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_YELLOW),
+		TERM_getVT100Code(_VT100_RESET_ATTRIB, 0), EL);
+	print_hline(handle);
+
+	if (state->map_count == 0) {
+		ttprintf("%s|%s  (no maps in NVM)%s%s\r\n",
+			TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_CYAN),
+			TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_RED),
+			TERM_getVT100Code(_VT100_RESET_ATTRIB, 0), EL);
+	} else {
+		for (int16_t i = 0; i < state->map_count; i++) {
+			MAPTABLE_HEADER_t *m = state->maps[i];
+			uint8_t sel = (i == state->selected);
+			ttprintf("%s|%s%s%s %2d  %3d - %3d   %3d      %-18s%s%s\r\n",
+				TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_CYAN),
+				sel ? TERM_getVT100Code(_VT100_BRIGHT, 0) : "",
+				sel ? TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_GREEN) :
+				      TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_WHITE),
+				sel ? "> " : "  ",
+				i,
+				m->programNumberStart, m->programNumberEnd,
+				m->listEntries,
+				m->name,
+				TERM_getVT100Code(_VT100_RESET_ATTRIB, 0), EL);
+		}
+	}
+
+	print_hline(handle);
+	ttprintf("%s|%s [\u2191\u2193] navigate  [Enter/\u2192] view entries  [q] quit%s%s\r\n",
+		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_CYAN),
+		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_WHITE),
+		TERM_getVT100Code(_VT100_RESET_ATTRIB, 0), EL);
+	print_hline(handle);
+}
+
+static void print_nvmmon_detail(TERMINAL_HANDLE *handle, nvmmon_state_t *state) {
+	MAPTABLE_HEADER_t *m = state->maps[state->selected];
+
+	print_section_header(handle, m->name);
+	ttprintf("%s|%s Program: %u - %u   Entries: %u%s%s\r\n",
+		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_CYAN),
+		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_WHITE),
+		m->programNumberStart, m->programNumberEnd, m->listEntries,
+		TERM_getVT100Code(_VT100_RESET_ATTRIB, 0), EL);
+	print_hline(handle);
+
+	ttprintf("%s| %s Note range  FreqOff    OT  Flags  BlockID%s%s\r\n",
+		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_CYAN),
+		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_YELLOW),
+		TERM_getVT100Code(_VT100_RESET_ATTRIB, 0), EL);
+	print_hline(handle);
+
+	for (uint32_t i = 0; i < m->listEntries; i++) {
+		MAPTABLE_ENTRY_t *e = MAPPER_ENTRY_FROM_HEADER(m, i);
+		ttprintf("%s|%s  %s%s%3d - %3d%s  %6d   %3u   0x%02x   0x%04x%s%s\r\n",
+			TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_CYAN),
+			TERM_getVT100Code(_VT100_RESET_ATTRIB, 0),
+			TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_GREEN),
+			note_name(e->startNote), e->startNote,
+			e->endNote,
+			TERM_getVT100Code(_VT100_RESET_ATTRIB, 0),
+			e->data.noteFreq,
+			e->data.targetOT,
+			e->data.flags,
+			e->data.startblockID,
+			TERM_getVT100Code(_VT100_RESET_ATTRIB, 0), EL);
+	}
+
+	print_hline(handle);
+	ttprintf("%s|%s [\u2190/b] back  [q] quit%s%s\r\n",
+		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_CYAN),
+		TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_WHITE),
+		TERM_getVT100Code(_VT100_RESET_ATTRIB, 0), EL);
+	print_hline(handle);
+}
+
+void TASK_nvmmon(void *pvParameters) {
+	TERMINAL_HANDLE *handle = (TERMINAL_HANDLE *)pvParameters;
+	char c = 0;
+
+	nvmmon_state_t *state = (nvmmon_state_t *)handle->currProgram->userData;
+	nvm_build_index(state);
+
+	TERM_sendVT100Code(handle, _VT100_CURSOR_DISABLE, 0);
+	TERM_sendVT100Code(handle, _VT100_CLS, 0);
+
+	do {
+		TERM_setCursorPos(handle, 1, 1);
+
+		if (state->mode == NVMMON_MODE_LIST) {
+			print_nvmmon_list(handle, state);
+		} else {
+			print_nvmmon_detail(handle, state);
+		}
+
+		ttprintf("\x1b[J");
+
+		xStreamBufferReceive(handle->currProgram->inputStream, &c, sizeof(c), pdMS_TO_TICKS(200));
+	} while (c != CTRL_C);
+
+	TERM_sendVT100Code(handle, _VT100_CURSOR_ENABLE, 0);
+	TERM_sendVT100Code(handle, _VT100_CLS, 0);
+	vPortFree(state);
+	TERM_killProgramm(handle);
+}
+
+uint8_t INPUT_nvmmon(TERMINAL_HANDLE *handle, uint16_t c) {
+	if (handle->currProgram->inputStream == NULL) return TERM_CMD_EXIT_SUCCESS;
+	nvmmon_state_t *state = (nvmmon_state_t *)handle->currProgram->userData;
+	switch (c) {
+		case 'q':
+		case CTRL_C:
+			c = CTRL_C;
+			xStreamBufferSend(handle->currProgram->inputStream, &c, 1, 20);
+			return TERM_CMD_EXIT_SUCCESS;
+		case _VT100_CURSOR_UP:
+			if (state->mode == NVMMON_MODE_LIST && state->selected > 0)
+				state->selected--;
+			return TERM_CMD_CONTINUE;
+		case _VT100_CURSOR_DOWN:
+			if (state->mode == NVMMON_MODE_LIST && state->selected < state->map_count - 1)
+				state->selected++;
+			return TERM_CMD_CONTINUE;
+		case '\r':
+		case _VT100_CURSOR_FORWARD:
+			if (state->mode == NVMMON_MODE_LIST && state->map_count > 0)
+				state->mode = NVMMON_MODE_DETAIL;
+			return TERM_CMD_CONTINUE;
+		case 'b':
+		case _VT100_CURSOR_BACK:
+			state->mode = NVMMON_MODE_LIST;
+			return TERM_CMD_CONTINUE;
+		default:
+			return TERM_CMD_CONTINUE;
+	}
+}
+
+uint8_t CMD_nvmmon_main(TERMINAL_HANDLE *handle, uint8_t argCount, char **args) {
+	nvmmon_state_t *state = pvPortMalloc(sizeof(nvmmon_state_t));
+	if (!state) return TERM_CMD_EXIT_ERROR;
+	state->mode = NVMMON_MODE_LIST;
+	state->selected = 0;
+	state->map_count = 0;
+
+	TermProgram *prog = pvPortMalloc(sizeof(TermProgram));
+	if (!prog) {
+		vPortFree(state);
+		return TERM_CMD_EXIT_ERROR;
+	}
+	prog->inputHandler = INPUT_nvmmon;
+	prog->args = NULL;
+	prog->argCount = 0;
+	prog->userData = state;
+	TERM_sendVT100Code(handle, _VT100_RESET, 0);
+	TERM_sendVT100Code(handle, _VT100_CURSOR_POS1, 0);
+	uint8_t returnCode = xTaskCreate(TASK_nvmmon, "nvmmon", APP_STACK, handle, tskIDLE_PRIORITY + 1, &prog->task)
+		? TERM_CMD_EXIT_PROC_STARTED : TERM_CMD_EXIT_ERROR;
+	if (returnCode == TERM_CMD_EXIT_PROC_STARTED) {
+		TERM_attachProgramm(handle, prog);
+	} else {
+		vPortFree(state);
+		vPortFree(prog);
+	}
+	return returnCode;
 }

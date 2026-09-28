@@ -347,8 +347,11 @@ MAPTABLE_HEADER_t* VMS_print_map(TERMINAL_HANDLE* handle, MAPTABLE_HEADER_t* map
 
 uint32_t nvm_get_blk_cnt(const VMS_Block_t* blk){
     uint32_t cnt=0;
+    uint32_t max_blocks = (BLOCKMEM_SIZE / sizeof(VMS_Block_t));
+    if(max_blocks == 0) return 0;
+
     blk++;  //First Block is a NULL block
-    while(1){
+    while(cnt < (max_blocks - 1)){
         if(!VMS_isBlockValid(blk)) break;
         blk++;
         cnt++;

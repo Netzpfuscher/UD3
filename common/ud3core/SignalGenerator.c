@@ -748,7 +748,11 @@ void SigGen_limit(){
      */
     
     //do we need to reduce the ontime of all of the notes?
-    if(currDuty > maxDuty){
+    if(maxDuty == 0){
+        //A zero limit (for example a fully backed-off grid limiter) must
+        //stop output immediately, even before the measured duty catches up.
+        ontimeScale = 0;
+    }else if(currDuty > maxDuty){
         //yes! Reduce the scaling factor
         
         ontimeScale = (maxDuty * MAX_VOL) / currDuty;

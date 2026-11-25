@@ -31,8 +31,7 @@ static VMS_VoiceData_t ** voiceData;
 static uint32_t VMSW_getNextVoice(uint32_t note, uint32_t output, uint32_t channel);
 static void VMSW_task(void * params);
 
-//static uint32_t blockMemSize = VMS_DEFAULT_BLOCKMEM_SIZE;
-static uint32_t blockMemBlockCount = VMS_DEFAULT_BLOCKMEM_SIZE/sizeof(VMS_Block_t);
+static uint32_t blockMemBlockCount = BLOCKMEM_SIZE/sizeof(VMS_Block_t);
 
 uint32_t VMSW_getBlockMemSizeInBlocks(){
     return blockMemBlockCount;

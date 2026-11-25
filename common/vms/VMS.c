@@ -254,9 +254,12 @@ static void VMS_nextBlock(VMS_listDataObject * data, uint32_t blockSet){
         }
     }else{
         //offblocks... no need to check for VMS_SUSTAIN_BLOCK_UNTIL_NOTEOFF, as a inverted note-event (so noteOff for a normal block or noteOn for an inverted one) always kills the block
-        if(block->offBlock != 0){
+        if(block->offBlock != 0 && block->offBlock != VMS_BLOCKID_INVALID){
             //add new block to the list
             VMS_addBlockToList(VMSW_getBlockPtr(block->offBlock), outputId, voiceId);
+        }else{
+            //No release block: make sure the voice does not keep sounding forever.
+            SigGen_setVoiceVMS(voiceId, 0, 0, 0, 0, 0, 0, 0);
         }
     }
     

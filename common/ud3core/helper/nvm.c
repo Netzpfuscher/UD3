@@ -338,13 +338,21 @@ void VMS_print_blk(TERMINAL_HANDLE* handle,uint32_t id ,const VMS_Block_t* blk, 
 }
 
 MAPTABLE_HEADER_t* VMS_print_map(TERMINAL_HANDLE* handle, MAPTABLE_HEADER_t* map){
-    if(!map->listEntries){
+    uintptr_t map_end = (uintptr_t)NVM_mapMem + MAPMEM_SIZE;
+
+    if((uintptr_t)map < (uintptr_t)NVM_mapMem || ((uintptr_t)map + sizeof(MAPTABLE_HEADER_t)) > map_end){
+        return NULL;
+    }
+    if(map->listEntries == 0 || map->listEntries == 0xff){
         return NULL;
     }
     
-    ttprintf("\r\nProgram: %u to %u - %s\r\n", map->programNumberStart, map->programNumberEnd, map->name);
+    ttprintf("\r\nProgram: %u to %u - %.*s\r\n", map->programNumberStart, map->programNumberEnd, MAPPER_MAP_NAME_LENGTH, map->name);
     MAPTABLE_ENTRY_t* ptr = (MAPTABLE_ENTRY_t*)(map+1);
     for(uint32_t i=0;i<map->listEntries;i++){
+        if(((uintptr_t)ptr + sizeof(MAPTABLE_ENTRY_t)) > map_end){
+            return NULL;
+        }
         ttprintf("   Note range: %u - %u\r\n", ptr->startNote, ptr->endNote);
         ttprintf("   Note frequency: %u\r\n", ptr->data.noteFreq);
         ttprintf("   Target ontime : %u\r\n", ptr->data.targetOT);
@@ -354,10 +362,8 @@ MAPTABLE_HEADER_t* VMS_print_map(TERMINAL_HANDLE* handle, MAPTABLE_HEADER_t* map
     }
     
     map = (MAPTABLE_HEADER_t*)ptr;
-    if(map->listEntries){
+    if(((uintptr_t)map + sizeof(MAPTABLE_HEADER_t)) <= map_end && map->listEntries != 0 && map->listEntries != 0xff){
         return map;
-    }else{
-        return NULL;
     }
     return NULL;
 }

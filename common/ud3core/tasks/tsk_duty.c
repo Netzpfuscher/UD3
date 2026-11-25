@@ -49,6 +49,7 @@ static void grid_trip(void){
     grid_tripped = 1;
     grid_scale = 0;
     tt.n.i2t_i.value = 100;
+    tt.n.grid_i.value = (int32_t)(grid_i_est * 10.0f);
     alarm_push(ALM_PRIO_CRITICAL, "GRID: Fuse I2t limit exceeded", (int32_t)(grid_i_est * 10.0f));
     interrupter_kill();
     bus_command = BUS_COMMAND_OFF;
@@ -126,6 +127,15 @@ void grid_regulator_update(void){
 
     float heat_limit = 1.25f * (float)configuration.grid_i2t_time;
     if(heat_limit <= 0.0f) heat_limit = 1.25f;
+
+    /* Publish the measurements before any trip return so the terminal still
+     * shows the overload that caused the trip. */
+    int32_t pct = (int32_t)((grid_heat * 100.0f) / heat_limit);
+    if(pct < 0) pct = 0;
+    if(pct > 100) pct = 100;
+    tt.n.i2t_i.value = pct;
+    tt.n.grid_i.value = (int32_t)(grid_i_est * 10.0f);
+
     if(grid_heat >= heat_limit){
         grid_trip();
         return;
@@ -140,12 +150,6 @@ void grid_regulator_update(void){
     }else{
         grid_severe_ms = 0;
     }
-
-    int32_t pct = (int32_t)((grid_heat * 100.0f) / heat_limit);
-    if(pct < 0) pct = 0;
-    if(pct > 100) pct = 100;
-    tt.n.i2t_i.value = pct;
-    tt.n.grid_i.value = (int32_t)(grid_i_est * 10.0f);
 
     /* QCW cannot be duty-scaled; stop the pulse if it is over the limit. */
     if(QCW_enable_Control && grid_i_est > i_limit){

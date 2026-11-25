@@ -1088,6 +1088,11 @@ static void SigGen_task(void * callData){
         //uint32_t noVoicesEnabled = 1;
 		
 		if(!isEnabled) continue;
+
+        /* Re-apply the duty/compressor/grid limits while notes are playing.
+         * These inputs (especially the grid limiter scale) can change after
+         * the voice parameters were last written. */
+        SigGen_limit();
               
         //check if the buffer is running low
         while(data->bufferLengthInCounts < SIGGEN_MS_TO_PERIOD_COUNT(1)){

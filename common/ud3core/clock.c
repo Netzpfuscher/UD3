@@ -85,12 +85,13 @@ void clock_set(uint32_t time){
  */
 void clock_trim(int32_t diff){
     static int32_t i=0;
-    int32_t p=0;
     i += diff * 4096;
     if(i>40960000) i=40960000;
     if(i<-40960000) i=-40960000;
-    p = diff* 1000000;
-    increment = n_increment +p+i;
+    int64_t next = (int64_t)n_increment + ((int64_t)diff * 1000000) + i;
+    if(next < 1) next = 1;
+    if(next > 0xFFFFFFFFll) next = 0xFFFFFFFFll;
+    increment = (uint32_t)next;
 }
 
 

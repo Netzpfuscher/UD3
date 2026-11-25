@@ -362,6 +362,23 @@ uint32_t SigGen_getCurrDuty(){
 }
 
 /**
+ * @brief Get the largest limited pulse width among enabled voices
+ * @return Pulse width in microseconds (0 if no voice is active)
+ */
+uint32_t SigGen_getPeakPulseWidth(){
+    uint32_t peak = 0;
+    if(taskData == NULL) return 0;
+    for(uint32_t currVoice = 0; currVoice < SIGGEN_VOICECOUNT; currVoice++){
+        if(!taskData->voice[currVoice].enabled) continue;
+        if(taskData->voice[currVoice].limitedPulseWidth_us > 0){
+            uint32_t width = (uint32_t)taskData->voice[currVoice].limitedPulseWidth_us;
+            if(width > peak) peak = width;
+        }
+    }
+    return peak;
+}
+
+/**
  * @brief Set hypervoice parameters for a voice (internal helper)
  *
  * Configures sub-pulse generation for harmonic enrichment:

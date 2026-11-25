@@ -13,6 +13,9 @@ int16_t ADC_peak_GetResult16();
 int32_t ADC_peak_CountsTo_mVolts(int32_t counts);
 float ADC_peak_CountsTo_Volts(int32_t counts);
 
+/* Simulated peak-detector input, in 12-bit ADC counts (1 mV/count). */
+void sim_hw_set_primary_current_counts(uint16_t counts);
+
 
 int32_t ADC_CountsTo_mVolts(int32_t counts);
 float ADC_therm_CountsTo_Volts(int32_t counts);

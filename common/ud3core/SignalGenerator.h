@@ -218,6 +218,12 @@
      */
     uint32_t SigGen_getCurrDuty();
 
+    /**
+     * @brief Get the largest limited pulse width among enabled voices
+     * @return Pulse width in microseconds (0 if no voice is active)
+     */
+    uint32_t SigGen_getPeakPulseWidth();
+
     /* ===== Volume Conversion Utilities ===== */
     
     /**

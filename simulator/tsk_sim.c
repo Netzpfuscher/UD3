@@ -14,6 +14,8 @@
 #include "cli_basic.h"
 #include "clock.h"
 #include "SignalGenerator.h"
+#include "ZCDtoPWM.h"
+#include "sim_hw.h"
 #include <math.h>
 
 #define MAX_BUS_CHARGE 4000
@@ -25,7 +27,65 @@ static int bus_i = 0;
 static float sine_phase = 0.0;
 static float bus_voltage = 0.0;  // Current bus voltage (smoothed)
 
+/*
+ * Simplified primary-current model.
+ *
+ * A DRSSTC primary current ramps roughly as V_bus * t_on / L_pri during a
+ * burst. We use that as the per-pulse peak, clamp it to the DAC current
+ * limit configured by the firmware, and hold the peak with a fast attack
+ * and slower decay so the normal telemetry path sees a realistic value.
+ */
+#define SIM_PRIMARY_L_HENRY   70e-6f
+#define SIM_PRIMARY_ATTACK    0.45f
+#define SIM_PRIMARY_DECAY     0.12f
+
+static float sim_primary_current_amps = 0.0f;
+
+static float sim_current_limit_amps(uint8_t dac){
+	if(configuration.ct1_ratio == 0 || configuration.ct1_burden == 0) return 0.0f;
+	// Inverse of the DAC calculation in configure_CT1().
+	return ((float)dac * DAC_VOLTS_PER_STEP * 10.0f * (float)configuration.ct1_ratio) / (float)configuration.ct1_burden;
+}
+
+static void update_primary_current(void){
+	float target = 0.0f;
+	bool active = false;
+	float on_time_us = (float)SigGen_getPeakPulseWidth();
+	if(on_time_us <= 0.0f) on_time_us = (float)param.pw;
+
+	if(QCW_enable_Control && ramp.index < QCW_RAMP_SAMPLES){
+		float limit = sim_current_limit_amps(ct1_dac_val[2]);
+		target = limit * ((float)ramp.data[ramp.index] / 255.0f);
+		active = true;
+	}else if(param.synth != SYNTH_OFF && tt.n.midi_voices.value > 0 &&
+	         on_time_us > 0.0f && tt.n.bus_v.value > 0){
+		float peak = (float)tt.n.bus_v.value * on_time_us * 1e-6f / SIM_PRIMARY_L_HENRY;
+		float limit = sim_current_limit_amps(ct1_dac_val[0]);
+		if(limit <= 0.0f) limit = (float)configuration.max_tr_current;
+		target = (peak < limit) ? peak : limit;
+		active = true;
+	}
+
+	// A latched fault or a killed output must decay to zero.
+	if(system_fault_Control == 0) active = false;
+	if(!active) target = 0.0f;
+
+	float alpha = (target > sim_primary_current_amps) ? SIM_PRIMARY_ATTACK : SIM_PRIMARY_DECAY;
+	sim_primary_current_amps += (target - sim_primary_current_amps) * alpha;
+	if(sim_primary_current_amps < 0.5f) sim_primary_current_amps = 0.0f;
+
+	// Convert amperes back to the 12-bit ADC_peak counts using the same
+	// ct1_ratio/ct1_burden calibration the firmware applies.
+	float counts = 0.0f;
+	if(configuration.ct1_ratio > 0){
+		counts = sim_primary_current_amps * (float)configuration.ct1_burden * 100.0f / (float)configuration.ct1_ratio;
+	}
+	if(counts > 4095.0f) counts = 4095.0f;
+	sim_hw_set_primary_current_counts((uint16_t)(counts + 0.5f));
+}
+
 static void populate_buffer(adc_sample_t* ptr){
+	update_primary_current();
 	float bus_target = 0.0;
 	
 	if (tt.n.bus_status.value == BUS_READY) {

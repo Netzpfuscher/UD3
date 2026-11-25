@@ -17,16 +17,31 @@ uint8_t QCW_enable_Control=0;
 uint8_t IVO_UART_Control=0;
 uint8_t IVO_Control=0;
 
+/*
+ * Simulated CT1 peak detector.
+ *
+ * The real ADC_peak block is a 12-bit converter fed by the CT1 burden.
+ * We model it as 1 mV per count (4096 mV full scale, matching the 4.096 V
+ * DAC reference), so the firmware's normal ct1_ratio/ct1_burden calibration
+ * converts these counts back into primary amperes.
+ */
+#define SIM_ADC_PEAK_MAX_COUNTS 4095u
+static uint16_t sim_primary_current_counts = 0;
+
+void sim_hw_set_primary_current_counts(uint16_t counts){
+	sim_primary_current_counts = (counts > SIM_ADC_PEAK_MAX_COUNTS) ? SIM_ADC_PEAK_MAX_COUNTS : counts;
+}
+
 int16_t ADC_peak_GetResult16(){
-	return 0;
+	return (int16_t)sim_primary_current_counts;
 }
 
 int32_t ADC_peak_CountsTo_mVolts(int32_t counts){
-	return 0;
+	return counts;
 }
 
 float ADC_peak_CountsTo_Volts(int32_t counts){
-	return 0.0;
+	return (float)counts / 1000.0f;
 }
 
 int32_t ADC_CountsTo_mVolts(int32_t counts){

@@ -268,9 +268,16 @@ int32_t VMSW_getKnownValue(KNOWN_VALUE ID, uint32_t output, uint32_t voiceId){
     return 0;
 }
 
+static uint32_t VMS_clamp_u32(uint64_t value){
+    return (value > 0xFFFFFFFFu) ? 0xFFFFFFFFu : (uint32_t)value;
+}
+
 void VMSW_setKnownValue(KNOWN_VALUE ID, int32_t value, uint32_t output, uint32_t voiceId){
     //precalculate voice data pointer, as this might be repeated multiple times in the following code otherwise
     VMS_VoiceData_t * vData = &(voiceData[output][voiceId]);
+    
+    //Modulation factors are unsigned; a negative value would wrap into a huge unsigned factor.
+    if(value < 0) value = 0;
     
     switch(ID){
         //all other values can't be written by VMS
@@ -281,7 +288,7 @@ void VMSW_setKnownValue(KNOWN_VALUE ID, int32_t value, uint32_t output, uint32_t
             //update volume. ontime is no longer used up until the very last stage
             vData->onTimeFactor = value;
             
-            vData->onTimeCurrent = (((uint32_t)value>>4) *  vData->onTimeTarget) / 62500; //62500 = 1000000 >> 4
+            vData->onTimeCurrent = VMS_clamp_u32(((uint64_t)((uint32_t)value>>4) *  vData->onTimeTarget) / 62500); //62500 = 1000000 >> 4
             
             //update siggen values
             //TODO implement burst into VMS?
@@ -296,29 +303,26 @@ void VMSW_setKnownValue(KNOWN_VALUE ID, int32_t value, uint32_t output, uint32_t
             //update volume. ontime is no longer used up until the very last stage
             vData->volumeFactor = value;
             
-            //get the current volume from the factor. We need to scale this to prevent overflow :/
-            if(vData->volumeTarget == MAX_VOL){
-                //volume is max, no need to scale the volume, just write a scaled down version of the factor into the voice
-                vData->volumeCurrent = value >> 4; //LOSSY the axual divisor should be 15.258...
+            //get the current volume from the factor, scaled in 64 bits and capped at MAX_VOL
+            uint64_t scaledVolume;
+            if(vData->volumeFactor == VMS_UNITY_FACTOR){
+                scaledVolume = vData->volumeTarget; //62500 = 1000000 >> 4
             }else{
+                scaledVolume = ((uint64_t)((uint32_t)value>>4) *  vData->volumeTarget) / 62500; //62500 = 1000000 >> 4
             }
-            
-            if(vData->volumeFactor == 1000000){
-                vData->volumeCurrent = vData->volumeTarget; //62500 = 1000000 >> 4
-            }else{
-                vData->volumeCurrent = (((uint32_t)value>>4) *  vData->volumeTarget) / 62500; //62500 = 1000000 >> 4
-            }
+            vData->volumeCurrent = (scaledVolume > MAX_VOL) ? MAX_VOL : (uint32_t)scaledVolume;
             
             //is hypervoice enabled? If so also update its volume
             if(vData->hypervoiceCount > 0){
                 //get the current volume from the factor. We need to scale this to prevent overflow :/
                 
-                if(vData->hypervoiceVolumeFactor == 1000000){
-                    //volume is max, no need to scale the volume, just write a scaled down version of the factor into the voice
-                    vData->hypervoiceVolumeCurrent = vData->volumeCurrent; //LOSSY the axual divisor should be 15.258...
+                uint64_t scaledHpvVolume;
+                if(vData->hypervoiceVolumeFactor == VMS_UNITY_FACTOR){
+                    scaledHpvVolume = vData->volumeCurrent; //62500 = 1000000 >> 4
                 }else{
-                    vData->hypervoiceVolumeCurrent = (((uint32_t)vData->hypervoiceVolumeFactor>>4) *  vData->volumeCurrent) / 62500; //62500 = 1000000 >> 4
+                    scaledHpvVolume = ((uint64_t)((uint32_t)vData->hypervoiceVolumeFactor>>4) *  vData->volumeCurrent) / 62500; //62500 = 1000000 >> 4
                 }
+                vData->hypervoiceVolumeCurrent = (scaledHpvVolume > MAX_VOL) ? MAX_VOL : (uint32_t)scaledHpvVolume;
                 
                 SigGen_setHyperVoiceVMS(voiceId, vData->hypervoiceCount / 1000000, vData->onTimeCurrent, vData->hypervoiceVolumeCurrent, vData->hypervoicePhase / 977);
             }
@@ -328,7 +332,7 @@ void VMSW_setKnownValue(KNOWN_VALUE ID, int32_t value, uint32_t output, uint32_t
             break;
             
         case freqCurrent:
-            vData->freqCurrent = value;
+            vData->freqCurrent = (value > 100000) ? 100000 : (uint32_t)value;
             break;
             
         case frequency:
@@ -350,8 +354,13 @@ void VMSW_setKnownValue(KNOWN_VALUE ID, int32_t value, uint32_t output, uint32_t
                 newFrequency += difference;
             }
             
-            //and finally, the currentfreqFactor
-            if(value != 1000000) newFrequency = (newFrequency * (value>>6)) / 15625;
+            //and finally, the currentfreqFactor, scaled in 64 bits to the 10 kHz limit
+            if(value != VMS_UNITY_FACTOR){
+                int64_t scaledFrequency = ((int64_t)newFrequency * (value>>6)) / 15625;
+                if(scaledFrequency < 0) scaledFrequency = 0;
+                if(scaledFrequency > 100000) scaledFrequency = 100000;
+                newFrequency = (uint32_t)scaledFrequency;
+            }
             
             vData->freqCurrent = newFrequency;
             
@@ -360,7 +369,7 @@ void VMSW_setKnownValue(KNOWN_VALUE ID, int32_t value, uint32_t output, uint32_t
             
         case noise:
             vData->noiseFactor = value;
-            vData->noiseCurrent = (((uint32_t)value>>4) *  vData->noiseTarget) / 62500; //62500 = 1000000 >> 4
+            vData->noiseCurrent = VMS_clamp_u32(((uint64_t)((uint32_t)value>>4) *  vData->noiseTarget) / 62500); //62500 = 1000000 >> 4
             
             SigGen_setVoiceVMS(voiceId, 1, vData->onTimeCurrent, vData->volumeCurrent, vData->freqCurrent, vData->noiseCurrent, 0, 0);
             break;

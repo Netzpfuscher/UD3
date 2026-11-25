@@ -2115,6 +2115,13 @@ void Bootloader_HostLink(uint8 timeOut) CYLARGE
                 {
                     uint16 upperRange;
 
+                    /* Never append a PROGRAM payload past the accumulated data buffer. */
+                    if(((uint32)dataOffset + ((uint32)pktSize - 3u)) > Bootloader_SIZEOF_COMMAND_BUFFER)
+                    {
+                        ackCode = Bootloader_ERR_LENGTH;
+                        break;
+                    }
+
                     /* Command may be sent along with last block of data, to program row. */
                     #if(CY_PSOC3)
                         (void) memcpy(&dataBuffer[dataOffset],

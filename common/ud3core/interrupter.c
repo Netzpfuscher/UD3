@@ -43,6 +43,10 @@
 #include "MidiProcessor.h"
 #include "NoteMapper.h"
 
+#ifdef SIMULATOR
+#include "sim_hw.h"
+#endif
+
 #include <device.h>
 #include <math.h>
 #include <stdlib.h>
@@ -239,6 +243,11 @@ void interrupter_oneshot(uint32_t pw, uint32_t vol) {
 	interrupter1_control_Control = INT_ENA;
 	interrupter1_control_Control = INT_KILL_ALL;
     CyGlobalIntEnable;
+
+#ifdef SIMULATOR
+	//Feed the simulated CT1 peak detector so autotune sees a pulse response.
+	sim_hw_oneshot(pw, ct1_dac_val[0]);
+#endif
 }
 
 /**

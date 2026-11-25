@@ -16,6 +16,10 @@ float ADC_peak_CountsTo_Volts(int32_t counts);
 /* Simulated peak-detector input, in 12-bit ADC counts (1 mV/count). */
 void sim_hw_set_primary_current_counts(uint16_t counts);
 
+/* Simulated CT1 response to an explicit one-shot pulse. */
+void sim_hw_oneshot(uint32_t pw_us, uint8_t dac_current);
+uint8_t sim_hw_primary_hold_active(void);
+
 
 int32_t ADC_CountsTo_mVolts(int32_t counts);
 float ADC_therm_CountsTo_Volts(int32_t counts);

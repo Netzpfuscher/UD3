@@ -1,7 +1,12 @@
 #include "sim_hw.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/time.h>
 #include "telemetry.h"
+#include "cli_common.h"
+#include "ZCDtoPWM.h"
+#include "FreeRTOS.h"
+#include "task.h"
 
 uint8_t ZCDref_Data=0;
 uint8_t FB_THRSH_DAC_Data=0;
@@ -42,6 +47,56 @@ int32_t ADC_peak_CountsTo_mVolts(int32_t counts){
 
 float ADC_peak_CountsTo_Volts(int32_t counts){
 	return (float)counts / 1000.0f;
+}
+
+/*
+ * Simulated resonant response for explicit one-shot pulses (autotune and
+ * the "oneshot" command). The sweep changes configuration.start_freq in
+ * 0.1 kHz units, so a Lorentzian around a configurable resonance gives the
+ * autotune algorithm a realistic peak to find. Override the defaults with
+ * UD3SIM_RESONANCE and UD3SIM_RESONANCE_BW (both in 0.1 kHz units).
+ */
+#define SIM_PRIMARY_L_HENRY 70e-6f
+static uint16_t sim_resonance_freq = 0;
+static uint16_t sim_resonance_bw = 0;
+static TickType_t sim_primary_hold_until = 0;
+
+static void sim_resonance_config(void){
+	if(sim_resonance_freq != 0) return;
+	const char *freq = getenv("UD3SIM_RESONANCE");
+	const char *bw = getenv("UD3SIM_RESONANCE_BW");
+	sim_resonance_freq = freq ? (uint16_t)atoi(freq) : 630;
+	sim_resonance_bw = bw ? (uint16_t)atoi(bw) : 25;
+	if(sim_resonance_bw == 0) sim_resonance_bw = 25;
+}
+
+void sim_hw_oneshot(uint32_t pw_us, uint8_t dac_current){
+	sim_resonance_config();
+	if(pw_us == 0 || configuration.ct1_ratio == 0 || configuration.ct1_burden == 0){
+		return;
+	}
+
+	float limit = (float)dac_current * DAC_VOLTS_PER_STEP * 10.0f *
+	              (float)configuration.ct1_ratio / (float)configuration.ct1_burden;
+	float peak = (float)tt.n.bus_v.value * (float)pw_us * 1e-6f / SIM_PRIMARY_L_HENRY;
+	if(peak > limit) peak = limit;
+
+	float detune = ((float)configuration.start_freq - (float)sim_resonance_freq) /
+	               (float)sim_resonance_bw;
+	float amps = peak / (1.0f + detune * detune);
+
+	float counts = amps * (float)configuration.ct1_burden * 100.0f /
+	               (float)configuration.ct1_ratio;
+	if(counts > 4095.0f) counts = 4095.0f;
+	sim_hw_set_primary_current_counts((uint16_t)(counts + 0.5f));
+
+	//Keep the periodic voice model from overwriting this pulse before it is read.
+	//Cover the largest autotune delay (200 ms) so the sweep can read the result.
+	sim_primary_hold_until = xTaskGetTickCount() + pdMS_TO_TICKS(250);
+}
+
+uint8_t sim_hw_primary_hold_active(void){
+	return ((int32_t)(xTaskGetTickCount() - sim_primary_hold_until) < 0) ? 1 : 0;
 }
 
 int32_t ADC_CountsTo_mVolts(int32_t counts){

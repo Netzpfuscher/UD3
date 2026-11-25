@@ -48,6 +48,8 @@ static float sim_current_limit_amps(uint8_t dac){
 }
 
 static void update_primary_current(void){
+	//A one-shot pulse (autotune/oneshot) owns the detector until it is read.
+	if(sim_hw_primary_hold_active()) return;
 	float target = 0.0f;
 	bool active = false;
 	float on_time_us = (float)SigGen_getPeakPulseWidth();

@@ -31,6 +31,7 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
         }
 
     while(addr<CY_EEPROM_SIZE){
+        if(((uint32_t)addr + DATASET_BYTES) > CY_EEPROM_SIZE) break;
         change_flag=0;
         for(int i=0;i<DATASET_BYTES;i++){
             data[i] = EEPROM_READ_BYTE(addr);
@@ -42,12 +43,16 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
             if(params[current_parameter].parameter_type==PARAM_CONFIG){
                 temp_hash=djb_hash(params[current_parameter].name);
                 if((uint8_t)temp_hash == data[0] && (uint8_t)(temp_hash>>8) == data[1]&& (uint8_t)(temp_hash>>16) == data[2]&& (uint8_t)(temp_hash>>24) == data[3]){
-                    for(uint8_t i=0;i<data[4];i++){
-                        *(i+(uint8_t * )params[current_parameter].value) = EEPROM_READ_BYTE(addr);
-                        addr++;
+                    /* The length byte is EEPROM data: only copy if it matches the field and fits. */
+                    if((data[4] == params[current_parameter].size) &&
+                       (((uint32_t)addr + data[4]) <= CY_EEPROM_SIZE)){
+                        for(uint8_t i=0;i<data[4];i++){
+                            *(i+(uint8_t * )params[current_parameter].value) = EEPROM_READ_BYTE(addr);
+                            addr++;
+                        }
+                        change_count++;
+                        change_flag=1;
                     }
-                    change_count++;
-                    change_flag=1;
                     break;
                 }
             }

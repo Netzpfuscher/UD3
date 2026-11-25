@@ -1355,13 +1355,6 @@ cystatus Bootloader_ValidateBootloadable(uint8 appId) CYSMALL \
     {
         uint32 CYDATA idx;
 
-        uint32 CYDATA end   = Bootloader_FIRST_APP_BYTE(appId) +
-                              Bootloader_GetMetadata(Bootloader_GET_BTLDB_LENGTH, appId);
-
-        CYBIT  valid = 0u; /* Assume bad flash image */
-        uint8  CYDATA calcedChecksum = 0u;
-
-
         #if(0u != Bootloader_DUAL_APP_BOOTLOADER)
 
             if(appId > 1u)
@@ -1370,6 +1363,24 @@ cystatus Bootloader_ValidateBootloadable(uint8 appId) CYSMALL \
             }
 
         #endif  /* (0u != Bootloader_DUAL_APP_BOOTLOADER) */
+
+        uint32 CYDATA start = Bootloader_FIRST_APP_BYTE(appId);
+        uint32 CYDATA length = Bootloader_GetMetadata(Bootloader_GET_BTLDB_LENGTH, appId);
+
+        /* The metadata row is writable, so never trust its start/length blindly. */
+        if(start >= (CY_FLASH_SIZE - Bootloader_MD_SIZEOF))
+        {
+            return(CYRET_BAD_DATA);
+        }
+        if(length > (CY_FLASH_SIZE - Bootloader_MD_SIZEOF - start))
+        {
+            return(CYRET_BAD_DATA);
+        }
+
+        uint32 CYDATA end = start + length;
+
+        CYBIT  valid = 0u; /* Assume bad flash image */
+        uint8  CYDATA calcedChecksum = 0u;
 
 
         #if(0u != Bootloader_FAST_APP_VALIDATION)

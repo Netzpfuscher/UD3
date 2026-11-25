@@ -230,14 +230,14 @@ uint8_t EEPROM_1_ReadByte(uint16 address) ;
 #define I2C_READ_XFER_MODE 1
 #define I2C_NAK_DATA 1
 #define I2C_MODE_COMPLETE_XFER 1
-#define I2C_MasterSendStart(p1,p2)
+#define I2C_MasterSendStart(p1,p2) 0
 #define I2C_MasterClearStatus()
 #define I2C_MasterWriteBuf(address,buffer,cnt,I2C_MODE_COMPLETE_XFER)
 #define I2C_MasterStatus() 1
 #define I2C_MSTAT_WR_CMPLT 1
-#define I2C_MasterWriteByte(registerAddress)
+#define I2C_MasterWriteByte(registerAddress) 0
 #define I2C_MasterSendStop()
-#define I2C_MasterSendRestart(address,I2C_READ_XFER_MODE)
+#define I2C_MasterSendRestart(address,I2C_READ_XFER_MODE) 0
 #define I2C_MasterReadByte(I2C_NAK_DATA) 0
 
 #define _putchar(character)

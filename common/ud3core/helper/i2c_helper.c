@@ -35,18 +35,30 @@
 #include "task.h"
 
 void I2C_Write(uint8_t address, uint8_t registerAddress, uint8_t data){
-    I2C_MasterSendStart(address,I2C_WRITE_XFER_MODE);
-    I2C_MasterWriteByte(registerAddress);
-    I2C_MasterWriteByte(data);
+    if(I2C_MasterSendStart(address,I2C_WRITE_XFER_MODE) != 0) return;
+    if(I2C_MasterWriteByte(registerAddress) != 0){
+        I2C_MasterSendStop();
+        return;
+    }
+    if(I2C_MasterWriteByte(data) != 0){
+        I2C_MasterSendStop();
+        return;
+    }
     I2C_MasterSendStop();
     
 }
 
 uint8_t I2C_Read(uint8_t address, uint8_t registerAddress){
-    uint8_t ret;
-    I2C_MasterSendStart(address,I2C_WRITE_XFER_MODE);
-    I2C_MasterWriteByte(registerAddress);
-    I2C_MasterSendRestart(address,I2C_READ_XFER_MODE);
+    uint8_t ret = 0xFF;
+    if(I2C_MasterSendStart(address,I2C_WRITE_XFER_MODE) != 0) return ret;
+    if(I2C_MasterWriteByte(registerAddress) != 0){
+        I2C_MasterSendStop();
+        return ret;
+    }
+    if(I2C_MasterSendRestart(address,I2C_READ_XFER_MODE) != 0){
+        I2C_MasterSendStop();
+        return ret;
+    }
     ret = I2C_MasterReadByte(I2C_NAK_DATA);
     I2C_MasterSendStop();
     return ret; 
@@ -55,7 +67,12 @@ uint8_t I2C_Read(uint8_t address, uint8_t registerAddress){
 void I2C_Write_Blk(uint8_t address, uint8_t * buffer, uint8_t cnt){
     I2C_MasterClearStatus();
     I2C_MasterWriteBuf(address,buffer,cnt,I2C_MODE_COMPLETE_XFER);
+    uint32_t timeout = 20; //ms
     while(!(I2C_MasterStatus() & I2C_MSTAT_WR_CMPLT)){
+        if(--timeout == 0){
+            I2C_MasterSendStop();
+            break;
+        }
         vTaskDelay(1);   
     }
 }

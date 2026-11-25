@@ -760,25 +760,27 @@ void tsk_min_TaskProc(void *pvParameters) {
                 transmit_features--;
             }
             
-            if(param.synth==SYNTH_SID || param.synth==SYNTH_SID_QCW){
-                if(uxQueueSpacesAvailable(qSID) < 30 && flow_ctl){
+            if((param.synth==SYNTH_SID || param.synth==SYNTH_SID_QCW) && (qSID != NULL)){
+                UBaseType_t sid_space = uxQueueSpacesAvailable(qSID);
+                if(sid_space < 30 && flow_ctl){
                     min_queue_frame(&min_ctx, MIN_ID_MIDI, (uint8_t*)&min_stop,1);
                     flow_ctl=0;
-                }else if(uxQueueSpacesAvailable(qSID) > 45 && !flow_ctl){ //
+                }else if(sid_space > 45 && !flow_ctl){ //
                     min_queue_frame(&min_ctx, MIN_ID_MIDI, (uint8_t*)&min_start,1);
                     flow_ctl=1;
-                }else if(uxQueueSpacesAvailable(qSID) > 59){
-                    if(xTaskGetTickCount()>next_sid_flow){
-                        next_sid_flow = xTaskGetTickCount() + FLOW_RETRANSMIT_TICKS;
+                }else if(sid_space > 59){
+                    TickType_t now = xTaskGetTickCount();
+                    if(now > next_sid_flow){
+                        next_sid_flow = now + FLOW_RETRANSMIT_TICKS;
                         min_send_frame(&min_ctx, MIN_ID_MIDI, (uint8_t*)&min_start,1);
                         flow_ctl=1;
                     }
                 }
             }
         
+            //Service the wire once per cycle, not once per socket.
+            poll_UART();
             for(i=0;i<NUM_MIN_CON;i++){
-                 
-                poll_UART();
                 if(socket_info[i].socket!=SOCKET_DISCONNECTED){   
                     uint16_t eth_bytes=xStreamBufferBytesAvailable(min_port[i].tx);
                     if(eth_bytes){

@@ -377,6 +377,11 @@ static void handle_ack(struct min_context *self, uint32_t seq, uint8_t *payload,
 	uint32_t num_nacked = read_be32(&payload[0]);
 	uint32_t num_in_window = self->transport_fifo.sn_max - self->transport_fifo.sn_min;
 
+	if (num_nacked > num_in_window) {
+		min_debug_print("Invalid ACK: num_nacked=%u exceeds window %u\r\n", num_nacked, num_in_window);
+		num_nacked = num_in_window;
+	}
+
 	if (num_nacked < seq) {
 		min_debug_print("Invalid ACK: num_nacked=%u < seq=%u\r\n", num_nacked, seq);
 		num_nacked = 0;

@@ -51,6 +51,7 @@ void COMP_compress(){
     taskENTER_CRITICAL();
     if(configuration.compressor_attac == 0){
         currGain = COMP_UNITYGAIN;
+        taskEXIT_CRITICAL();
         return;
     }
     

@@ -77,12 +77,15 @@
     VMS_Block_t* NVM_blocks = (VMS_Block_t*)(((uint8_t*)flash_pages) + MAPMEM_SIZE);
 
     uint8_t CyWriteRowData(uint8_t arr_n, uint16_t page, uint8_t* page_content){
+        if(page < NVM_START_PAGE || page >= (NVM_START_PAGE + 128)) return 1;
         page -= NVM_START_PAGE;
+        if(page_content == NULL) return 1;
         memcpy(&flash_pages[page][0], page_content, NVM_PAGE_SIZE);
         return 0;
     }
     void CyFlushCache(){
         FILE *fp = fopen(flash_file, "w");
+        if(fp == NULL) return;
 
         for(uint32_t i = 0;i<sizeof(flash_pages);i++){
             fputc(((char*) flash_pages)[i],fp);

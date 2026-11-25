@@ -152,6 +152,7 @@ uint16_t ADC_therm_Offset=0;
 uint16_t ADC[2]={1800,1800};
 static uint16_t* adc_data = &ADC[0];
 void Therm_Mux_Select(uint8_t ch){
+	if(ch >= 2) ch = 0;
 	
 	if(tt.n.avg_power.value<1000){
 		if(ADC[ch]<1800){
@@ -231,18 +232,19 @@ void EEPROM_1_Start(){
 
 uint8_t EEPROM_1_Write(const uint8 * rowData, uint8 rowNumber){
 	uint16_t start = rowNumber * CYDEV_EEPROM_ROW_SIZE;
+	if(((uint32_t)start + CYDEV_EEPROM_ROW_SIZE) > EEPROM_SIZE) return 1;
 	memcpy(eeprom+start,rowData,CYDEV_EEPROM_ROW_SIZE);
-	FILE *fp;
-	//if(rowNumber==0){
-		
-	fp = fopen("eeprom.txt", "w");
+	FILE *fp = fopen("eeprom.txt", "w");
+	if(fp == NULL) return 1;
 
 	for(uint32_t i = 0;i<EEPROM_SIZE;i++){
 		fputc(eeprom[i],fp);
 	}
 	fclose(fp);
+	return 0;
 }
 uint8_t EEPROM_1_ReadByte(uint16 address){
+	if(address >= EEPROM_SIZE) return 0xFF;
 	return eeprom[address];
 }
 

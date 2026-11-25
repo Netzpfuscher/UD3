@@ -71,11 +71,21 @@ uint8_t CMD_main(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         }
     }
     TermProgram * prog = pvPortMalloc(sizeof(TermProgram));
+    if(prog == NULL){
+        ttprintf("Malloc failed\r\n");
+        return TERM_CMD_EXIT_ERROR;
+    }
     prog->inputHandler = INPUT_handler;
     prog->args = cpy_args;
     prog->argCount = argCount;
+    prog->raw_input = 0;
     
     top_state_t * state = pvPortMalloc(sizeof(top_state_t));
+    if(state == NULL){
+        vPortFree(prog);
+        ttprintf("Malloc failed\r\n");
+        return TERM_CMD_EXIT_ERROR;
+    }
     state->sort_column = SORT_CPU;
     state->sort_ascending = 0;
     prog->userData = state;
@@ -198,6 +208,7 @@ void TASK_main(void *pvParameters){
         
         xStreamBufferReceive(handle->currProgram->inputStream,&c,sizeof(c),pdMS_TO_TICKS(1000));
     }while(c!=CTRL_C);
+    vPortFree(state);
     TERM_killProgramm(handle);
 }
 
@@ -209,7 +220,6 @@ uint8_t INPUT_handler(TERMINAL_HANDLE * handle, uint16_t c){
         case CTRL_C:
             c=CTRL_C;
             xStreamBufferSend(handle->currProgram->inputStream,&c,1,20);
-            vPortFree(state);
             return TERM_CMD_EXIT_SUCCESS;
         case 'p':
             state->sort_column = SORT_PID;

@@ -53,7 +53,6 @@ static void update_primary_current(void){
 	float target = 0.0f;
 	bool active = false;
 	float on_time_us = (float)SigGen_getPeakPulseWidth();
-	if(on_time_us <= 0.0f) on_time_us = (float)param.pw;
 
 	if(QCW_enable_Control && ramp.index < QCW_RAMP_SAMPLES){
 		float limit = sim_current_limit_amps(ct1_dac_val[2]);
@@ -105,11 +104,12 @@ static void populate_buffer(adc_sample_t* ptr){
 	float alpha = dt / (BUS_RC_TIME_CONSTANT + dt);
 	
 	if(tt.n.midi_voices.value && system_fault_Control){
-		float temp = (((55000 - param.pwd)/1000) * param.pw)/10;
-		temp = temp * ((float)tt.n.bus_v.value / 493.0);
-		bus_i = temp;
-		temp = (((55000 - param.pwd)/1000) * param.pw)/10;
-		OnTimeCounter_WriteCounter(0xffffff - temp);
+		/* Follow the limited pulse width, not the raw parameter: the duty
+		 * compressor and grid limiter act on limitedPulseWidth_us. */
+		uint32_t on_time_us = SigGen_getPeakPulseWidth();
+		float on_time_counts = (((55000 - param.pwd)/1000) * (float)on_time_us)/10;
+		bus_i = on_time_counts * ((float)tt.n.bus_v.value / 493.0);
+		OnTimeCounter_WriteCounter(0xffffff - (uint32_t)on_time_counts);
 	}else{
 		bus_i = 0;
 	}

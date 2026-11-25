@@ -684,6 +684,62 @@ def test_socket_reconnect(client: MinUdpClient) -> None:
           "CLI failed after reconnect")
 
 
+@test("Grid limiter reduces duty under simulated load")
+def test_grid_limiter_active(client: MinUdpClient) -> None:
+    """Drive a simulated TR load and verify the limiter reacts.
+
+    The watchdog is disabled for the duration because this test intentionally
+    has no MIN keep-alive traffic while the simulated bus is charging.
+    """
+    client.connect_socket()
+    try:
+        for command in (
+            b"set watchdog 0\r",
+            b"bus on\r",
+            b"tr start\r",
+            b"set pw 100\r",
+            b"set pwd 500\r",
+            b"set vol 32767\r",
+            b"set grid_fuse 25\r",
+            b"set grid_voltage 100\r",
+            b"set grid_pf 0.6\r",
+            b"set grid_i2t_time 60\r",
+        ):
+            client.cli(command, 0.5)
+
+        status = None
+        for _ in range(10):
+            time.sleep(0.5)
+            text = client.cli(b"grid\r", 0.8)
+            if b"LIMITING" in text or b"TRIPPED" in text:
+                status = text
+                break
+
+        check(status is not None, "grid limiter did not react to simulated load")
+        check(b"I_est:" in status, "grid current estimate missing")
+        check(b"scale: 100.0%" not in status,
+              f"grid scale stayed at 100%; got {status[:200]!r}")
+
+        # A fuse that is far too small must produce the latched hard/I2t trip.
+        client.cli(b"set grid_fuse 1\r", 0.7)
+        tripped = None
+        for _ in range(6):
+            time.sleep(0.5)
+            text = client.cli(b"grid\r", 0.8)
+            if b"TRIPPED" in text:
+                tripped = text
+                break
+        check(tripped is not None, "grid limiter did not trip on severe overload")
+        check(b"I2t: 100%" in tripped, f"I2t did not reach 100%; got {tripped[:200]!r}")
+    finally:
+        client.cli(b"kill reset\r", 0.7)
+        client.cli(b"grid reset\r", 0.7)
+        client.cli(b"tr stop\r", 0.7)
+        client.cli(b"bus off\r", 0.7)
+        client.cli(b"set grid_fuse 0\r", 0.7)
+        client.cli(b"set watchdog 1\r", 0.7)
+
+
 # ---------------------------------------------------------------------------
 # Simulator lifecycle / runner
 # ---------------------------------------------------------------------------

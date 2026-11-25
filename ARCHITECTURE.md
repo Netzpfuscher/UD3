@@ -310,6 +310,11 @@ and derives a DC power limit from `grid_fuse`, `grid_voltage`, `grid_phases`,
 - `DutyCompressor` — effective maximum duty,
 - `qcw_regenerate_ramp()` — QCW ramp maximum.
 
+`SigGen_limit()` is re-run from the 1 kHz `SigGen` task, so a scale change
+calculated by the 100 ms grid loop takes effect while a note is already
+playing. Applying it only when voice parameters change would leave the old
+pulse width in the scheduler until the next note.
+
 The I²t model normalizes current as `x = I_grid / I_fuse`:
 
 ```
@@ -499,7 +504,9 @@ for the application, CLI, protocol and control logic.
 `tsk_sim.c` models:
 
 - mains-rectified bus voltage with RC charging and bus status,
-- a bus-current estimate driven by `param.pw`/`param.pwd` and active voices,
+- a bus-current estimate driven by the active limited pulse width
+  (`SigGen_getPeakPulseWidth()`) and `param.pwd`, so grid/duty limiting
+  actually changes the simulated DC-bus power,
 - the ping-pong ADC buffers consumed by `tsk_analog`.
 
 `sim_hw.c` models the CT1 peak detector:
@@ -542,6 +549,10 @@ python3 simulator/tests/test_min_udp.py --start-sim --shell
 - Audio output is optional and not part of normal tests.
 - The simulator writes `flash.data` and `eeprom.txt` in its working directory;
   the test runner uses a temporary directory for isolation.
+- The firmware watchdog kills the output if no MIN/CLI traffic arrives within
+  `watchdog_timeout`. When testing a long simulated run manually, either send
+  keep-alives or temporarily `set watchdog 0`; the automated limiter test does
+  the latter.
 
 ---
 

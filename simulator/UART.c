@@ -95,7 +95,9 @@ frm frame;
 
 uint8_t r_buffer[16000];
 
+#if !defined(MIN_PORT)
 #define MIN_PORT 1337
+#endif
 
 
 QueueHandle_t xframes=NULL;

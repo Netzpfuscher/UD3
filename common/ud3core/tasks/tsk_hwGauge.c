@@ -49,7 +49,7 @@ static unsigned tsk_hwGauge_initVar = 0;
 static unsigned calibrationActive = 0;
 static uint32_t gaugeToCalibrate = 0;
 static uint32_t calibrationStage = 0;
-static HWGauge calibrationGaugeBackup;
+static HWGauge_s calibrationGaugeBackup;
 
 static PCA9685* pca_ptr = NULL;
 
@@ -140,7 +140,7 @@ static uint8_t CMD_hwGaugeCalibrate_handleInput(TERMINAL_HANDLE * handle, uint16
             vPortFree(handle->currProgram);
             TERM_removeProgramm(handle);
             calibrationActive = 0;
-            memcpy(&hwGauges.gauge[gaugeToCalibrate], &calibrationGaugeBackup, sizeof(HWGauge));
+            memcpy(&hwGauges.gauge[gaugeToCalibrate], &calibrationGaugeBackup, sizeof(HWGauge_s));
             ttprintf("\r\n\n%sCalibration Canceled!%s\r\n\n", TERM_getVT100Code(_VT100_FOREGROUND_COLOR, _VT100_RED), TERM_getVT100Code(_VT100_RESET, 0));
             return TERM_CMD_EXIT_SUCCESS;
         
@@ -277,7 +277,7 @@ uint8_t CMD_hwGauge(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
             prog->inputHandler = CMD_hwGaugeCalibrate_handleInput;
             TERM_sendVT100Code(handle, _VT100_RESET, 0); TERM_sendVT100Code(handle, _VT100_CURSOR_POS1, 0);
             returnCode = TERM_CMD_EXIT_PROC_STARTED;
-            memcpy(&calibrationGaugeBackup, &hwGauges.gauge[gauge], sizeof(HWGauge));
+            memcpy(&calibrationGaugeBackup, &hwGauges.gauge[gauge], sizeof(HWGauge_s));
             calibrationActive = 1;
             gaugeToCalibrate = gauge;
             TERM_attachProgramm(handle, prog);

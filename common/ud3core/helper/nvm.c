@@ -128,6 +128,14 @@ uint8_t nvm_flush(){
     return rc ? pdFAIL : pdTRUE;
 }
 
+void nvm_discard(){
+    if(page_content != NULL){
+        vPortFree(page_content);
+        page_content = NULL;
+    }
+    last_page = 0xFFFF;
+}
+
 uint8_t nvm_write_buffer(uint16_t index, uint8_t* buffer, int32_t len){
 
     uint16_t n_pages = 0;

@@ -95,6 +95,13 @@
      */
     uint8_t nvm_flush();
     /**
+     * @brief Discard a buffered but not yet committed flash page
+     *
+     * Frees the page buffer without programming it. Used when an upload is
+     * interrupted or cancelled.
+     */
+    void nvm_discard();
+    /**
      * @brief Count valid VMS blocks in flash
      *
      * @param blk Pointer to VMS block array

@@ -59,6 +59,7 @@
 #define STACK_TERMINAL 256   //!< Terminal task stack (256 words = 1KB)
 #define STACK_OVERLAY 256    //!< Overlay task stack (256 words = 1KB)
 #define STACK_ANALOG 128     //!< Analog task stack (128 words = 512 bytes)
+#define STACK_DUTY 200       //!< Duty/grid-limiter task stack (200 words = 800 bytes)
 #define STACK_THERMISTOR 100 //!< Thermistor task stack (100 words = 400 bytes)
 #define STACK_UART 256       //!< UART task stack (256 words = 1KB)
 #define STACK_MIN 384        //!< MIN protocol task stack (384 words = 1.5KB)

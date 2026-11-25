@@ -276,6 +276,7 @@ void tsk_cli_Start(void) {
         TERM_addCommand(CMD_features, "features","Get supported features",0,&TERM_cmdListHead);
         TERM_addCommandConstAC(CMD_eeprom, "eeprom","Save/Load config [load/save]",AC_eeprom,&TERM_cmdListHead);
         TERM_addCommand(CMD_udkill, "kill","Stops the output",0,&TERM_cmdListHead);
+        TERM_addCommand(CMD_grid, "grid","Grid/fuse limiter status [reset]",0,&TERM_cmdListHead);
         TERM_addCommand(CMD_load_defaults, "load_default","Loads the default parameters",0,&TERM_cmdListHead);
 
         TERM_addCommandAC(TERM_addCommand(CMD_get, "get", "Usage get [param]", 0, &TERM_cmdListHead), complete_parameter_name, NULL);

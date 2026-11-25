@@ -34,6 +34,7 @@
 #include "ZCDtoPWM.h"
 #include "SignalGenerator.h"
 #include "tasks/tsk_cli.h"
+#include "tasks/grid_limit.h"
 
 #define COMPSTATE_ATTAC 0
 #define COMPSTATE_SUSTAIN 1
@@ -56,9 +57,10 @@ void COMP_compress(){
     }
     
     uint32_t currDuty = SigGen_getCurrDuty();
+    uint16_t maxDutyTenths = grid_regulator_effective_max_duty_tenths();
     
     //TODO make sure dutycycle value range is correct between implementations
-    if((currDuty*10) > configuration.max_tr_duty){
+    if((currDuty*10) > maxDutyTenths){
         compressorState = COMPSTATE_ATTAC;
         if((currGain -= configuration.compressor_attac) < 0) currGain = 0;
 
@@ -68,7 +70,7 @@ void COMP_compress(){
                 compressorSustainCount = 0;
             case COMPSTATE_SUSTAIN:
                 //did the dutycycle change?
-                if(currDuty < configuration.max_tr_duty){
+                if((currDuty*10) < maxDutyTenths){
                     if(compressorSustainCount == configuration.compressor_sustain){
                         compressorState = COMPSTATE_RELEASE;
                         compressorSustainCount = 0;

@@ -110,6 +110,7 @@ uint8_t CMD_eeprom(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 uint8_t CMD_udkill(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 /** @brief Fuse configuration */
 uint8_t CMD_fuse(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+uint8_t CMD_grid(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 /** @brief Restore default parameters */
 uint8_t CMD_load_defaults(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 /** @brief Get parameter value(s) */
@@ -212,6 +213,15 @@ struct config_struct{
     uint8_t compressor_maxDutyOffset; /**< Max duty offset before hard limit */
     
     float drive_factor; /**< Drive voltage measurement calibration factor */
+
+    /* Grid / fuse current limiter */
+    uint16_t grid_fuse; /**< Grid fuse rating in A RMS (0 = limiter disabled) */
+    uint16_t grid_voltage; /**< Nominal grid voltage in V RMS */
+    uint8_t grid_phases; /**< 1 = single phase, 3 = three phase */
+    uint8_t grid_pf; /**< Grid power factor, x100 (60 = 0.60) */
+    uint8_t grid_margin; /**< Continuous limit as % of fuse rating */
+    uint8_t grid_eff; /**< Rectifier/driver efficiency in % */
+    uint8_t grid_i2t_time; /**< I2t trip time at 150% fuse, in seconds */
 };
 typedef struct config_struct cli_config;
 

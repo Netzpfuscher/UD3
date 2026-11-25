@@ -124,6 +124,7 @@ typedef struct __tele_human__ {
 	TELE avg_power;     /**< Average power consumption */
 	TELE batt_i;        /**< Battery current */
 	TELE i2t_i;         /**< I²t accumulated current (overcurrent protection metric) */
+	TELE grid_i;        /**< Estimated grid current (0.1 A units) */
 	TELE primary_i;     /**< Primary coil current */
 	TELE midi_voices;   /**< Number of active MIDI voices (polyphony count) */
 	TELE fres;          /**< Resonant frequency (measured or configured) */

@@ -90,6 +90,18 @@ void init_telemetry(){
     tt.n.i2t_i.resend_time = TT_FAST;
     tt.n.i2t_i.chart = TT_NO_TELEMETRY;
     tt.n.i2t_i.gauge = TT_NO_TELEMETRY;
+
+    tt.n.grid_i.name = "Grid";
+    tt.n.grid_i.value = 0;
+    tt.n.grid_i.min = 0;
+    tt.n.grid_i.max = 100;
+    tt.n.grid_i.offset = 0;
+    tt.n.grid_i.unit = TT_UNIT_A;
+    tt.n.grid_i.divider = 10;
+    tt.n.grid_i.high_res = pdFALSE;
+    tt.n.grid_i.resend_time = TT_FAST;
+    tt.n.grid_i.chart = TT_NO_TELEMETRY;
+    tt.n.grid_i.gauge = TT_NO_TELEMETRY;
     
     tt.n.fres.name = "Fres";
     tt.n.fres.value = 0;
@@ -273,6 +285,7 @@ void recalc_telemetry_limits(){
     tt.n.batt_i.max = max_current;
     tt.n.avg_power.max = ((configuration.r_top / 1000) * max_current) / tt.n.avg_power.divider;
     tt.n.dutycycle.max = configuration.max_tr_duty/10;
+    tt.n.grid_i.max = configuration.grid_fuse ? configuration.grid_fuse : 100;
 }
 
 

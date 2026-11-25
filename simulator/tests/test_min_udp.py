@@ -655,6 +655,21 @@ def test_idle_reset(client: MinUdpClient) -> None:
     check(client.probe(), "MIN task unresponsive after idle period")
 
 
+@test("Grid/fuse limiter parameters and status")
+def test_grid_limiter_cli(client: MinUdpClient) -> None:
+    client.connect_socket()
+    client.cli(b"set grid_fuse 1\r", 1.2)
+    client.cli(b"set grid_voltage 230\r", 1.2)
+    client.cli(b"set grid_pf 0.6\r", 1.2)
+    text = client.cli(b"grid\r", 1.5)
+    check(b"Grid limiter:" in text, f"grid status missing; got {text[:160]!r}")
+    check(b"Fuse: 1A" in text, f"fuse value missing; got {text[:160]!r}")
+    check(b"PF 0.60" in text, f"power factor missing; got {text[:160]!r}")
+    text = client.cli(b"grid reset\r", 1.0)
+    check(b"reset" in text.lower(), f"grid reset missing; got {text[:160]!r}")
+    client.cli(b"set grid_fuse 0\r", 1.2)
+
+
 @test("Socket disconnect, reconnect, and CLI recovery")
 def test_socket_reconnect(client: MinUdpClient) -> None:
     client.connect_socket()

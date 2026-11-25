@@ -51,6 +51,7 @@
 #include "clock.h"
 #include "qcw.h"
 #include "ZCDtoPWM.h"
+#include "tasks/grid_limit.h"
 #include "cli_common.h"
 
 #include "FreeRTOS.h"
@@ -732,6 +733,9 @@ void SigGen_limit(){
     
     //make sure the value isn't too high
     if(maxDuty > 99) maxDuty = 99;
+
+    //The grid/fuse limiter can only reduce the configured duty limit.
+    maxDuty = (maxDuty * grid_regulator_get_scale()) / 1000;
     
     /* about the scaling (I admit this is weird):
      * 

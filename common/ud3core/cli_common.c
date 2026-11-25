@@ -54,6 +54,7 @@
 #include "tasks/tsk_min.h"
 #include "tasks/tsk_fault.h"
 #include "tasks/tsk_hwGauge.h"
+#include "tasks/grid_limit.h"
 #include "min_id.h"
 #include "helper/teslaterm.h"
 #include "math.h"
@@ -89,6 +90,8 @@ uint8_t callback_TTupdateFunction(parameter_entry * params, uint8_t index, TERMI
 uint8_t callback_OfftimeFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 /** @brief Callback for i2t (current-time) parameter */
 uint8_t callback_i2tFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+/** @brief Callback for grid limiter parameters */
+uint8_t callback_GridFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 /** @brief Callback for baudrate change */
 uint8_t callback_baudrateFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 /** @brief Callback for SPI speed change */
@@ -194,6 +197,15 @@ void init_config(){
     configuration.autostart = pdFALSE;
     
     configuration.drive_factor = 1.0f;
+
+    configuration.grid_fuse = 0;
+    configuration.grid_voltage = 230;
+    configuration.grid_phases = 1;
+    configuration.grid_pf = 60;
+    configuration.grid_margin = 80;
+    configuration.grid_eff = 95;
+    configuration.grid_i2t_time = 5;
+    grid_regulator_reset();
     
     interrupter.mod = INTR_MOD_PW;
     
@@ -322,6 +334,13 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"comp_sustain"    , configuration.compressor_sustain  , 0      ,255    ,0      ,NULL                    ,"Compressor Sustain Setting")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"comp_release"    , configuration.compressor_release  , 0      ,255    ,0      ,NULL                    ,"Compressor Release Setting")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"comp_dutyOffset" , configuration.compressor_maxDutyOffset  , 0      ,255    ,0      ,NULL              ,"Maximum Dutycycle offset before hard limit")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"grid_fuse"       , configuration.grid_fuse       , 0      ,200    ,0      ,callback_GridFunction       ,"Grid fuse rating [A RMS], 0=disabled")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"grid_voltage"    , configuration.grid_voltage    , 100    ,600    ,0      ,callback_GridFunction       ,"Nominal grid voltage [V RMS]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"grid_phases"     , configuration.grid_phases     , 1      ,3      ,0      ,callback_GridFunction       ,"Grid phases (1 or 3)")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"grid_pf"         , configuration.grid_pf         , 10     ,100    ,100    ,callback_GridFunction       ,"Grid power factor (0.01, 60=0.60)")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"grid_margin"     , configuration.grid_margin     , 10     ,100    ,0      ,callback_GridFunction       ,"Continuous limit [% of fuse]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"grid_eff"        , configuration.grid_eff        , 50     ,100    ,0      ,callback_GridFunction       ,"Rectifier/driver efficiency [%]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"grid_i2t_time"   , configuration.grid_i2t_time   , 1      ,60     ,0      ,callback_GridFunction       ,"I2t trip time at 150% fuse [s]")
 };
 
 uint8_t get_conf_size(void) {
@@ -629,6 +648,20 @@ uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, TERMINA
 }
 
 /**
+ * @brief Callback for grid limiter parameters
+ *
+ * Restarts the limiter so a changed fuse/voltage does not retain a stale
+ * trip or duty scale. "grid_phases" is normalised to 1 or 3.
+ */
+uint8_t callback_GridFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
+    if(configuration.grid_phases != 1 && configuration.grid_phases != 3){
+        configuration.grid_phases = 1;
+    }
+    grid_regulator_reset();
+    return 1;
+}
+
+/**
  * @brief Default callback (no action)
  * @param params Parameter array
  * @param index Index of changed parameter
@@ -894,6 +927,7 @@ uint8_t CMD_udkill(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     }else if(strcmp(args[0], "reset") == 0){
         interrupter_unkill();
         reset_fault();
+        grid_regulator_reset();
         sysflt_clr(pdTRUE); 
         TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_GREEN);
     	ttprintf("Killbit reset\r\n");
@@ -909,6 +943,40 @@ uint8_t CMD_udkill(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     return TERM_CMD_EXIT_SUCCESS;
 }
 
+
+uint8_t CMD_grid(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
+    if(argCount && strcmp(args[0], "-?") == 0){
+        ttprintf("Usage: grid [reset]\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    if(argCount && strcmp(args[0], "reset") == 0){
+        grid_regulator_reset();
+        ttprintf("Grid limiter reset\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    if(argCount && strcmp(args[0], "status") != 0){
+        ttprintf("Usage: grid [reset]\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    if(configuration.grid_fuse == 0){
+        ttprintf("Grid limiter: disabled (grid_fuse=0)\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+
+    uint16_t scale = grid_regulator_get_scale();
+    const char *state = grid_regulator_is_tripped() ? "TRIPPED" : (scale < 1000 ? "LIMITING" : "OK");
+    int32_t grid_i = tt.n.grid_i.value;
+
+    ttprintf("Grid limiter: %s\r\n", state);
+    ttprintf("Fuse: %uA  %uV  %u phase(s)  PF %u.%02u  margin %u%%  eff %u%%\r\n",
+             configuration.grid_fuse, configuration.grid_voltage, configuration.grid_phases,
+             configuration.grid_pf / 100, configuration.grid_pf % 100,
+             configuration.grid_margin, configuration.grid_eff);
+    ttprintf("I_est: %i.%iA  P_dc: %iW  scale: %u.%u%%  I2t: %i%%\r\n",
+             grid_i / 10, grid_i % 10, tt.n.avg_power.value,
+             scale / 10, scale % 10, tt.n.i2t_i.value);
+    return TERM_CMD_EXIT_SUCCESS;
+}
 
 /**
  * @brief Command: Get parameter value(s)

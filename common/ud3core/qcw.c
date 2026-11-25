@@ -49,6 +49,7 @@
 #include "tasks/tsk_overlay.h"
 #include "tasks/tsk_midi.h"
 #include "tasks/tsk_fault.h"
+#include "tasks/grid_limit.h"
 #include "telemetry.h"
 
 ramp_params volatile ramp;
@@ -109,6 +110,7 @@ void qcw_regenerate_ramp(){
     uint32_t div = roundf(divider);
     
     uint32_t temp_max = param.qcw_max;
+    temp_max = (temp_max * grid_regulator_get_scale()) / 1000;
     
     if((temp_max + param.qcw_vol) > 255){
         temp_max = 255 - param.qcw_vol;  //Scale the max down to fit the volume
@@ -259,6 +261,7 @@ void qcw_ramp_visualize(CHART *chart, TERMINAL_HANDLE * handle){
  */
 void qcw_start(){
     if(tsk_fault_is_fault() || sysfault.interlock) return;         //Never start while a fault is latched
+    if(grid_regulator_is_tripped() || grid_regulator_get_scale() == 0) return; //Grid limiter has no headroom
     if(tt.n.dutycycle.value > configuration.max_qcw_duty) return;  //Don't command a pulse if duty is too high
        
     ramp.index=0;

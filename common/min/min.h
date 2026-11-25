@@ -124,6 +124,7 @@ struct min_context {
 	uint8_t port;
 	uint32_t rx_space;
 	uint32_t remote_rx_space;
+	uint8_t transport_idle_reset;
 };
 
 /* ── Public API ───────────────────────────────────────────────────────── */

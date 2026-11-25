@@ -309,7 +309,7 @@ static void fifo_reset(struct min_context *self)
 	self->transport_fifo.sn_min = 0;
 	self->transport_fifo.rn = 0;
 
-	self->transport_fifo.last_received_anything_ms = now;
+	/* Keep the real last-receive time; otherwise an idle reset would re-arm itself. */
 	self->transport_fifo.last_sent_ack_time_ms = now;
 	self->transport_fifo.last_received_frame_ms = 0;
 }
@@ -619,9 +619,14 @@ static void poll_transport(struct min_context *self)
 	bool remote_active = (now - self->transport_fifo.last_received_frame_ms < TRANSPORT_IDLE_TIMEOUT_MS);
 
 	if (!remote_connected) {
-		min_transport_reset(self, true);
+		//Reset the transport once per idle period, not every poll.
+		if(!self->transport_idle_reset){
+			self->transport_idle_reset = 1;
+			min_transport_reset(self, true);
+		}
 		return;
 	}
+	self->transport_idle_reset = 0;
 
 	uint8_t window_size = self->transport_fifo.sn_max - self->transport_fifo.sn_min;
 

@@ -493,7 +493,9 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
             break;
         case VMS_WRT_FLUSH:
             last_write_index=0;
-            nvm_flush();
+            if(!nvm_flush()){
+                alarm_push(ALM_PRIO_WARN, "COM: VMS flash flush failed", 0);
+            }
             if(map_entries != NULL) {
                 vPortFree(map_entries);
                 map_entries = NULL;
@@ -502,14 +504,7 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
                 vPortFree(map_header);
                 map_header = NULL;
             }
-            for(uint8_t i=0;i<NUM_MIN_CON;i++){
-                if(socket_info[i].socket==SOCKET_CONNECTED){
-                    TERMINAL_HANDLE* handle = min_handle[i];
-                    ttprintf("\r\n VMS-Block write finished: %u\r\n", nvm_get_blk_cnt((VMS_Block_t*) NVM_blockMem));
-                    
-                    ttprintfEcho("\r\n\r\n%s@%s>", handle->currUserName, TERM_DEVICE_NAME);
-                }
-            }
+            //Do not print here: the MIN task is the only drain of its own TX buffer.
             break;
         default:
             break;

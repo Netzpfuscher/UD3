@@ -99,8 +99,22 @@ static uint8_t *page_content=NULL;  //!< Buffered flash page for write operation
 static uint16_t last_page=0xFFFF;   //!< Last buffered page number
 static uint16_t page;               //!< Current page being written
 
+#define NVM_PAGE_COUNT ((MAPMEM_SIZE + BLOCKMEM_SIZE) / NVM_PAGE_SIZE)
+#define NVM_LAST_PAGE  (NVM_START_PAGE + NVM_PAGE_COUNT - 1)
+
 
 uint8_t nvm_flush(){
+    //Nothing has been buffered since the last flush: this is a valid no-op.
+    if(page_content == NULL) return pdTRUE;
+
+    //Never hand an out-of-range row to the flash controller.
+    if(page < NVM_START_PAGE || page > NVM_LAST_PAGE){
+        vPortFree(page_content);
+        page_content = NULL;
+        last_page=0xFFFF;
+        return pdFAIL;
+    }
+
     CySetTemp();
     uint32_t rc = CyWriteRowData((uint8)NVM_ARRAY, page, page_content);
     CyFlushCache();

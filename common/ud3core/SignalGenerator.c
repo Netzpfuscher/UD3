@@ -332,19 +332,31 @@ uint32_t SigGen_getCurrDuty(){
         //dutycycle = frequency * pulseWidth; pulsewidth calculation from volume already takes the master volume into account
         
         //scale to correct for the error from A: microseconds to seconds of OT, B: 10ths of a hertz to hertz in the frequency and C: a multiply by 100 for returning percent instead of 0-1
-        uint32_t ourDuty = (taskData->voice[currVoice].pulseWidth_us * taskData->voice[currVoice].frequencyTenths) / 100000; 
+        int64_t duty = ((int64_t)taskData->voice[currVoice].pulseWidth_us * taskData->voice[currVoice].frequencyTenths) / 100000;
+        if(duty < 0) duty = 0;
+        if(duty > 0xFFFFFFFFll) duty = 0xFFFFFFFFll;
+        uint32_t ourDuty = (uint32_t)duty;
         
         //is hypervoice on? if so add the duty from the second pulse
         if(taskData->voice[currVoice].hpvCount != 0 && taskData->voice[currVoice].noiseAmplitude == 0){ 
             //TODO actually respect the hpv divider in the duty calculation
             //scale to correct for the error from A: microseconds to seconds of OT, B: 10ths of a hertz to hertz in the frequency and C: a multiply by 100 for returning percent instead of 0-1       
-            ourDuty += ((taskData->voice[currVoice].pulseWidth_us / taskData->voice[currVoice].hpvCount) * taskData->voice[currVoice].frequencyTenths) / 100000; 
+            int64_t hpvDuty = ((int64_t)(taskData->voice[currVoice].pulseWidth_us / taskData->voice[currVoice].hpvCount) * taskData->voice[currVoice].frequencyTenths) / 100000;
+            if(hpvDuty > 0){
+                if(hpvDuty > (int64_t)(0xFFFFFFFFu - ourDuty)) ourDuty = 0xFFFFFFFFu;
+                else ourDuty += (uint32_t)hpvDuty;
+            }
         }
-        totalDuty += ourDuty;
+        if(ourDuty > (0xFFFFFFFFu - totalDuty)) totalDuty = 0xFFFFFFFFu;
+        else totalDuty += ourDuty;
     }
     
     //scale current duty by the compressor volume
-    if(Comp_getGain() != COMP_UNITYGAIN) totalDuty = (totalDuty * Comp_getGain()) >> 15;
+    int32_t gain = Comp_getGain();
+    if(gain > 0 && gain != COMP_UNITYGAIN){
+        uint64_t scaledDuty = ((uint64_t)totalDuty * (uint32_t)gain) >> 15;
+        totalDuty = (scaledDuty > 0xFFFFFFFFu) ? 0xFFFFFFFFu : (uint32_t)scaledDuty;
+    }
     
     return totalDuty;
 }

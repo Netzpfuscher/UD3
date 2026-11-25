@@ -147,6 +147,7 @@ void process_midi(uint8_t* ptr, uint16_t len) {
 #define SID_COMMAND_HPV_ENABLE   2
 
 void process_min_sid(uint8_t* ptr, uint16_t len) {
+    if(len < 1) return;
     uint8_t n_frames = *ptr;
     len--;
     ptr++;
@@ -156,6 +157,7 @@ void process_min_sid(uint8_t* ptr, uint16_t len) {
         uint16_t value = (ptr[2] << 8) | ptr[3];
         switch (command) {
             case SID_COMMAND_VOLUME:
+                if (channel >= N_SIDCHANNEL) return;
                 SID_filterData.channelVolume[channel] = value;
                 return;
             case SID_COMMAND_NOISE_VOLUME:

@@ -518,6 +518,12 @@ uint8_t TERM_handleInput(uint16_t c, TERMINAL_HANDLE * handle){
                 TERM_doAutoComplete(handle);
             }
             
+            //Nothing to cycle through (or allocation failed): do not underflow the index
+            if(handle->autocompleteBuffer == NULL || handle->autocompleteBufferLength == 0){
+                ttprintfEcho("\x07");
+                break;
+            }
+            
             if(--handle->currAutocompleteCount > handle->autocompleteBufferLength - 1) handle->currAutocompleteCount = handle->autocompleteBufferLength - 1;
             
             if(handle->currAutocompleteCount == 0){

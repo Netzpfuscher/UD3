@@ -590,6 +590,7 @@ uint8_t callback_baudrateFunction(parameter_entry * params, uint8_t index, TERMI
  */
 uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     uint8 sfflag = system_fault_Read();
+    uint8 interlock_before = sysfault.interlock;
     sysflt_set(pdTRUE); //halt tesla coil operation during updates!
     
     if(configuration.hw_rev > 0){
@@ -618,7 +619,12 @@ uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, TERMINA
         qcw_regenerate_ramp();   
     }
     
-	system_fault_Control = sfflag;
+	sysfault.interlock = interlock_before;
+	if(interlock_before){
+		sysflt_set(pdFALSE); //keep the hardware fault line asserted
+	}else{
+		system_fault_Control = sfflag;
+	}
     return 1;
 }
 

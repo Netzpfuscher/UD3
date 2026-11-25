@@ -251,6 +251,10 @@ static void fifo_pop(struct min_context *self)
 
 static struct transport_frame *fifo_push(struct min_context *self, uint16_t data_size)
 {
+	if (data_size > TRANSPORT_FIFO_MAX_FRAME_DATA) {
+		min_debug_print("No FIFO payload space: data_size=%d exceeds FIFO\r\n", data_size);
+		return NULL;
+	}
 	if (self->transport_fifo.n_frames >= TRANSPORT_FIFO_MAX_FRAMES) {
 		min_debug_print("No FIFO frame slots\r\n");
 		return NULL;
@@ -584,7 +588,9 @@ void min_rx_byte(struct min_context *self, uint8_t byte)
 		if (self->rx_frame_checksum == crc) {
 			self->rx_frame_state = RX_RECEIVING_EOF;
 		} else {
+#ifdef TRANSPORT_PROTOCOL
 			self->transport_fifo.crc_fails++;
+#endif
 			self->rx_frame_state = RX_SEARCHING_FOR_SOF;
 		}
 		break;
@@ -694,6 +700,12 @@ bool min_init_context(struct min_context *self, uint8_t port)
 
 void min_send_frame(struct min_context *self, uint8_t min_id, uint8_t *payload, uint8_t payload_len)
 {
+	if (payload_len > MAX_PAYLOAD) {
+		return;
+	}
+	if (payload_len != 0U && payload == NULL) {
+		return;
+	}
 	if (ON_WIRE_SIZE(payload_len) <= min_tx_space(self->port)) {
 		transmit_frame(self, min_id & ID_MASK, 0, payload, 0, 0xffffU, payload_len);
 	}
@@ -701,6 +713,9 @@ void min_send_frame(struct min_context *self, uint8_t min_id, uint8_t *payload, 
 
 void min_transport_reset(struct min_context *self, bool inform_other_side)
 {
+#ifndef TRANSPORT_PROTOCOL
+	(void)inform_other_side;
+#endif
 #ifdef TRANSPORT_PROTOCOL
 	if (inform_other_side) {
 		send_reset(self);
@@ -714,6 +729,13 @@ void min_transport_reset(struct min_context *self, bool inform_other_side)
 
 bool min_queue_frame(struct min_context *self, uint8_t min_id, uint8_t *payload, uint8_t payload_len)
 {
+	if (payload_len > MAX_PAYLOAD) {
+		return false;
+	}
+	if (payload_len != 0U && payload == NULL) {
+		return false;
+	}
+
 	struct transport_frame *frame = fifo_push(self, payload_len);
 	if (frame == NULL) {
 		self->transport_fifo.dropped_frames++;
@@ -723,10 +745,16 @@ bool min_queue_frame(struct min_context *self, uint8_t min_id, uint8_t *payload,
 	frame->min_id = min_id & ID_MASK;
 	frame->payload_len = payload_len;
 
-	uint16_t offset = frame->payload_offset;
-	for (uint32_t i = 0; i < payload_len; i++) {
-		self->transport_fifo.payloads[offset] = payload[i];
-		offset = (offset + 1) & FIFO_DATA_MASK;
+	if (payload_len != 0U) {
+		uint16_t offset = frame->payload_offset;
+		uint16_t first = TRANSPORT_FIFO_MAX_FRAME_DATA - offset;
+		if (first > payload_len) {
+			first = payload_len;
+		}
+		memcpy(&self->transport_fifo.payloads[offset], payload, first);
+		if (payload_len > first) {
+			memcpy(&self->transport_fifo.payloads[0], payload + first, payload_len - first);
+		}
 	}
 
 	min_debug_print("Queued ID=%u, len=%d\r\n", min_id, payload_len);
@@ -735,6 +763,9 @@ bool min_queue_frame(struct min_context *self, uint8_t min_id, uint8_t *payload,
 
 bool min_queue_has_space_for_frame(struct min_context *self, uint8_t payload_len)
 {
+	if (payload_len > MAX_PAYLOAD) {
+		return false;
+	}
 	return self->transport_fifo.n_frames < TRANSPORT_FIFO_MAX_FRAMES &&
 		   self->transport_fifo.n_ring_buffer_bytes <= TRANSPORT_FIFO_MAX_FRAME_DATA - payload_len;
 }

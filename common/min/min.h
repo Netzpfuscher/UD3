@@ -53,11 +53,17 @@
 #if (MAX_PAYLOAD > 255)
 #error "MIN frame payloads can be no bigger than 255 bytes"
 #endif
-#if (TRANSPORT_FIFO_MAX_FRAMES > 256)
-#error "Transport FIFO frames cannot exceed 256"
+#if (TRANSPORT_FIFO_MAX_FRAMES >= 256)
+#error "Transport FIFO frame count must fit in uint8_t (fewer than 256 frames)"
 #endif
-#if (TRANSPORT_FIFO_MAX_FRAME_DATA > 65536)
-#error "Transport FIFO data allocated cannot exceed 64Kbytes"
+#if (TRANSPORT_FIFO_MAX_FRAME_DATA >= 65536)
+#error "Transport FIFO data must fit in uint16_t (less than 64Kbytes)"
+#endif
+#if ((TRANSPORT_FIFO_MAX_FRAMES & (TRANSPORT_FIFO_MAX_FRAMES - 1U)) != 0U)
+#error "TRANSPORT_FIFO_SIZE_FRAMES_BITS must describe a power of two"
+#endif
+#if ((TRANSPORT_FIFO_MAX_FRAME_DATA & (TRANSPORT_FIFO_MAX_FRAME_DATA - 1U)) != 0U)
+#error "TRANSPORT_FIFO_SIZE_FRAME_DATA_BITS must describe a power of two"
 #endif
 
 /* ── CRC32 context ────────────────────────────────────────────────────── */
@@ -163,7 +169,7 @@ extern uint8_t min_debug;
 #ifdef MIN_DEBUG_PRINTING
 void min_debug_prt(const char *msg, ...);
 #define min_debug_print(msg, ...) \
-	if (min_debug) min_debug_prt(msg, ##__VA_ARGS__);
+	do { if (min_debug) min_debug_prt(msg, ##__VA_ARGS__); } while (0)
 #else
 #define min_debug_print(...)
 #endif

@@ -125,7 +125,8 @@ void Mapper_noteOnEventHandler(uint32_t output, uint32_t note, uint32_t velocity
           
         //does the note fall within the range of the current header entry?
         if(note >= currEntry->startNote && note <= currEntry->endNote){
-            //yes :) add entry to the list of ones to process
+            //yes :) add entry to the list of ones to process, bounded by the voice count
+            if(requestedVoiceCount >= SIGGEN_VOICECOUNT) break;
             entries[requestedVoiceCount++] = currEntry;
         }else{
             //no, make sure to NULL the pointer, incase the loop ends after this entry. We need to know if we stopped the loop because we found the entry or because the list ended

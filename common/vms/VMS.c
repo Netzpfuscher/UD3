@@ -24,6 +24,9 @@
 
 static DLLObject * VMS_listHead = 0;
 
+//Hard cap per voice: a malformed block graph must not grow without bound.
+#define VMS_MAX_BLOCKS_PER_VOICE 64
+
 static void VMS_removeBlockFromList(VMS_listDataObject * target);
 static unsigned VMS_hasReachedThreshold(const VMS_Block_t * block, int32_t factor, int32_t targetFactor, int32_t param1);
 //static int32_t VMS_getParam(VMS_Block_t * block, uint32_t voiceId, uint8_t param);
@@ -115,9 +118,22 @@ void VMS_addBlockToList(const VMS_Block_t * block, uint32_t output, uint32_t voi
     
     //is it valid?
     if(block == NULL || block->flags == VMS_FLAG_BLOCK_INVALID) return;
+    if(VMS_listHead == NULL) return;
+
+    //refuse to grow a single voice beyond the hard cap (also breaks block cycles)
+    uint32_t activeBlocks = 0;
+    DLLObject * currObject = VMS_listHead->next;
+    while(currObject != VMS_listHead){
+        VMS_listDataObject * currBlock = (VMS_listDataObject *)currObject->data;
+        if(currBlock->targetOutputIndex == output && currBlock->targetVoiceIndex == voiceId){
+            if(++activeBlocks >= VMS_MAX_BLOCKS_PER_VOICE) return;
+        }
+        currObject = currObject->next;
+    }
     
     //allocate and initialize memory
     VMS_listDataObject * data = pvPortMalloc(sizeof(VMS_listDataObject));
+    if(data == NULL) return;
     memset(data, 0, sizeof(VMS_listDataObject));
     
     data->block = block;
@@ -130,6 +146,10 @@ void VMS_addBlockToList(const VMS_Block_t * block, uint32_t output, uint32_t voi
     switch(block->type){
         case VMS_SIN:
             data->data = pvPortMalloc(sizeof(SINE_DATA));
+            if(data->data == NULL){
+                vPortFree(data);
+                return;
+            }
             memset(data->data, 0, sizeof(SINE_DATA));
             break;
         default:

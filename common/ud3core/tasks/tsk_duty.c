@@ -59,7 +59,11 @@ void grid_regulator_reset(void){
     grid_scale = GRID_SCALE_MAX;
     grid_tripped = 0;
     grid_heat = 0.0f;
-    grid_power_filt = 0;
+    /* Keep the current power estimate available when the limiter is enabled
+     * or reconfigured; otherwise the displayed/current estimate has to ramp
+     * up from zero again. */
+    grid_power_filt = tt.n.avg_power.value;
+    if(grid_power_filt < 0) grid_power_filt = 0;
     grid_i_est = 0.0f;
     grid_severe_ms = 0;
     tt.n.i2t_i.value = 0;
@@ -99,7 +103,10 @@ void grid_regulator_update(void){
 
     int32_t power = tt.n.avg_power.value;
     if(power < 0) power = 0;
-    grid_power_filt += (power - grid_power_filt) / 8;
+    /* A 100 ms loop with a 1/2 EMA gives roughly a 0.2 s time constant.
+     * The old 1/8 EMA added ~0.8 s of avoidable lag on top of the ADC
+     * filtering and the bus RC. */
+    grid_power_filt += (power - grid_power_filt) / 2;
     grid_i_est = (float)grid_power_filt / denom;
 
     float fuse = (float)configuration.grid_fuse;

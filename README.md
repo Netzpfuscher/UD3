@@ -10,7 +10,7 @@
 [![Platform: PSoC](https://img.shields.io/badge/Platform-Cypress%20PSoC-blue.svg)](https://www.cypress.com/)
 [![RTOS: FreeRTOS](https://img.shields.io/badge/RTOS-FreeRTOS%20v9.0.0-green.svg)](https://www.freertos.org/)
 
-[Wiki](https://github.com/Netzpfuscher/UD3/wiki) • [Features](#features) • [Getting Started](#getting-started) • [Simulator](#simulator)
+[Wiki](https://github.com/Netzpfuscher/UD3/wiki) • [Architecture](ARCHITECTURE.md) • [Features](#features) • [Getting Started](#getting-started) • [Simulator](#simulator)
 
 </div>
 
@@ -28,7 +28,7 @@ UD3 is a comprehensive controller for **DRSSTC** (Dual Resonant Solid State Tesl
   - MIDI playback (polyphonic)
   - SID (Commodore 64 audio)
   - QCW Ramp / MIDI / SID modes
-- **4-channel polyphonic synthesis** for complex audio
+- **Up to six-voice polyphonic synthesis** for complex audio
 
 ### 📊 Measurement & Control
 - **Primary resonator frequency measurement** via frequency sweep
@@ -36,6 +36,8 @@ UD3 is a comprehensive controller for **DRSSTC** (Dual Resonant Solid State Tesl
 - **Bus current measurement** (current or voltage mode CT)
 - **Dual voltage measurement** (differential)
 - **Pulse skipping** for duty cycle control
+- **Grid/fuse power limiter** with configurable fuse rating, I²t trip, and QCW limiting
+- **Autotune** frequency sweep for finding the primary resonance
 
 ### 🛡️ Safety & Monitoring
 - **Alarm/Event system** for fault tracing
@@ -60,11 +62,11 @@ UD3 is a comprehensive controller for **DRSSTC** (Dual Resonant Solid State Tesl
 
 ### Documentation
 
-See the **[Wiki](https://github.com/Netzpfuscher/UD3/wiki)** for comprehensive information on:
-- Hardware setup
-- Installation instructions
-- Configuration parameters
-- Troubleshooting guides
+See the **[Wiki](https://github.com/Netzpfuscher/UD3/wiki)** for hardware setup, installation and troubleshooting, and **[ARCHITECTURE.md](ARCHITECTURE.md)** for the software architecture and data flow.
+
+Additional references:
+- [INFO.md](INFO.md) — CLI commands and parameter reference
+- [ARCHITECTURE.md](ARCHITECTURE.md) — firmware, simulator, task and module architecture
 
 ### Hardware Requirements
 
@@ -96,8 +98,22 @@ make
 
 - Full FreeRTOS task scheduling (POSIX threads)
 - UART simulation via pseudo-terminal + UDP
-- Accessible at `/tmp/UD3Serial` (symlink) or UDP port 21324
-- Test CLI, parameters, and logic without physical hardware
+- MIN endpoint: UDP port **1337**; pseudo-terminal symlink: **`/tmp/ud3sim-uart`**
+- Simulated bus voltage/current, primary current, and autotune resonance
+- MIN-over-UDP integration tests and an interactive CLI shell
+- Test CLI, parameters, VMS, and logic without physical hardware
+
+### Simulator Tests
+
+```bash
+# Run the full MIN-over-UDP integration suite against a private simulator:
+python3 simulator/tests/test_min_udp.py --start-sim
+
+# Open an interactive UD3 CLI over MIN:
+python3 simulator/tests/test_min_udp.py --start-sim --shell
+```
+
+The test tool implements the MIN framing and transport layer itself (CRC32, byte stuffing, ACKs, sequence numbers), so it also serves as a reference host implementation.
 
 ## Repository Structure
 
@@ -113,6 +129,11 @@ UD3/
 │   ├── vms/                # Voice Music System
 │   └── rtos/               # FreeRTOS kernel
 ├── simulator/              # POSIX simulator
+│   ├── tests/              # MIN-over-UDP integration tests
+│   └── ...
+├── ARCHITECTURE.md         # Software architecture and data flow
+├── INFO.md                 # CLI and parameter reference
+├── docs/                   # Generated Doxygen docs
 ├── UD3_QFN.cydsn/         # PSoC project (QFN)
 ├── UD3_TQFP.cydsn/        # PSoC project (TQFP)
 └── UARTldr_*.cydsn/       # Bootloader projects
@@ -126,6 +147,15 @@ UD3/
 - **Formatting**: clang-format (see `.clang-format`)
 - **Indentation**: Tabs (4 spaces wide)
 - **Brace style**: K&R (attach)
+
+### Testing
+
+Run the simulator tests before submitting changes:
+
+```bash
+cd simulator && make
+cd .. && python3 simulator/tests/test_min_udp.py --start-sim
+```
 
 ### Building Firmware
 

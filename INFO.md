@@ -123,6 +123,12 @@ MIDI synthesizer status monitor (press CTRL+C to exit).
   - Channel program mappings
 - **Source**: `common/ud3core/interrupter.c:630`
 
+#### `grid [status|reset]`
+Show the grid/fuse power limiter status or reset its duty scale, I2t accumulator and trip latch.
+- **`grid`** / **`grid status`**: Show fuse settings, estimated grid current, DC power, duty scale, I2t utilisation and state (`OK`, `LIMITING`, `TRIPPED`)
+- **`grid reset`**: Clear the limiter state; `kill reset` also clears it
+- **Source**: `common/ud3core/cli_common.c`, `common/ud3core/tasks/tsk_duty.c`
+
 #### `alarms <get|reset|roll>`
 Alarm/event queue management.
 - **`alarms get`**: Display alarm history
@@ -319,6 +325,32 @@ Parameters are defined in `common/ud3core/cli_common.c` in the `confparam[]` arr
 | `temp1_max` | Config | 0-100 | 40 | Max temperature 1 [°C] |
 | `temp2_max` | Config | 0-100 | 40 | Max temperature 2 [°C] |
 | `max_fb_errors` | Config | 0-60000 | 0 | Max feedback errors/sec (0=disabled) |
+
+### Grid / Fuse Limiter
+
+| Parameter | Type | Range | Default | Description |
+|-----------|------|-------|---------|-------------|
+| `grid_fuse` | Config | 0-200 | 0 | Grid fuse rating [A RMS], 0=disabled |
+| `grid_voltage` | Config | 100-600 | 230 | Nominal grid voltage [V RMS] |
+| `grid_phases` | Config | 1-3 | 1 | 1=single phase, 3=three phase |
+| `grid_pf` | Config | 0.10-1.00 | 0.60 | Power factor used for the grid-current estimate |
+| `grid_margin` | Config | 10-100 | 80 | Continuous limit as % of fuse rating |
+| `grid_eff` | Config | 50-100 | 95 | Rectifier/driver efficiency [%] |
+| `grid_i2t_time` | Config | 1-60 | 5 | I2t trip time at 150% of fuse rating [s] |
+
+The limiter estimates grid current from filtered DC-bus power:
+
+```text
+I_grid ~= P_dc / (V_mains * PF * efficiency * phase_factor)
+```
+
+It only reduces the configured `max_tr_duty` and the QCW ramp maximum. A
+normalized I2t accumulator trips the output when the fuse is overloaded for too
+long, and a hard trip occurs after 500 ms above 200 % of the fuse rating. A
+trip kills the output, opens the bus and latches until `grid reset` or
+`kill reset`. The physical fuse/breaker remains the primary protection.
+
+After adding or changing these parameters, run `eeprom save` to persist them.
 
 ### Current Transformers (CT)
 

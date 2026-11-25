@@ -2157,6 +2157,20 @@ void Bootloader_HostLink(uint8 timeOut) CYLARGE
                         upperRange = Bootloader_NUMBER_OF_ROWS_IN_ARRAY;
                     #endif  /* (!CY_PSOC4) */
 
+                    /* The host may only address EEPROM or an existing flash array. */
+                    #if(!CY_PSOC4)
+                    if(!(((btldrData >= Bootloader_FIRST_EE_ARRAYID) &&
+                          (btldrData <= Bootloader_LAST_EE_ARRAYID)) ||
+                         (btldrData < CY_FLASH_NUMBER_ARRAYS)))
+                    #else
+                    if(btldrData >= CY_FLASH_NUMBER_ARRAYS)
+                    #endif  /* (!CY_PSOC4) */
+                    {
+                        ackCode = Bootloader_ERR_ARRAY;
+                        dataOffset = 0u;
+                        break;
+                    }
+
                     /* Check if we have all data to program */
                     if(dataOffset == pktSize)
                     {
@@ -2582,7 +2596,7 @@ void Bootloader_HostLink(uint8 timeOut) CYLARGE
 
                             checksum = Bootloader_Calc8BitSum(CY_EEPROM_BASE, rowAddr, CYDEV_EEPROM_ROW_SIZE);
                         }
-                        else
+                        else if(btldrData < CY_FLASH_NUMBER_ARRAYS)
                         {
                             /* flash */ 
                             rowAddr = ((uint32)btldrData * CYDEV_FLS_SECTOR_SIZE)
@@ -2598,6 +2612,11 @@ void Bootloader_HostLink(uint8 timeOut) CYLARGE
                             }                            
 
                             checksum = Bootloader_Calc8BitSum(CY_FLASH_BASE, rowAddr, CYDEV_FLS_ROW_SIZE);
+                        }
+                        else
+                        {
+                            ackCode = Bootloader_ERR_ARRAY;
+                            break;
                         }
 
                     #else

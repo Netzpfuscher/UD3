@@ -241,6 +241,7 @@ uint8_t CMD_ntc(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
    
     if(getch(handle, portMAX_DELAY) != 'y'){
         ttprintf("Calibration aborted\r\n");
+        xSemaphoreGive(adc_sem);
         return TERM_CMD_EXIT_SUCCESS;
     }
     

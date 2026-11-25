@@ -1550,15 +1550,20 @@ uint8_t CMD_signals(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
  * @return Number of matching parameters found
  */
 uint8_t complete_parameter_name(TERMINAL_HANDLE * handle, void * parameters) {
+    handle->autocompleteBufferLength = 0;
     char* prefix = pvPortMalloc(128);
+    if(prefix == NULL) return 0;
     uint8_t prefix_length;
     memset(prefix, 0, 128);
     handle->autocompleteStart = TERM_findLastArg(handle, prefix, &prefix_length);
 
     uint8_t num_candidates = sizeof(confparam) / sizeof(parameter_entry);
     handle->autocompleteBuffer = pvPortMalloc(num_candidates * sizeof(char*));
+    if(handle->autocompleteBuffer == NULL){
+        vPortFree(prefix);
+        return 0;
+    }
     handle->currAutocompleteCount = 0;
-    handle->autocompleteBufferLength = 0;
     for (uint8_t current_parameter = 0; current_parameter < num_candidates; current_parameter++) {
         if (!confparam[current_parameter].visible) { continue; }
         char* current_name = (char*) confparam[current_parameter].name;

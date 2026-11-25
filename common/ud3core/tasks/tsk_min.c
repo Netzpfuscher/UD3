@@ -237,6 +237,7 @@ struct _socket_info socket_info[NUM_MIN_CON];
  * @param len_payload Length of payload in bytes
  */
 void process_synth(uint8_t *min_payload, uint8_t len_payload){
+    if(len_payload == 0) return;
     len_payload--;
     switch(*min_payload++){
         case SYNTH_CMD_FLUSH:
@@ -287,6 +288,7 @@ uint8_t transmit_features=0;
 void min_command(uint8_t command, uint8_t *min_payload, uint8_t len_payload){
     switch(command){
         case CMD_LINK:
+            if(len_payload < 1) break;
             sysfault.link_state = *min_payload ? pdTRUE : pdFALSE;
             break;
         default:
@@ -377,6 +379,7 @@ void min_event(uint8_t command, uint8_t *min_payload, uint8_t len_payload){
  * - VMS_WRT_FLUSH: Finalize EEPROM writes and cleanup buffers
  */
 void min_vms(uint8_t *min_payload, uint8_t len_payload){
+    if(len_payload == 0) return;
     
     uint8_t packet_type = *min_payload;
     min_payload++;
@@ -555,21 +558,27 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
                 }
                 WD_reset();
             return;
-        case MIN_ID_SOCKET:
-            if(*min_payload>(NUM_MIN_CON-1)) return;
-            socket_info[*min_payload].socket = *(min_payload+1);
-            strncpy(socket_info[*min_payload].info,(char*)min_payload+2,sizeof(socket_info[0].info));
-            socket_info[*min_payload].info[sizeof(socket_info[0].info)-1] = '\0';
-            if(socket_info[*min_payload].socket==SOCKET_CONNECTED){
+        case MIN_ID_SOCKET: {
+            if(len_payload < 2) return;
+            uint8_t socket_index = min_payload[0];
+            if(socket_index > (NUM_MIN_CON-1)) return;
+            socket_info[socket_index].socket = min_payload[1];
+            uint8_t info_len = len_payload - 2;
+            if(info_len > (sizeof(socket_info[0].info) - 1)) info_len = sizeof(socket_info[0].info) - 1;
+            memcpy(socket_info[socket_index].info,(char*)min_payload+2,info_len);
+            socket_info[socket_index].info[info_len] = '\0';
+            if(socket_info[socket_index].socket==SOCKET_CONNECTED){
                 if(!transmit_features){
                     transmit_features=sizeof(version)/sizeof(char*);
                 }
             }else{
-                min_port[*min_payload].term_mode = PORT_TERM_VT100;    
-                stop_overlay_task(min_handle[*min_payload]);   
+                min_port[socket_index].term_mode = PORT_TERM_VT100;    
+                stop_overlay_task(min_handle[socket_index]);   
             }
             return;
+        }
         case MIN_ID_SYNTH:
+            if(len_payload < 1) return;
             process_synth(min_payload,len_payload);
             return;
         case MIN_ID_COMMAND:
@@ -578,6 +587,7 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_p
             min_command(min_payload[0], &min_payload[1], len_payload);
             return;
         case MIN_ID_EVENT:
+            if(len_payload < 1) return;
             len_payload--;
             min_event(min_payload[0], &min_payload[1], len_payload);
             return;

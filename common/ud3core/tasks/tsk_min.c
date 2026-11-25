@@ -405,7 +405,6 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
             if(!nvm_write_buffer(MAPMEM_SIZE + (sizeof(VMS_Block_t) * (data->id)), (uint8_t*) &(data->block), sizeof(VMS_Block_t))){
                 alarm_push(ALM_PRIO_WARN, "COM: VMS block write failed", data->id);
             }
-            TERM_printDebug(min_handle[1], "got block: %d target=%d\r\n", data->id, data->block.target);
             
             break;
         }
@@ -432,8 +431,6 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
                     alarm_push(ALM_PRIO_CRITICAL, "COM: VMS map allocation failed", 0);
                     return;
                 }
-                
-                TERM_printDebug(min_handle[1], "got header for %s with count %d\r\n", map_header->header.name, map_header->header.listEntries);
             } else {
                 if(((uint32_t)last_write_index + sizeof(MAPTABLE_HEADER_t)) <= MAPMEM_SIZE){
                     if(!nvm_write_buffer(last_write_index, (uint8_t*)&(map_header->header), sizeof(MAPTABLE_HEADER_t))){
@@ -465,11 +462,7 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
                 memcpy(&map_entries[n_map_entry], &(map_entry->entry), sizeof(MAPTABLE_ENTRY_t));
                 n_map_entry++;
                 
-                TERM_printDebug(min_handle[1], "got mapentry %d of %d: id=%d notes=%d-%d freq=%d flags=%02x ot=%d startBlock=%d\r\n", n_map_entry, map_header->header.listEntries, 0, map_entry->entry.startNote, map_entry->entry.endNote, map_entry->entry.data.noteFreq, map_entry->entry.data.flags, map_entry->entry.data.targetOT, map_entry->entry.data.startblockID);
-                
                 if(n_map_entry == map_header->header.listEntries){
-                    TERM_printDebug(min_handle[1], "write map: %s\r\n", map_header->header.name);
-                    
                     uint32_t map_size = sizeof(MAPTABLE_HEADER_t) + ((uint32_t)sizeof(MAPTABLE_ENTRY_t) * map_header->header.listEntries);
                     if(((uint32_t)last_write_index + map_size) <= MAPMEM_SIZE){
                         if(!nvm_write_buffer(last_write_index, (uint8_t*)&(map_header->header), sizeof(MAPTABLE_HEADER_t))){

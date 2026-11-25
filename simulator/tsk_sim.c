@@ -20,6 +20,13 @@
 
 #define MAX_BUS_CHARGE 4000
 #define MAINS_FREQ 50.0
+/*
+ * The ADC buffer contains 25 samples at 32 kHz, i.e. 0.78 ms of simulated
+ * time.  Delaying 10 ms per buffer made the bus voltage, bus current and
+ * therefore the grid estimate run ~12.8x slower than real time.  Use one
+ * tick per buffer so the model runs close to real time.
+ */
+#define SIM_ADC_TASK_DELAY_MS 1
 #define BUS_RC_TIME_CONSTANT 0.1  // RC time constant in seconds (adjust for desired charge speed)
 
 static int bus_charge = 0;
@@ -148,7 +155,7 @@ void tsk_sim(void *pvParameters) {
             read_buffer_0 = !read_buffer_0;
 		}
 		
-		vTaskDelay(10);
+		vTaskDelay(pdMS_TO_TICKS(SIM_ADC_TASK_DELAY_MS));
 	}
 }
 

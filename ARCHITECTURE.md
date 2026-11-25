@@ -509,6 +509,11 @@ for the application, CLI, protocol and control logic.
   actually changes the simulated DC-bus power,
 - the ping-pong ADC buffers consumed by `tsk_analog`.
 
+`tsk_sim` emits one 25-sample buffer per 1 ms tick. Earlier versions waited
+10 ms per buffer, which made bus voltage, DC current and the grid estimate run
+about 12.8 times slower than real time. The 1 ms cadence keeps the model close
+to the 32 kHz ADC sample rate.
+
 `sim_hw.c` models the CT1 peak detector:
 
 - `ADC_peak_GetResult16()` returns a simulated 12-bit value (1 mV/count),

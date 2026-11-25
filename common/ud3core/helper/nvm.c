@@ -129,6 +129,9 @@ uint8_t nvm_write_buffer(uint16_t index, uint8_t* buffer, int32_t len){
 
     uint16_t n_pages = 0;
 
+    if(len <= 0) return pdTRUE;
+    if(buffer == NULL) return pdFAIL;
+    if((uint32_t)index + (uint32_t)len > (MAPMEM_SIZE + BLOCKMEM_SIZE)) return pdFAIL;
 
     if(page_content==NULL){
         page_content = pvPortMalloc(NVM_PAGE_SIZE);
@@ -140,11 +143,11 @@ uint8_t nvm_write_buffer(uint16_t index, uint8_t* buffer, int32_t len){
     while(len>0){
         uint8_t * page_addr = (uint8_t*)NVM_mapMem + ((index / NVM_PAGE_SIZE)*NVM_PAGE_SIZE); 
         page = NVM_START_PAGE + (index / NVM_PAGE_SIZE);
+        if(page > NVM_LAST_PAGE) return pdFAIL;
         if(last_page==0xFFFF){
             last_page = page;
             memcpy(page_content, page_addr , NVM_PAGE_SIZE);
         }
-        if(page > 256) return pdFAIL;
         
         uint32_t write_len = len;
         if(write_len+write_offset > NVM_PAGE_SIZE){

@@ -390,18 +390,25 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
     static uint16_t last_write_index=0;
     
     switch (packet_type){
-        case VMS_WRT_BLOCK:
-            if((len_payload % VMS_WIRE_SIZE) != 0){
+        case VMS_WRT_BLOCK: {
+            if(len_payload < VMS_WIRE_SIZE || (len_payload % VMS_WIRE_SIZE) != 0){
                 alarm_push(ALM_PRIO_WARN, "COM: Malformed block write", len_payload);
                 return;
             }
             
             //convert wire byte to vms stuff
             VMS_WIRE_DATA_t * data = (VMS_WIRE_DATA_t *) min_payload;
-            nvm_write_buffer(MAPMEM_SIZE + (sizeof(VMS_Block_t) * (data->id)), (uint8_t*) &(data->block), sizeof(VMS_Block_t));
+            if(data->id >= (BLOCKMEM_SIZE / sizeof(VMS_Block_t))){
+                alarm_push(ALM_PRIO_WARN, "COM: VMS block ID out of range", data->id);
+                return;
+            }
+            if(!nvm_write_buffer(MAPMEM_SIZE + (sizeof(VMS_Block_t) * (data->id)), (uint8_t*) &(data->block), sizeof(VMS_Block_t))){
+                alarm_push(ALM_PRIO_WARN, "COM: VMS block write failed", data->id);
+            }
             TERM_printDebug(min_handle[1], "got block: %d target=%d\r\n", data->id, data->block.target);
             
             break;
+        }
         case VMS_WRT_MAP_HEADER:
             //header will be needed again later, allocate ram
             if(map_header != NULL) vPortFree(map_header);

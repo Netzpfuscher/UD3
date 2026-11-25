@@ -48,6 +48,7 @@
 #include "helper/teslaterm.h"
 #include "tasks/tsk_overlay.h"
 #include "tasks/tsk_midi.h"
+#include "tasks/tsk_fault.h"
 #include "telemetry.h"
 
 ramp_params volatile ramp;
@@ -63,6 +64,11 @@ TimerHandle_t xQCW_Timer;
  * @note Must execute quickly (within 125µs ISR budget)
  */
 void qcw_handle(){
+    //A latched interlock must stop an active pulse immediately.
+    if(sysfault.interlock){
+        qcw_stop();
+        return;
+    }
     if(ramp.index >= ramp.stop_index){
         qcw_modulate(0);
         QCW_enable_Control = 0;
@@ -252,6 +258,7 @@ void qcw_ramp_visualize(CHART *chart, TERMINAL_HANDLE * handle){
  * @note Called by qcw command, MIDI handler, or auto-repeat timer
  */
 void qcw_start(){
+    if(tsk_fault_is_fault() || sysfault.interlock) return;         //Never start while a fault is latched
     if(tt.n.dutycycle.value > configuration.max_qcw_duty) return;  //Don't command a pulse if duty is too high
        
     ramp.index=0;

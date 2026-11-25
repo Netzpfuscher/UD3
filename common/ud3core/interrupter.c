@@ -58,6 +58,7 @@ interrupter_params interrupter;
  */
 void interrupter_kill(void){
     sysfault.interlock = 1;
+    qcw_stop();
     SigGen_killAudio();
     param.pw=0;
     interrupter_updateTR();

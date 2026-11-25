@@ -82,13 +82,16 @@ void alarm_push(uint8_t level, const char* message, int32_t value){
  */
 void alarm_push_c(uint8_t level, char* message, uint16_t len, int32_t value){
 	ALARMS temp;
+	if(message == NULL) return;
 	if(uxQueueSpacesAvailable(qAlarms)==0){
 		xQueueReceive(qAlarms,&temp,0);
 		if(ptr_is_freeable(temp.message)) vPortFree(temp.message);
 	}
 	temp.alarm_level = level;
-	temp.message = (char*)pvPortMalloc(len+1);
-	strncpy(temp.message,message,len+1);
+	temp.message = (char*)pvPortMalloc((size_t)len + 1);
+	if(temp.message == NULL) return;
+	if(len) memcpy(temp.message, message, len);
+	temp.message[len] = '\0';
 	temp.num = num;
 	temp.value = value;
 	temp.timestamp = xTaskGetTickCount() * portTICK_RATE_MS;

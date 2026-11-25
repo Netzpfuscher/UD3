@@ -14,6 +14,9 @@ Usage:
     # Start a private simulator instance automatically:
     python3 simulator/tests/test_min_udp.py --start-sim
 
+    # Interactive CLI shell over MIN:
+    python3 simulator/tests/test_min_udp.py --start-sim --shell
+
     # Different endpoint / binary:
     python3 simulator/tests/test_min_udp.py --host 127.0.0.1 --port 1337 \
         --start-sim --sim simulator/build/ud3sim
@@ -702,6 +705,7 @@ def start_simulator(path: Path) -> tuple[subprocess.Popen, tempfile.TemporaryDir
     proc = subprocess.Popen(
         [str(path)],
         cwd=workdir.name,
+        stdin=subprocess.DEVNULL,  # do not steal the shell's stdin
         stdout=log,
         stderr=subprocess.STDOUT,
     )
@@ -756,6 +760,86 @@ def run_tests(client: MinUdpClient) -> int:
     return failures
 
 
+def stream_cli_output(client: MinUdpClient, quiet: float = 0.4,
+                     max_time: float = 10.0) -> None:
+    """Print terminal frames as they arrive until the CLI goes quiet."""
+    start = time.monotonic()
+    last_data = start
+    while True:
+        frames = client.recv(0.05)
+        now = time.monotonic()
+        got_frame = bool(frames)
+        for frame in frames:
+            if frame.app_id == MIN_ID_TERM:
+                data = frame.payload
+                try:
+                    sys.stdout.buffer.write(data)
+                    sys.stdout.buffer.flush()
+                except AttributeError:
+                    sys.stdout.write(data.decode("latin-1"))
+                    sys.stdout.flush()
+        if got_frame:
+            last_data = now
+        if now - start >= max_time:
+            break
+        if not got_frame and now - last_data >= quiet:
+            break
+
+
+def interactive_shell(client: MinUdpClient) -> int:
+    """Run a small interactive CLI-over-MIN shell."""
+    try:
+        import readline  # noqa: F401 - enables line editing/history when available
+    except ImportError:
+        pass
+
+    client.connect_socket()
+    client.drain(0.2)
+    print("Interactive MIN CLI. Type :help for local commands, :q to quit.")
+    print("Everything else is sent to the UD3 CLI. Ctrl+C aborts a command.\n")
+
+    try:
+        while True:
+            try:
+                line = input("MIN[0]> ")
+            except EOFError:
+                print()
+                break
+            except KeyboardInterrupt:
+                client.send_app(MIN_ID_TERM, b"\x03")
+                print("^C")
+                continue
+
+            stripped = line.strip()
+            if stripped in (":q", ":quit", "exit", "quit"):
+                break
+            if stripped in (":h", ":help", ":?"):
+                print("  :help       show this help")
+                print("  :q, :quit   leave the shell")
+                print("  :reset      reset the MIN transport/sequence counters")
+                print("  :reconnect  disconnect and reconnect CLI socket 0")
+                continue
+            if stripped == ":reset":
+                client.resync()
+                print("MIN transport reset")
+                continue
+            if stripped == ":reconnect":
+                client.disconnect_socket()
+                client.connect_socket()
+                print("CLI socket reconnected")
+                continue
+
+            try:
+                client.send_app(MIN_ID_TERM, line.encode("utf-8", "replace") + b"\r")
+                stream_cli_output(client)
+            except KeyboardInterrupt:
+                client.send_app(MIN_ID_TERM, b"\x03")
+                print("^C")
+    finally:
+        client.disconnect_socket()
+    return 0
+
+
 def main(argv: Optional[list[str]] = None) -> int:
     script_dir = Path(__file__).resolve().parent
     default_sim = script_dir.parent / "build" / "ud3sim"
@@ -775,6 +859,11 @@ def main(argv: Optional[list[str]] = None) -> int:
         type=Path,
         default=default_sim,
         help=f"simulator binary (default: {default_sim})",
+    )
+    parser.add_argument(
+        "--shell",
+        action="store_true",
+        help="open an interactive CLI-over-MIN shell instead of running tests",
     )
     parser.add_argument("--verbose", action="store_true", help="print MIN frames")
     parser.add_argument(
@@ -820,7 +909,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             return 1
 
         print(f"MIN UDP endpoint: {args.host}:{args.port}")
-        if args.start_sim is False:
+        if args.start_sim is False and not args.shell:
             print("note: VMS tests write the simulator flash; "
                   "use --start-sim for an isolated instance")
         if proc is not None and proc.poll() is not None:
@@ -828,6 +917,9 @@ def main(argv: Optional[list[str]] = None) -> int:
             if log_path is not None:
                 print_log_tail(log_path)
             return 1
+
+        if args.shell:
+            return interactive_shell(client)
 
         failures = run_tests(client)
         total = len(TESTS)

@@ -139,10 +139,18 @@ void configure_CT2(void) {
 		params.ct2_offset_cnt = (uint32_t)(4096ul * (uint32_t)configuration.ct2_offset) / 5000ul;
 
 		//Calculate ADC counts for full-scale voltage (above offset)
-		uint32_t cnt_fs = ((4096ul * (uint32_t)configuration.ct2_voltage) / 5000ul) - params.ct2_offset_cnt;
+		uint32_t cnt_fs = ((4096ul * (uint32_t)configuration.ct2_voltage) / 5000ul);
+
+		//A zero or negative full-scale range cannot be scaled: keep the current telemetry at zero
+		if(cnt_fs <= params.ct2_offset_cnt){
+			params.idc_ma_count = 0;
+			return;
+		}
+		cnt_fs -= params.ct2_offset_cnt;
 
 		//Calculate scaling factor (current equivalent per ADC count)
-		params.idc_ma_count = (((uint32_t)configuration.ct2_current * 100ul) / cnt_fs);
+		uint32_t idc_scale = (((uint32_t)configuration.ct2_current * 100ul) / cnt_fs);
+		params.idc_ma_count = (idc_scale > 0xFFFFu) ? 0xFFFFu : (uint16_t)idc_scale;
 	}
 }
 
@@ -168,22 +176,28 @@ void configure_ZCD_to_PWM(void) {
 		set_switch_without_fb(pdFALSE);
 	}
 
-	//Calculate phase lead time in timer counts
-	//lead_time is in microseconds, convert to CPU clock cycles
-	uint32_t lead_time_temp;
-	lead_time_temp = (configuration.lead_time * 1000) / (1000000 / BCLK__BUS_CLK__MHZ);
-
 	//Calculate starting PWM period from configured startup frequency
 	//start_freq is in Hz*100 (e.g., 10000 = 100.00 Hz)
-	//Divide by 200: factor of 2 for half-periods, factor of 100 for frequency scaling
-	pwm_start_prd_temp = BCLK__BUS_CLK__HZ / (configuration.start_freq * 200);
+	//Divide by 200: factor of 2 for half-periods, factor by 100 for frequency scaling
+	uint32_t start_freq = configuration.start_freq;
+	if(start_freq == 0) start_freq = 630; //documented default, also avoids division by zero
+	pwm_start_prd_temp = BCLK__BUS_CLK__HZ / (start_freq * 200.0f);
+	if(!isfinite(pwm_start_prd_temp) || pwm_start_prd_temp > 32767.0f) pwm_start_prd_temp = 32767.0f;
+	if(pwm_start_prd_temp < 8.0f) pwm_start_prd_temp = 8.0f;
 
 	//Calculate top period value (prevents ultra-low frequency operation)
-	params.pwm_top = round(pwm_start_prd_temp * 2);
+	params.pwm_top = (uint16_t)roundf(pwm_start_prd_temp * 2.0f);
+	if(params.pwm_top < 16) params.pwm_top = 16;
+
+	//Calculate phase lead time in timer counts, never longer than the half period
+	//lead_time is in nanoseconds, convert to CPU clock cycles
+	uint32_t lead_time_temp;
+	lead_time_temp = (configuration.lead_time * 1000) / (1000000 / BCLK__BUS_CLK__MHZ);
+	if(lead_time_temp > ((uint32_t)params.pwm_top - 4)) lead_time_temp = (uint32_t)params.pwm_top - 4;
 
 	//PWMA period (feedback-controlled PWM with phase lead compensation)
-	params.pwma_start_prd = params.pwm_top - lead_time_temp;
-	params.pwma_start_cmp = params.pwm_top - pwm_start_prd_temp + 4;
+	params.pwma_start_prd = (uint16_t)(params.pwm_top - lead_time_temp);
+	params.pwma_start_cmp = (uint16_t)(params.pwm_top - (uint16_t)roundf(pwm_start_prd_temp) + 4);
 
 	//PWMB period (fixed-frequency startup oscillator)
 	params.pwmb_start_prd = round(pwm_start_prd_temp);

@@ -170,13 +170,15 @@ uint8_t updateDefaultFunction(parameter_entry * params, char * newValue, uint8_t
     case TYPE_CHAR:
         *(char*)params[index].value = *newValue;
         break;
-    case TYPE_STRING:
-        for(int i=0;i<params[index].size;i++){
-            *(i+(char*)params[index].value) = newValue[i];
-            if(!newValue[i]) break;
-        }
+    case TYPE_STRING: {
+        uint8_t size = params[index].size;
+        if(size == 0) goto error;
+        uint32_t len = strlen(newValue);
+        if(len >= size) len = size - 1;
+        memcpy(params[index].value, newValue, len);
+        ((char*)params[index].value)[len] = '\0';
         return 1;
-        break;
+    }
 
     }
     return 0;

@@ -572,6 +572,7 @@ uint8_t EEPROM_Read_Row(uint8_t row, uint8_t * buffer){
  * This minimizes EEPROM wear by avoiding redundant writes.
  */
 uint8_t EEPROM_buffer_write(uint8_t byte, uint16_t address, uint8_t flush){
+    if(address >= CY_EEPROM_SIZE) return 0;
     byte_cnt++;
     static uint8_t eeprom_buffer[CY_EEPROM_SIZEOF_ROW];
     static uint16_t last_row = 0xFFFF;
@@ -690,6 +691,18 @@ void EEPROM_write_conf(parameter_entry * params, uint8_t param_size, uint16_t ee
 	uint16_t change_count = 0;
 	uint32_t temp_hash=0;
 	uint16_t param_count=0;
+
+    //Never start a dataset that cannot fit into EEPROM (5-byte header + params + 5-byte trailer).
+    uint32_t required = (uint32_t)eeprom_offset + 10;
+    for (uint8_t i = 0; i < param_size; i++) {
+        if(params[i].parameter_type == PARAM_CONFIG) required += 5 + params[i].size;
+    }
+    if(required > CY_EEPROM_SIZE){
+        alarm_push(ALM_PRIO_CRITICAL, "EEPROM: Configuration does not fit", required);
+        ttprintf("ERROR: configuration needs %u bytes, EEPROM has %u\r\n", required, (unsigned)CY_EEPROM_SIZE);
+        return;
+    }
+
         EEPROM_buffer_write(0x00, count,0);
 		count++;
 		EEPROM_buffer_write(0xC0, count,0);
@@ -769,6 +782,7 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
     uint16_t param_count=0;
     uint16_t change_count=0;
     uint8_t change_flag=0;
+        if(((uint32_t)addr + DATASET_BYTES) > CY_EEPROM_SIZE) return;
         for(int i=0;i<DATASET_BYTES;i++){
             data[i] = EEPROM_READ_BYTE(addr);
             addr++;
@@ -783,6 +797,7 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
         }
 
     while(addr<CY_EEPROM_SIZE){
+        if(((uint32_t)addr + DATASET_BYTES) > CY_EEPROM_SIZE) break;
         change_flag=0;
         for(int i=0;i<DATASET_BYTES;i++){
             data[i] = EEPROM_READ_BYTE(addr);
@@ -794,7 +809,7 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
             if(params[current_parameter].parameter_type==PARAM_CONFIG){
                 temp_hash=djb_hash(params[current_parameter].name);
                 if((uint8_t)temp_hash == data[0] && (uint8_t)(temp_hash>>8) == data[1]&& (uint8_t)(temp_hash>>16) == data[2]&& (uint8_t)(temp_hash>>24) == data[3]){
-                    if(params[current_parameter].size == data[4]){
+                    if((params[current_parameter].size == data[4]) && (((uint32_t)addr + data[4]) <= CY_EEPROM_SIZE)){
                         for(uint8_t i=0;i<data[4];i++){   //Dataset layout: 4byte hash + 1 byte size + data
                             *(i+(uint8_t * )params[current_parameter].value) = EEPROM_READ_BYTE(addr);
                             addr++;
@@ -819,7 +834,10 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
                 }
             }
         }
-        if(!change_flag) addr+=data[4];
+        if(!change_flag){
+            if(data[4] == 0 || (((uint32_t)addr + data[4]) > CY_EEPROM_SIZE)) break;
+            addr += data[4];
+        }
         
         if(current_parameter == param_size){
             #ifndef BOOT
@@ -836,15 +854,17 @@ void EEPROM_read_conf(parameter_entry * params, uint8_t param_size, uint16_t eep
             addr = DATASET_BYTES + eeprom_offset; //Skip header
             temp_hash=djb_hash(params[current_parameter].name);
             while(addr<CY_EEPROM_SIZE){
+                if(((uint32_t)addr + DATASET_BYTES) > CY_EEPROM_SIZE) break;
                 for(int i=0;i<DATASET_BYTES;i++){
                     data[i] = EEPROM_READ_BYTE(addr);
                     addr++;
                 }
-                    addr += data[4];
                 if(data[0] == 0xDE && data[1] == 0xAD && data[2] == 0xBE && data[3] == 0xEF) break;
+                if(data[4] == 0 || (((uint32_t)addr + data[4]) > CY_EEPROM_SIZE)) break;
                 if((uint8_t)temp_hash == data[0] && (uint8_t)(temp_hash>>8) == data[1]&& (uint8_t)(temp_hash>>16) == data[2]&& (uint8_t)(temp_hash>>24) == data[3]){
                         found_param = 1;
                 }
+                addr += data[4];
             }
             if(!found_param){
                 #ifndef BOOT

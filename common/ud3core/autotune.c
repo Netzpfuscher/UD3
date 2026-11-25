@@ -192,6 +192,11 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 		return 0;
 	}
 
+	if (sysfault.interlock || tsk_fault_is_fault()) {
+		ttprintf("Error: cannot tune while a fault is latched\r\n");
+		return 0;
+	}
+
     freq_str *freq_resp;
     freq_resp = pvPortMalloc(sizeof(freq_str));
     if(freq_resp==NULL){
@@ -265,8 +270,9 @@ uint16_t run_adc_sweep(uint16_t F_min, uint16_t F_max, uint16_t pulsewidth, uint
 	configuration.max_fb_errors = original_max_fb_errors;
 
 	configure_ZCD_to_PWM();
+	uint8_t was_killed = sysfault.interlock;
 	interrupter_init_safe();
-	interrupter_unkill();
+	sysfault.interlock = was_killed;
 	//interrupter_DMA_mode(original_dma_mode);
 
 	//search max current

@@ -61,7 +61,7 @@
 #define STACK_ANALOG 128     //!< Analog task stack (128 words = 512 bytes)
 #define STACK_THERMISTOR 100 //!< Thermistor task stack (100 words = 400 bytes)
 #define STACK_UART 256       //!< UART task stack (256 words = 1KB)
-#define STACK_MIN 256        //!< MIN protocol task stack (256 words = 1KB)
+#define STACK_MIN 384        //!< MIN protocol task stack (384 words = 1.5KB)
 #define STACK_USB 128        //!< USB task stack (128 words = 512 bytes)
 #define STACK_ETH 256        //!< Ethernet task stack (256 words = 1KB)
 #define STACK_FAULT 100      //!< Fault task stack (100 words = 400 bytes)

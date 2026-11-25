@@ -410,19 +410,40 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
             break;
         }
         case VMS_WRT_MAP_HEADER:
+            if(len_payload < sizeof(MAP_HEADER_WIRE_DATA_t)){
+                alarm_push(ALM_PRIO_WARN, "COM: Malformed map header", len_payload);
+                return;
+            }
             //header will be needed again later, allocate ram
             if(map_header != NULL) vPortFree(map_header);
             map_header = pvPortMalloc(sizeof(MAP_HEADER_WIRE_DATA_t));
+            if(map_header == NULL){
+                alarm_push(ALM_PRIO_CRITICAL, "COM: VMS map header allocation failed", 0);
+                return;
+            }
             memcpy(map_header, min_payload, sizeof(MAP_HEADER_WIRE_DATA_t));
             
             if (map_header->header.listEntries != 0) {
                 if(map_entries != NULL) vPortFree(map_entries);
                 map_entries = pvPortMalloc(sizeof(MAPTABLE_ENTRY_t) * map_header->header.listEntries);
+                if(map_entries == NULL){
+                    vPortFree(map_header);
+                    map_header = NULL;
+                    alarm_push(ALM_PRIO_CRITICAL, "COM: VMS map allocation failed", 0);
+                    return;
+                }
                 
                 TERM_printDebug(min_handle[1], "got header for %s with count %d\r\n", map_header->header.name, map_header->header.listEntries);
             } else {
-                nvm_write_buffer(last_write_index, (uint8_t*)&(map_header->header), sizeof(MAPTABLE_HEADER_t));
-                last_write_index += sizeof(MAPTABLE_HEADER_t);
+                if(((uint32_t)last_write_index + sizeof(MAPTABLE_HEADER_t)) <= MAPMEM_SIZE){
+                    if(!nvm_write_buffer(last_write_index, (uint8_t*)&(map_header->header), sizeof(MAPTABLE_HEADER_t))){
+                        alarm_push(ALM_PRIO_WARN, "COM: VMS map header write failed", last_write_index);
+                    }else{
+                        last_write_index += sizeof(MAPTABLE_HEADER_t);
+                    }
+                }else{
+                    alarm_push(ALM_PRIO_WARN, "COM: VMS map table full", last_write_index);
+                }
                 vPortFree(map_header);
                 map_header = NULL;
             }
@@ -430,6 +451,14 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
             break;
         case VMS_WRT_MAP_DATA:
             if(map_header != NULL && map_entries != NULL){
+                if(len_payload < sizeof(MAP_ENTRY_WIRE_DATA_t)){
+                    alarm_push(ALM_PRIO_WARN, "COM: Malformed map entry", len_payload);
+                    return;
+                }
+                if(n_map_entry >= map_header->header.listEntries){
+                    alarm_push(ALM_PRIO_WARN, "COM: Too many VMS map entries", n_map_entry);
+                    return;
+                }
                 
                 //copy the data 
                 map_entry = (MAP_ENTRY_WIRE_DATA_t*) min_payload;
@@ -441,10 +470,21 @@ void min_vms(uint8_t *min_payload, uint8_t len_payload){
                 if(n_map_entry == map_header->header.listEntries){
                     TERM_printDebug(min_handle[1], "write map: %s\r\n", map_header->header.name);
                     
-                    nvm_write_buffer(last_write_index, (uint8_t*)&(map_header->header), sizeof(MAPTABLE_HEADER_t));
-                    last_write_index += sizeof(MAPTABLE_HEADER_t);
-                    nvm_write_buffer(last_write_index, (uint8_t*)map_entries, sizeof(MAPTABLE_ENTRY_t) * map_header->header.listEntries);
-                    last_write_index += sizeof(MAPTABLE_ENTRY_t) * map_header->header.listEntries;
+                    uint32_t map_size = sizeof(MAPTABLE_HEADER_t) + ((uint32_t)sizeof(MAPTABLE_ENTRY_t) * map_header->header.listEntries);
+                    if(((uint32_t)last_write_index + map_size) <= MAPMEM_SIZE){
+                        if(!nvm_write_buffer(last_write_index, (uint8_t*)&(map_header->header), sizeof(MAPTABLE_HEADER_t))){
+                            alarm_push(ALM_PRIO_WARN, "COM: VMS map header write failed", last_write_index);
+                        }else{
+                            last_write_index += sizeof(MAPTABLE_HEADER_t);
+                            if(!nvm_write_buffer(last_write_index, (uint8_t*)map_entries, map_size - sizeof(MAPTABLE_HEADER_t))){
+                                alarm_push(ALM_PRIO_WARN, "COM: VMS map data write failed", last_write_index);
+                            }else{
+                                last_write_index += map_size - sizeof(MAPTABLE_HEADER_t);
+                            }
+                        }
+                    }else{
+                        alarm_push(ALM_PRIO_WARN, "COM: VMS map table full", last_write_index);
+                    }
                     
                     vPortFree(map_entries);
                     vPortFree(map_header);

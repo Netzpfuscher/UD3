@@ -199,7 +199,11 @@ void configure_interrupter()
     interrupter_init_safe();
 
     // The minimum interrupter period for transient mode in clock ticks (which are equal to microseconds here).
-	params.min_tr_prd = INTERRUPTER_CLK_FREQ / configuration.max_tr_prf;
+	if(configuration.max_tr_prf){
+		params.min_tr_prd = INTERRUPTER_CLK_FREQ / configuration.max_tr_prf;
+	}else{
+		params.min_tr_prd = 0;
+	}
     
     // Disable interrupter
     interrupter.mode = INTR_MODE_OFF;

@@ -125,6 +125,9 @@ void configure_CT1(void) {
 	ct1_dac_val[1] = params.max_tr_cl_dac_val; // Transient mode (duplicate)
 	ct1_dac_val[2] = round(max_qcw_cl_dac_val_temp); // QCW mode
 
+	//Never let the minimum current limit exceed the maximum limit.
+	if(params.max_tr_cl_dac_val < params.min_tr_cl_dac_val) params.max_tr_cl_dac_val = params.min_tr_cl_dac_val;
+
 	//Calculate range for dynamic current limiting
 	params.diff_tr_cl_dac_val = params.max_tr_cl_dac_val - params.min_tr_cl_dac_val;
 }

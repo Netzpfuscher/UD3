@@ -412,7 +412,7 @@ uint8_t set_visibility(parameter_entry * params, uint8_t param_size, char* text,
 	
 	for (uint8_t current_parameter = 0; current_parameter < param_size; current_parameter++) {
 		uint8_t text_len = strlen(params[current_parameter].name);
-		if (memcmp(text, params[current_parameter].name, text_len) == 0) {
+		if (strncmp(text, params[current_parameter].name, text_len) == 0) {
 			if(text_len > max_len){
 				max_len = text_len;
 				max_index = current_parameter;
